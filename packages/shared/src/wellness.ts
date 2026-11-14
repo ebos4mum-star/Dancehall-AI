@@ -85,6 +85,11 @@ export function parsePrefs(raw: unknown): WellnessPrefs {
   };
 }
 
+/** The one rule for hiding calorie, nutrient and weight numbers: an eating concern, pregnancy or postpartum, or tracking turned off. */
+export const numbersHidden = (
+  p: Pick<WellnessPrefs, 'eatingConcern' | 'pregnantOrPostpartum' | 'tracking'>,
+): boolean => p.eatingConcern || p.pregnantOrPostpartum || p.tracking === 'none';
+
 export const WELLNESS_KINDS = [
   'hydration',
   'sleep',
@@ -346,7 +351,7 @@ export function coachWellnessContext(args: {
   const entries = args.entries.filter((e) => e.day >= from && e.day <= args.today);
   if (entries.length === 0 && !args.prefs) return undefined;
   const prefs = args.prefs ?? DEFAULT_PREFS;
-  const hidden = prefs.eatingConcern || prefs.pregnantOrPostpartum || prefs.tracking === 'none';
+  const hidden = numbersHidden(prefs);
   const sleep = entriesOf(entries, 'sleep');
   const level = entriesOf(entries, 'recovery').find((e) => e.day === args.today)?.label;
   return {

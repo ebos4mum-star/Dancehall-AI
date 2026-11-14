@@ -259,7 +259,7 @@ export default function Plan() {
               <AppText
                 variant="caption"
                 muted
-              >{`${t(`plan.${p.budgetLevel}` as StringKey)} · ${p.items.length} items · ~${Math.round(totals(p.items.map((i) => ({ name: i.name, foodId: i.foodId, grams: i.grams, kcal: i.kcal, proteinG: i.proteinG, carbsG: i.carbsG, fatG: i.fatG, kcalLow: i.kcal, kcalHigh: i.kcal, source: 'curated', confidence: 'medium', userEdited: false }))).kcal / p.days)} kcal/day`}</AppText>
+              >{`${t(`plan.${p.budgetLevel}` as StringKey)} · ${p.items.length} items${hideNumbers ? '' : ` · ~${Math.round(totals(p.items.map((i) => ({ name: i.name, foodId: i.foodId, grams: i.grams, kcal: i.kcal, proteinG: i.proteinG, carbsG: i.carbsG, fatG: i.fatG, kcalLow: i.kcal, kcalHigh: i.kcal, source: 'curated', confidence: 'medium', userEdited: false }))).kcal / p.days)} kcal/day`}`}</AppText>
             </View>
           </View>
           <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>

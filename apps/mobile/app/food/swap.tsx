@@ -12,8 +12,10 @@ import { Button } from '@/ui/Button';
 import { BigField } from '@/onboarding/kit';
 import { FoodHero } from '@/food/kit';
 import { Ionicons } from '@expo/vector-icons';
+import { useNumbersHidden } from '@/wellness/hooks';
 
 export default function SwapScreen() {
+  const hideNumbers = useNumbersHidden();
   const { colors, spacing, radius } = useTheme();
   const [q, setQ] = useState('');
   const [food, setFood] = useState<FoodRef | null>(null);
@@ -89,10 +91,9 @@ export default function SwapScreen() {
               <FoodBadge foodId={food.id} />
               <View style={{ flex: 1 }}>
                 <AppText variant="heading">{food.name}</AppText>
-                <AppText
-                  variant="caption"
-                  muted
-                >{`${food.servingLabel} · ${kcalText(item)}`}</AppText>
+                <AppText variant="caption" muted>
+                  {hideNumbers ? food.servingLabel : `${food.servingLabel} · ${kcalText(item)}`}
+                </AppText>
               </View>
             </View>
             <SwapPanel item={item} />

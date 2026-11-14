@@ -13,6 +13,7 @@ import {
 import { useDraft } from '@/food/draft';
 import { useFoodData } from '@/food/hooks';
 import { recentFoods } from '@/food/recent';
+import { useNumbersHidden } from '@/wellness/hooks';
 import { FoodBadge, PortionStepper, kcalText, macroText } from '@/food/ui';
 import { t } from '@/i18n';
 import { parseDecimal } from '@/lib/format';
@@ -25,6 +26,7 @@ import { Screen } from '@/ui/Screen';
 import { TextField } from '@/ui/TextField';
 
 export default function AddFood() {
+  const hideNumbers = useNumbersHidden();
   const { replaceKey, from } = useLocalSearchParams<{ replaceKey?: string; from?: string }>();
   const { dispatch } = useDraft();
   const { colors, spacing, radius } = useTheme();
@@ -126,10 +128,11 @@ export default function AddFood() {
                     <AppText variant="label" numberOfLines={2}>
                       {r.name}
                     </AppText>
-                    <AppText
-                      variant="caption"
-                      muted
-                    >{`${Math.round(r.grams)} g · ~${Math.round(r.kcal)} kcal`}</AppText>
+                    <AppText variant="caption" muted>
+                      {hideNumbers
+                        ? `${Math.round(r.grams)} g`
+                        : `${Math.round(r.grams)} g · ~${Math.round(r.kcal)} kcal`}
+                    </AppText>
                   </Pressable>
                 ))}
               </ScrollView>
@@ -161,10 +164,12 @@ export default function AddFood() {
               <View style={{ flex: 1 }}>
                 <AppText variant="label">{r.name}</AppText>
                 <AppText variant="caption" muted>
-                  {t('add.serving', {
-                    label: r.servingLabel,
-                    kcal: Math.round((r.per100g.kcal * r.servingG) / 100),
-                  })}
+                  {hideNumbers
+                    ? r.servingLabel
+                    : t('add.serving', {
+                        label: r.servingLabel,
+                        kcal: Math.round((r.per100g.kcal * r.servingG) / 100),
+                      })}
                 </AppText>
               </View>
             </Pressable>
@@ -176,10 +181,14 @@ export default function AddFood() {
                 {t('add.portion')}
               </AppText>
               <PortionStepper grams={grams} onChange={setGrams} />
-              <AppText>{kcalText(preview)}</AppText>
-              <AppText variant="caption" muted>
-                {macroText(preview)}
-              </AppText>
+              {hideNumbers ? null : (
+                <>
+                  <AppText>{kcalText(preview)}</AppText>
+                  <AppText variant="caption" muted>
+                    {macroText(preview)}
+                  </AppText>
+                </>
+              )}
               <Button label={t('add.add')} onPress={() => done(preview)} />
             </DepthCard>
           ) : null}
@@ -196,44 +205,53 @@ export default function AddFood() {
             onChangeText={setG}
             keyboardType="decimal-pad"
           />
-          <TextField
-            label={t('add.kcal')}
-            value={kcal}
-            onChangeText={setKcal}
-            keyboardType="decimal-pad"
-          />
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-            <View style={{ flex: 1 }}>
+          {hideNumbers ? (
+            <AppText variant="caption" muted>
+              {t('add.manualHidden')}
+            </AppText>
+          ) : (
+            <>
               <TextField
-                label={`${t('food.protein')} g`}
-                value={p}
-                onChangeText={setP}
+                label={t('add.kcal')}
+                value={kcal}
+                onChangeText={setKcal}
                 keyboardType="decimal-pad"
               />
-            </View>
-            <View style={{ flex: 1 }}>
-              <TextField
-                label={`${t('food.carbs')} g`}
-                value={c}
-                onChangeText={setC}
-                keyboardType="decimal-pad"
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <TextField
-                label={`${t('food.fat')} g`}
-                value={f}
-                onChangeText={setF}
-                keyboardType="decimal-pad"
-              />
-            </View>
-          </View>
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                <View style={{ flex: 1 }}>
+                  <TextField
+                    label={`${t('food.protein')} g`}
+                    value={p}
+                    onChangeText={setP}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <TextField
+                    label={`${t('food.carbs')} g`}
+                    value={c}
+                    onChangeText={setC}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <TextField
+                    label={`${t('food.fat')} g`}
+                    value={f}
+                    onChangeText={setF}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              </View>
+            </>
+          )}
           {err ? <Notice tone="warning">{err}</Notice> : null}
           <Button
             label={t('add.add')}
             onPress={() => {
               const grams = parseDecimal(g);
-              const k = parseDecimal(kcal);
+              // With numbers hidden the person is not asked for calories; the entry is saved without nutrition values.
+              const k = hideNumbers ? 0 : parseDecimal(kcal);
               if (
                 name.trim().length < 1 ||
                 grams === null ||
@@ -248,9 +266,9 @@ export default function AddFood() {
                   name,
                   grams,
                   kcal: k,
-                  proteinG: parseDecimal(p) ?? 0,
-                  carbsG: parseDecimal(c) ?? 0,
-                  fatG: parseDecimal(f) ?? 0,
+                  proteinG: hideNumbers ? 0 : (parseDecimal(p) ?? 0),
+                  carbsG: hideNumbers ? 0 : (parseDecimal(c) ?? 0),
+                  fatG: hideNumbers ? 0 : (parseDecimal(f) ?? 0),
                 }),
               );
             }}

@@ -566,3 +566,53 @@ describe('weight-management coach topics (simulated, rules-based)', () => {
     expect(JSON.stringify(some)).toMatch(/1 strength session/);
   });
 });
+
+describe('hidden numbers reach neither the coach context nor its replies', () => {
+  const wl = (hidden: boolean): NonNullable<CoachContext['wellness']> => ({
+    walkMinutesWeek: 0,
+    strengthSessionsWeek: 0,
+    sleepNightsWeek: 0,
+    sleepAvgHours: null,
+    recoveryToday: null,
+    hungerCheckinsWeek: 0,
+    intent: 'lose',
+    numbersHidden: hidden,
+  });
+  const make = (hidden: boolean) =>
+    buildCoachContext({
+      personalized: true,
+      unitSystem: 'metric',
+      now: new Date('2026-06-03T10:00:00Z'),
+      timeZone: 'UTC',
+      weightTrend: 'down',
+      guideKcal: 2100,
+      wellness: wl(hidden),
+      food: {
+        mealsToday: 1,
+        kcalToday: 640,
+        lastMealItems: [{ name: 'Fried chicken', foodId: 'fried-chicken', grams: 150, kcal: 420 }],
+      },
+    });
+  it('strips calories, the weight direction and the energy guide, keeping what was logged', () => {
+    const ctx = make(true);
+    expect(ctx.weightTrend).toBeNull();
+    expect(ctx.guideKcal).toBeUndefined();
+    expect(ctx.food?.kcalToday).toBeUndefined();
+    expect(ctx.food?.mealsToday).toBe(1);
+    expect(ctx.food?.lastMealItems?.every((i) => i.kcal === 0)).toBe(true);
+    expect(JSON.stringify(ctx)).not.toMatch(/640|650|2100|2150|420/);
+  });
+  it('is unchanged when numbers are not hidden', () => {
+    const ctx = make(false);
+    expect(ctx.weightTrend).toBe('down');
+    expect(ctx.guideKcal).toBe(2100);
+    expect(ctx.food?.kcalToday).toBe(650);
+  });
+  it('a food-swap reply quotes no calories or figures when numbers are hidden', () => {
+    const r = composeCoachReply('any swap for fried chicken?', make(true));
+    expect(r.message).not.toMatch(/\d|kcal|calorie/i);
+    expect(composeCoachReply('any swap for fried chicken?', make(false)).message).toMatch(
+      /kcal|protein|fiber|cost/,
+    );
+  });
+});

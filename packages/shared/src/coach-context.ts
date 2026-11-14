@@ -93,23 +93,31 @@ export function buildCoachContext(args: {
     today: localDateKey(args.now, args.timeZone ?? null),
   };
   if (!args.personalized) return base;
+  // When the person chose no numbers (or has an eating concern, or is pregnant or postpartum) the coach receives no weight direction, no calorie
+  // figures and no per-item nutrition: only what was logged (names and counts). This is enforced here so every caller, device or server, inherits it.
+  const hidden = args.wellness?.numbersHidden === true;
   return {
     ...base,
     mode: args.mode ?? null,
     lowImpact: args.lowImpact,
     goals: args.goals,
-    weightTrend: args.weightTrend ?? null,
+    weightTrend: hidden ? null : (args.weightTrend ?? null),
     activity: args.activity,
     food: args.food
-      ? {
-          ...args.food,
-          kcalToday: args.food.kcalToday === undefined ? undefined : round50(args.food.kcalToday),
-        }
+      ? hidden
+        ? {
+            mealsToday: args.food.mealsToday,
+            lastMealItems: args.food.lastMealItems?.map((i) => ({ ...i, kcal: 0 })),
+          }
+        : {
+            ...args.food,
+            kcalToday: args.food.kcalToday === undefined ? undefined : round50(args.food.kcalToday),
+          }
       : undefined,
     plan: args.plan ?? null,
     wellness: args.wellness,
     comeback: args.comeback ?? null,
-    guideKcal: args.guideKcal === undefined ? undefined : round50(args.guideKcal),
+    guideKcal: hidden || args.guideKcal === undefined ? undefined : round50(args.guideKcal),
   };
 }
 

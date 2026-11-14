@@ -8,6 +8,7 @@ import {
   hydrationOn,
   measurementChange,
   movementTotals,
+  numbersHidden,
   parsePrefs,
   sleepSummary,
   type WellnessEntry,
@@ -333,5 +334,15 @@ describe('daily plan with wellness context', () => {
     const p = generateDailyPlan({ ...base, wellness: { ...wellness, sleepHours: 4.5 } });
     const g = p.items.find((x) => x.title === 'Go gently today');
     expect(g?.why).toMatch(/not advice about your health/);
+  });
+});
+
+describe('numbersHidden', () => {
+  it('is true for an eating concern, pregnancy or postpartum, or tracking off, and false otherwise', () => {
+    expect(numbersHidden(parsePrefs({}))).toBe(false);
+    expect(numbersHidden(parsePrefs({ tracking: 'light' }))).toBe(false);
+    expect(numbersHidden(parsePrefs({ eatingConcern: true }))).toBe(true);
+    expect(numbersHidden(parsePrefs({ pregnantOrPostpartum: true }))).toBe(true);
+    expect(numbersHidden(parsePrefs({ tracking: 'none' }))).toBe(true);
   });
 });

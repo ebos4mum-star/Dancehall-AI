@@ -123,13 +123,20 @@ export function composeCoachReply(userText: string, c: CoachContext): Reply {
       const item = [...(c.food?.lastMealItems ?? [])]
         .filter((i) => i.foodId)
         .sort((a, b) => b.kcal - a.kcal)[0];
+      const hidden = c.wellness?.numbersHidden === true;
+      // With numbers hidden the calorie-based "lighter" comparison is not used and no figure is quoted.
       const swap = item
-        ? suggestSwaps({ foodId: item.foodId, grams: item.grams, kcal: item.kcal }, 'lighter')[0]
+        ? suggestSwaps(
+            { foodId: item.foodId, grams: item.grams, kcal: item.kcal },
+            hidden ? 'more_fiber' : 'lighter',
+          )[0]
         : undefined;
       if (item && swap) {
         const from = FOOD_BY_ID.get(item.foodId!)!;
         return {
-          message: `A comparable swap for ${from.name} is ${swap.food.name}: ${swap.reason}. These are ideas, not rules, and both are fine.`,
+          message: hidden
+            ? `A comparable swap for ${from.name} is ${swap.food.name}, which has more fiber. These are ideas, not rules, and both are fine.`
+            : `A comparable swap for ${from.name} is ${swap.food.name}: ${swap.reason}. These are ideas, not rules, and both are fine.`,
           because: reasons(c, ['I compared equal portions using the sample reference data.']),
           proposedChanges: [
             {
