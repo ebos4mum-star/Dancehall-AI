@@ -21,7 +21,9 @@ import {
   type WellnessEntryInput,
   type WellnessPrefs,
 } from '@dancehall/shared';
+import { bindAuthLifecycle, type AppStateSource } from './authLifecycle';
 import { createCoachAdapter } from './supabaseCoach';
+import { createPhotoAdapter } from './supabasePhoto';
 import {
   CURRENT_POLICY_VERSION,
   StoreError,
@@ -62,6 +64,8 @@ export interface SupabaseStoreConfig {
   /** Secure storage for the auth session (Keychain/Keystore on device). */
   /** Base URL of the server AI gateway. Optional: without it the AI features report "unavailable". */
   aiApiUrl?: string;
+  /** The app's foreground state (React Native's AppState). When given, token auto-refresh runs only while the app is active. */
+  appState?: AppStateSource;
   storage: {
     getItem(k: string): Promise<string | null>;
     setItem(k: string, v: string): Promise<void>;
@@ -206,6 +210,7 @@ function createBaseStore(
     if (event === 'INITIAL_SESSION') return;
     setTimeout(emit, 0);
   });
+  if (cfg.appState) bindAuthLifecycle(db.auth, cfg.appState);
   const ok = <T>(r: { data: T | null; error: { message?: string; code?: string } | null }): T => {
     if (r.error) throw mapSupabaseError(r.error);
     return r.data as T;
@@ -1008,5 +1013,6 @@ function withCoach(
   return {
     ...store,
     ...createCoachAdapter({ db: __db, base: store, aiApiUrl: cfg.aiApiUrl, emit: __emit }),
+    ...createPhotoAdapter({ db: __db, base: store, aiApiUrl: cfg.aiApiUrl, emit: __emit }),
   };
 }

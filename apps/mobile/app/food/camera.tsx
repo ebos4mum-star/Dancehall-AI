@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage, useLoad } from '@/data/hooks';
 import { newKey, useDraft } from '@/food/draft';
-import { discardPhoto, preparePhoto, seedFrom } from '@/food/photo';
+import { discardPhoto, preparePhoto, readPhotoForUpload, seedFrom } from '@/food/photo';
 import { t } from '@/i18n';
 import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
@@ -43,13 +43,16 @@ export default function CameraScreen() {
     let resized: { uri: string } | null = null;
     try {
       let seed: number;
+      let upload: Awaited<ReturnType<typeof readPhotoForUpload>> | undefined;
       if (photo) {
         resized = await preparePhoto(photo.uri, photo.width, photo.height);
         seed = seedFrom(`${photo.uri}${Date.now()}`);
+        // Only a real (Supabase) store uploads the bytes; the development mock never needs them.
+        if (store.mode === 'supabase') upload = await readPhotoForUpload(resized.uri);
       } else {
         seed = sampleCounter++;
       }
-      const res = await store.analyzeMealPhoto!({ seed });
+      const res = await store.analyzeMealPhoto!({ seed, photo: upload });
       dispatch({
         type: 'start',
         draft: {

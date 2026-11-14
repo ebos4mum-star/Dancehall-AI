@@ -70,6 +70,39 @@ const SERVER_CODES: Record<string, StoreErrorCode> = {
   validation_failed: 'invalid_input',
 };
 
+/** Calls the server AI gateway with the person's session token. The app never holds a provider key. */
+export function createServerCaller(
+  db: SupabaseClient,
+  aiApiUrl: string | undefined,
+  fetchImpl?: typeof fetch,
+) {
+  return async function callServer<T>(path: string, body: unknown): Promise<T> {
+    if (!aiApiUrl) throw new StoreError('ai_unavailable', 'The AI service is not available yet.');
+    const { data } = await db.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) throw new StoreError('not_authenticated');
+    let res: Response;
+    try {
+      res = await (fetchImpl ?? fetch)(`${aiApiUrl}${path}`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    } catch {
+      throw new StoreError('ai_unavailable');
+    }
+    const json = (await res.json().catch(() => ({}))) as {
+      error?: { code?: string; message?: string };
+    };
+    if (!res.ok)
+      throw new StoreError(
+        SERVER_CODES[json.error?.code ?? ''] ?? 'ai_unavailable',
+        json.error?.message,
+      );
+    return json as T;
+  };
+}
+
 export function createCoachAdapter(d: CoachAdapterDeps): Partial<DataStore> {
   const { db, base, emit } = d;
   const now = d.now ?? (() => new Date());
@@ -89,32 +122,7 @@ export function createCoachAdapter(d: CoachAdapterDeps): Partial<DataStore> {
   };
   const today = async () => localDateKey(now(), (await base.getProfile()).timeZone);
 
-  /** Calls the server AI gateway with the person's session token. The app never holds a provider key. */
-  async function callServer<T>(path: string, body: unknown): Promise<T> {
-    if (!d.aiApiUrl) throw new StoreError('ai_unavailable', 'The AI service is not available yet.');
-    const { data } = await db.auth.getSession();
-    const token = data.session?.access_token;
-    if (!token) throw new StoreError('not_authenticated');
-    let res: Response;
-    try {
-      res = await (d.fetchImpl ?? fetch)(`${d.aiApiUrl}${path}`, {
-        method: 'POST',
-        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-    } catch {
-      throw new StoreError('ai_unavailable');
-    }
-    const json = (await res.json().catch(() => ({}))) as {
-      error?: { code?: string; message?: string };
-    };
-    if (!res.ok)
-      throw new StoreError(
-        SERVER_CODES[json.error?.code ?? ''] ?? 'ai_unavailable',
-        json.error?.message,
-      );
-    return json as T;
-  }
+  const callServer = createServerCaller(db, d.aiApiUrl, d.fetchImpl);
 
   const toAction = (r: Row): CoachAction => ({
     id: r.id as string,

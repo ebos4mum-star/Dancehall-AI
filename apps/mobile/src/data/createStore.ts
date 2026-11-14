@@ -1,3 +1,4 @@
+import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { resolveConfig, type AppConfig } from '@/lib/env';
 import { MockStore } from './mockStore';
@@ -23,6 +24,7 @@ export function createStore(config: AppConfig): DataStore {
       publishableKey: config.supabasePublishableKey!,
       aiApiUrl: config.aiApiUrl,
       storage: secureStorage,
+      appState: AppState,
     });
   }
   return new MockStore({

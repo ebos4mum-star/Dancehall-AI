@@ -1,5 +1,7 @@
 import { File } from 'expo-file-system';
 import { SaveFormat, manipulateAsync } from 'expo-image-manipulator';
+import { StoreError, type PhotoUpload } from '@/data/types';
+import { PHOTO_CONTENT_TYPE, PHOTO_MAX_BYTES } from './photoUpload';
 import { JPEG_QUALITY, fitWithin } from './photoMath';
 
 /**
@@ -19,6 +21,14 @@ export async function preparePhoto(
     format: SaveFormat.JPEG,
   });
   return { uri: out.uri, width: out.width, height: out.height };
+}
+
+/** Reads the prepared JPEG for upload. Refuses oversize files before reading them into memory. */
+export async function readPhotoForUpload(uri: string): Promise<PhotoUpload> {
+  const f = new File(uri);
+  if (typeof f.size === 'number' && f.size > PHOTO_MAX_BYTES)
+    throw new StoreError('photo_too_large');
+  return { data: await f.arrayBuffer(), contentType: PHOTO_CONTENT_TYPE };
 }
 
 /** Best-effort deletion of a temporary local photo. Never throws: a failure to delete must not block the person. */
