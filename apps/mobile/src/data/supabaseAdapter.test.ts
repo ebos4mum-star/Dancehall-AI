@@ -518,11 +518,16 @@ describe('celebration ledger persistence', () => {
     expect(await store().listCelebrations!()).toEqual(['daily:water:2026-06-15']);
     expect(last()).toMatchObject({ table: 'celebrations' });
   });
-  it('records with ignore-duplicates, sending only the id and the mode', async () => {
-    await store().recordCelebrations!([
+  it('records with ignore-duplicates, sending only the id and the mode, and returns only the ids it newly recorded', async () => {
+    respond = () => ({
+      data: [{ achievement_id: 'weekly:movement_minutes:2026-06-15' }],
+      error: null,
+    });
+    const claimed = await store().recordCelebrations!([
       { id: 'daily:water:2026-06-15', mode: 'full' },
       { id: 'weekly:movement_minutes:2026-06-15', mode: 'off' },
     ]);
+    expect(claimed).toEqual(['weekly:movement_minutes:2026-06-15']);
     expect(last()).toMatchObject({ table: 'celebrations', op: 'upsert' });
     expect(last().payload).toEqual([
       { achievement_id: 'daily:water:2026-06-15', mode: 'full' },
