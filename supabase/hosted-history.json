@@ -1,5 +1,5 @@
 {
-  "_comment": "Record of the migration history on the dedicated DanceHall Fit AI development project, as read (read-only) on 2026-11-14. Hosted versions are apply-time timestamps; names match the repository files. sha256 pins the repository content of every applied migration: editing one is an error (add a new migration instead). Update this file only after a hosted migration has been authorized, applied and re-verified.",
+  "_comment": "Record of the migration history on the dedicated DanceHall Fit AI development project (13 of 13 applied). Hosted versions are apply-time timestamps; names match the repository files. sha256 pins the repository content of every applied migration: editing one is an error (add a new migration instead). The last four (household, wellness, household_join_limit, celebrations) were applied on 2026-11-14 through the Supabase connector after approval, and each was re-verified with its owner-apply verify script, verify_05_final and the 127-check hosted database suite (127 passed, 0 failed). Update this file only after a hosted migration has been authorized, applied and re-verified.",
   "projectRef": "vvwjhbsyxetnktimgaxg",
   "applied": [
     {
@@ -49,22 +49,46 @@
       "name": "fit_challenges",
       "file": "20261206000100_fit_challenges.sql",
       "sha256": "ac68ae52a50aba39c57178c83310b9e6dcf6f49612fd83e0bca74219a6cce2e0"
+    },
+    {
+      "hostedVersion": "20261114221234",
+      "name": "habits",
+      "file": "20261207000100_habits.sql",
+      "sha256": "719ebf686732871570c0f32ec03f1a7c8c63d52af2d180695f2870c987f9b54f"
+    },
+    {
+      "hostedVersion": "20261114232540",
+      "name": "household",
+      "file": "20261208000100_household.sql",
+      "sha256": "2b84a422e0fa067fc742de28e25d11f0d4114f89679477fc104772f68a418b75"
+    },
+    {
+      "hostedVersion": "20261114232650",
+      "name": "wellness",
+      "file": "20261209000100_wellness.sql",
+      "sha256": "34120308ae0a36b05be81a47c0cf59fb0c5735d78b53994aac35df90fe988379"
+    },
+    {
+      "hostedVersion": "20261114232713",
+      "name": "household_join_limit",
+      "file": "20261211000100_household_join_limit.sql",
+      "sha256": "4e911d275de17d619044a8a412634b20322d0943bbd05273de72f66cc89bc247"
+    },
+    {
+      "hostedVersion": "20261114232732",
+      "name": "celebrations",
+      "file": "20261212000100_celebrations.sql",
+      "sha256": "09b8409918de302d704468d2fe0cd33fded514d8c13a6c31acf9ace760fd439c"
     }
   ],
-  "pending": [
-    "20261207000100_habits.sql",
-    "20261208000100_household.sql",
-    "20261209000100_wellness.sql",
-    "20261211000100_household_join_limit.sql",
-    "20261212000100_celebrations.sql"
-  ],
+  "pending": [],
   "fingerprintAfterApplied": {
-    "columns": "93d0c4105e0656c54cc111b7bfd28127",
-    "constraints": "d02ed9050f39afc74b603ec856059b61",
-    "functions": "22933198da8a277678f99e539f94f919",
-    "indexes": "d6ecf422b40bc82b6802f2a8a0dd3e38",
-    "policies": "5c0451a612fff81e8d834d5fa737ef65",
-    "rls": "055280a0e433d68257dfaae0f371f7cf",
-    "triggers": "8f61fb1af156a0785ac21c98c4654d30"
+    "columns": "36c4d7c04f4e3f44f454995a68deb0db",
+    "constraints": "2faa63a25f3201aae81f045fa8705167",
+    "functions": "ab69038bfd9618304644dd88cc97f711",
+    "indexes": "2b761162460821c1cf46805803398384",
+    "policies": "8cb09362522e9c0393779e2632a5aa5e",
+    "rls": "7c09e471047097e906257046e65bb7a1",
+    "triggers": "4f8f9c5b67ab0615fdb300e293c9d555"
   }
 }

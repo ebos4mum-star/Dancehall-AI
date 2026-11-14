@@ -57,12 +57,16 @@ test('the headers and the README carry the migration checksums', () => {
   }
 });
 
-test('the steps are exactly the pending migrations, in file order, and each has a verification script', () => {
-  const pending = hist.pending.filter((f) => f !== '20261207000100_habits.sql');
-  assert.deepEqual(
-    STEPS.map((s) => s.file),
-    pending.filter((f) => STEPS.some((s) => s.file === f)),
-  );
+test('the steps are exactly the migrations applied through this procedure, in file order, and each has a verification script', () => {
+  // The owner pack was written while these four were pending. They have since been applied (see hosted-history.json), so each step must now
+  // be recorded as applied, none may still be pending, and the steps must keep file order.
+  const stepFiles = STEPS.map((s) => s.file);
+  assert.deepEqual(stepFiles, [...stepFiles].sort());
+  const applied = hist.applied.map((a) => a.file);
+  for (const f of stepFiles) {
+    assert.ok(applied.includes(f), `${f} is recorded as applied`);
+    assert.ok(!hist.pending.includes(f), `${f} is no longer pending`);
+  }
   const files = readdirSync(join(root, 'supabase', 'owner-apply'));
   for (const s of STEPS)
     assert.ok(files.includes(`verify_${String(s.n).padStart(2, '0')}_${s.name}.sql`));

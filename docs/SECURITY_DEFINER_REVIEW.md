@@ -48,3 +48,21 @@ Only the migrations listed as `pending` in `supabase/hosted-history.json` (files
 5. `20261212000100_celebrations.sql`: `celebrations`; no functions, nothing `SECURITY DEFINER`.
 
 No existing table or data is altered or dropped; the only replaced object is `household_join` (same signature, owner, search path and grants). Verified locally: clean database (all 15 SQL test files), and a replica of the hosted eight-migration state with only these applied on top (`bash supabase/tests/replica.sh`: the replica first matches the hosted catalog fingerprint, the result equals a clean build of all 13 migrations, and all SQL tests pass on it).
+
+## Hosted result and trigger-function grant (2026-11-14)
+
+All 13 migrations are applied to the development project and the 127-check hosted database suite passed (127 passed, 0 failed; see `docs/LIVE_TEST_RESULTS.md`).
+
+**Finding: `app.household_after_member_delete()` is executable by `PUBLIC`.** It is the only `SECURITY DEFINER` trigger function that keeps the default `PUBLIC` execute grant (`audit_row` and `handle_new_user` revoke it). Measured on the hosted project: `anon` and `authenticated` both hold `EXECUTE`; `anon` has no `USAGE` on schema `app`, `authenticated` does.
+
+**Risk: low, not exploitable today.** A function that returns `trigger` cannot be called directly. Measured as `authenticated`: `select app.household_after_member_delete()` fails with `0A000 trigger functions can only be called as triggers`. The grant is still wrong in principle (a definer function should not be callable by roles that never need it) and it is the one deviation from the pattern used by the other definer functions.
+
+**Proposed minimal, backward-compatible correction (not applied, not added to `supabase/migrations/`, needs your approval):**
+
+```sql
+revoke execute on function app.household_after_member_delete() from public, anon, authenticated;
+```
+
+Why it is safe: a trigger fires with the privileges of the function's owner (it is `SECURITY DEFINER`) and the `EXECUTE` check happens when the trigger is created, not each time it fires, so member deletion, leaving, owner hand-over and account-deletion cascades behave exactly as before. Evidence, all local: with the revoke applied after all 13 migrations, `has_function_privilege` is false for `anon` and `authenticated`, and all 16 SQL test files pass (including `12_household`, `14_definer_review` and `99_owner_isolation`). If approved, ship it as one new migration (for example `20261213000100_revoke_household_trigger_execute.sql`) with a one-line assertion added to `14_definer_review.test.sql`, apply it through the same one-at-a-time procedure, and add it to `hosted-history.json`.
+
+Also seen, and unchanged: the ordinary (non-definer) trigger and helper functions in `app` (`set_updated_at`, `habit_limit`, `validate_goal` and similar) carry the default `PUBLIC` execute grant as well. They are not `SECURITY DEFINER`, `anon` cannot reach schema `app`, and trigger functions cannot be called directly, so no correction is proposed for them. The pure helpers (`app.safety_limits`, `app.valid_territories`, `app.blocks_problems`, `app.audit_stamp`) are callable by `authenticated`; they read no user data.

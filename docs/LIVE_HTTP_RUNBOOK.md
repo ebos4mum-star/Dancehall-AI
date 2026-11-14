@@ -4,7 +4,7 @@ The build sandbox's network policy blocks the project's API host, so the HTTP su
 
 ## Preconditions
 
-1. The five migrations are applied to the development project (see `docs/LIVE_VERIFICATION.md`).
+1. All 13 migrations are applied to the development project (done 2026-11-14; see `supabase/hosted-history.json` and `docs/LIVE_TEST_RESULTS.md`).
 2. Two synthetic users exist in that project, created by you in the Supabase dashboard (Authentication, Users, Add user, "Auto Confirm User") with emails ending `.test`, for example `live-a@example.test` and `live-b@example.test`, and strong random passwords. This does not turn on public sign-up or any email sending. Password sign-in for existing users is part of the default email provider.
 3. The project URL and the **publishable** key (`sb_publishable_...`). Never use a secret or service key; the suite refuses them.
 
