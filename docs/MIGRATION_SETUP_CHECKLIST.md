@@ -47,3 +47,21 @@ Nothing here has been run for you: no project, build, or paid service has been c
 - [ ] Create EAS environment variables (not in git): `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` for `preview` and `production`.
 - [ ] `eas build --platform ios --profile preview` (internal), then `production` for TestFlight.
 - [ ] Server secrets (`ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, ...) go in Supabase Edge Function secrets only.
+
+## 5. Connecting the new project (exact steps, after you create it)
+
+1. Supabase dashboard, Project Settings, API: copy the **Project URL** and the **publishable** key. Do not copy `service_role` / secret keys.
+2. Create `apps/mobile/.env.local` (git-ignored) with exactly:
+   ```
+   EXPO_PUBLIC_APP_ENV=development
+   EXPO_PUBLIC_AUTH_MODE=supabase
+   EXPO_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_<value>
+   ```
+   Leave `EXPO_PUBLIC_AI_API_URL` unset: paid AI stays disabled and AI calls report "unavailable".
+3. Apply migrations (section 2), then confirm in the SQL editor that every table has RLS:
+   `select tablename from pg_tables where schemaname='public' and not rowsecurity;` returns no rows.
+4. Confirm the private bucket exists: Storage shows `food-photos` as private.
+5. Start the app (`pnpm --filter @dancehall/mobile start`), sign in with your own email, enter the 6-digit code, complete onboarding.
+   In the Table editor you should see rows in `profiles`, `profile_private`, `consents` and `goals` for your user only.
+6. If the app shows "App configuration problem", the URL or key is missing, not https, or is a secret key. It never falls back silently.
