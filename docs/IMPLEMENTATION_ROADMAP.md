@@ -22,6 +22,14 @@ Only **Phase 0B** is complete. Every later phase needs the owner's explicit appr
 | 11    | Programs and events            | Instructor-led 4/6/8-week programs, Dance Party Mode, community milestone events, optional sponsored challenges.                                                          | Instructor and music rights                    | Gates L1-L3, C1/C2                                 |
 | 12    | Voice                          | Voice coaching and voice food-log corrections.                                                                                                                            | AI voice usage                                 | Gates P2, A1g                                      |
 
+## Approved feature: Pulse celebration system (not yet built)
+
+The product owner approved an animated **Pulse celebration system** for daily, weekly, monthly and yearly goal achievements. It stays on the roadmap and must be built on the existing Pulse (`celebrate` state, moment system and haptics), not replaced by generic badges or static success messages.
+
+- Scope: celebrations when a daily, weekly, monthly or yearly goal the person set is reached (movement, hydration, habits, challenges, and weight goals only for people who chose weight numbers).
+- Rules: follows `CHARACTER_BRIEF_PULSE.md` (restrained, one accent burst, never shaming, no medical claims); respects reduced motion and the sound/haptics settings; never celebrates a number for someone with an eating-concern or numbers-off setting; no streak pressure and no loss framing for missed periods; celebrations are computed from recorded data and shown once per achievement (idempotent across devices and retries).
+- Prerequisites: a defined, owner-approved goal model per period (what counts, and thresholds), and a place to remember which celebrations were already shown (local first; a table only if cross-device sync is wanted, which would need a new migration and approval).
+
 ## Dependencies that are not engineering work
 
 - Legal: terms, privacy notice, health disclaimers, per-country review.
