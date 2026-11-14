@@ -1,5 +1,9 @@
-import { IconBadge, SectionTitle } from '@/ui/kit';
-import { useMemo, useState } from 'react';
+import { Disclosure, IconBadge, IconChoice, type IconName } from '@/ui/kit';
+import { FoodHero } from '@/food/kit';
+import { BigField } from '@/onboarding/kit';
+import { EmptyState } from '@/ui/EmptyState';
+import { brand } from '@/theme/tokens';
+import { useState } from 'react';
 import { View } from 'react-native';
 import {
   BUDGET_LEVELS,
@@ -20,9 +24,7 @@ import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
 import { DepthCard } from '@/ui/Depth';
 import { Notice } from '@/ui/Banner';
-import { Choice } from '@/ui/Choice';
 import { Screen } from '@/ui/Screen';
-import { TextField } from '@/ui/TextField';
 import { haptics } from '@/ui/haptics';
 
 const REGIONS = [
@@ -35,6 +37,12 @@ const REGIONS = [
   'american',
 ] as const;
 type Region = (typeof REGIONS)[number];
+const MEAL_ICON: Record<string, IconName> = {
+  breakfast: 'sunny',
+  lunch: 'restaurant',
+  dinner: 'moon',
+  snack: 'nutrition',
+};
 
 export default function Plan() {
   const { store } = useApp();
@@ -92,25 +100,15 @@ export default function Plan() {
       setErr(errorMessage(e));
     }
   };
-  const mealsText = useMemo(
-    () => (d: MealPlanDraft['days'][number]) =>
-      d.meals.map(
-        (m) =>
-          `${t(`food.meal.${m.mealType}` as StringKey)}: ${m.items.map((i) => `${i.name} ${Math.round(i.grams)} g`).join(', ')}`,
-      ),
-    [],
-  );
 
   return (
-    <Screen
-      top={false}
-      banner={{
-        world: 'food',
-        title: t('ban.foodPlan.title'),
-        line: t('ban.foodPlan.line'),
-        pulse: 'idle',
-      }}
-    >
+    <Screen>
+      <FoodHero
+        title={t('ban.foodPlan.title')}
+        line={t('food2.planLine')}
+        pulse={preview ? 'welcome' : 'idle'}
+        stats={guide ? [{ label: t('food2.planGuide'), value: `${guide.guideKcal} kcal` }] : []}
+      />
       <AppText muted>{t('plan.intro')}</AppText>
       {!guide ? (
         <Notice>{t('plan.needProfile')}</Notice>
@@ -120,44 +118,67 @@ export default function Plan() {
           muted
         >{`${t('plan.guide', { kcal: guide.guideKcal })}. ${t('food.guideNote')}`}</AppText>
       )}
+      <AppText variant="heading" accessibilityRole="header">
+        {t('food2.planStep1')}
+      </AppText>
       <DepthCard>
-        <Choice
-          label={t('plan.days')}
-          value={days}
-          onChange={setDays}
-          options={[
-            { value: '3', label: '3' },
-            { value: '7', label: '7' },
-          ]}
-        />
-        <Choice
-          label={t('plan.budget')}
-          value={level}
-          onChange={setLevel}
-          options={BUDGET_LEVELS.map((b) => ({ value: b, label: t(`plan.${b}` as StringKey) }))}
-        />
-        <Choice
-          label={t('plan.cuisine')}
-          value={region}
-          onChange={setRegion}
-          options={REGIONS.map((r) => ({ value: r, label: t(`region.${r}` as StringKey) }))}
-        />
-        <TextField
-          label={t('plan.amount')}
-          value={amount}
-          onChangeText={setAmount}
-          keyboardType="decimal-pad"
-        />
-        <TextField
-          label={t('plan.currency')}
-          value={currency}
-          onChangeText={setCurrency}
-          autoCapitalize="characters"
-          maxLength={3}
-        />
-        <AppText variant="caption" muted>
-          {t('plan.costNote')}
-        </AppText>
+        <AppText variant="label">{t('plan.days')}</AppText>
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          {(['3', '7'] as const).map((d) => (
+            <View key={d} style={{ flex: 1 }}>
+              <IconChoice
+                icon="calendar"
+                label={t('food2.planDays', { n: d })}
+                selected={days === d}
+                onPress={() => setDays(d)}
+              />
+            </View>
+          ))}
+        </View>
+        <AppText variant="label">{t('plan.budget')}</AppText>
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          {BUDGET_LEVELS.map((b) => (
+            <View key={b} style={{ flex: 1 }}>
+              <IconChoice
+                icon={b === 'low' ? 'leaf' : b === 'medium' ? 'basket' : 'cart'}
+                label={t(`plan.${b}` as StringKey)}
+                selected={level === b}
+                onPress={() => setLevel(b)}
+                tint={brand.lime}
+              />
+            </View>
+          ))}
+        </View>
+        <AppText variant="label">{t('plan.cuisine')}</AppText>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+          {REGIONS.map((r) => (
+            <IconChoice
+              key={r}
+              icon="earth"
+              label={t(`region.${r}` as StringKey)}
+              selected={region === r}
+              onPress={() => setRegion(r)}
+              tint={brand.coral}
+            />
+          ))}
+        </View>
+        <Disclosure title={t('food2.planMore')} summary={t('plan.costNote')}>
+          <BigField
+            icon="cash"
+            label={t('plan.amount')}
+            value={amount}
+            onChangeText={setAmount}
+            keyboardType="decimal-pad"
+          />
+          <BigField
+            icon="card"
+            label={t('plan.currency')}
+            value={currency}
+            onChangeText={setCurrency}
+            autoCapitalize="none"
+            maxLength={3}
+          />
+        </Disclosure>
         <Button
           label={t('plan.preview')}
           disabled={!guide}
@@ -171,18 +192,35 @@ export default function Plan() {
       {msg ? <Notice>{msg}</Notice> : null}
       {preview ? (
         <View style={{ gap: spacing.md }}>
+          <AppText variant="heading" accessibilityRole="header">
+            {t('food2.planStep2')}
+          </AppText>
           {preview.days.map((d) => (
             <DepthCard key={d.dayIndex}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                 <IconBadge name="calendar" size={32} />
-                <AppText variant="heading">{t('plan.day', { n: d.dayIndex + 1 })}</AppText>
-              </View>
-              {mealsText(d).map((line) => (
-                <AppText key={line} variant="caption" muted>
-                  {line}
+                <AppText variant="heading" style={{ flex: 1 }}>
+                  {t('plan.day', { n: d.dayIndex + 1 })}
                 </AppText>
+                <AppText variant="caption" muted>
+                  {kcalText(d.totals)}
+                </AppText>
+              </View>
+              {d.meals.map((m) => (
+                <View key={m.mealType} style={{ flexDirection: 'row', gap: spacing.sm }}>
+                  <IconBadge
+                    name={MEAL_ICON[m.mealType] ?? 'restaurant'}
+                    size={28}
+                    fill={brand.violet}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="label">{t(`food.meal.${m.mealType}` as StringKey)}</AppText>
+                    <AppText variant="caption" muted>
+                      {m.items.map((i) => `${i.name} ${Math.round(i.grams)} g`).join(', ')}
+                    </AppText>
+                  </View>
+                </View>
               ))}
-              <AppText variant="label">{kcalText(d.totals)}</AppText>
             </DepthCard>
           ))}
           <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
@@ -198,32 +236,43 @@ export default function Plan() {
           </View>
         </View>
       ) : null}
-      <SectionTitle icon="bookmark" title={t('plan.mine')} />
-      {plans && plans.length === 0 ? <AppText muted>{t('plan.none')}</AppText> : null}
+      <AppText variant="heading" accessibilityRole="header">
+        {t('food2.planStep3')}
+      </AppText>
+      {plans && plans.length === 0 ? (
+        <EmptyState icon="bookmark-outline" title={t('plan.mine')} body={t('food2.planEmpty')} />
+      ) : null}
       {(plans ?? []).map((p) => (
         <DepthCard key={p.id}>
-          <AppText variant="label">{`${p.name} · ${formatDate(p.startDate)} · ${t(`plan.${p.budgetLevel}` as StringKey)}`}</AppText>
-          <AppText
-            variant="caption"
-            muted
-          >{`${p.items.length} items · ~${Math.round(totals(p.items.map((i) => ({ name: i.name, foodId: i.foodId, grams: i.grams, kcal: i.kcal, proteinG: i.proteinG, carbsG: i.carbsG, fatG: i.fatG, kcalLow: i.kcal, kcalHigh: i.kcal, source: 'curated', confidence: 'medium', userEdited: false }))).kcal / p.days)} kcal/day`}</AppText>
-          <Button
-            variant="secondary"
-            label={openList === p.id ? t('grocery.hide') : t('grocery.show')}
-            onPress={() => setOpenList(openList === p.id ? null : p.id)}
-          />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <IconBadge name="bookmark" size={36} fill={brand.lime} />
+            <View style={{ flex: 1 }}>
+              <AppText variant="label">{`${p.name} · ${formatDate(p.startDate)}`}</AppText>
+              <AppText
+                variant="caption"
+                muted
+              >{`${t(`plan.${p.budgetLevel}` as StringKey)} · ${p.items.length} items · ~${Math.round(totals(p.items.map((i) => ({ name: i.name, foodId: i.foodId, grams: i.grams, kcal: i.kcal, proteinG: i.proteinG, carbsG: i.carbsG, fatG: i.fatG, kcalLow: i.kcal, kcalHigh: i.kcal, source: 'curated', confidence: 'medium', userEdited: false }))).kcal / p.days)} kcal/day`}</AppText>
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
+            <Button
+              variant="secondary"
+              label={openList === p.id ? t('grocery.hide') : t('grocery.show')}
+              onPress={() => setOpenList(openList === p.id ? null : p.id)}
+            />
+            <Button
+              variant="secondary"
+              label={t('common.delete')}
+              onPress={async () => {
+                try {
+                  await store.deleteMealPlan(p.id);
+                } catch (e) {
+                  setErr(errorMessage(e));
+                }
+              }}
+            />
+          </View>
           {openList === p.id ? <GroceryList planName={p.name} items={p.items} /> : null}
-          <Button
-            variant="secondary"
-            label={t('common.delete')}
-            onPress={async () => {
-              try {
-                await store.deleteMealPlan(p.id);
-              } catch (e) {
-                setErr(errorMessage(e));
-              }
-            }}
-          />
         </DepthCard>
       ))}
     </Screen>

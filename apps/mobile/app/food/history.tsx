@@ -1,5 +1,6 @@
 import { View } from 'react-native';
-import { IconBadge, SectionTitle } from '@/ui/kit';
+import { Disclosure, IconBadge, SectionTitle, type IconName } from '@/ui/kit';
+import { FoodHero } from '@/food/kit';
 import { brand } from '@/theme/tokens';
 import { router } from 'expo-router';
 import { localDateKey, totals } from '@dancehall/shared';
@@ -17,6 +18,13 @@ import { Notice } from '@/ui/Banner';
 import { Screen } from '@/ui/Screen';
 import { SkeletonList } from '@/ui/Skeleton';
 
+const MEAL_ICON: Record<string, IconName> = {
+  breakfast: 'sunny',
+  lunch: 'restaurant',
+  dinner: 'moon',
+  snack: 'nutrition',
+};
+
 export default function History() {
   const { logs, timeZone, error, loading } = useFoodData();
   const { spacing } = useTheme();
@@ -27,16 +35,22 @@ export default function History() {
   }
   const week = weeklyNutrition(logs, timeZone, new Date());
   const keys = [...days.keys()].sort().reverse().slice(0, 30);
+  const mealCount = keys.reduce((n, k) => n + days.get(k)!.length, 0);
   return (
-    <Screen
-      top={false}
-      banner={{
-        world: 'food',
-        title: t('ban.foodHistory.title'),
-        line: t('ban.foodHistory.line'),
-        pulse: 'idle',
-      }}
-    >
+    <Screen>
+      <FoodHero
+        title={t('ban.foodHistory.title')}
+        line={t('food2.histLine')}
+        pulse={keys.length > 0 ? 'welcome' : 'idle'}
+        stats={
+          keys.length > 0
+            ? [
+                { label: t('food2.histDays'), value: String(keys.length) },
+                { label: t('food2.histMeals'), value: String(mealCount) },
+              ]
+            : []
+        }
+      />
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {loading && logs.length === 0 ? <SkeletonList label={t('common.loading')} /> : null}
       {!loading && keys.length === 0 ? (
@@ -54,35 +68,32 @@ export default function History() {
           <NutritionWeekBars week={week} />
         </DepthCard>
       ) : null}
-      {keys.map((k) => {
+      {keys.map((k, idx) => {
         const ls = days.get(k)!;
         const sum = totals(ls.flatMap((l) => l.items));
         return (
-          <DepthCard key={k}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-              <IconBadge name="calendar" size={40} fill={brand.violet} />
-              <View style={{ flex: 1 }}>
-                <AppText variant="heading" accessibilityRole="header">
-                  {formatDate(k)}
-                </AppText>
-                <AppText variant="caption" muted>
-                  {kcalText(sum)}
-                </AppText>
-              </View>
-            </View>
-            <View style={{ gap: spacing.md }}>
-              {ls.map((l) => (
-                <View key={l.id} style={{ gap: spacing.sm }}>
-                  <AppText variant="label" muted>
-                    {t(`food.meal.${l.mealType}` as StringKey)}
-                  </AppText>
-                  {l.items.map((i) => (
-                    <DiaryItem key={i.id} item={i} />
-                  ))}
+          <Disclosure
+            key={k}
+            title={formatDate(k)}
+            summary={`${ls.length} ${ls.length === 1 ? 'meal' : 'meals'} · ${kcalText(sum)}`}
+            initiallyOpen={idx === 0}
+          >
+            {ls.map((l) => (
+              <View key={l.id} style={{ gap: spacing.sm }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                  <IconBadge
+                    name={MEAL_ICON[l.mealType] ?? 'restaurant'}
+                    size={28}
+                    fill={brand.violet}
+                  />
+                  <AppText variant="label">{t(`food.meal.${l.mealType}` as StringKey)}</AppText>
                 </View>
-              ))}
-            </View>
-          </DepthCard>
+                {l.items.map((i) => (
+                  <DiaryItem key={i.id} item={i} />
+                ))}
+              </View>
+            ))}
+          </Disclosure>
         );
       })}
     </Screen>

@@ -1,11 +1,14 @@
-import { SectionTitle } from '@/ui/kit';
+import { IconBadge, SectionTitle } from '@/ui/kit';
 import { useState } from 'react';
-import { Switch, View } from 'react-native';
+import { View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { FoodHero } from '@/food/kit';
+import { SettingRow } from '@/ui/SettingRow';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage, useLoad } from '@/data/hooks';
 import { formatDate } from '@/lib/format';
 import { t } from '@/i18n';
-import { spacing } from '@/theme/tokens';
+import { brand, radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
@@ -40,53 +43,74 @@ export default function CoachSettings() {
   };
   const on = consents?.ai_coach_personalization ?? false;
 
+  const used = (usage?.features ?? []).reduce((n, f) => n + f.used, 0);
   return (
-    <Screen
-      top={false}
-      banner={{
-        world: 'coach',
-        title: t('ban.coachSettings.title'),
-        line: t('ban.coachSettings.line'),
-        pulse: 'idle',
-      }}
-    >
+    <Screen>
+      <FoodHero
+        world="coach"
+        title={t('ban.coachSettings.title')}
+        line={t('ban.coachSettings.line')}
+        pulse={on ? 'welcome' : 'idle'}
+        stats={[
+          { label: t('coachset.personalization'), value: on ? 'On' : 'Off' },
+          { label: t('coachset.history'), value: String((convs ?? []).length) },
+        ]}
+      />
       {err ? <Notice tone="warning">{err}</Notice> : null}
       {consentError ? (
         <Notice tone="warning">{`${consentError} ${t('privacy.loadFailed')}`}</Notice>
       ) : null}
+
+      <AppText variant="heading" accessibilityRole="header">
+        {t('coachset.personalization')}
+      </AppText>
+      <SettingRow
+        icon="sparkles"
+        title={t('privacy.aiCoach')}
+        body={t('coach.personalizeBody')}
+        value={on}
+        disabled={!consents}
+        onChange={(v) => guard(() => store.setConsent('ai_coach_personalization', v))}
+      />
       <DepthCard>
-        <SectionTitle icon="sparkles" title={t('coachset.personalization')} />
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: spacing.md,
-          }}
-        >
-          <AppText variant="label" style={{ flex: 1 }}>
-            {t('privacy.aiCoach')}
+        <SectionTitle icon="eye" title={t('coach.used')} />
+        {(summary ?? []).length === 0 ? (
+          <AppText variant="caption" muted>
+            {t('coach.usedNothing')}
           </AppText>
-          <Switch
-            accessibilityLabel={t('privacy.aiCoach')}
-            value={on}
-            disabled={!consents}
-            onValueChange={(v) => guard(() => store.setConsent('ai_coach_personalization', v))}
-            trackColor={{ true: colors.primary, false: colors.border }}
-          />
-        </View>
-        <AppText variant="caption" muted>
-          {t('coach.personalizeBody')}
-        </AppText>
-        <AppText variant="label">{t('coach.used')}</AppText>
+        ) : null}
         {(summary ?? []).map((l) => (
-          <AppText key={l} variant="caption" muted>{`• ${l}`}</AppText>
+          <View key={l} style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
+            <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+            <AppText variant="caption" style={{ flex: 1 }}>
+              {l}
+            </AppText>
+          </View>
         ))}
       </DepthCard>
 
+      {store.setAiPaused ? (
+        <SettingRow
+          icon="pause-circle"
+          title={t('coachset.pause')}
+          body={t('coachset.pauseNote')}
+          value={usage?.userPaused === true}
+          onChange={(v) => guard(() => store.setAiPaused!(v))}
+        />
+      ) : null}
+
+      <AppText variant="heading" accessibilityRole="header">
+        {t('coachset.history')}
+      </AppText>
       <DepthCard>
-        <SectionTitle icon="chatbubbles" title={t('coachset.history')} />
-        {(convs ?? []).length === 0 ? <AppText muted>{t('coachset.noHistory')}</AppText> : null}
+        {(convs ?? []).length === 0 ? (
+          <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
+            <IconBadge name="chatbubbles" size={40} fill={brand.violet} />
+            <AppText muted style={{ flex: 1 }}>
+              {t('coachset.noHistory')}
+            </AppText>
+          </View>
+        ) : null}
         {(convs ?? []).map((c) => (
           <View key={c.id} style={{ gap: spacing.xs }}>
             <AppText variant="label">{c.title}</AppText>
@@ -103,15 +127,22 @@ export default function CoachSettings() {
         ))}
         {(convs ?? []).length > 0 ? (
           confirmAll ? (
-            <Button
-              label={`${t('coachset.deleteAll')}?`}
-              onPress={() =>
-                guard(async () => {
-                  await store.deleteAllConversations!();
-                  setConfirmAll(false);
-                })
-              }
-            />
+            <View style={{ gap: spacing.sm }} accessibilityLiveRegion="polite">
+              <Button
+                label={`${t('coachset.deleteAll')}?`}
+                onPress={() =>
+                  guard(async () => {
+                    await store.deleteAllConversations!();
+                    setConfirmAll(false);
+                  })
+                }
+              />
+              <Button
+                variant="secondary"
+                label={t('food2.keep')}
+                onPress={() => setConfirmAll(false)}
+              />
+            </View>
           ) : (
             <Button
               variant="secondary"
@@ -125,14 +156,19 @@ export default function CoachSettings() {
         </AppText>
       </DepthCard>
 
+      <AppText variant="heading" accessibilityRole="header">
+        {t('coachset.usage')}
+      </AppText>
       <DepthCard>
-        <SectionTitle icon="speedometer" title={t('coachset.usage')} />
+        {(usage?.features ?? []).length === 0 ? (
+          <AppText variant="caption" muted>{`${used} / 0`}</AppText>
+        ) : null}
         {(usage?.features ?? []).map((f) => (
           <View key={f.feature} style={{ gap: 4 }}>
             <AppText
-              variant="caption"
-              muted
-            >{`${f.feature.replace('_', ' ')}: ${f.used} / ${f.allowance}`}</AppText>
+              variant="label"
+              style={{ textTransform: 'capitalize' }}
+            >{`${f.feature.replace(/_/g, ' ')}: ${f.used} / ${f.allowance}`}</AppText>
             <ProgressBar
               fraction={f.allowance ? f.used / f.allowance : 0}
               label={`${f.feature} usage`}
@@ -143,36 +179,19 @@ export default function CoachSettings() {
         {usage?.staffPaused ? <Notice>{t('coachset.staffPaused')}</Notice> : null}
       </DepthCard>
 
-      {store.setAiPaused ? (
-        <DepthCard>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: spacing.md,
-            }}
-          >
-            <AppText variant="label" style={{ flex: 1 }}>
-              {t('coachset.pause')}
-            </AppText>
-            <Switch
-              accessibilityLabel={t('coachset.pause')}
-              value={usage?.userPaused === true}
-              onValueChange={(v) => guard(() => store.setAiPaused!(v))}
-              trackColor={{ true: colors.primary, false: colors.border }}
-            />
-          </View>
-          <AppText variant="caption" muted>
-            {t('coachset.pauseNote')}
-          </AppText>
-        </DepthCard>
-      ) : null}
-
       {store.requestAccountDeletion ? (
-        <DepthCard>
+        <View
+          style={{
+            borderRadius: radius.lg,
+            borderWidth: 2,
+            borderColor: colors.warningText,
+            backgroundColor: colors.warningBg,
+            padding: spacing.md,
+            gap: spacing.sm,
+          }}
+        >
           <SectionTitle icon="trash" title={t('coachset.deleteAccount')} />
-          <AppText variant="caption" muted>
+          <AppText variant="caption" style={{ color: colors.warningText }}>
             {t('coachset.deleteAccountNote')}
           </AppText>
           {deletion ? (
@@ -191,34 +210,17 @@ export default function CoachSettings() {
               onPress={() => guard(() => store.requestAccountDeletion!())}
             />
           )}
-        </DepthCard>
+        </View>
       ) : null}
 
       {config.authMode === 'mock' ? (
-        <DepthCard>
-          <SectionTitle icon="flask" title={t('coachset.dev')} />
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: spacing.md,
-            }}
-          >
-            <AppText variant="label" style={{ flex: 1 }}>
-              {t('coachset.kill')}
-            </AppText>
-            <Switch
-              accessibilityLabel={t('coachset.kill')}
-              value={(usage?.staffPaused ?? usage?.paused) === true}
-              onValueChange={(v) => guard(() => store.devSetKillSwitch!(v))}
-              trackColor={{ true: colors.primary, false: colors.border }}
-            />
-          </View>
-          <AppText variant="caption" muted>
-            {t('coachset.killNote')}
-          </AppText>
-        </DepthCard>
+        <SettingRow
+          icon="flask"
+          title={t('coachset.kill')}
+          body={`${t('coachset.dev')}. ${t('coachset.killNote')}`}
+          value={(usage?.staffPaused ?? usage?.paused) === true}
+          onChange={(v) => guard(() => store.devSetKillSwitch!(v))}
+        />
       ) : null}
     </Screen>
   );

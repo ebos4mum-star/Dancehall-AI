@@ -164,6 +164,8 @@ export function BigField({
   keyboardType,
   maxLength,
   autoComplete,
+  editable = true,
+  autoCapitalize,
   status,
 }: {
   label: string;
@@ -175,7 +177,9 @@ export function BigField({
   placeholder?: string;
   keyboardType?: KeyboardTypeOptions;
   maxLength?: number;
-  autoComplete?: 'name';
+  autoComplete?: 'name' | 'email' | 'one-time-code';
+  editable?: boolean;
+  autoCapitalize?: 'none' | 'words';
   /** A short validation state shown under the field (never the only signal: it has text). */
   status?: { ok: boolean; text: string } | null;
 }) {
@@ -207,6 +211,8 @@ export function BigField({
           keyboardType={keyboardType}
           maxLength={maxLength}
           autoComplete={autoComplete}
+          editable={editable}
+          autoCapitalize={autoCapitalize}
           style={[
             typography.body,
             {
