@@ -384,6 +384,29 @@ async function step(name, fn) {
       await btn('Add habit').isDisabled();
     },
   );
+  await step('K: water logging, focus choice and honest estimates', async () => {
+    await tab('Food');
+    await seen('Water today');
+    await btn('Add a glass (250 ml)').click();
+    await seen('250 of about');
+    await btn('Add a bottle (500 ml)').click();
+    await seen('750 of about');
+    await btn('Undo last').click();
+    await seen('250 of about');
+    await seen('Your estimates');
+    await seen('Estimate · not reviewed by a dietitian');
+    await tab('Me');
+    await btn(/^Goals/).click();
+    await seen('Your focus');
+    await btn('Maintain weight').click();
+    await seen('Keep your weight steady');
+    await btn('No numbers').click();
+    await p.goBack();
+    await p.waitForTimeout(400);
+    await tab('Food');
+    await seen('No calorie target');
+    await p.goBack().catch(() => {});
+  });
   await step('Privacy: data survives a reload (device storage), no page errors', async () => {
     await p.goto(base);
     await p.waitForTimeout(2500);

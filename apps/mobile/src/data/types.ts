@@ -14,6 +14,9 @@ import type {
   Sex,
   ActivityLevel,
   UnitSystem,
+  WellnessEntry,
+  WellnessEntryInput,
+  WellnessPrefs,
 } from '@dancehall/shared';
 
 export interface Session {
@@ -184,6 +187,15 @@ export interface DataStore {
   archiveHabit(id: string): Promise<void>;
   listHabitCheckins(sinceDay: string): Promise<HabitCheckin[]>;
   setHabitDone(habitId: string, day: string, done: boolean): Promise<void>;
+
+  // Wellness (optional logs and preferences). Optional: not every adapter provides them.
+  /** Entries on or after `sinceDay` (YYYY-MM-DD), newest first. */
+  listWellness?(sinceDay?: string): Promise<WellnessEntry[]>;
+  /** Idempotent when `clientKey` is repeated: the existing entry is returned and nothing new is recorded. */
+  addWellness?(input: WellnessEntryInput): Promise<WellnessEntry>;
+  deleteWellness?(id: string): Promise<void>;
+  getWellnessPrefs?(): Promise<WellnessPrefs>;
+  setWellnessPrefs?(patch: Partial<WellnessPrefs>): Promise<WellnessPrefs>;
 
   // Household meals and grocery coordination. Optional: not every adapter provides them.
   getHousehold?(): Promise<Household | null>;
@@ -457,6 +469,7 @@ export interface DailyPlanItem {
     minutes?: number;
     lowImpact?: boolean;
     foodId?: string;
+    action?: 'log_water' | 'log_walk';
   };
   doneAt: string | null;
 }

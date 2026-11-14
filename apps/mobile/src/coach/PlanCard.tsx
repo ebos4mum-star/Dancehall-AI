@@ -3,7 +3,7 @@ import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { nextUp, type NextAction } from '@/today/nextUp';
 import { router } from 'expo-router';
-import { PLAN_MODES, type PlanMode } from '@dancehall/shared';
+import { PLAN_MODES, localDateKey, type PlanMode } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage, useLoad } from '@/data/hooks';
 import { t, type StringKey } from '@/i18n';
@@ -21,8 +21,9 @@ import { SkeletonList } from '@/ui/Skeleton';
 /** The Daily Fit Plan: a few optional, explained suggestions. Ticking an item is the person's own action (no confirmation needed). */
 /** `onAccomplished` fires when the person ticks an item done (never when they un-tick), so the screen can mark the moment. */
 export function PlanCard({ onAccomplished }: { onAccomplished?: () => void }) {
-  const { store } = useApp();
+  const { store, profile } = useApp();
   const { colors } = useTheme();
+  const [logging, setLogging] = useState(false);
   const supported = typeof store.getDailyPlan === 'function';
   const {
     data: plan,
@@ -167,6 +168,33 @@ export function PlanCard({ onAccomplished }: { onAccomplished?: () => void }) {
                                 }
                               : { pathname: '/dance/[id]', params: { id: it.ref!.workoutId! } },
                           )
+                        }
+                      />
+                    ) : null}
+                    {!done && it.ref?.action && store.addWellness ? (
+                      <Button
+                        variant="secondary"
+                        disabled={logging}
+                        label={it.ref.action === 'log_water' ? t('wl.logGlass') : t('wl.logWalk')}
+                        onPress={() =>
+                          guard(async () => {
+                            // One tap records it and ticks the item, so the same action cannot be logged twice from here.
+                            setLogging(true);
+                            try {
+                              await store.addWellness!({
+                                kind: it.ref!.action === 'log_water' ? 'hydration' : 'walk',
+                                day: localDateKey(new Date(), profile?.timeZone ?? null),
+                                amount:
+                                  it.ref!.action === 'log_water' ? 250 : (it.ref!.minutes ?? 10),
+                                clientKey: `plan-${it.id}`.slice(0, 64).padEnd(8, '0'),
+                              });
+                              await store.setPlanItemDone!(it.id, true);
+                              haptics.tap();
+                              onAccomplished?.();
+                            } finally {
+                              setLogging(false);
+                            }
+                          })
                         }
                       />
                     ) : null}

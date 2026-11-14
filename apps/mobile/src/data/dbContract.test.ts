@@ -275,6 +275,19 @@ describe('grant contract: every column the adapter writes is granted to authenti
     await s.addHabit('Stretch');
     await s.archiveHabit('h');
     await s.setHabitDone('h', '2026-06-01', true);
+    await s.addWellness!({
+      kind: 'walk',
+      day: '2026-06-01',
+      amount: 20,
+      amount2: 1.5,
+      label: null,
+      clientKey: 'contract-key-1',
+    });
+    for (const e of [false, true]) {
+      exists = e;
+      await s.setWellnessPrefs!({ goalIntent: 'maintain' });
+    }
+    exists = false;
   }
 
   it('covers inserts and updates for onboarding, goals, weight, food, workouts and challenges', async () => {
@@ -311,6 +324,8 @@ describe('grant contract: every column the adapter writes is granted to authenti
       'readiness_screenings',
       'habits',
       'habit_checkins',
+      'wellness_entries',
+      'wellness_prefs',
     ])
       expect(tables.has(t), `${t} was exercised`).toBe(true);
   });

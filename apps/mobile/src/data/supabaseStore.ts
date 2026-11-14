@@ -12,10 +12,14 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import {
   consentPurposeSchema,
   evaluateReadiness,
+  parsePrefs,
   type ConsentPurpose,
   type FoodItemValues,
   type MealType,
   type ReadinessQuestion,
+  type WellnessEntry,
+  type WellnessEntryInput,
+  type WellnessPrefs,
 } from '@dancehall/shared';
 import { createCoachAdapter } from './supabaseCoach';
 import {
@@ -76,6 +80,8 @@ export function mapSupabaseError(
   const m = CODES.exec(msg);
   if (m) return new StoreError(m[1] as StoreErrorCode, msg);
   if (/fit_challenges_one_active/.test(msg)) return new StoreError('active_challenge_exists', msg);
+  if (/wellness_sleep_night_idx|wellness_entries_client_key_idx/.test(msg))
+    return new StoreError('invalid_input', msg);
   if (/target_leaves_rest_days/.test(msg)) return new StoreError('invalid_input', msg);
   if (e?.code === '23505' || /goals_one_active_per_period/.test(msg))
     return new StoreError('active_goal_exists', msg);
@@ -88,6 +94,15 @@ export function mapSupabaseError(
 
 type Row = Record<string, unknown>;
 const num = (v: unknown) => Number(v);
+const fromWellnessRow = (r: Row): WellnessEntry => ({
+  id: r.id as string,
+  kind: r.kind as WellnessEntry['kind'],
+  day: r.day as string,
+  amount: Number(r.amount),
+  amount2: r.amount2 == null ? null : Number(r.amount2),
+  label: (r.label as string | null) ?? null,
+  createdAt: r.created_at as string,
+});
 
 const toItemRow = (v: FoodItemValues) => ({
   food_id: v.foodId,
@@ -699,6 +714,75 @@ function createBaseStore(
       if (done) ok(await db.from('habit_checkins').insert({ habit_id: habitId, day }));
       else ok(await db.from('habit_checkins').delete().eq('habit_id', habitId).eq('day', day));
       emit();
+    },
+
+    // ---------- Wellness (optional logs and preferences; RLS and range checks live in the database) ----------
+    async listWellness(sinceDay = '0000-01-01') {
+      return (
+        ok(
+          await db
+            .from('wellness_entries')
+            .select('id,kind,day,amount,amount2,label,created_at')
+            .gte('day', sinceDay)
+            .order('day', { ascending: false })
+            .limit(2000),
+        ) as Row[]
+      ).map(fromWellnessRow);
+    },
+    async addWellness(input: WellnessEntryInput) {
+      const row = {
+        kind: input.kind,
+        day: input.day,
+        amount: input.amount,
+        amount2: input.amount2 ?? null,
+        label: input.label ?? null,
+        client_key: input.clientKey ?? null,
+      };
+      const res = await db
+        .from('wellness_entries')
+        .insert(row)
+        .select('id,kind,day,amount,amount2,label,created_at')
+        .single();
+      if (
+        res.error &&
+        input.clientKey &&
+        /wellness_entries_client_key_idx/.test(res.error.message ?? '')
+      ) {
+        // The same action already succeeded: return that entry instead of recording it twice.
+        return fromWellnessRow(
+          ok(
+            await db
+              .from('wellness_entries')
+              .select('id,kind,day,amount,amount2,label,created_at')
+              .eq('client_key', input.clientKey)
+              .single(),
+          ) as Row,
+        );
+      }
+      const r = fromWellnessRow(ok(res) as Row);
+      emit();
+      return r;
+    },
+    async deleteWellness(id: string) {
+      ok(await db.from('wellness_entries').delete().eq('id', id));
+      emit();
+    },
+    async getWellnessPrefs() {
+      const r = ok(await db.from('wellness_prefs').select('data').maybeSingle()) as Row | null;
+      return parsePrefs(r?.data);
+    },
+    async setWellnessPrefs(patch: Partial<WellnessPrefs>) {
+      const cur = ok(await db.from('wellness_prefs').select('data').maybeSingle()) as Row | null;
+      const next = parsePrefs({ ...parsePrefs(cur?.data), ...patch });
+      if (cur)
+        ok(
+          await db
+            .from('wellness_prefs')
+            .update({ data: next, updated_at: new Date().toISOString() }),
+        );
+      else ok(await db.from('wellness_prefs').insert({ data: next }));
+      emit();
+      return next;
     },
 
     // ---------- Household (shared meals and grocery only; RLS limits every row to members) ----------

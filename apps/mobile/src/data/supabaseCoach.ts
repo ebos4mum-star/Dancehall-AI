@@ -8,6 +8,9 @@ import {
   contextSummaryLines,
   detectComeback,
   generateDailyPlan,
+  parsePrefs,
+  wellnessPlanContext,
+  addDaysIso,
   recentActiveDayCount,
   localDateKey,
   monthlyAllowance,
@@ -42,6 +45,8 @@ type Base = Pick<
   | 'latestReadiness'
   | 'createSession'
   | 'createGoal'
+  | 'getWellnessPrefs'
+  | 'listWellness'
 >;
 export interface CoachAdapterDeps {
   db: SupabaseClient;
@@ -161,14 +166,17 @@ export function createCoachAdapter(d: CoachAdapterDeps): Partial<DataStore> {
   });
 
   async function buildDraft(date: string, mode: PlanMode) {
-    const [profile, sessions, logs, goals, weights, readiness] = await Promise.all([
-      base.getProfile(),
-      base.listSessions(),
-      base.listFoodLogs(),
-      base.listGoals(),
-      base.listWeights(),
-      base.latestReadiness(),
-    ]);
+    const [profile, sessions, logs, goals, weights, readiness, wellnessPrefs, wellnessEntries] =
+      await Promise.all([
+        base.getProfile(),
+        base.listSessions(),
+        base.listFoodLogs(),
+        base.listGoals(),
+        base.listWeights(),
+        base.latestReadiness(),
+        base.getWellnessPrefs?.() ?? parsePrefs(null),
+        base.listWellness?.(addDaysIso(date, -2)) ?? [],
+      ]);
     const tz = profile.timeZone;
     const latestW = [...weights].sort((a, b) => b.measuredAt.localeCompare(a.measuredAt))[0];
     const hour =
@@ -205,6 +213,12 @@ export function createCoachAdapter(d: CoachAdapterDeps): Partial<DataStore> {
         ? Math.floor((now().getTime() - Date.parse(latestW.measuredAt)) / 86_400_000)
         : null,
       recentActiveDays: recentActiveDayCount(sessions, date, tz),
+      wellness: wellnessPlanContext({
+        prefs: wellnessPrefs,
+        entries: wellnessEntries,
+        day: date,
+        weightKg: latestW?.weightKg ?? null,
+      }),
       seed: Number(date.replace(/-/g, '')) % 97,
     });
   }

@@ -41,7 +41,13 @@ import {
   proposeGoal,
   summarizeWeights,
   weekStartOf,
+  entryProblem,
+  parsePrefs,
+  wellnessPlanContext,
   type PlanMode,
+  type WellnessEntry,
+  type WellnessEntryInput,
+  type WellnessPrefs,
 } from '@dancehall/shared';
 import {
   StoreError,
@@ -120,6 +126,8 @@ interface State {
   challenges: FitChallenge[];
   habits: Array<Habit & { archivedAt: string | null }>;
   habitCheckins: HabitCheckin[];
+  wellness?: Array<WellnessEntry & { clientKey: string | null }>;
+  wellnessPrefs?: unknown;
   /** Development mock: a household of one (there is no second synthetic person to join). */
   household?: { id: string; name: string; inviteCode: string | null } | null;
   householdMeals?: Array<Omit<HouseholdMeal, 'addedByMe'>>;
@@ -781,6 +789,65 @@ export class MockStore implements DataStore {
     await this.commit();
   }
 
+  // ---------- Wellness (optional logs and preferences; same rules as the database) ----------
+  async listWellness(sinceDay = '0000-01-01'): Promise<WellnessEntry[]> {
+    const s = await this.authed();
+    return (s.wellness ?? [])
+      .filter((e) => e.day >= sinceDay)
+      .sort((a, b) => b.day.localeCompare(a.day) || b.createdAt.localeCompare(a.createdAt))
+      .map(({ clientKey: _k, ...e }) => ({ ...e }));
+  }
+  async addWellness(input: WellnessEntryInput): Promise<WellnessEntry> {
+    const s = await this.authed();
+    this.requireConsent(s);
+    s.wellness ??= [];
+    const key = input.clientKey ?? null;
+    if (key !== null && (key.length < 8 || key.length > 64))
+      throw new StoreError('invalid_input', 'client key');
+    if (key !== null) {
+      const dup = s.wellness.find((e) => e.clientKey === key);
+      if (dup) {
+        const { clientKey: _k, ...e } = dup;
+        return { ...e };
+      }
+    }
+    const today = localDateKey(this.now(), s.profile.timeZone);
+    const problem = entryProblem(input, today);
+    if (problem) throw new StoreError('invalid_input', problem);
+    if (input.kind === 'sleep' && s.wellness.some((e) => e.kind === 'sleep' && e.day === input.day))
+      throw new StoreError('invalid_input', 'sleep already logged for that night');
+    const rec = {
+      id: newId(),
+      kind: input.kind,
+      day: input.day,
+      amount: input.amount,
+      amount2: input.amount2 ?? null,
+      label: input.label ?? null,
+      createdAt: this.now().toISOString(),
+      clientKey: key,
+    };
+    s.wellness.push(rec);
+    await this.commit();
+    const { clientKey: _k, ...out } = rec;
+    return out;
+  }
+  async deleteWellness(id: string): Promise<void> {
+    const s = await this.authed();
+    s.wellness = (s.wellness ?? []).filter((e) => e.id !== id);
+    await this.commit();
+  }
+  async getWellnessPrefs(): Promise<WellnessPrefs> {
+    return parsePrefs((await this.authed()).wellnessPrefs);
+  }
+  async setWellnessPrefs(patch: Partial<WellnessPrefs>): Promise<WellnessPrefs> {
+    const s = await this.authed();
+    this.requireConsent(s);
+    const next = parsePrefs({ ...parsePrefs(s.wellnessPrefs), ...patch });
+    s.wellnessPrefs = next;
+    await this.commit();
+    return next;
+  }
+
   // ---------- Habits (personal, gentle: counts only) ----------
   async listHabits(): Promise<Habit[]> {
     const s = await this.authed();
@@ -1022,6 +1089,12 @@ export class MockStore implements DataStore {
         ? Math.floor((this.now().getTime() - Date.parse(latestW.measuredAt)) / 86_400_000)
         : null,
       recentActiveDays: recentActiveDayCount(s.sessions, date, tz),
+      wellness: wellnessPlanContext({
+        prefs: parsePrefs(s.wellnessPrefs),
+        entries: (s.wellness ?? []).map(({ clientKey: _k, ...e }) => e),
+        day: date,
+        weightKg: latestW?.weightKg ?? null,
+      }),
       seed: Number(date.replace(/-/g, '')) % 97,
     });
     return {

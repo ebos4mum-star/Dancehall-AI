@@ -431,3 +431,83 @@ describe('food item removal', () => {
     expect(calls.some((c) => c.table === 'food_logs' && c.op === 'delete')).toBe(false);
   });
 });
+
+describe('wellness persistence', () => {
+  it('writes only granted columns and maps the row', async () => {
+    respond = () => ({
+      data: {
+        id: 'w1',
+        kind: 'hydration',
+        day: '2026-06-01',
+        amount: '250',
+        amount2: null,
+        label: null,
+        created_at: 't',
+      },
+      error: null,
+    });
+    const e = await store().addWellness!({
+      kind: 'hydration',
+      day: '2026-06-01',
+      amount: 250,
+      clientKey: 'tap-key-0001',
+    });
+    expect(last()).toMatchObject({ table: 'wellness_entries', op: 'insert' });
+    expect(Object.keys(last().payload as object).sort()).toEqual(
+      ['amount', 'amount2', 'client_key', 'day', 'kind', 'label'].sort(),
+    );
+    expect(e).toMatchObject({ id: 'w1', amount: 250, amount2: null });
+  });
+  it('returns the existing entry when the same client key was already recorded', async () => {
+    let n = 0;
+    respond = () => {
+      n += 1;
+      return n === 1
+        ? {
+            data: null,
+            error: {
+              code: '23505',
+              message:
+                'duplicate key value violates unique constraint "wellness_entries_client_key_idx"',
+            },
+          }
+        : {
+            data: {
+              id: 'w9',
+              kind: 'walk',
+              day: '2026-06-01',
+              amount: 20,
+              amount2: null,
+              label: null,
+              created_at: 't',
+            },
+            error: null,
+          };
+    };
+    const e = await store().addWellness!({
+      kind: 'walk',
+      day: '2026-06-01',
+      amount: 20,
+      clientKey: 'tap-key-0002',
+    });
+    expect(e.id).toBe('w9');
+    expect(calls.filter((c) => c.op === 'insert')).toHaveLength(1);
+  });
+  it('maps a second sleep entry for the same night to invalid_input, not a goal error', async () => {
+    respond = () => ({
+      data: null,
+      error: {
+        code: '23505',
+        message: 'duplicate key value violates unique constraint "wellness_sleep_night_idx"',
+      },
+    });
+    expect(
+      await codeOf(store().addWellness!({ kind: 'sleep', day: '2026-06-01', amount: 7 })),
+    ).toBe('invalid_input');
+  });
+  it('deletes by id', async () => {
+    await store().deleteWellness!('w1');
+    expect(last()).toMatchObject({ table: 'wellness_entries', op: 'delete' });
+    expect(last().filters).toContainEqual(['id', 'w1']);
+  });
+});

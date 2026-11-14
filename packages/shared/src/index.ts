@@ -24,3 +24,5 @@ export * from './weekly';
 export * from './recommend';
 export * from './instruction-media';
 export * from './session-clock';
+export * from './wellness';
+export * from './nutrition-plan';
