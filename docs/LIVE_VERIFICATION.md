@@ -34,6 +34,7 @@ Order and contents:
 2. `20261208000100_household.sql`: five household tables, membership helper functions, five RPCs.
 3. `20261209000100_wellness.sql`: `wellness_entries`, `wellness_prefs`.
 4. `20261211000100_household_join_limit.sql`: `household_join_attempts` and an in-place replacement of `household_join` (adds the invite attempt limit; see `docs/SECURITY_DEFINER_REVIEW.md`). The only migration that replaces an existing function; same signature, owner, search path and grants.
+5. `20261212000100_celebrations.sql`: `celebrations`, the Pulse shown-state ledger (insert-only, owner-only, consent-gated; additive).
 
 Before: take a database backup or a Supabase branch if available (the project has no user data, so this is a precaution); re-run the fingerprint query (below) and confirm it still matches.
 Apply (needs explicit owner approval): one migration at a time, in the order above, as a named migration with the exact repository SQL, stopping at the first error.

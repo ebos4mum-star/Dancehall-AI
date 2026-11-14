@@ -55,7 +55,8 @@
     "20261207000100_habits.sql",
     "20261208000100_household.sql",
     "20261209000100_wellness.sql",
-    "20261211000100_household_join_limit.sql"
+    "20261211000100_household_join_limit.sql",
+    "20261212000100_celebrations.sql"
   ],
   "fingerprintAfterApplied": {
     "columns": "93d0c4105e0656c54cc111b7bfd28127",

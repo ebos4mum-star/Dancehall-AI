@@ -129,6 +129,8 @@ interface State {
   habitCheckins: HabitCheckin[];
   wellness?: Array<WellnessEntry & { clientKey: string | null }>;
   wellnessPrefs?: unknown;
+  /** Celebrations already handled (first write wins), mirroring the `celebrations` table. */
+  celebrations?: Array<{ id: string; mode: 'full' | 'gentle' | 'off'; at: string }>;
   /** Development mock: a household of one (there is no second synthetic person to join). */
   household?: { id: string; name: string; inviteCode: string | null } | null;
   /** Times of incorrect invite codes (mirrors the database limit: 5 in 15 minutes). */
@@ -849,6 +851,28 @@ export class MockStore implements DataStore {
     s.wellnessPrefs = next;
     await this.commit();
     return next;
+  }
+
+  async listCelebrations(): Promise<string[]> {
+    const s = await this.authed();
+    return (s.celebrations ?? []).map((c) => c.id);
+  }
+  async recordCelebrations(
+    items: Array<{ id: string; mode: 'full' | 'gentle' | 'off' }>,
+  ): Promise<void> {
+    const s = await this.authed();
+    this.requireConsent(s);
+    const have = new Set((s.celebrations ?? []).map((c) => c.id));
+    const re =
+      /^(daily|weekly|monthly|yearly):(water|habits|movement|movement_minutes|movement_weeks):\d{4}(-\d{2}){0,2}$/;
+    for (const it of items) {
+      if (!re.test(it.id) || !['full', 'gentle', 'off'].includes(it.mode))
+        throw new StoreError('invalid_input');
+      if (have.has(it.id)) continue;
+      have.add(it.id);
+      (s.celebrations ??= []).push({ id: it.id, mode: it.mode, at: this.now().toISOString() });
+    }
+    await this.commit();
   }
 
   // ---------- Habits (personal, gentle: counts only) ----------

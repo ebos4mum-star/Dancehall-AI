@@ -197,6 +197,10 @@ export interface DataStore {
   deleteWellness?(id: string): Promise<void>;
   getWellnessPrefs?(): Promise<WellnessPrefs>;
   setWellnessPrefs?(patch: Partial<WellnessPrefs>): Promise<WellnessPrefs>;
+  /** Ids of goal achievements already handled by Pulse (celebrated, or recorded without showing). Used so nothing is celebrated twice, on any device. */
+  listCelebrations?(): Promise<string[]>;
+  /** Records achievements as handled. First write wins: re-recording an id changes nothing and is not an error. */
+  recordCelebrations?(items: Array<{ id: string; mode: 'full' | 'gentle' | 'off' }>): Promise<void>;
 
   // Household meals and grocery coordination. Optional: not every adapter provides them.
   getHousehold?(): Promise<Household | null>;

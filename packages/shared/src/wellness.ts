@@ -23,6 +23,9 @@ export const DIET_PREFS = [
   'dairy_free',
 ] as const;
 export type DietPref = (typeof DIET_PREFS)[number];
+export const CELEBRATION_LEVELS = ['off', 'gentle', 'full'] as const;
+/** off = never celebrate; gentle = a calm Pulse message, no haptics; full = Pulse celebration with a brief haptic. */
+export type CelebrationLevel = (typeof CELEBRATION_LEVELS)[number];
 export const TRACKING_STYLES = ['detailed', 'light', 'none'] as const;
 export type TrackingStyle = (typeof TRACKING_STYLES)[number];
 
@@ -39,6 +42,14 @@ export interface WellnessPrefs {
   waterGoalMl: number | null;
   /** Optional free text about a wind-down routine (kept private, never analysed). */
   bedtimeRoutine: string | null;
+  /** Daily movement goal in minutes (dance, walking and strength together), if the person set one. */
+  dailyMovementMinutes: number | null;
+  /** How many weeks in a month the person wants to reach their weekly movement goal. Needs the weekly goal. */
+  monthlyGoalWeeks: number | null;
+  /** How many weeks in a year the person wants to reach their weekly movement goal. Needs the weekly goal. */
+  yearlyGoalWeeks: number | null;
+  /** How Pulse celebrates goals the person reached. */
+  celebrations: CelebrationLevel;
   /** Safety flags the person chose to share. Used only to avoid unsuitable targets. */
   pregnantOrPostpartum: boolean;
   eatingConcern: boolean;
@@ -52,6 +63,10 @@ export const DEFAULT_PREFS: WellnessPrefs = {
   tracking: 'light',
   waterGoalMl: null,
   bedtimeRoutine: null,
+  dailyMovementMinutes: null,
+  monthlyGoalWeeks: null,
+  yearlyGoalWeeks: null,
+  celebrations: 'full',
   pregnantOrPostpartum: false,
   eatingConcern: false,
 };
@@ -80,6 +95,11 @@ export function parsePrefs(raw: unknown): WellnessPrefs {
     tracking,
     waterGoalMl: num(r.waterGoalMl, 500, 6000),
     bedtimeRoutine: routine,
+    dailyMovementMinutes: num(r.dailyMovementMinutes, 1, 600),
+    monthlyGoalWeeks: num(r.monthlyGoalWeeks, 1, 5),
+    yearlyGoalWeeks: num(r.yearlyGoalWeeks, 1, 53),
+    celebrations:
+      CELEBRATION_LEVELS.find((g) => g === r.celebrations) ?? DEFAULT_PREFS.celebrations,
     pregnantOrPostpartum: r.pregnantOrPostpartum === true,
     eatingConcern: r.eatingConcern === true,
   };

@@ -512,6 +512,34 @@ describe('wellness persistence', () => {
   });
 });
 
+describe('celebration ledger persistence', () => {
+  it('lists handled achievements for the signed-in person', async () => {
+    respond = () => ({ data: [{ achievement_id: 'daily:water:2026-06-15' }], error: null });
+    expect(await store().listCelebrations!()).toEqual(['daily:water:2026-06-15']);
+    expect(last()).toMatchObject({ table: 'celebrations' });
+  });
+  it('records with ignore-duplicates, sending only the id and the mode', async () => {
+    await store().recordCelebrations!([
+      { id: 'daily:water:2026-06-15', mode: 'full' },
+      { id: 'weekly:movement_minutes:2026-06-15', mode: 'off' },
+    ]);
+    expect(last()).toMatchObject({ table: 'celebrations', op: 'upsert' });
+    expect(last().payload).toEqual([
+      { achievement_id: 'daily:water:2026-06-15', mode: 'full' },
+      { achievement_id: 'weekly:movement_minutes:2026-06-15', mode: 'off' },
+    ]);
+  });
+  it('records nothing when there is nothing to record, and surfaces a real failure', async () => {
+    calls.length = 0;
+    await store().recordCelebrations!([]);
+    expect(calls).toHaveLength(0);
+    respond = () => ({ data: null, error: { message: 'boom' } });
+    await expect(
+      store().recordCelebrations!([{ id: 'daily:water:2026-06-15', mode: 'full' }]),
+    ).rejects.toBeInstanceOf(Error);
+  });
+});
+
 describe('household invite attempts', () => {
   it('treats the null the database returns for an incorrect or used code as an invalid invite', async () => {
     respond = () => ({ data: null, error: null });

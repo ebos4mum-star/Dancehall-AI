@@ -785,6 +785,29 @@ function createBaseStore(
       return next;
     },
 
+    // ---------- Celebration ledger (what Pulse has already celebrated; first write wins, so no device repeats one) ----------
+    async listCelebrations() {
+      return (
+        ok(
+          await db
+            .from('celebrations')
+            .select('achievement_id')
+            .order('shown_at', { ascending: false })
+            .limit(2000),
+        ) as Row[]
+      ).map((r) => r.achievement_id as string);
+    },
+    async recordCelebrations(items: Array<{ id: string; mode: 'full' | 'gentle' | 'off' }>) {
+      if (items.length === 0) return;
+      // Ignore duplicates: another device may have recorded the same achievement first, which is exactly the outcome we want.
+      ok(
+        await db.from('celebrations').upsert(
+          items.map((i) => ({ achievement_id: i.id, mode: i.mode })),
+          { onConflict: 'user_id,achievement_id', ignoreDuplicates: true },
+        ),
+      );
+    },
+
     // ---------- Household (shared meals and grocery only; RLS limits every row to members) ----------
     async getHousehold(): Promise<Household | null> {
       const me = await uid();

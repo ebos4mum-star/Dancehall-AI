@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CELEBRATION_RULES,
   achievedCelebrations,
   dueCelebrations,
   remember,
@@ -22,7 +21,10 @@ const base: CelebrationInput = {
   today: '2026-06-17', // a Wednesday; week starts 2026-06-15
   timeZone: 'UTC',
   waterGoalMl: 2000,
+  dailyMovementMinutes: null,
   weeklyMinutesGoal: null,
+  monthlyWeeksGoal: null,
+  yearlyWeeksGoal: null,
   entries: [],
   sessions: [],
   habits: { activeIds: [], checkins: [] },
@@ -65,34 +67,45 @@ describe('daily celebrations', () => {
       }),
     ).toEqual(['daily:habits:2026-06-17']);
   });
-  it('movement: dance, walks and strength add up to the threshold; short bursts do not', () => {
+  it('movement: dance, walks and strength add up to THEIR configured daily goal; no goal means no celebration', () => {
     const session = {
       status: 'completed',
       completedAt: '2026-06-17T09:00:00Z',
       minutes: 5,
       durationS: null,
     };
-    expect(ids({ ...base, sessions: [session] })).toEqual([]);
-    expect(ids({ ...base, sessions: [session], entries: [entry('walk', base.today, 5)] })).toEqual([
+    const goal = { ...base, dailyMovementMinutes: 10 };
+    expect(ids({ ...goal, sessions: [session] })).toEqual([]);
+    expect(ids({ ...goal, sessions: [session], entries: [entry('walk', base.today, 5)] })).toEqual([
       'daily:movement:2026-06-17',
     ]);
     expect(
       ids({
-        ...base,
+        ...goal,
         sessions: [{ ...session, status: 'planned' }],
         entries: [entry('walk', base.today, 9)],
       }),
     ).toEqual([]);
-    expect(CELEBRATION_RULES.dailyMovementMinutes).toBe(10);
+    // Their goal is theirs: 30 means 30, and without a goal even a long walk is not celebrated.
+    expect(
+      ids({ ...base, dailyMovementMinutes: 30, entries: [entry('walk', base.today, 20)] }),
+    ).toEqual([]);
+    expect(ids({ ...base, entries: [entry('walk', base.today, 200)] })).toEqual([]);
+  });
+  it('water: only their configured goal is celebrated, never a default guide', () => {
+    const e = [entry('hydration', base.today, 5000)];
+    expect(ids({ ...base, waterGoalMl: null, entries: e })).toEqual([]);
+    expect(ids({ ...base, waterGoalMl: 1500, entries: e })).toEqual(['daily:water:2026-06-17']);
   });
 });
 
-describe('weekly, monthly and yearly celebrations use the person’s OWN weekly goal', () => {
+describe('weekly, monthly and yearly celebrations use goals the person configured', () => {
   const walks = (days: string[], m = 40) => days.map((d) => entry('walk', d, m));
-  it('without a weekly goal there are none', () => {
-    expect(
-      ids({ ...base, entries: walks(['2026-06-15', '2026-06-16', '2026-06-17'], 300) }),
-    ).not.toContain('weekly:movement_minutes:2026-06-15');
+  it('without a weekly goal there are none, however much they move', () => {
+    const i = { ...base, monthlyWeeksGoal: 1, yearlyWeeksGoal: 1 };
+    expect(ids({ ...i, entries: walks(['2026-06-15', '2026-06-16', '2026-06-17'], 300) })).toEqual(
+      [],
+    );
   });
   it('weekly: the week total reaches the goal', () => {
     const i = { ...base, weeklyMinutesGoal: 100 };
@@ -107,27 +120,35 @@ describe('weekly, monthly and yearly celebrations use the person’s OWN weekly 
       ids({ ...i, entries: walks(['2026-06-08', '2026-06-09', '2026-06-10'], 40) }),
     ).not.toContain('weekly:movement_minutes:2026-06-15');
   });
-  it('monthly: the goal met in enough weeks starting in the month', () => {
+  it('monthly: only when they set a monthly weeks goal, and only once it is reached', () => {
     const i = { ...base, today: '2026-06-24', weeklyMinutesGoal: 30 };
     const two = walks(['2026-06-01', '2026-06-08']);
-    expect(ids({ ...i, entries: two })).not.toContain('monthly:movement_weeks:2026-06');
-    expect(ids({ ...i, entries: [...two, ...walks(['2026-06-15'])] })).toContain(
+    const three = [...two, ...walks(['2026-06-15'])];
+    expect(ids({ ...i, entries: three })).not.toContain('monthly:movement_weeks:2026-06');
+    expect(ids({ ...i, monthlyWeeksGoal: 3, entries: two })).not.toContain(
+      'monthly:movement_weeks:2026-06',
+    );
+    expect(ids({ ...i, monthlyWeeksGoal: 3, entries: three })).toContain(
+      'monthly:movement_weeks:2026-06',
+    );
+    expect(ids({ ...i, monthlyWeeksGoal: 2, entries: two })).toContain(
       'monthly:movement_weeks:2026-06',
     );
   });
-  it('yearly: the goal met in about half the weeks of the year', () => {
+  it('yearly: only when they set a yearly weeks goal, and only once it is reached', () => {
     const i = { ...base, today: '2026-09-30', weeklyMinutesGoal: 30 };
     const weekDays = (count: number) =>
       Array.from({ length: count }, (_, k) => {
         const d = new Date(Date.UTC(2026, 0, 5 + k * 7)); // Mondays from Jan 5
         return d.toISOString().slice(0, 10);
       });
-    expect(
-      ids({ ...i, entries: walks(weekDays(CELEBRATION_RULES.yearlyWeeksRequired - 1)) }),
-    ).not.toContain('yearly:movement_weeks:2026');
-    expect(
-      ids({ ...i, entries: walks(weekDays(CELEBRATION_RULES.yearlyWeeksRequired)) }),
-    ).toContain('yearly:movement_weeks:2026');
+    expect(ids({ ...i, entries: walks(weekDays(30)) })).not.toContain('yearly:movement_weeks:2026');
+    expect(ids({ ...i, yearlyWeeksGoal: 20, entries: walks(weekDays(19)) })).not.toContain(
+      'yearly:movement_weeks:2026',
+    );
+    expect(ids({ ...i, yearlyWeeksGoal: 20, entries: walks(weekDays(20)) })).toContain(
+      'yearly:movement_weeks:2026',
+    );
   });
 });
 
@@ -156,6 +177,7 @@ describe('the celebration ledger', () => {
     const i = {
       ...base,
       weeklyMinutesGoal: 30,
+      dailyMovementMinutes: 10,
       entries: [entry('hydration', base.today, 2500), entry('walk', base.today, 40)],
     };
     const due = dueCelebrations(achievedCelebrations(i), new Set());

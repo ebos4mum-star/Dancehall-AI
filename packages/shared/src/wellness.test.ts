@@ -346,3 +346,32 @@ describe('numbersHidden', () => {
     expect(numbersHidden(parsePrefs({ tracking: 'none' }))).toBe(true);
   });
 });
+
+describe('celebration preferences', () => {
+  it('default to full celebrations with no goals configured, and accept only valid values', () => {
+    const d = parsePrefs({});
+    expect(d.celebrations).toBe('full');
+    expect([d.dailyMovementMinutes, d.monthlyGoalWeeks, d.yearlyGoalWeeks]).toEqual([
+      null,
+      null,
+      null,
+    ]);
+    expect(parsePrefs({ celebrations: 'off' }).celebrations).toBe('off');
+    expect(parsePrefs({ celebrations: 'gentle' }).celebrations).toBe('gentle');
+    expect(parsePrefs({ celebrations: 'deafening' }).celebrations).toBe('full');
+    const p = parsePrefs({ dailyMovementMinutes: 20, monthlyGoalWeeks: 3, yearlyGoalWeeks: 30 });
+    expect([p.dailyMovementMinutes, p.monthlyGoalWeeks, p.yearlyGoalWeeks]).toEqual([20, 3, 30]);
+    const bad = parsePrefs({
+      dailyMovementMinutes: 0,
+      monthlyGoalWeeks: 9,
+      yearlyGoalWeeks: 99,
+      celebrations: 3,
+    });
+    expect([bad.dailyMovementMinutes, bad.monthlyGoalWeeks, bad.yearlyGoalWeeks]).toEqual([
+      null,
+      null,
+      null,
+    ]);
+    expect(bad.celebrations).toBe('full');
+  });
+});

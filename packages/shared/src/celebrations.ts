@@ -4,22 +4,17 @@ import { entriesOf, hydrationOn, type WellnessEntry } from './wellness';
 
 /**
  * Pulse celebrations: which goal achievements, across daily, weekly, monthly and yearly periods, deserve a celebration. Pure and computed ONLY from
- * what the person recorded and the goals they set (their own water goal and weekly movement-minutes goal); nothing is estimated.
+ * what the person recorded and the goals THEY configured. There are no built-in thresholds: a period with no configured goal is never celebrated.
+ *
+ * Configured goals used (all optional, all set by the person in Goals, "Your focus"):
+ *  - daily: water goal (ml); movement goal (minutes of dance, walking and strength); all active habits ticked
+ *  - weekly: movement minutes per week
+ *  - monthly: weeks in a month they want to reach the weekly goal (needs the weekly goal)
+ *  - yearly: weeks in a year they want to reach the weekly goal (needs the weekly goal)
  *
  * Deliberately NOT celebrated: weight, calories, measurements or any food number. Weight celebrations need owner approval and the same safety
  * rules as weight goals (see docs/PULSE_CELEBRATIONS.md). A missed period is never mentioned.
- *
- * The thresholds below are PROVISIONAL defaults pending owner approval of the goal model; they are all in this one object.
  */
-export const CELEBRATION_RULES = {
-  /** A "moved today" celebration needs at least this many minutes of dance, walking and strength combined. */
-  dailyMovementMinutes: 10,
-  /** Monthly: the weekly movement goal met in at least this many weeks that start in the month. */
-  monthlyWeeksRequired: 3,
-  /** Yearly: the weekly movement goal met in at least this many weeks that start in the year (about half the year). */
-  yearlyWeeksRequired: 26,
-} as const;
-
 export const CELEBRATION_PERIODS = ['daily', 'weekly', 'monthly', 'yearly'] as const;
 export type CelebrationPeriod = (typeof CELEBRATION_PERIODS)[number];
 export type CelebrationKind =
@@ -48,10 +43,15 @@ export interface CelebrationInput {
   /** Today in the person's time zone (YYYY-MM-DD). */
   today: string;
   timeZone: string | null;
-  /** The person's own water goal, or the general guide when they have not set one. */
-  waterGoalMl: number;
-  /** The person's own weekly movement goal in minutes. Null means they have not set one, so no weekly, monthly or yearly movement celebrations. */
+  /** The water goal the person set (ml). Null when they have not set one: the general guide is not their goal, so it is not celebrated. */
+  waterGoalMl: number | null;
+  /** The daily movement goal the person set, in minutes. Null means no daily movement celebration. */
+  dailyMovementMinutes: number | null;
+  /** The weekly movement goal the person set, in minutes. Null means no weekly, monthly or yearly movement celebrations. */
   weeklyMinutesGoal: number | null;
+  /** Weeks in a month / year the person wants to reach their weekly goal. Null means no such celebration. */
+  monthlyWeeksGoal: number | null;
+  yearlyWeeksGoal: number | null;
   /** Wellness entries covering at least the start of this year. */
   entries: readonly WellnessEntry[];
   sessions: ReadonlyArray<{
@@ -88,7 +88,11 @@ export function achievedCelebrations(i: CelebrationInput): Celebration[] {
   const minutes = movementMinutesByDay(i.sessions, i.entries, i.timeZone);
 
   // Daily
-  if (i.waterGoalMl > 0 && hydrationOn(i.entries, i.today, i.waterGoalMl).ml >= i.waterGoalMl)
+  if (
+    i.waterGoalMl &&
+    i.waterGoalMl > 0 &&
+    hydrationOn(i.entries, i.today, i.waterGoalMl).ml >= i.waterGoalMl
+  )
     out.push(make('daily', 'water', i.today));
   if (
     i.habits.activeIds.length > 0 &&
@@ -97,10 +101,10 @@ export function achievedCelebrations(i: CelebrationInput): Celebration[] {
     )
   )
     out.push(make('daily', 'habits', i.today));
-  if ((minutes.get(i.today) ?? 0) >= CELEBRATION_RULES.dailyMovementMinutes)
+  if (i.dailyMovementMinutes && (minutes.get(i.today) ?? 0) >= i.dailyMovementMinutes)
     out.push(make('daily', 'movement', i.today));
 
-  // Weekly, monthly and yearly all hang off the person's OWN weekly movement goal.
+  // Weekly, monthly and yearly all hang off the person's weekly movement goal.
   const goal = i.weeklyMinutesGoal;
   if (goal && goal > 0) {
     const perWeek = new Map<string, number>();
@@ -112,10 +116,11 @@ export function achievedCelebrations(i: CelebrationInput): Celebration[] {
     const month = i.today.slice(0, 7);
     const year = i.today.slice(0, 4);
     if (
-      metWeeks.filter((w) => w.startsWith(month)).length >= CELEBRATION_RULES.monthlyWeeksRequired
+      i.monthlyWeeksGoal &&
+      metWeeks.filter((w) => w.startsWith(month)).length >= i.monthlyWeeksGoal
     )
       out.push(make('monthly', 'movement_weeks', month));
-    if (metWeeks.filter((w) => w.startsWith(year)).length >= CELEBRATION_RULES.yearlyWeeksRequired)
+    if (i.yearlyWeeksGoal && metWeeks.filter((w) => w.startsWith(year)).length >= i.yearlyWeeksGoal)
       out.push(make('yearly', 'movement_weeks', year));
   }
   return out;

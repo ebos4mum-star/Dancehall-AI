@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 import {
   ACTIVITY_PREFS,
+  CELEBRATION_LEVELS,
   DIET_PREFS,
   EQUIPMENT_PREFS,
   GOAL_INTENTS,
@@ -70,10 +71,22 @@ export function FocusCard() {
   const { prefs } = w;
   const [minutes, setMinutes] = useState('');
   const [water, setWater] = useState('');
+  const [daily, setDaily] = useState('');
+  const [monthly, setMonthly] = useState('');
+  const [yearly, setYearly] = useState('');
   useEffect(() => {
     setMinutes(prefs.exerciseMinutesPerWeek === null ? '' : String(prefs.exerciseMinutesPerWeek));
     setWater(prefs.waterGoalMl === null ? '' : String(prefs.waterGoalMl));
-  }, [prefs.exerciseMinutesPerWeek, prefs.waterGoalMl]);
+    setDaily(prefs.dailyMovementMinutes === null ? '' : String(prefs.dailyMovementMinutes));
+    setMonthly(prefs.monthlyGoalWeeks === null ? '' : String(prefs.monthlyGoalWeeks));
+    setYearly(prefs.yearlyGoalWeeks === null ? '' : String(prefs.yearlyGoalWeeks));
+  }, [
+    prefs.exerciseMinutesPerWeek,
+    prefs.waterGoalMl,
+    prefs.dailyMovementMinutes,
+    prefs.monthlyGoalWeeks,
+    prefs.yearlyGoalWeeks,
+  ]);
   const num = (v: string): number | null => {
     const n = Number(v.replace(',', '.'));
     return v.trim() !== '' && Number.isFinite(n) && n >= 0 ? n : null;
@@ -180,6 +193,60 @@ export function FocusCard() {
         variant="secondary"
         label={t('common.save')}
         onPress={() => void w.setPrefs({ waterGoalMl: num(water) })}
+      />
+      <SectionTitle icon="sparkles" title={t('wl.celTitle')} />
+      <AppText variant="caption" muted>
+        {t('wl.celIntro')}
+      </AppText>
+      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+        {CELEBRATION_LEVELS.map((k) => (
+          <View key={k} style={{ flex: 1 }}>
+            <IconChoice
+              icon={k === 'off' ? 'notifications-off' : k === 'gentle' ? 'leaf' : 'sparkles'}
+              label={t(`wl.cel.${k}` as StringKey)}
+              selected={prefs.celebrations === k}
+              onPress={() => void w.setPrefs({ celebrations: k })}
+            />
+          </View>
+        ))}
+      </View>
+      <AppText variant="caption" muted>
+        {t(`wl.celNote.${prefs.celebrations}` as StringKey)}
+      </AppText>
+      <BigField
+        icon="footsteps"
+        label={t('wl.dailyMinutes')}
+        value={daily}
+        onChangeText={setDaily}
+        keyboardType="number-pad"
+        suffix="min"
+      />
+      <BigField
+        icon="calendar"
+        label={t('wl.monthlyWeeks')}
+        value={monthly}
+        onChangeText={setMonthly}
+        keyboardType="number-pad"
+        suffix={t('wl.weeksUnit')}
+      />
+      <BigField
+        icon="trophy"
+        label={t('wl.yearlyWeeks')}
+        value={yearly}
+        onChangeText={setYearly}
+        keyboardType="number-pad"
+        suffix={t('wl.weeksUnit')}
+      />
+      <Button
+        variant="secondary"
+        label={t('wl.saveCelGoals')}
+        onPress={() =>
+          void w.setPrefs({
+            dailyMovementMinutes: num(daily),
+            monthlyGoalWeeks: num(monthly),
+            yearlyGoalWeeks: num(yearly),
+          })
+        }
       />
       <SectionTitle icon="heart" title={t('wl.careTitle')} />
       <AppText variant="caption" muted>
