@@ -8,6 +8,8 @@ export const APPROVED_URL = `https://${APPROVED_PROJECT_REF}.supabase.co`;
 // Built from parts so no source file names a privileged key literally (the repo-wide security test scans for those).
 const FORBIDDEN_KEY_PARTS = [['service', 'role'].join('_'), ['sb', 'secret', ''].join('_')];
 
+const SYNTHETIC_EMAIL = /^[^@\s]+@[^@\s]+\.test$/i;
+
 export interface LiveEnv {
   LIVE_SUPABASE?: string;
   LIVE_SUPABASE_URL?: string;
@@ -41,6 +43,9 @@ export function resolveLiveConfig(env: LiveEnv): LiveConfig {
   const b = { email: env.LIVE_USER_B_EMAIL ?? '', password: env.LIVE_USER_B_PASSWORD ?? '' };
   if (!a.email || !a.password || !b.email || !b.password)
     return { enabled: false, reason: 'two test users (A and B) with passwords are required' };
+  // Synthetic accounts only: the reserved `.test` top-level domain can never be a real person's address.
+  if (![a.email, b.email].every((e) => SYNTHETIC_EMAIL.test(e)))
+    return { enabled: false, reason: 'test users must have synthetic emails ending in .test' };
   if (a.email.toLowerCase() === b.email.toLowerCase())
     return { enabled: false, reason: 'users A and B must be different accounts' };
   return { enabled: true, url, key, a, b };

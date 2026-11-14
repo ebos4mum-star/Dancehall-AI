@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { APPROVED_URL, resolveLiveConfig } from './liveGuard';
 
@@ -43,5 +45,22 @@ describe('live verification guard', () => {
   it('needs two distinct test users', () => {
     expect(resolveLiveConfig({ ...good, LIVE_USER_B_EMAIL: 'A@example.test' }).enabled).toBe(false);
     expect(resolveLiveConfig({ ...good, LIVE_USER_B_PASSWORD: '' }).enabled).toBe(false);
+  });
+  it('accepts only synthetic (.test) accounts, never a real address', () => {
+    for (const email of ['person@gmail.com', 'a@example.com', 'a@example.test.evil.com', 'nobody'])
+      expect(resolveLiveConfig({ ...good, LIVE_USER_A_EMAIL: email }).enabled, email).toBe(false);
+    expect(resolveLiveConfig({ ...good, LIVE_USER_A_EMAIL: 'Live-A@Example.TEST' }).enabled).toBe(
+      true,
+    );
+  });
+  it('the live files never log, print or persist credentials', () => {
+    for (const f of readdirSync(__dirname)
+      .filter((n) => n.endsWith('.ts') && !n.endsWith('.test.ts'))
+      .concat(['live.test.ts'])) {
+      const src = readFileSync(join(__dirname, f), 'utf8');
+      expect(src, f).not.toMatch(
+        /console\.|writeFile|appendFile|JSON\.stringify\((cfg|live|env|process\.env)/,
+      );
+    }
   });
 });

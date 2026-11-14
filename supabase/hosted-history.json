@@ -1,0 +1,68 @@
+{
+  "_comment": "Record of the migration history on the dedicated DanceHall Fit AI development project, as read (read-only) on 2026-11-14. Hosted versions are apply-time timestamps; names match the repository files. sha256 pins the repository content of every applied migration: editing one is an error (add a new migration instead). Update this file only after a hosted migration has been authorized, applied and re-verified.",
+  "projectRef": "vvwjhbsyxetnktimgaxg",
+  "applied": [
+    {
+      "hostedVersion": "20261114150446",
+      "name": "identity_consent",
+      "file": "20261201000100_identity_consent.sql",
+      "sha256": "b86a745e6469436b4956cf5d80aba4fab48c78deb0bbf4e315d346a2178daf8e"
+    },
+    {
+      "hostedVersion": "20261114150507",
+      "name": "weight_goals_readiness",
+      "file": "20261201000200_weight_goals_readiness.sql",
+      "sha256": "75c5bde3eb8f34f006295136bd00eb9d1295ea473db738ec4c8e6d157538387f"
+    },
+    {
+      "hostedVersion": "20261114150548",
+      "name": "food_nutrition",
+      "file": "20261202000100_food_nutrition.sql",
+      "sha256": "12d46dc65f11013011a2e60a80f9af5521a2799b1ab7f5001a2137f36ee47bef"
+    },
+    {
+      "hostedVersion": "20261114150649",
+      "name": "dance_catalog",
+      "file": "20261203000100_dance_catalog.sql",
+      "sha256": "d7371efff372fe3ebe30c786f927b17e1167cee527af67fe6dea228af7b114e2"
+    },
+    {
+      "hostedVersion": "20261114150728",
+      "name": "coach",
+      "file": "20261204000100_coach.sql",
+      "sha256": "38db17c7731af517e579ec6720a46547ac653ce8958166d1b221669ebc63e0c0"
+    },
+    {
+      "hostedVersion": "20261114150747",
+      "name": "integration",
+      "file": "20261205000100_integration.sql",
+      "sha256": "50dc9587ac450ddcbea98a16683bfd5a0e33132a1953e459f18674fd065b3681"
+    },
+    {
+      "hostedVersion": "20261114150751",
+      "name": "deletion_config",
+      "file": "20261205000200_deletion_config.sql",
+      "sha256": "1363db6345785b6bfe355fba24724fedcd9db8268e7b855e69b6e2f8d7ab247f"
+    },
+    {
+      "hostedVersion": "20261114150755",
+      "name": "fit_challenges",
+      "file": "20261206000100_fit_challenges.sql",
+      "sha256": "ac68ae52a50aba39c57178c83310b9e6dcf6f49612fd83e0bca74219a6cce2e0"
+    }
+  ],
+  "pending": [
+    "20261207000100_habits.sql",
+    "20261208000100_household.sql",
+    "20261209000100_wellness.sql"
+  ],
+  "fingerprintAfterApplied": {
+    "columns": "93d0c4105e0656c54cc111b7bfd28127",
+    "constraints": "d02ed9050f39afc74b603ec856059b61",
+    "functions": "22933198da8a277678f99e539f94f919",
+    "indexes": "d6ecf422b40bc82b6802f2a8a0dd3e38",
+    "policies": "5c0451a612fff81e8d834d5fa737ef65",
+    "rls": "055280a0e433d68257dfaae0f371f7cf",
+    "triggers": "8f61fb1af156a0785ac21c98c4654d30"
+  }
+}

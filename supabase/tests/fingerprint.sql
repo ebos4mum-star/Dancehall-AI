@@ -1,0 +1,8 @@
+select 'columns' k, count(*) n, md5(string_agg(t,'|' order by t)) h from (select table_name||':'||string_agg(column_name||' '||data_type||' '||is_nullable||' '||coalesce(column_default,''), ',' order by ordinal_position) t from information_schema.columns where table_schema='public' and table_name in (select tablename from pg_tables where schemaname='public') group by table_name) x
+union all select 'policies', count(*), md5(string_agg(tablename||policyname||cmd||array_to_string(roles,',')||coalesce(qual,'')||coalesce(with_check,''),'|' order by tablename,policyname)) from pg_policies where schemaname='public'
+union all select 'functions', count(*), md5(string_agg(n.nspname||p.proname||'('||pg_get_function_identity_arguments(p.oid)||')'||md5(p.prosrc),'|' order by n.nspname,p.proname,pg_get_function_identity_arguments(p.oid))) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','app')
+union all select 'constraints', count(*), md5(string_agg(conrelid::regclass::text||conname||pg_get_constraintdef(c.oid),'|' order by conrelid::regclass::text,conname)) from pg_constraint c join pg_namespace n on n.oid=c.connamespace where n.nspname='public'
+union all select 'indexes', count(*), md5(string_agg(indexdef,'|' order by indexname)) from pg_indexes where schemaname='public'
+union all select 'triggers', count(*), md5(string_agg(c.relname||t.tgname,'|' order by c.relname,t.tgname)) from pg_trigger t join pg_class c on c.oid=t.tgrelid join pg_namespace n on n.oid=c.relnamespace where not t.tgisinternal and n.nspname='public'
+union all select 'rls', count(*), md5(string_agg(tablename||rowsecurity::text,'|' order by tablename)) from pg_tables where schemaname='public'
+order by 1;
