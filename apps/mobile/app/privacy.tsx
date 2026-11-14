@@ -1,9 +1,10 @@
-import { Switch, View } from 'react-native';
+import { Share, Switch, View } from 'react-native';
 import { router } from 'expo-router';
 import { consentPurposeSchema, type ConsentPurpose } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage, useLoad } from '@/data/hooks';
 import { cleanDisplayName } from '@/lib/displayName';
+import { buildDataExport, exportToText } from '@/privacy/export';
 import { t, type StringKey } from '@/i18n';
 import { useTheme } from '@/theme/useTheme';
 import { useState } from 'react';
@@ -29,6 +30,23 @@ export default function Privacy() {
   const { data, error } = useLoad((s) => s.getConsents());
   const [msg, setMsg] = useState<string | null>(null);
   const [name, setName] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportText, setExportText] = useState<string | null>(null);
+  const runExport = async () => {
+    setExporting(true);
+    setMsg(null);
+    try {
+      const text = exportToText(await buildDataExport(store));
+      setExportText(text);
+      // The system share sheet is a deliberate tap; where it is unavailable the text stays on screen to copy.
+      await Share.share({ title: 'DanceHall Fit export', message: text }).catch(() => undefined);
+    } catch (e) {
+      setExportText(null);
+      setMsg(errorMessage(e));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const guard = async (fn: () => Promise<unknown>) => {
     try {
@@ -113,7 +131,35 @@ export default function Privacy() {
       })}
       {error ? <Notice tone="warning">{`${error} ${t('privacy.loadFailed')}`}</Notice> : null}
       {msg ? <Notice tone="warning">{msg}</Notice> : null}
-      <Notice>{t('privacy.exportNote')}</Notice>
+      <Card>
+        <AppText variant="heading" accessibilityRole="header">
+          {t('privacy.exportTitle')}
+        </AppText>
+        <AppText muted>{t('privacy.exportBody')}</AppText>
+        <Button
+          variant="secondary"
+          label={exporting ? t('common.loading') : t('privacy.exportButton')}
+          disabled={exporting}
+          onPress={runExport}
+        />
+        {exportText ? (
+          <>
+            <Notice>{t('privacy.exportReady')}</Notice>
+            <TextField
+              label={t('privacy.exportText')}
+              value={exportText}
+              onChangeText={() => undefined}
+              multiline
+              editable
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </>
+        ) : null}
+        <AppText variant="caption" muted>
+          {t('privacy.exportNote')}
+        </AppText>
+      </Card>
       <Card>
         <AppText variant="heading" accessibilityRole="header">
           {t('privacy.account')}

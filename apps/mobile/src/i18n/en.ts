@@ -236,7 +236,14 @@ export const en = {
   'privacy.account': 'Account',
   'privacy.signOut': 'Sign out',
   'privacy.resetDev': 'Reset development data',
-  'privacy.exportNote': 'Data export and account deletion are being built and will appear here.',
+  'privacy.exportTitle': 'Export my data',
+  'privacy.exportBody':
+    'Get a copy of your profile, weight, goals, food diary, saved meals, meal plans, workouts and challenges as a JSON file you can keep.',
+  'privacy.exportButton': 'Export my data',
+  'privacy.exportReady': 'Your export is ready. Share it, or select and copy the text below.',
+  'privacy.exportText': 'Export (JSON)',
+  'privacy.exportNote':
+    'Nothing leaves your device unless you share it. To delete your account, open Coach, then Privacy and history.',
 
   'me.title': 'Me',
   'me.progress': 'Weight progress',

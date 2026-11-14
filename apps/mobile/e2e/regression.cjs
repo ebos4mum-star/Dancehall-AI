@@ -296,6 +296,22 @@ async function step(name, fn) {
       await p.waitForTimeout(400);
     },
   );
+  await step(
+    'I: the person can export their data and the export is complete and private',
+    async () => {
+      await tab('Me');
+      await btn('Privacy and settings').click();
+      await btn('Export my data').click();
+      await seen('Your export is ready');
+      const text = await p.getByLabel('Export (JSON)').inputValue();
+      const d = JSON.parse(text);
+      assert.equal(d.format, 'dancehall-fit-export-v1');
+      assert.ok(d.workoutSessions.length >= 1 && d.foodLogs.length >= 1 && d.weights.length >= 1);
+      assert.ok(d.challenges.length >= 1 && d.mealPlans.length >= 1);
+      await p.goBack();
+      await p.waitForTimeout(400);
+    },
+  );
   await step('Privacy: data survives a reload (device storage), no page errors', async () => {
     await p.goto(base);
     await p.waitForTimeout(2500);
