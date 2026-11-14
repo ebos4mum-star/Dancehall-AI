@@ -113,6 +113,13 @@ export class AiGateway {
   }
 
   async run(req: GatewayRequest): Promise<unknown> {
+    return (await this.runDetailed(req)).data;
+  }
+
+  /** Like `run`, but also reports the outcome so callers can tell a fixed safety redirect from a normal answer. */
+  async runDetailed(
+    req: GatewayRequest,
+  ): Promise<{ data: unknown; outcome: UsageEvent['outcome'] }> {
     const at = this.cfg.now();
     const month = at.toISOString().slice(0, 7);
     // 1. Kill switches come first: they cost nothing and must always win.
@@ -145,10 +152,13 @@ export class AiGateway {
         });
         const r = SAFE_REDIRECT_MESSAGES[screen.kind];
         return {
-          message: r.message,
-          because: r.because,
-          proposedChanges: [],
-          supportReferral: r.supportReferral,
+          outcome: screen.kind === 'risk' ? 'risk_referral' : 'safety_redirect',
+          data: {
+            message: r.message,
+            because: r.because,
+            proposedChanges: [],
+            supportReferral: r.supportReferral,
+          },
         };
       }
     }
@@ -244,7 +254,7 @@ export class AiGateway {
         );
       }
       await this.usage.record({ ...base, outcome: 'ok' });
-      return parsed.data;
+      return { data: parsed.data, outcome: 'ok' };
     } catch (e) {
       if (e instanceof AppError) throw e;
       // Provider failure: release the reservation (no billed cost known) and record it.
