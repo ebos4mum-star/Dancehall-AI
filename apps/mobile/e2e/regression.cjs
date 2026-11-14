@@ -21,7 +21,7 @@ async function step(name, fn) {
       '\n     ',
       String(e.message)
         .split('\n')
-        .slice(0, process.env.E2E_VERBOSE ? 6 : 1)
+        .slice(0, process.env.E2E_VERBOSE ? 20 : 1)
         .join(' | '),
     );
   }
@@ -406,6 +406,27 @@ async function step(name, fn) {
     await tab('Food');
     await seen('No calorie target');
     await p.goBack().catch(() => {});
+  });
+  await step('L: walking, recovery, hunger and coach reflect what was logged', async () => {
+    await tab('Dance');
+    await seen('Walking and strength');
+    await seen('Guided strength workouts');
+    await seen('Not available yet');
+    await p.getByLabel('Walk length').last().fill('20');
+    await btn('Log walk').click();
+    await seen('20 min walking');
+    // A double tap on the same pending form logs nothing new: the field was cleared.
+    assert.equal(await btn('Log walk').isDisabled(), true);
+    await btn('Sore').click();
+    await seen('easy walk may feel kinder');
+    await tab('Food');
+    await seen('Hunger check-in');
+    await btn('Hungry').click();
+    await seen('Check-ins today: 1');
+    await tab('Coach');
+    await p.getByRole('textbox').last().fill('Why is this in my plan?');
+    await btn('Send').click();
+    await seen('Every suggestion is rule-based', 6000);
   });
   await step('Privacy: data survives a reload (device storage), no page errors', async () => {
     await p.goto(base);
