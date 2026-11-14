@@ -11,6 +11,9 @@ const textPairs: Array<[keyof ColorTokens, keyof ColorTokens]> = [
   ['primary', 'background'],
   ['success', 'background'],
   ['warningText', 'warningBg'],
+  ['onHero', 'heroFrom'],
+  ['onHero', 'heroTo'],
+  ['success', 'successBg'],
 ];
 
 describe.each([

@@ -158,3 +158,55 @@ describe('gateway (mock provider only)', () => {
     expect(store.events[0]?.outcome).toBe('risk_referral');
   });
 });
+
+import { CURATED_FOODS, matchReference } from '@dancehall/shared';
+import { MOCK_MEAL_TEMPLATES, mockFoodPhotoResponse, foodPhotoResponseSchema } from './index';
+
+describe('simulated food recognition (mock only)', () => {
+  it('returns several foods with portion ranges, schema-valid, labeled as a simulation', () => {
+    for (let seed = 0; seed < 12; seed++) {
+      const r = foodPhotoResponseSchema.parse(mockFoodPhotoResponse(`mock-seed:${seed}`));
+      expect(r.items.length).toBeGreaterThanOrEqual(4);
+      expect(r.notes).toMatch(/not real image analysis/i);
+      for (const i of r.items) expect(i.gramsHigh).toBeGreaterThan(i.gramsLow);
+    }
+  });
+  it('is deterministic per seed and varies across seeds', () => {
+    expect(mockFoodPhotoResponse('mock-seed:2')).toEqual(mockFoodPhotoResponse('mock-seed:2'));
+    expect(JSON.stringify(mockFoodPhotoResponse('mock-seed:0'))).not.toBe(
+      JSON.stringify(mockFoodPhotoResponse('mock-seed:1')),
+    );
+  });
+  it('every template food exists in the reference data, and one seed simulates an unmatched item', () => {
+    const ids = new Set(CURATED_FOODS.map((f) => f.id));
+    for (const t of MOCK_MEAL_TEMPLATES)
+      for (const i of t.items) expect(ids.has(i.id), i.id).toBe(true);
+    const r = foodPhotoResponseSchema.parse(mockFoodPhotoResponse('mock-seed:3'));
+    expect(r.items.some((i) => matchReference(i.referenceQuery) === null)).toBe(true);
+  });
+  it('runs through the gateway with metering and quota (free tier allows 5 a month)', async () => {
+    const store = new InMemoryUsageStore();
+    const g = new AiGateway(new MockAiProvider(), store, cfg());
+    for (let i = 0; i < 5; i++)
+      await g.run({
+        userId: 'u9',
+        entitlement: FREE_ENTITLEMENT,
+        feature: 'food_photo',
+        prompt: `mock-seed:${i}`,
+        hasImage: true,
+      });
+    expect(
+      store.events.filter((e) => e.feature === 'food_photo' && e.outcome === 'ok'),
+    ).toHaveLength(5);
+    await rejects(
+      g.run({
+        userId: 'u9',
+        entitlement: FREE_ENTITLEMENT,
+        feature: 'food_photo',
+        prompt: 'mock-seed:9',
+        hasImage: true,
+      }),
+      'quota_exceeded',
+    );
+  });
+});

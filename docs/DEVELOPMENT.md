@@ -39,3 +39,11 @@ cd apps/mobile && EXPO_OFFLINE=1 npx expo export --platform web --output-dir /tm
 ```
 
 serve the output with any static server and open it at phone width. This checks layout and logic; it does not verify native behavior (haptics, secure storage, camera).
+
+## Food data and the seed
+
+`packages/shared/src/food-data.json` is the single source of the synthetic reference foods (used by the app and the database). After editing it run `node scripts/gen-food-seed.mjs` to regenerate `supabase/seed.sql`; `pnpm check:seed` (part of `pnpm verify` and CI) fails if they differ.
+
+## Trying the food flow without a camera
+
+In the development build, **Snap a meal → Try a sample plate (simulated)** runs the full pipeline with no photo. **Choose a photo** exercises the real resize-and-discard path with any image; the result is still simulated and says so.

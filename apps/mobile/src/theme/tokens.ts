@@ -16,6 +16,11 @@ export interface ColorTokens {
   warningBg: string;
   warningText: string;
   border: string;
+  /** Hero gradient (premium, energetic). White text is verified on both stops. */
+  heroFrom: string;
+  heroTo: string;
+  onHero: string;
+  successBg: string;
 }
 
 export const lightColors: ColorTokens = {
@@ -31,6 +36,10 @@ export const lightColors: ColorTokens = {
   warningBg: '#FFF1D6',
   warningText: '#8A4B00',
   border: '#E6DCEB',
+  heroFrom: '#B3124F',
+  heroTo: '#4B1D9E',
+  onHero: '#FFFFFF',
+  successBg: '#E3F5EE',
 };
 
 export const darkColors: ColorTokens = {
@@ -46,6 +55,10 @@ export const darkColors: ColorTokens = {
   warningBg: '#3A2A12',
   warningText: '#FFD166',
   border: '#3A2D5C',
+  heroFrom: '#9C1A55',
+  heroTo: '#36207F',
+  onHero: '#FFFFFF',
+  successBg: '#12382E',
 };
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 } as const;

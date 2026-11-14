@@ -1,4 +1,9 @@
 import type {
+  BudgetLevel,
+  FoodItemValues,
+  GroundedItem,
+  MealType,
+  MealPlanDraft,
   ConsentPurpose,
   GoalPeriod,
   GoalType,
@@ -74,7 +79,13 @@ export type StoreErrorCode =
   | 'active_goal_exists'
   | 'invalid_input'
   | 'not_found'
-  | 'unknown';
+  | 'unknown'
+  | 'ai_consent_required'
+  | 'quota_exceeded'
+  | 'budget_exhausted'
+  | 'feature_disabled'
+  | 'ai_unavailable'
+  | 'photo_already_deleted';
 
 export class StoreError extends Error {
   constructor(
@@ -120,10 +131,113 @@ export interface DataStore {
   createGoal(g: NewGoal): Promise<Goal>;
   setGoalStatus(id: string, status: GoalStatus): Promise<void>;
 
+  listFoodLogs(range?: { fromIso?: string; toIso?: string }): Promise<FoodLog[]>;
+  createFoodLog(input: NewFoodLog): Promise<FoodLog>;
+  updateFoodItem(id: string, values: FoodItemValues): Promise<void>;
+  deleteFoodItem(id: string): Promise<void>;
+  deleteFoodLog(id: string): Promise<void>;
+  listSavedMeals(): Promise<SavedMeal[]>;
+  saveMeal(input: {
+    name: string;
+    mealType: MealType | null;
+    items: FoodItemValues[];
+  }): Promise<SavedMeal>;
+  deleteSavedMeal(id: string): Promise<void>;
+
+  /** Meal photo analysis. In development this is SIMULATED (mock); the Supabase adapter has no analysis service yet. */
+  analyzeMealPhoto?(input: { seed: number }): Promise<PhotoAnalysisResult>;
+  listPhotoAnalyses?(): Promise<PhotoAnalysisRecord[]>;
+  setPhotoSaved?(analysisId: string, saved: boolean): Promise<void>;
+  /** Marks temporary photos whose retention window has passed as deleted. Returns how many. */
+  purgeExpiredPhotos?(): Promise<number>;
+
+  listMealPlans(): Promise<MealPlan[]>;
+  createMealPlan(input: NewMealPlan): Promise<MealPlan>;
+  deleteMealPlan(id: string): Promise<void>;
+
   latestReadiness(): Promise<ReadinessResultRecord | null>;
   saveReadiness(
     answers: Partial<Record<ReadinessQuestion, boolean>>,
   ): Promise<ReadinessResultRecord>;
+}
+
+// ---------- Food ----------
+export type FoodLogSource = 'manual' | 'photo' | 'saved_meal' | 'plan';
+export interface FoodLogItem extends FoodItemValues {
+  id: string;
+  logId: string;
+}
+export interface FoodLog {
+  id: string;
+  loggedAt: string;
+  mealType: MealType;
+  source: FoodLogSource;
+  photoAnalysisId: string | null;
+  items: FoodLogItem[];
+}
+export interface NewFoodLog {
+  mealType: MealType;
+  loggedAt?: string;
+  source: FoodLogSource;
+  items: FoodItemValues[];
+  photoAnalysisId?: string | null;
+}
+export interface SavedMeal {
+  id: string;
+  name: string;
+  mealType: MealType | null;
+  items: FoodItemValues[];
+  createdAt: string;
+}
+export interface PhotoAnalysisRecord {
+  id: string;
+  status: 'uploaded' | 'succeeded' | 'failed' | 'deleted';
+  provider: 'mock' | 'live';
+  requestedAt: string;
+  analyzedAt: string | null;
+  /** When the temporary stored original is deleted (24 hours after a successful analysis unless saved). */
+  deleteAfter: string | null;
+  saved: boolean;
+  deletedAt: string | null;
+}
+export interface PhotoAnalysisResult {
+  analysisId: string;
+  /** 'mock' means SIMULATED recognition: it does not look at the image. The UI must say so. */
+  provider: 'mock' | 'live';
+  items: GroundedItem[];
+  notes: string | null;
+}
+export interface PlanItemRecord {
+  dayIndex: number;
+  mealType: MealType;
+  foodId: string | null;
+  name: string;
+  grams: number;
+  kcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  costTier: number | null;
+}
+export interface MealPlan {
+  id: string;
+  name: string;
+  startDate: string;
+  days: number;
+  budgetLevel: BudgetLevel;
+  budgetCents: number | null;
+  currency: string | null;
+  targetKcal: number;
+  createdAt: string;
+  items: PlanItemRecord[];
+}
+export interface NewMealPlan {
+  name: string;
+  startDate: string;
+  budgetLevel: BudgetLevel;
+  budgetCents?: number | null;
+  currency?: string | null;
+  plan: MealPlanDraft;
 }
 
 export const CURRENT_POLICY_VERSION = 'dev-0';

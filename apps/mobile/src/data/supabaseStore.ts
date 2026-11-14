@@ -3,6 +3,8 @@ import {
   consentPurposeSchema,
   evaluateReadiness,
   type ConsentPurpose,
+  type FoodItemValues,
+  type MealType,
   type ReadinessQuestion,
 } from '@dancehall/shared';
 import {
@@ -19,6 +21,12 @@ import {
   type Session,
   type StoreErrorCode,
   type WeightEntry,
+  type FoodLog,
+  type FoodLogItem,
+  type MealPlan,
+  type NewFoodLog,
+  type NewMealPlan,
+  type SavedMeal,
 } from './types';
 
 export interface SupabaseStoreConfig {
@@ -53,6 +61,45 @@ export function mapSupabaseError(
 
 type Row = Record<string, unknown>;
 const num = (v: unknown) => Number(v);
+
+const toItemRow = (v: FoodItemValues) => ({
+  food_id: v.foodId,
+  name: v.name,
+  grams: v.grams,
+  kcal: v.kcal,
+  protein_g: v.proteinG,
+  carbs_g: v.carbsG,
+  fat_g: v.fatG,
+  kcal_low: v.kcalLow,
+  kcal_high: v.kcalHigh,
+  source: v.source,
+  confidence: v.confidence,
+  user_edited: v.userEdited,
+});
+const fromItemRow = (r: Row): FoodLogItem => ({
+  id: r.id as string,
+  logId: r.log_id as string,
+  foodId: (r.food_id as string | null) ?? null,
+  name: r.name as string,
+  grams: Number(r.grams),
+  kcal: Number(r.kcal),
+  proteinG: Number(r.protein_g),
+  carbsG: Number(r.carbs_g),
+  fatG: Number(r.fat_g),
+  kcalLow: Number(r.kcal_low),
+  kcalHigh: Number(r.kcal_high),
+  source: r.source as FoodLogItem['source'],
+  confidence: r.confidence as FoodLogItem['confidence'],
+  userEdited: r.user_edited as boolean,
+});
+const fromLogRow = (r: Row): FoodLog => ({
+  id: r.id as string,
+  loggedAt: r.logged_at as string,
+  mealType: r.meal_type as MealType,
+  source: r.source as FoodLog['source'],
+  photoAnalysisId: (r.photo_analysis_id as string | null) ?? null,
+  items: ((r.food_log_items as Row[] | undefined) ?? []).map(fromItemRow),
+});
 
 export function createSupabaseStore(cfg: SupabaseStoreConfig): DataStore {
   const db: SupabaseClient = createClient(cfg.url, cfg.publishableKey, {
@@ -271,6 +318,168 @@ export function createSupabaseStore(cfg: SupabaseStoreConfig): DataStore {
     },
     async setGoalStatus(id, status) {
       ok(await db.from('goals').update({ status }).eq('id', id));
+      emit();
+    },
+
+    async listFoodLogs(range) {
+      let q = db
+        .from('food_logs')
+        .select('*, food_log_items(*)')
+        .order('logged_at', { ascending: false })
+        .limit(500);
+      if (range?.fromIso) q = q.gte('logged_at', range.fromIso);
+      if (range?.toIso) q = q.lt('logged_at', range.toIso);
+      return (ok(await q) as Row[]).map(fromLogRow);
+    },
+    async createFoodLog(input: NewFoodLog) {
+      const row: Row = { meal_type: input.mealType, source: input.source };
+      if (input.loggedAt) row.logged_at = input.loggedAt;
+      if (input.photoAnalysisId) row.photo_analysis_id = input.photoAnalysisId;
+      const log = ok(await db.from('food_logs').insert(row).select('*').single()) as Row;
+      const res = await db
+        .from('food_log_items')
+        .insert(input.items.map((i) => ({ log_id: log.id, ...toItemRow(i) })))
+        .select('*');
+      if (res.error) {
+        await db
+          .from('food_logs')
+          .delete()
+          .eq('id', log.id as string); // do not leave an empty meal behind
+        throw mapSupabaseError(res.error);
+      }
+      emit();
+      return fromLogRow({ ...log, food_log_items: res.data });
+    },
+    async updateFoodItem(id, v) {
+      const { food_id, name, grams, kcal, protein_g, carbs_g, fat_g, kcal_low, kcal_high } =
+        toItemRow(v);
+      ok(
+        await db
+          .from('food_log_items')
+          .update({ food_id, name, grams, kcal, protein_g, carbs_g, fat_g, kcal_low, kcal_high })
+          .eq('id', id),
+      );
+      emit();
+    },
+    async deleteFoodItem(id) {
+      ok(await db.from('food_log_items').delete().eq('id', id));
+      emit();
+    },
+    async deleteFoodLog(id) {
+      ok(await db.from('food_logs').delete().eq('id', id));
+      emit();
+    },
+    async listSavedMeals() {
+      return (
+        ok(
+          await db.from('saved_meals').select('*').order('created_at', { ascending: false }),
+        ) as Row[]
+      ).map((r): SavedMeal => ({
+        id: r.id as string,
+        name: r.name as string,
+        mealType: (r.meal_type as MealType | null) ?? null,
+        items: r.items as FoodItemValues[],
+        createdAt: r.created_at as string,
+      }));
+    },
+    async saveMeal(input) {
+      const r = ok(
+        await db
+          .from('saved_meals')
+          .insert({ name: input.name.trim(), meal_type: input.mealType, items: input.items })
+          .select('*')
+          .single(),
+      ) as Row;
+      emit();
+      return {
+        id: r.id as string,
+        name: r.name as string,
+        mealType: (r.meal_type as MealType | null) ?? null,
+        items: r.items as FoodItemValues[],
+        createdAt: r.created_at as string,
+      };
+    },
+    async deleteSavedMeal(id) {
+      ok(await db.from('saved_meals').delete().eq('id', id));
+      emit();
+    },
+    async listMealPlans() {
+      const plans = ok(
+        await db
+          .from('meal_plans')
+          .select('*, meal_plan_items(*)')
+          .order('created_at', { ascending: false }),
+      ) as Row[];
+      return plans.map((p): MealPlan => ({
+        id: p.id as string,
+        name: p.name as string,
+        startDate: p.start_date as string,
+        days: Number(p.days),
+        budgetLevel: p.budget_level as MealPlan['budgetLevel'],
+        budgetCents: (p.budget_cents as number | null) ?? null,
+        currency: (p.currency as string | null) ?? null,
+        targetKcal: Number(p.target_kcal),
+        createdAt: p.created_at as string,
+        items: ((p.meal_plan_items as Row[]) ?? []).map((i) => ({
+          dayIndex: Number(i.day_index),
+          mealType: i.meal_type as MealType,
+          foodId: (i.food_id as string | null) ?? null,
+          name: i.name as string,
+          grams: Number(i.grams),
+          kcal: Number(i.kcal),
+          proteinG: Number(i.protein_g),
+          carbsG: Number(i.carbs_g),
+          fatG: Number(i.fat_g),
+          costTier: (i.cost_tier as number | null) ?? null,
+        })),
+      }));
+    },
+    async createMealPlan(input: NewMealPlan) {
+      const p = ok(
+        await db
+          .from('meal_plans')
+          .insert({
+            name: input.name.trim(),
+            start_date: input.startDate,
+            days: input.plan.days.length,
+            budget_level: input.budgetLevel,
+            budget_cents: input.budgetCents ?? null,
+            currency: input.currency ?? null,
+            target_kcal: input.plan.targetKcal,
+          })
+          .select('*')
+          .single(),
+      ) as Row;
+      const rows = input.plan.days.flatMap((d) =>
+        d.meals.flatMap((m) =>
+          m.items.map((i) => ({
+            plan_id: p.id,
+            day_index: d.dayIndex,
+            meal_type: m.mealType,
+            food_id: i.foodId,
+            name: i.name,
+            grams: i.grams,
+            kcal: i.kcal,
+            protein_g: i.proteinG,
+            carbs_g: i.carbsG,
+            fat_g: i.fatG,
+          })),
+        ),
+      );
+      const res = await db.from('meal_plan_items').insert(rows);
+      if (res.error) {
+        await db
+          .from('meal_plans')
+          .delete()
+          .eq('id', p.id as string);
+        throw mapSupabaseError(res.error);
+      }
+      emit();
+      const all = await this.listMealPlans();
+      return all.find((x) => x.id === p.id)!;
+    },
+    async deleteMealPlan(id) {
+      ok(await db.from('meal_plans').delete().eq('id', id));
       emit();
     },
 

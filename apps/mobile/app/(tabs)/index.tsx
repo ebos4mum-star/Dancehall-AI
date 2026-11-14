@@ -3,6 +3,9 @@ import { View } from 'react-native';
 import { router } from 'expo-router';
 import { goalProgress, lbToKg, summarizeWeights, type UnitSystem } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
+import { useFoodData } from '@/food/hooks';
+import { MacroBars } from '@/food/ui';
+import { Ring } from '@/ui/motion';
 import { errorMessage, useLoad } from '@/data/hooks';
 import { t, type StringKey } from '@/i18n';
 import { formatChange, formatDate, formatWeight, parseDecimal } from '@/lib/format';
@@ -18,13 +21,14 @@ import { TextField } from '@/ui/TextField';
 
 export default function Today() {
   const { store, profile } = useApp();
-  const { spacing } = useTheme();
+  const { spacing, colors } = useTheme();
   const units: UnitSystem = profile?.unitSystem ?? 'metric';
   const { data, loading, error } = useLoad(async (s) => ({
     weights: await s.listWeights(),
     goals: await s.listGoals(),
     readiness: await s.latestReadiness(),
   }));
+  const food = useFoodData();
   const [entry, setEntry] = useState('');
   const [msg, setMsg] = useState<{ text: string; warn: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -122,6 +126,40 @@ export default function Today() {
               onPress={() => router.push('/progress')}
             />
           ) : null}
+        </Card>
+      </FadeIn>
+
+      <FadeIn>
+        <Card>
+          <AppText variant="heading">{t('today.foodTitle')}</AppText>
+          {food.todayLogs.length === 0 ? (
+            <AppText muted>{t('today.foodEmpty')}</AppText>
+          ) : (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.lg }}>
+              <Ring
+                size={92}
+                stroke={10}
+                fraction={food.guide ? food.todayTotals.kcal / food.guide.guideKcal : 0}
+                color={colors.primary}
+                track={colors.border}
+              >
+                <AppText variant="label">{`~${food.todayTotals.kcal}`}</AppText>
+              </Ring>
+              <View style={{ flex: 1, gap: spacing.xs }}>
+                <AppText
+                  variant="caption"
+                  muted
+                >{`${t('food.kcalAbout', { kcal: food.todayTotals.kcal })} ${t('food.range', { low: food.todayTotals.kcalLow, high: food.todayTotals.kcalHigh })}`}</AppText>
+                <MacroBars totals={food.todayTotals} />
+              </View>
+            </View>
+          )}
+          {food.todayTotals.unreviewedEstimates > 0 ? (
+            <AppText variant="caption" muted>
+              {t('food.includesEstimates', { n: food.todayTotals.unreviewedEstimates })}
+            </AppText>
+          ) : null}
+          <Button label={t('today.foodLog')} onPress={() => router.push('/food/camera')} />
         </Card>
       </FadeIn>
 

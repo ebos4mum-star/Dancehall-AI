@@ -1,23 +1,45 @@
 import {
+  AiGateway,
+  InMemoryUsageStore,
+  MockAiProvider,
+  newBudget,
+  type BudgetState,
+  type UsageEvent,
+} from '@dancehall/ai';
+import {
+  AppError,
+  FREE_ENTITLEMENT,
+  MEAL_TYPES,
   ageYearsOn,
   consentPurposeSchema,
   evaluateReadiness,
   goalWeeks,
+  groundPhotoItems,
   hardCheckGoal,
   type ConsentPurpose,
+  type FoodItemValues,
+  type MealType,
   type ReadinessQuestion,
 } from '@dancehall/shared';
 import {
   StoreError,
   type Consents,
   type DataStore,
+  type FoodLog,
   type Goal,
   type GoalStatus,
+  type MealPlan,
+  type NewFoodLog,
   type NewGoal,
+  type NewMealPlan,
+  type PhotoAnalysisRecord,
+  type PhotoAnalysisResult,
   type PrivateProfile,
   type Profile,
   type ReadinessResultRecord,
+  type SavedMeal,
   type Session,
+  type StoreErrorCode,
   type WeightEntry,
 } from './types';
 
@@ -35,6 +57,12 @@ interface State {
   weights: WeightEntry[];
   goals: Goal[];
   readiness: ReadinessResultRecord[];
+  foodLogs: FoodLog[];
+  savedMeals: SavedMeal[];
+  photos: PhotoAnalysisRecord[];
+  plans: MealPlan[];
+  aiEvents: UsageEvent[];
+  aiBudget: BudgetState;
 }
 
 const KEY = 'dh.mock.v1';
@@ -54,7 +82,42 @@ const emptyState = (): State => ({
   weights: [],
   goals: [],
   readiness: [],
+  foodLogs: [],
+  savedMeals: [],
+  photos: [],
+  plans: [],
+  aiEvents: [],
+  aiBudget: newBudget(),
 });
+
+const DAY_MS = 86_400_000;
+const AI_PHOTO: ConsentPurpose = 'ai_processing_of_food_photos';
+
+function checkItem(i: FoodItemValues): void {
+  const bad =
+    !(i.name.trim().length >= 1 && i.name.length <= 80) ||
+    !(i.grams > 0 && i.grams <= 5000) ||
+    !(i.kcal >= 0 && i.kcal <= 10000) ||
+    !(i.proteinG >= 0 && i.carbsG >= 0 && i.fatG >= 0) ||
+    !(i.kcalLow >= 0 && i.kcalLow <= i.kcal && i.kcal <= i.kcalHigh) ||
+    !['curated', 'usda_fdc', 'open_food_facts', 'user_manual', 'ai_estimate'].includes(i.source) ||
+    !['low', 'medium', 'high'].includes(i.confidence);
+  if (bad) throw new StoreError('invalid_input', 'food item');
+}
+function mapAiError(e: unknown): StoreError {
+  if (e instanceof AppError) {
+    const code: StoreErrorCode =
+      e.code === 'quota_exceeded'
+        ? 'quota_exceeded'
+        : e.code === 'budget_exhausted'
+          ? 'budget_exhausted'
+          : e.code === 'feature_disabled'
+            ? 'feature_disabled'
+            : 'ai_unavailable';
+    return new StoreError(code, e.userMessage);
+  }
+  return new StoreError('ai_unavailable');
+}
 
 let counter = 0;
 const newId = () =>
@@ -250,6 +313,273 @@ export class MockStore implements DataStore {
     )
       throw new StoreError('active_goal_exists');
     g.status = status;
+    await this.commit();
+  }
+
+  // ---------- Food diary ----------
+  async listFoodLogs(range?: { fromIso?: string; toIso?: string }) {
+    const s = await this.authed();
+    return s.foodLogs
+      .filter(
+        (l) =>
+          (!range?.fromIso || l.loggedAt >= range.fromIso) &&
+          (!range?.toIso || l.loggedAt < range.toIso),
+      )
+      .sort((a, b) => b.loggedAt.localeCompare(a.loggedAt))
+      .map((l) => ({ ...l, items: l.items.map((i) => ({ ...i })) }));
+  }
+  async createFoodLog(input: NewFoodLog): Promise<FoodLog> {
+    const s = await this.authed();
+    this.requireConsent(s); // ordinary manual logging needs only health-data consent
+    if (input.source === 'photo' && !this.consented(s, AI_PHOTO))
+      throw new StoreError('ai_consent_required');
+    if (!MEAL_TYPES.includes(input.mealType) || input.items.length < 1 || input.items.length > 30)
+      throw new StoreError('invalid_input', 'meal');
+    input.items.forEach(checkItem);
+    const at = input.loggedAt ?? this.now().toISOString();
+    if (Date.parse(at) > this.now().getTime() + DAY_MS)
+      throw new StoreError('invalid_input', 'food_log_not_in_future');
+    const logId = newId();
+    const log: FoodLog = {
+      id: logId,
+      loggedAt: at,
+      mealType: input.mealType,
+      source: input.source,
+      photoAnalysisId: input.photoAnalysisId ?? null,
+      items: input.items.map((v) => ({ ...v, id: newId(), logId })),
+    };
+    s.foodLogs.push(log);
+    await this.commit();
+    return { ...log, items: log.items.map((i) => ({ ...i })) };
+  }
+  async updateFoodItem(id: string, values: FoodItemValues) {
+    const s = await this.authed();
+    this.requireConsent(s);
+    checkItem(values);
+    const item = s.foodLogs.flatMap((l) => l.items).find((i) => i.id === id);
+    if (!item) throw new StoreError('not_found');
+    // Like the database trigger: any change to a value counts as the person editing it. Source cannot be changed.
+    const { source: _keep, ...rest } = values;
+    const changed = (
+      [
+        'name',
+        'grams',
+        'kcal',
+        'proteinG',
+        'carbsG',
+        'fatG',
+        'kcalLow',
+        'kcalHigh',
+        'foodId',
+      ] as const
+    ).some((k) => rest[k] !== item[k]);
+    Object.assign(item, rest, { userEdited: item.userEdited || changed });
+    await this.commit();
+  }
+  async deleteFoodItem(id: string) {
+    const s = await this.authed();
+    for (const l of s.foodLogs) l.items = l.items.filter((i) => i.id !== id);
+    s.foodLogs = s.foodLogs.filter((l) => l.items.length > 0);
+    await this.commit();
+  }
+  async deleteFoodLog(id: string) {
+    const s = await this.authed();
+    s.foodLogs = s.foodLogs.filter((l) => l.id !== id);
+    await this.commit();
+  }
+  async listSavedMeals() {
+    const s = await this.authed();
+    return [...s.savedMeals]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map((m) => ({ ...m, items: m.items.map((i) => ({ ...i })) }));
+  }
+  async saveMeal(input: {
+    name: string;
+    mealType: MealType | null;
+    items: FoodItemValues[];
+  }): Promise<SavedMeal> {
+    const s = await this.authed();
+    this.requireConsent(s);
+    const name = input.name.trim();
+    if (name.length < 1 || name.length > 60 || input.items.length < 1 || input.items.length > 30)
+      throw new StoreError('invalid_input', 'saved meal');
+    input.items.forEach(checkItem);
+    const meal: SavedMeal = {
+      id: newId(),
+      name,
+      mealType: input.mealType,
+      items: input.items.map((i) => ({ ...i })),
+      createdAt: this.now().toISOString(),
+    };
+    s.savedMeals.push(meal);
+    await this.commit();
+    return { ...meal, items: meal.items.map((i) => ({ ...i })) };
+  }
+  async deleteSavedMeal(id: string) {
+    const s = await this.authed();
+    s.savedMeals = s.savedMeals.filter((m) => m.id !== id);
+    await this.commit();
+  }
+
+  // ---------- Photo analysis (SIMULATED recognition through the real gateway) ----------
+  async analyzeMealPhoto(input: { seed: number }): Promise<PhotoAnalysisResult> {
+    const s = await this.authed();
+    this.requireConsent(s);
+    if (!this.consented(s, AI_PHOTO)) throw new StoreError('ai_consent_required');
+    const now = this.now();
+    const rec: PhotoAnalysisRecord = {
+      id: newId(),
+      status: 'uploaded',
+      provider: 'mock',
+      requestedAt: now.toISOString(),
+      analyzedAt: null,
+      deleteAfter: new Date(now.getTime() + DAY_MS).toISOString(),
+      saved: false,
+      deletedAt: null,
+    };
+    s.photos.push(rec);
+    // The same gateway the server will use: kill switches, quota, budget reservation, schema validation, usage metering.
+    const usage = new InMemoryUsageStore();
+    usage.events = [...s.aiEvents];
+    const gateway = new AiGateway(
+      new MockAiProvider(),
+      usage,
+      {
+        flags: { ai_gateway: true },
+        killAll: false,
+        killFeatures: {},
+        maxOutputTokens: 800,
+        now: () => this.now(),
+        models: {
+          food_photo: 'mock-large',
+          concierge_chat: 'mock-small',
+          weekly_review: 'mock-small',
+        } as never,
+      },
+      { ...s.aiBudget },
+    );
+    try {
+      const out = (await gateway.run({
+        userId: 'dev-user-synthetic',
+        entitlement: FREE_ENTITLEMENT,
+        feature: 'food_photo',
+        prompt: `mock-seed:${input.seed}`,
+        hasImage: true,
+      })) as {
+        items: Parameters<typeof groundPhotoItems>[0];
+        notes?: string;
+      };
+      s.aiEvents = usage.events;
+      s.aiBudget = gateway.budget;
+      rec.status = 'succeeded';
+      rec.analyzedAt = this.now().toISOString();
+      rec.deleteAfter = new Date(this.now().getTime() + DAY_MS).toISOString(); // original deleted 24 hours after a successful analysis
+      await this.commit();
+      return {
+        analysisId: rec.id,
+        provider: 'mock',
+        items: groundPhotoItems(out.items),
+        notes: out.notes ?? null,
+      };
+    } catch (e) {
+      s.aiEvents = usage.events;
+      s.aiBudget = gateway.budget;
+      rec.status = 'failed'; // unsuccessful uploads are still deleted within 24 hours of upload (deleteAfter was set at upload)
+      await this.commit();
+      throw mapAiError(e);
+    }
+  }
+  async listPhotoAnalyses() {
+    const s = await this.authed();
+    return s.photos.map((p) => ({ ...p }));
+  }
+  async setPhotoSaved(analysisId: string, saved: boolean) {
+    const s = await this.authed();
+    const p = s.photos.find((x) => x.id === analysisId);
+    if (!p) throw new StoreError('not_found');
+    if (saved && (p.deletedAt || p.status === 'deleted'))
+      throw new StoreError('photo_already_deleted');
+    p.saved = saved;
+    p.deleteAfter = saved ? null : new Date(this.now().getTime() + DAY_MS).toISOString();
+    await this.commit();
+  }
+  async purgeExpiredPhotos() {
+    await this.load();
+    if (!this.state.signedIn) return 0;
+    const t = this.now().toISOString();
+    let n = 0;
+    for (const p of this.state.photos) {
+      if (!p.deletedAt && !p.saved && p.deleteAfter !== null && p.deleteAfter <= t) {
+        p.status = 'deleted';
+        p.deletedAt = t;
+        p.deleteAfter = null;
+        n += 1;
+      }
+    }
+    if (n > 0) await this.commit();
+    return n;
+  }
+
+  // ---------- Meal plans ----------
+  async listMealPlans() {
+    const s = await this.authed();
+    return [...s.plans]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map((p) => ({ ...p, items: p.items.map((i) => ({ ...i })) }));
+  }
+  async createMealPlan(input: NewMealPlan): Promise<MealPlan> {
+    const s = await this.authed();
+    this.requireConsent(s);
+    const days = input.plan.days.length;
+    const name = input.name.trim();
+    if (
+      name.length < 1 ||
+      name.length > 60 ||
+      days < 1 ||
+      days > 14 ||
+      input.plan.targetKcal < 800 ||
+      input.plan.targetKcal > 6000
+    )
+      throw new StoreError('invalid_input', 'plan');
+    if (
+      (input.budgetCents == null) !== (input.currency == null) ||
+      (input.currency != null && !/^[A-Z]{3}$/.test(input.currency))
+    )
+      throw new StoreError('invalid_input', 'budget');
+    const plan: MealPlan = {
+      id: newId(),
+      name,
+      startDate: input.startDate,
+      days,
+      budgetLevel: input.budgetLevel,
+      budgetCents: input.budgetCents ?? null,
+      currency: input.currency ?? null,
+      targetKcal: input.plan.targetKcal,
+      createdAt: this.now().toISOString(),
+      items: input.plan.days.flatMap((d) =>
+        d.meals.flatMap((m) =>
+          m.items.map((i) => ({
+            dayIndex: d.dayIndex,
+            mealType: m.mealType,
+            foodId: i.foodId,
+            name: i.name,
+            grams: i.grams,
+            kcal: i.kcal,
+            proteinG: i.proteinG,
+            carbsG: i.carbsG,
+            fatG: i.fatG,
+            costTier: null,
+          })),
+        ),
+      ),
+    };
+    s.plans.push(plan);
+    await this.commit();
+    return { ...plan, items: plan.items.map((i) => ({ ...i })) };
+  }
+  async deleteMealPlan(id: string) {
+    const s = await this.authed();
+    s.plans = s.plans.filter((p) => p.id !== id);
     await this.commit();
   }
 

@@ -68,3 +68,10 @@ Storage: private buckets, per-user folders, no public read, food photos deleted 
 ## Testing approach
 
 Pure logic is tested with unit tests (Vitest). Database policy tests will run on plain Postgres in CI from Phase 1. No CI job calls a paid or external service.
+
+## Batch B additions (nutrition, local)
+
+- **Reference foods** (`foods`, seeded) are readable by signed-in users and written only by trusted code. Diary tables (`food_logs`, `food_log_items`), `saved_meals`, `meal_plans`/`meal_plan_items` and `food_photo_analyses` are owner-only with consent-gated writes.
+- **Photo analysis flow (target design):** the app resizes the photo, uploads it to the private bucket, calls the server AI gateway, which validates structured output and grounds items in reference data, then the original is deleted 24 hours after analysis unless saved. In the development build the same gateway runs in-process against a mock provider and nothing is uploaded.
+- **App layers:** `DataStore` (mock or Supabase) for persistence; pure logic in `packages/shared` (items, ranges, search, grounding, swaps, planner, energy guide); a `DraftProvider` holds the meal being composed so photo, manual and saved-meal entry share one review screen.
+- **UI kit:** `ui/motion.tsx` (press feedback, count-up, reveal, floating, ring) and `ui/Depth.tsx` (depth cards, hero card, `CharacterStage` slot for future 3D artwork). All animation respects reduced motion.

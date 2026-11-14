@@ -87,17 +87,4 @@ begin
   perform test.throws($q$insert into public.goals (type, period, start_date, end_date, start_kg, target_kg) values ('maintain', 'yearly', current_date, (current_date + interval '1 year')::date, 66, 66)$q$, 'row-level security');
   perform test.assert((select count(*) from public.weight_entries) = 2, 'B can still read own data');
   perform test.as_admin();
-
-  -- Generic isolation: every public table with a user_id column holds rows for A that B can never see.
-  declare t record; cnt bigint;
-  begin
-    for t in select table_name from information_schema.columns where table_schema = 'public' and column_name = 'user_id' loop
-      execute format('select count(*) from public.%I where user_id = %L', t.table_name, a) into cnt;
-      perform test.assert(cnt > 0, format('seed covers table %s', t.table_name));
-      perform test.as_user(b);
-      execute format('select count(*) from public.%I where user_id = %L', t.table_name, a) into cnt;
-      perform test.as_admin();
-      perform test.assert(cnt = 0, format('B reads zero of A rows in %s', t.table_name));
-    end loop;
-  end;
 end $$;

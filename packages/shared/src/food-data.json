@@ -1,0 +1,857 @@
+{
+  "_notice": "SYNTHETIC illustrative values for development only. Rounded approximations of typical foods, NOT authoritative nutrition data. Replace with licensed reference data (USDA FoodData Central, Open Food Facts) and dietitian-reviewed regional entries before any public release (gates N1, N3). Preparation, brand and portion variation are large.",
+  "source": "curated",
+  "isSynthetic": true,
+  "foods": [
+    {
+      "id": "white-rice",
+      "name": "White rice, cooked",
+      "category": "grain",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 130,
+        "proteinG": 2.7,
+        "carbsG": 28,
+        "fatG": 0.3,
+        "fiberG": 0.4
+      },
+      "servingG": 150,
+      "servingLabel": "1 cup",
+      "costTier": 1,
+      "aliases": ["rice"]
+    },
+    {
+      "id": "brown-rice",
+      "name": "Brown rice, cooked",
+      "category": "grain",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 123,
+        "proteinG": 2.7,
+        "carbsG": 26,
+        "fatG": 1,
+        "fiberG": 1.6
+      },
+      "servingG": 150,
+      "servingLabel": "1 cup",
+      "costTier": 1,
+      "aliases": []
+    },
+    {
+      "id": "jollof-rice",
+      "name": "Jollof rice",
+      "category": "mixed_dish",
+      "regionTags": ["west_african"],
+      "per100g": {
+        "kcal": 160,
+        "proteinG": 3,
+        "carbsG": 27,
+        "fatG": 4,
+        "fiberG": 1
+      },
+      "servingG": 200,
+      "servingLabel": "1 plate",
+      "costTier": 1,
+      "aliases": ["jollof"]
+    },
+    {
+      "id": "fried-rice",
+      "name": "Fried rice",
+      "category": "mixed_dish",
+      "regionTags": ["asian", "global"],
+      "per100g": {
+        "kcal": 163,
+        "proteinG": 4,
+        "carbsG": 24,
+        "fatG": 5.5,
+        "fiberG": 1
+      },
+      "servingG": 200,
+      "servingLabel": "1 plate",
+      "costTier": 2,
+      "aliases": []
+    },
+    {
+      "id": "rice-and-peas",
+      "name": "Rice and peas",
+      "category": "mixed_dish",
+      "regionTags": ["caribbean"],
+      "per100g": {
+        "kcal": 150,
+        "proteinG": 4,
+        "carbsG": 26,
+        "fatG": 3,
+        "fiberG": 2.5
+      },
+      "servingG": 200,
+      "servingLabel": "1 plate",
+      "costTier": 1,
+      "aliases": ["rice and beans"]
+    },
+    {
+      "id": "pasta",
+      "name": "Pasta, cooked",
+      "category": "grain",
+      "regionTags": ["mediterranean", "global"],
+      "per100g": {
+        "kcal": 158,
+        "proteinG": 5.8,
+        "carbsG": 31,
+        "fatG": 0.9,
+        "fiberG": 1.8
+      },
+      "servingG": 180,
+      "servingLabel": "1 bowl",
+      "costTier": 1,
+      "aliases": ["spaghetti"]
+    },
+    {
+      "id": "whole-wheat-bread",
+      "name": "Whole wheat bread",
+      "category": "grain",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 252,
+        "proteinG": 12.5,
+        "carbsG": 43,
+        "fatG": 3.5,
+        "fiberG": 6
+      },
+      "servingG": 40,
+      "servingLabel": "1 slice",
+      "costTier": 1,
+      "aliases": ["bread", "toast"]
+    },
+    {
+      "id": "pita-bread",
+      "name": "Pita bread",
+      "category": "grain",
+      "regionTags": ["mediterranean"],
+      "per100g": {
+        "kcal": 275,
+        "proteinG": 9,
+        "carbsG": 55,
+        "fatG": 1.2,
+        "fiberG": 2.2
+      },
+      "servingG": 60,
+      "servingLabel": "1 pita",
+      "costTier": 1,
+      "aliases": ["pita"]
+    },
+    {
+      "id": "roti",
+      "name": "Roti / chapati",
+      "category": "grain",
+      "regionTags": ["south_asian", "caribbean"],
+      "per100g": {
+        "kcal": 297,
+        "proteinG": 9,
+        "carbsG": 46,
+        "fatG": 7,
+        "fiberG": 5
+      },
+      "servingG": 45,
+      "servingLabel": "1 roti",
+      "costTier": 1,
+      "aliases": ["chapati", "flatbread"]
+    },
+    {
+      "id": "oatmeal",
+      "name": "Oatmeal, cooked",
+      "category": "grain",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 71,
+        "proteinG": 2.5,
+        "carbsG": 12,
+        "fatG": 1.5,
+        "fiberG": 1.7
+      },
+      "servingG": 240,
+      "servingLabel": "1 bowl",
+      "costTier": 1,
+      "aliases": ["porridge", "oats"]
+    },
+    {
+      "id": "boiled-egg",
+      "name": "Egg, boiled",
+      "category": "protein",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 155,
+        "proteinG": 13,
+        "carbsG": 1.1,
+        "fatG": 11,
+        "fiberG": 0
+      },
+      "servingG": 50,
+      "servingLabel": "1 egg",
+      "costTier": 1,
+      "aliases": ["egg", "eggs"]
+    },
+    {
+      "id": "grilled-chicken",
+      "name": "Chicken breast, grilled",
+      "category": "protein",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 165,
+        "proteinG": 31,
+        "carbsG": 0,
+        "fatG": 3.6,
+        "fiberG": 0
+      },
+      "servingG": 120,
+      "servingLabel": "1 breast",
+      "costTier": 2,
+      "aliases": ["chicken"]
+    },
+    {
+      "id": "jerk-chicken",
+      "name": "Jerk chicken",
+      "category": "protein",
+      "regionTags": ["caribbean"],
+      "per100g": {
+        "kcal": 190,
+        "proteinG": 22,
+        "carbsG": 4,
+        "fatG": 9,
+        "fiberG": 0.5
+      },
+      "servingG": 130,
+      "servingLabel": "1 piece",
+      "costTier": 2,
+      "aliases": []
+    },
+    {
+      "id": "fried-chicken",
+      "name": "Fried chicken",
+      "category": "protein",
+      "regionTags": ["american", "global"],
+      "per100g": {
+        "kcal": 246,
+        "proteinG": 18,
+        "carbsG": 10,
+        "fatG": 15,
+        "fiberG": 0.4
+      },
+      "servingG": 130,
+      "servingLabel": "1 piece",
+      "costTier": 2,
+      "aliases": []
+    },
+    {
+      "id": "grilled-tilapia",
+      "name": "Tilapia, grilled",
+      "category": "protein",
+      "regionTags": ["west_african", "global"],
+      "per100g": {
+        "kcal": 128,
+        "proteinG": 26,
+        "carbsG": 0,
+        "fatG": 2.7,
+        "fiberG": 0
+      },
+      "servingG": 140,
+      "servingLabel": "1 fillet",
+      "costTier": 2,
+      "aliases": ["tilapia", "fish"]
+    },
+    {
+      "id": "baked-salmon",
+      "name": "Salmon, baked",
+      "category": "protein",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 206,
+        "proteinG": 22,
+        "carbsG": 0,
+        "fatG": 12,
+        "fiberG": 0
+      },
+      "servingG": 140,
+      "servingLabel": "1 fillet",
+      "costTier": 3,
+      "aliases": ["salmon"]
+    },
+    {
+      "id": "beef-stew",
+      "name": "Beef stew",
+      "category": "mixed_dish",
+      "regionTags": ["west_african", "caribbean"],
+      "per100g": {
+        "kcal": 130,
+        "proteinG": 12,
+        "carbsG": 4,
+        "fatG": 7,
+        "fiberG": 0.8
+      },
+      "servingG": 200,
+      "servingLabel": "1 bowl",
+      "costTier": 2,
+      "aliases": ["stew"]
+    },
+    {
+      "id": "goat-curry",
+      "name": "Goat curry",
+      "category": "mixed_dish",
+      "regionTags": ["caribbean", "south_asian"],
+      "per100g": {
+        "kcal": 150,
+        "proteinG": 14,
+        "carbsG": 3,
+        "fatG": 9,
+        "fiberG": 0.8
+      },
+      "servingG": 180,
+      "servingLabel": "1 bowl",
+      "costTier": 3,
+      "aliases": ["curry goat"]
+    },
+    {
+      "id": "chicken-tikka-masala",
+      "name": "Chicken tikka masala",
+      "category": "mixed_dish",
+      "regionTags": ["south_asian"],
+      "per100g": {
+        "kcal": 140,
+        "proteinG": 12,
+        "carbsG": 6,
+        "fatG": 8,
+        "fiberG": 1
+      },
+      "servingG": 200,
+      "servingLabel": "1 bowl",
+      "costTier": 2,
+      "aliases": ["tikka masala"]
+    },
+    {
+      "id": "egusi-soup",
+      "name": "Egusi soup",
+      "category": "mixed_dish",
+      "regionTags": ["west_african"],
+      "per100g": {
+        "kcal": 190,
+        "proteinG": 8,
+        "carbsG": 6,
+        "fatG": 15,
+        "fiberG": 2
+      },
+      "servingG": 200,
+      "servingLabel": "1 bowl",
+      "costTier": 2,
+      "aliases": ["egusi"]
+    },
+    {
+      "id": "tofu",
+      "name": "Tofu, firm",
+      "category": "protein",
+      "regionTags": ["asian", "global"],
+      "per100g": {
+        "kcal": 76,
+        "proteinG": 8,
+        "carbsG": 1.9,
+        "fatG": 4.8,
+        "fiberG": 0.3
+      },
+      "servingG": 100,
+      "servingLabel": "100 g",
+      "costTier": 2,
+      "aliases": []
+    },
+    {
+      "id": "lentils",
+      "name": "Lentils (dal), cooked",
+      "category": "legume",
+      "regionTags": ["south_asian", "global"],
+      "per100g": {
+        "kcal": 116,
+        "proteinG": 9,
+        "carbsG": 20,
+        "fatG": 0.4,
+        "fiberG": 7.9
+      },
+      "servingG": 180,
+      "servingLabel": "1 cup",
+      "costTier": 1,
+      "aliases": ["dal", "lentil"]
+    },
+    {
+      "id": "black-beans",
+      "name": "Black beans, cooked",
+      "category": "legume",
+      "regionTags": ["latin_american", "global"],
+      "per100g": {
+        "kcal": 132,
+        "proteinG": 8.9,
+        "carbsG": 24,
+        "fatG": 0.5,
+        "fiberG": 8.7
+      },
+      "servingG": 170,
+      "servingLabel": "1 cup",
+      "costTier": 1,
+      "aliases": ["beans"]
+    },
+    {
+      "id": "chickpeas",
+      "name": "Chickpeas, cooked",
+      "category": "legume",
+      "regionTags": ["mediterranean", "south_asian"],
+      "per100g": {
+        "kcal": 164,
+        "proteinG": 8.9,
+        "carbsG": 27,
+        "fatG": 2.6,
+        "fiberG": 7.6
+      },
+      "servingG": 160,
+      "servingLabel": "1 cup",
+      "costTier": 1,
+      "aliases": ["garbanzo"]
+    },
+    {
+      "id": "hummus",
+      "name": "Hummus",
+      "category": "legume",
+      "regionTags": ["mediterranean"],
+      "per100g": {
+        "kcal": 166,
+        "proteinG": 8,
+        "carbsG": 14,
+        "fatG": 10,
+        "fiberG": 6
+      },
+      "servingG": 60,
+      "servingLabel": "4 tbsp",
+      "costTier": 2,
+      "aliases": []
+    },
+    {
+      "id": "falafel",
+      "name": "Falafel",
+      "category": "legume",
+      "regionTags": ["mediterranean"],
+      "per100g": {
+        "kcal": 333,
+        "proteinG": 13,
+        "carbsG": 32,
+        "fatG": 18,
+        "fiberG": 5
+      },
+      "servingG": 80,
+      "servingLabel": "4 pieces",
+      "costTier": 2,
+      "aliases": []
+    },
+    {
+      "id": "spinach-cooked",
+      "name": "Spinach, cooked",
+      "category": "vegetable",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 23,
+        "proteinG": 3,
+        "carbsG": 3.6,
+        "fatG": 0.3,
+        "fiberG": 2.4
+      },
+      "servingG": 90,
+      "servingLabel": "1/2 cup",
+      "costTier": 1,
+      "aliases": ["spinach", "greens"]
+    },
+    {
+      "id": "mixed-salad",
+      "name": "Mixed green salad",
+      "category": "vegetable",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 20,
+        "proteinG": 1.5,
+        "carbsG": 3.5,
+        "fatG": 0.2,
+        "fiberG": 1.8
+      },
+      "servingG": 80,
+      "servingLabel": "1 side",
+      "costTier": 1,
+      "aliases": ["salad"]
+    },
+    {
+      "id": "greek-salad",
+      "name": "Greek salad",
+      "category": "mixed_dish",
+      "regionTags": ["mediterranean"],
+      "per100g": {
+        "kcal": 110,
+        "proteinG": 3,
+        "carbsG": 6,
+        "fatG": 9,
+        "fiberG": 1.5
+      },
+      "servingG": 150,
+      "servingLabel": "1 bowl",
+      "costTier": 2,
+      "aliases": []
+    },
+    {
+      "id": "broccoli",
+      "name": "Broccoli, steamed",
+      "category": "vegetable",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 35,
+        "proteinG": 2.4,
+        "carbsG": 7,
+        "fatG": 0.4,
+        "fiberG": 3.3
+      },
+      "servingG": 90,
+      "servingLabel": "1 cup",
+      "costTier": 1,
+      "aliases": ["vegetables"]
+    },
+    {
+      "id": "tomato-stew",
+      "name": "Tomato stew (sauce)",
+      "category": "mixed_dish",
+      "regionTags": ["west_african"],
+      "per100g": {
+        "kcal": 70,
+        "proteinG": 1.5,
+        "carbsG": 7,
+        "fatG": 4,
+        "fiberG": 1.5
+      },
+      "servingG": 100,
+      "servingLabel": "1/2 cup",
+      "costTier": 1,
+      "aliases": ["pepper sauce"]
+    },
+    {
+      "id": "fried-plantain",
+      "name": "Plantain, fried",
+      "category": "vegetable",
+      "regionTags": ["west_african", "caribbean", "latin_american"],
+      "per100g": {
+        "kcal": 236,
+        "proteinG": 1.5,
+        "carbsG": 37,
+        "fatG": 10,
+        "fiberG": 2.3
+      },
+      "servingG": 80,
+      "servingLabel": "1/2 plantain",
+      "costTier": 1,
+      "aliases": ["plantain", "dodo"]
+    },
+    {
+      "id": "boiled-plantain",
+      "name": "Plantain, boiled",
+      "category": "vegetable",
+      "regionTags": ["west_african", "caribbean"],
+      "per100g": {
+        "kcal": 122,
+        "proteinG": 1.3,
+        "carbsG": 32,
+        "fatG": 0.4,
+        "fiberG": 2.3
+      },
+      "servingG": 120,
+      "servingLabel": "1/2 plantain",
+      "costTier": 1,
+      "aliases": []
+    },
+    {
+      "id": "sweet-potato",
+      "name": "Sweet potato, baked",
+      "category": "vegetable",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 90,
+        "proteinG": 2,
+        "carbsG": 21,
+        "fatG": 0.2,
+        "fiberG": 3.3
+      },
+      "servingG": 130,
+      "servingLabel": "1 medium",
+      "costTier": 1,
+      "aliases": []
+    },
+    {
+      "id": "yam-boiled",
+      "name": "Yam, boiled",
+      "category": "vegetable",
+      "regionTags": ["west_african", "caribbean"],
+      "per100g": {
+        "kcal": 118,
+        "proteinG": 1.5,
+        "carbsG": 28,
+        "fatG": 0.2,
+        "fiberG": 4.1
+      },
+      "servingG": 150,
+      "servingLabel": "1 piece",
+      "costTier": 1,
+      "aliases": ["yam"]
+    },
+    {
+      "id": "banana",
+      "name": "Banana",
+      "category": "fruit",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 89,
+        "proteinG": 1.1,
+        "carbsG": 23,
+        "fatG": 0.3,
+        "fiberG": 2.6
+      },
+      "servingG": 118,
+      "servingLabel": "1 medium",
+      "costTier": 1,
+      "aliases": []
+    },
+    {
+      "id": "mango",
+      "name": "Mango",
+      "category": "fruit",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 60,
+        "proteinG": 0.8,
+        "carbsG": 15,
+        "fatG": 0.4,
+        "fiberG": 1.6
+      },
+      "servingG": 165,
+      "servingLabel": "1 cup",
+      "costTier": 2,
+      "aliases": []
+    },
+    {
+      "id": "orange",
+      "name": "Orange",
+      "category": "fruit",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 47,
+        "proteinG": 0.9,
+        "carbsG": 12,
+        "fatG": 0.1,
+        "fiberG": 2.4
+      },
+      "servingG": 130,
+      "servingLabel": "1 medium",
+      "costTier": 1,
+      "aliases": []
+    },
+    {
+      "id": "apple",
+      "name": "Apple",
+      "category": "fruit",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 52,
+        "proteinG": 0.3,
+        "carbsG": 14,
+        "fatG": 0.2,
+        "fiberG": 2.4
+      },
+      "servingG": 180,
+      "servingLabel": "1 medium",
+      "costTier": 1,
+      "aliases": []
+    },
+    {
+      "id": "pineapple",
+      "name": "Pineapple",
+      "category": "fruit",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 50,
+        "proteinG": 0.5,
+        "carbsG": 13,
+        "fatG": 0.1,
+        "fiberG": 1.4
+      },
+      "servingG": 165,
+      "servingLabel": "1 cup",
+      "costTier": 2,
+      "aliases": []
+    },
+    {
+      "id": "plain-yogurt",
+      "name": "Yogurt, plain",
+      "category": "dairy",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 61,
+        "proteinG": 3.5,
+        "carbsG": 4.7,
+        "fatG": 3.3,
+        "fiberG": 0
+      },
+      "servingG": 170,
+      "servingLabel": "1 pot",
+      "costTier": 1,
+      "aliases": ["yoghurt"]
+    },
+    {
+      "id": "milk",
+      "name": "Milk, whole",
+      "category": "dairy",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 61,
+        "proteinG": 3.2,
+        "carbsG": 4.8,
+        "fatG": 3.3,
+        "fiberG": 0
+      },
+      "servingG": 240,
+      "servingLabel": "1 cup",
+      "costTier": 1,
+      "aliases": []
+    },
+    {
+      "id": "paneer",
+      "name": "Paneer",
+      "category": "dairy",
+      "regionTags": ["south_asian"],
+      "per100g": {
+        "kcal": 265,
+        "proteinG": 18,
+        "carbsG": 1.2,
+        "fatG": 20,
+        "fiberG": 0
+      },
+      "servingG": 80,
+      "servingLabel": "3 cubes",
+      "costTier": 3,
+      "aliases": []
+    },
+    {
+      "id": "avocado",
+      "name": "Avocado",
+      "category": "fat",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 160,
+        "proteinG": 2,
+        "carbsG": 9,
+        "fatG": 15,
+        "fiberG": 6.7
+      },
+      "servingG": 100,
+      "servingLabel": "1/2 avocado",
+      "costTier": 3,
+      "aliases": []
+    },
+    {
+      "id": "peanut-butter",
+      "name": "Peanut butter",
+      "category": "fat",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 588,
+        "proteinG": 25,
+        "carbsG": 20,
+        "fatG": 50,
+        "fiberG": 6
+      },
+      "servingG": 32,
+      "servingLabel": "2 tbsp",
+      "costTier": 2,
+      "aliases": []
+    },
+    {
+      "id": "mixed-nuts",
+      "name": "Mixed nuts",
+      "category": "snack",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 607,
+        "proteinG": 20,
+        "carbsG": 21,
+        "fatG": 54,
+        "fiberG": 7
+      },
+      "servingG": 30,
+      "servingLabel": "1 handful",
+      "costTier": 3,
+      "aliases": ["nuts"]
+    },
+    {
+      "id": "pancakes",
+      "name": "Pancakes",
+      "category": "mixed_dish",
+      "regionTags": ["american"],
+      "per100g": {
+        "kcal": 227,
+        "proteinG": 6,
+        "carbsG": 28,
+        "fatG": 10,
+        "fiberG": 1
+      },
+      "servingG": 130,
+      "servingLabel": "2 pancakes",
+      "costTier": 1,
+      "aliases": []
+    },
+    {
+      "id": "orange-juice",
+      "name": "Orange juice",
+      "category": "drink",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 45,
+        "proteinG": 0.7,
+        "carbsG": 10,
+        "fatG": 0.2,
+        "fiberG": 0.2
+      },
+      "servingG": 250,
+      "servingLabel": "1 glass",
+      "costTier": 1,
+      "aliases": ["juice"]
+    },
+    {
+      "id": "soda",
+      "name": "Soda (sugary)",
+      "category": "drink",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 41,
+        "proteinG": 0,
+        "carbsG": 10.6,
+        "fatG": 0,
+        "fiberG": 0
+      },
+      "servingG": 330,
+      "servingLabel": "1 can",
+      "costTier": 1,
+      "aliases": ["cola"]
+    },
+    {
+      "id": "water",
+      "name": "Water",
+      "category": "drink",
+      "regionTags": ["global"],
+      "per100g": {
+        "kcal": 0,
+        "proteinG": 0,
+        "carbsG": 0,
+        "fatG": 0,
+        "fiberG": 0
+      },
+      "servingG": 250,
+      "servingLabel": "1 glass",
+      "costTier": 1,
+      "aliases": []
+    }
+  ]
+}

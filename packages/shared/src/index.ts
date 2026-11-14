@@ -10,3 +10,6 @@ export * from './units';
 export * from './country-list';
 export * from './goals';
 export * from './progress';
+export * from './food';
+export * from './food-data';
+export * from './energy-guide';

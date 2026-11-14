@@ -36,6 +36,7 @@ jobs:
       - run: pnpm check:secrets
       - run: pnpm check:workspace
       - run: pnpm check:ci
+      - run: pnpm check:seed
       - run: pnpm test:scripts
       - run: pnpm format:check
       - run: pnpm lint

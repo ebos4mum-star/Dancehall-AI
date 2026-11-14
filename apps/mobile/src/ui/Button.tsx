@@ -13,10 +13,11 @@ export function Button({
   label: string;
   onPress: () => void;
   disabled?: boolean;
-  variant?: 'primary' | 'secondary';
+  variant?: 'primary' | 'secondary' | 'hero';
 }) {
   const { colors, radius, spacing } = useTheme();
   const primary = variant === 'primary';
+  const hero = variant === 'hero';
   return (
     <Pressable
       accessibilityRole="button"
@@ -34,13 +35,16 @@ export function Button({
         alignItems: 'center',
         paddingHorizontal: spacing.lg,
         borderRadius: radius.pill,
-        backgroundColor: primary ? colors.primary : 'transparent',
-        borderWidth: primary ? 0 : 1,
+        backgroundColor: hero ? '#FFFFFF' : primary ? colors.primary : 'transparent',
+        borderWidth: primary || hero ? 0 : 1,
         borderColor: colors.border,
         opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
       })}
     >
-      <AppText variant="label" style={{ color: primary ? colors.onPrimary : colors.text }}>
+      <AppText
+        variant="label"
+        style={{ color: hero ? '#B3124F' : primary ? colors.onPrimary : colors.text }}
+      >
         {label}
       </AppText>
     </Pressable>

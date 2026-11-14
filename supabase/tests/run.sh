@@ -19,6 +19,7 @@ pg_isready -q || { echo "No Postgres server reachable. Set PGHOST/PGUSER/PGPASSW
 q -d postgres -c "drop database if exists $DB" -c "create database $DB"
 q -d "$DB" -f supabase/tests/shim.sql
 for f in supabase/migrations/*.sql; do echo "migrate  $f"; q -d "$DB" -f "$f"; done
+[ -f supabase/seed.sql ] && { echo "seed     supabase/seed.sql"; q -d "$DB" -f supabase/seed.sql; }
 q -d "$DB" -f supabase/tests/helpers.sql
 fail=0
 for f in supabase/tests/*.test.sql; do
