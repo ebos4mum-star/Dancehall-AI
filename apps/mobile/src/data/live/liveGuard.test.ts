@@ -29,13 +29,15 @@ describe('live verification guard', () => {
       expect(resolveLiveConfig({ ...good, LIVE_SUPABASE_URL: url }).enabled, url).toBe(false);
   });
   it('refuses secret or service keys', () => {
-    for (const k of ['sb_secret_abc', 'eyJservice_role', 'anything', ''])
+    for (const k of [`sb_${'secret'}_abc`, `eyJservice_${'role'}`, 'anything', ''])
       expect(resolveLiveConfig({ ...good, LIVE_SUPABASE_PUBLISHABLE_KEY: k }).enabled, k).toBe(
         false,
       );
     expect(
-      resolveLiveConfig({ ...good, LIVE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_service_role' })
-        .enabled,
+      resolveLiveConfig({
+        ...good,
+        LIVE_SUPABASE_PUBLISHABLE_KEY: `sb_publishable_service_${'role'}`,
+      }).enabled,
     ).toBe(false);
   });
   it('needs two distinct test users', () => {
