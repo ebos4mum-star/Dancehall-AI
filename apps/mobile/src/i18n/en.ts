@@ -77,8 +77,9 @@ export const en = {
   'grocery.show': 'Grocery list',
   'grocery.hide': 'Hide grocery list',
   'grocery.title': 'Shopping list',
+  'grocery.people': 'Cooking for (people)',
   'grocery.note':
-    'Amounts are the planned portions added together. Check packaging and what you already have at home.',
+    'Amounts are the planned portions added together and multiplied by the number of people. Each person’s own needs can differ, and your health information stays private to you. Check packaging and what you already have at home.',
   'grocery.share': 'Share list',
 
   'me.challenges': 'Fit Challenge',
@@ -498,6 +499,7 @@ export const en = {
   'ses.save': 'Save to my activity',
   'ses.discard': 'Don’t save',
   'ses.nothing': 'There is nothing to save yet.',
+  'ses.weekCount': 'Sessions this week: {n}',
   'ses.saved': 'Saved to your activity.',
   'sch.title': 'Schedule',
   'sch.empty': 'Nothing scheduled. Pick a workout and choose a day.',

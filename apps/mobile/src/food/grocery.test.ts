@@ -46,3 +46,48 @@ describe('buildGroceryList', () => {
     );
   });
 });
+
+import { clampHouseholdSize, scaleGroceryList } from './grocery';
+import { readHouseholdSize, writeHouseholdSize, type SizeStore } from './household';
+
+describe('household scaling', () => {
+  const base = [{ key: 'rice', name: 'Rice', grams: 270, meals: 2 }];
+  it('multiplies quantities and rounds up to 10 g, leaving the one-person list unchanged', () => {
+    expect(scaleGroceryList(base, 1)).toEqual(base);
+    expect(scaleGroceryList(base, 3)[0]!.grams).toBe(810);
+    expect(scaleGroceryList([{ key: 'x', name: 'X', grams: 15, meals: 1 }], 2)[0]!.grams).toBe(30);
+  });
+  it('clamps the household size to 1-6 and ignores junk', () => {
+    expect([0, 1, 4.4, 9, -3].map(clampHouseholdSize)).toEqual([1, 1, 4, 6, 1]);
+    expect(clampHouseholdSize('3')).toBe(3);
+    expect(clampHouseholdSize('abc')).toBe(1);
+    expect(clampHouseholdSize(undefined)).toBe(1);
+  });
+  it('mentions the number of people in the shared text only when more than one', () => {
+    expect(groceryText('Plan', [], 1)).toBe('Plan');
+    expect(groceryText('Plan', [], 3)).toBe('Plan (3 people)');
+  });
+  const mem = (): SizeStore & { d: Map<string, string> } => {
+    const d = new Map<string, string>();
+    return { d, get: async (k) => d.get(k) ?? null, set: async (k, v) => void d.set(k, v) };
+  };
+  it('remembers the size per user on the device and survives bad data and failing storage', async () => {
+    const s = mem();
+    expect(await readHouseholdSize(s, 'u1')).toBe(1);
+    await writeHouseholdSize(s, 'u1', 4);
+    expect(await readHouseholdSize(s, 'u1')).toBe(4);
+    expect(await readHouseholdSize(s, 'u2')).toBe(1);
+    s.d.set('dh.household.size.u1', 'junk');
+    expect(await readHouseholdSize(s, 'u1')).toBe(1);
+    const bad: SizeStore = {
+      get: async () => {
+        throw new Error('x');
+      },
+      set: async () => {
+        throw new Error('x');
+      },
+    };
+    expect(await readHouseholdSize(bad, 'u')).toBe(1);
+    await expect(writeHouseholdSize(bad, 'u', 2)).resolves.toBeUndefined();
+  });
+});

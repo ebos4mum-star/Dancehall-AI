@@ -204,6 +204,35 @@ async function step(name, fn) {
     await p.goBack();
     await seen('Sam K');
   });
+  await step('F: a guided workout can be finished, saved, and counts for the week', async () => {
+    await tab('Dance');
+    await btn(/Quick Fit/).click();
+    await btn('Start guided session').click();
+    await p.getByRole('button', { name: 'Start', exact: true }).last().click();
+    await p.waitForTimeout(2200);
+    await btn('End session').click();
+    await seen('You moved for');
+    await btn('Save to my activity').click();
+    await seen('Sessions this week: 1');
+    await btn('Continue').click();
+    await p.waitForTimeout(600);
+  });
+  await step('F: a meal plan becomes a grocery list that scales to the household', async () => {
+    await tab('Food');
+    await btn('Meal plan').click();
+    await btn('Preview plan').click();
+    await btn('Save plan').click();
+    await btn('Grocery list').click();
+    await seen('Shopping list');
+    const one = await p.getByRole('checkbox').first().getAttribute('aria-label');
+    await p.getByRole('radio', { name: '2', exact: true }).last().click();
+    await p.waitForTimeout(400);
+    const two = await p.getByRole('checkbox').first().getAttribute('aria-label');
+    const grams = (l) => Number(/(\d+) g/.exec(l)[1]);
+    assert.ok(grams(two) >= grams(one) * 2 - 10 && grams(two) > grams(one), `${one} -> ${two}`);
+    await p.goBack();
+    await p.waitForTimeout(500);
+  });
   await step('Privacy: data survives a reload (device storage), no page errors', async () => {
     await p.goto(base);
     await p.waitForTimeout(2500);
