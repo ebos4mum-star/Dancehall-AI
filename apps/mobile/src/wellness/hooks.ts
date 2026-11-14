@@ -23,6 +23,8 @@ export interface WellnessData {
   targets: NutritionTargets;
   loading: boolean;
   error: string | null;
+  /** Loads again after a failed read. */
+  reload: () => void;
   /** Records an entry once. Overlapping taps while one is being saved are ignored. */
   add: (input: Omit<WellnessEntryInput, 'day'> & { day?: string }) => Promise<boolean>;
   remove: (id: string) => Promise<void>;
@@ -34,7 +36,7 @@ export interface WellnessData {
 /** Preferences, the last 60 days of optional logs and the nutrition targets, refreshed whenever the store changes. */
 export function useWellness(): WellnessData {
   const { store, profile } = useApp();
-  const { data, loading, error } = useLoad(async (s) => {
+  const { data, loading, error, reload } = useLoad(async (s) => {
     const todayKey = localDateKey(new Date(), profile?.timeZone ?? null);
     return {
       prefs: (await s.getWellnessPrefs?.()) ?? DEFAULT_PREFS,
@@ -133,6 +135,7 @@ export function useWellness(): WellnessData {
     targets: derived.targets,
     loading,
     error,
+    reload,
     add,
     remove,
     setPrefs,

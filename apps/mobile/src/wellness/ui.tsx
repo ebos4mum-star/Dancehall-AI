@@ -22,7 +22,7 @@ import { Disclosure, IconBadge, IconChoice, SectionTitle, type IconName } from '
 import { ProgressBar } from '@/ui/ProgressBar';
 import { SettingRow } from '@/ui/SettingRow';
 import { BigField } from '@/onboarding/kit';
-import { useWellness } from './hooks';
+import { useWellness, type WellnessData } from './hooks';
 import { useEffect, useState } from 'react';
 
 const INTENT_ICON: Record<(typeof GOAL_INTENTS)[number], IconName> = {
@@ -296,6 +296,7 @@ export function HydrationCard() {
   return (
     <DepthCard>
       <SectionTitle icon="water" title={t('wl.hydrationTitle')} />
+      <WellnessLoadState w={w} />
       <ProgressBar
         fraction={h.fraction}
         label={t('wl.hydrationOf', { ml: h.ml, goal: h.goalMl })}
@@ -330,4 +331,22 @@ export function HydrationCard() {
       </AppText>
     </DepthCard>
   );
+}
+
+/** Shown at the top of every wellness card: a calm loading line, or a plain error with a retry, so a failed read is never mistaken for "nothing logged". */
+export function WellnessLoadState({ w }: { w: WellnessData }) {
+  if (w.error)
+    return (
+      <View style={{ gap: spacing.sm }}>
+        <Notice tone="warning">{t('wl.loadError')}</Notice>
+        <Button variant="secondary" label={t('common.retry')} onPress={w.reload} />
+      </View>
+    );
+  if (w.loading)
+    return (
+      <AppText variant="caption" muted accessibilityLiveRegion="polite">
+        {t('common.loading')}
+      </AppText>
+    );
+  return null;
 }

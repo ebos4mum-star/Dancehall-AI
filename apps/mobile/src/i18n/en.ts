@@ -619,6 +619,8 @@ export const en = {
   'wl.how': 'How these were worked out',
   'wl.seeProfessional': 'A doctor, midwife or registered dietitian can give advice that fits you.',
   'wl.noTargets': 'No calorie target',
+  'wl.loadError':
+    'We could not load your logs, so the totals below may be out of date. Nothing was lost.',
   'wl.hydrationTitle': 'Water today',
   'wl.hydrationOf': '{ml} of about {goal} ml',
   'wl.glasses': '{n} glasses',

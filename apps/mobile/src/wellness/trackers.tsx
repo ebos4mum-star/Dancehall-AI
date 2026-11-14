@@ -23,6 +23,7 @@ import { DepthCard } from '@/ui/Depth';
 import { SectionTitle } from '@/ui/kit';
 import { BigField } from '@/onboarding/kit';
 import { useWellness } from './hooks';
+import { WellnessLoadState } from './ui';
 
 const num = (v: string): number | null => {
   const n = Number(v.trim().replace(',', '.'));
@@ -75,6 +76,7 @@ export function MovementCard() {
   return (
     <DepthCard>
       <SectionTitle icon="walk" title={t('wl.moveTitle')} />
+      <WellnessLoadState w={w} />
       <AppText accessibilityLiveRegion="polite">
         {t('wl.moveWeek', { walk: tot.walkMinutes, strength: tot.strengthMinutes })}
       </AppText>
@@ -157,6 +159,7 @@ export function SleepCard() {
   return (
     <DepthCard>
       <SectionTitle icon="moon" title={t('wl.sleepTitle')} />
+      <WellnessLoadState w={w} />
       {s.lastNight ? (
         <AppText accessibilityLiveRegion="polite">
           {t('wl.sleepLast', { h: s.lastNight.hours })}
@@ -212,6 +215,7 @@ export function RecoveryCard() {
   return (
     <DepthCard>
       <SectionTitle icon="bed" title={t('wl.recoveryTitle')} />
+      <WellnessLoadState w={w} />
       <Options
         options={RECOVERY_LEVELS}
         value={(level as (typeof RECOVERY_LEVELS)[number] | null) ?? null}
@@ -239,6 +243,7 @@ export function HungerCard() {
   return (
     <DepthCard>
       <SectionTitle icon="heart" title={t('wl.hungerTitle')} />
+      <WellnessLoadState w={w} />
       <AppText variant="caption" muted>
         {t('wl.hungerBody')}
       </AppText>
@@ -277,6 +282,7 @@ export function MeasurementsCard() {
   return (
     <DepthCard>
       <SectionTitle icon="resize" title={t('wl.measureTitle')} />
+      <WellnessLoadState w={w} />
       {sites.map(({ s, c }) => (
         <AppText key={s}>
           {t(`wl.site.${s}` as StringKey)}: {c!.latestCm} cm
