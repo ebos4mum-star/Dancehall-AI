@@ -62,7 +62,15 @@ export default function Progress() {
   };
 
   return (
-    <Screen top={false}>
+    <Screen
+      top={false}
+      banner={{
+        world: 'me',
+        title: t('ban.progress.title'),
+        line: t('ban.progress.line'),
+        pulse: 'idle',
+      }}
+    >
       <RecapCard />
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {loading && !data ? <SkeletonList label={t('common.loading')} cards={2} /> : null}

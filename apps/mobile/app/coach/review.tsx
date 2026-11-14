@@ -34,7 +34,15 @@ export default function WeeklyReview() {
     }
   };
   return (
-    <Screen top={false}>
+    <Screen
+      top={false}
+      banner={{
+        world: 'coach',
+        title: t('ban.coachReview.title'),
+        line: t('ban.coachReview.line'),
+        pulse: 'idle',
+      }}
+    >
       <AppText muted>{t('wr.intro')}</AppText>
       <Notice tone="warning">{t('coach.mockBanner')}</Notice>
       {usage && !usage.personalization ? <Notice>{t('wr.needConsent')}</Notice> : null}

@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from './AppText';
+import { WorldBanner, type Banner } from '@/scene/WorldBanner';
 import { DevBanner } from './DevBanner';
 
 /** Standard screen: scrollable, keyboard-aware, safe-area padded. `title` is omitted on screens that show a navigation header. */
@@ -10,10 +11,13 @@ export function Screen({
   title,
   children,
   top = true,
+  banner,
 }: {
   title?: string;
   children: ReactNode;
   top?: boolean;
+  /** Shows this screen's world (scene, Pulse, one line of purpose) above the content. */
+  banner?: Banner;
 }) {
   const { colors, spacing } = useTheme();
   const insets = useSafeAreaInsets();
@@ -32,6 +36,7 @@ export function Screen({
             paddingBottom: spacing.xxl,
           }}
         >
+          {banner ? <WorldBanner {...banner} /> : null}
           {title ? (
             <AppText variant="title" accessibilityRole="header">
               {title}

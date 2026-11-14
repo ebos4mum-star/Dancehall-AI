@@ -28,7 +28,7 @@ export default function MeScreen() {
   return (
     <Screen title={t('me.title')}>
       <Reveal>
-        <HeroCard>
+        <HeroCard world="me">
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
             <View
               accessible

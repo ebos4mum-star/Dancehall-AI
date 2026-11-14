@@ -62,7 +62,7 @@ export default function FoodDashboard() {
     <Screen title={t('food.title')}>
       {error ? <Notice tone="warning">{error}</Notice> : null}
       <Reveal>
-        <HeroCard>
+        <HeroCard world="food">
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
             <View style={{ flex: 1, gap: spacing.sm }}>
               <AppText variant="title" style={{ color: colors.onHero }} accessibilityRole="header">
@@ -70,7 +70,7 @@ export default function FoodDashboard() {
               </AppText>
               <AppText style={{ color: colors.onHero }}>{t('food.heroBody')}</AppText>
             </View>
-            <CharacterStage size={92} />
+            <CharacterStage size={104} />
           </View>
           <Button
             variant="hero"

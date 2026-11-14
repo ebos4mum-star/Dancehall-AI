@@ -17,6 +17,7 @@ import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
 import { useDanceData } from '@/dance/hooks';
+import { PulseStage } from '@/pulse/PulseStage';
 import { CharacterStage, DepthCard, HeroCard } from '@/ui/Depth';
 import { Notice } from '@/ui/Banner';
 import { Choice } from '@/ui/Choice';
@@ -172,8 +173,8 @@ export default function Session() {
     const m = Math.floor(s.elapsedS / 60);
     return (
       <Screen top={false}>
-        <HeroCard style={{ alignItems: 'center' }}>
-          <CharacterStage size={96} />
+        <HeroCard world="dance" style={{ alignItems: 'center' }}>
+          <CharacterStage size={120} state="celebrate" />
           <AppText
             variant="title"
             accessibilityRole="header"
@@ -229,11 +230,18 @@ export default function Session() {
 
   return (
     <Screen top={false}>
-      <AppText
-        variant="caption"
-        muted
-        accessibilityLiveRegion="polite"
-      >{`${workout.title} · ${t('ses.block', { n: s.index + 1, total: s.segments.length })} · ${t(`wk.${seg.kind}` as StringKey)}`}</AppText>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        <View style={{ flex: 1 }}>
+          <AppText
+            variant="caption"
+            muted
+            accessibilityLiveRegion="polite"
+          >{`${workout.title} · ${t('ses.block', { n: s.index + 1, total: s.segments.length })} · ${t(`wk.${seg.kind}` as StringKey)}`}</AppText>
+        </View>
+        <View style={{ width: 72, height: 66, overflow: 'hidden' }}>
+          <PulseStage state={s.status === 'running' ? 'dance' : 'idle'} size={72} />
+        </View>
+      </View>
       <ProgressBar
         fraction={overall}
         label={t('ses.progress', {

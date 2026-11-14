@@ -15,6 +15,8 @@ import { heroLine } from '@/today/heroLine';
 import { useTodaySummary } from '@/today/hooks';
 import { takeWelcome } from '@/today/welcome';
 import { usePulse } from '@/pulse/PulseStage';
+import { ReviewBar } from '@/preview/ReviewBar';
+import { useReview } from '@/preview/review';
 import { haptics } from '@/ui/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useApp } from '@/data/AppProvider';
@@ -60,6 +62,8 @@ export default function Today() {
     : null;
   const summary2 = useTodaySummary();
   const pulse = usePulse();
+  const review = useReview();
+  const shownPulse = review.pulse ?? pulse.state;
   const { session } = useApp();
   const todayKey = localDateKey(new Date(), profile?.timeZone ?? null);
 
@@ -149,14 +153,15 @@ export default function Today() {
       <TodayHero
         greeting={t('today.hello', { name: profile?.displayName ?? '' })}
         line={heroLine({
-          pulse: pulse.state,
+          pulse: shownPulse,
           next: summary2.next,
           hour: new Date().getHours(),
           doneAnything: summary2.score > 0,
         })}
         chips={heroChips}
-        pulse={pulse.state}
+        pulse={shownPulse}
       />
+      <ReviewBar />
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {loading && !data ? <SkeletonList label={t('common.loading')} /> : null}
 

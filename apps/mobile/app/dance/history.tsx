@@ -20,7 +20,15 @@ export default function History() {
     .filter((s) => s.status === 'completed')
     .sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''));
   return (
-    <Screen top={false}>
+    <Screen
+      top={false}
+      banner={{
+        world: 'dance',
+        title: t('ban.danceHistory.title'),
+        line: t('ban.danceHistory.line'),
+        pulse: 'dance',
+      }}
+    >
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {loading && sessions.length === 0 ? (
         <SkeletonList label={t('common.loading')} cards={2} />

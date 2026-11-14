@@ -137,7 +137,15 @@ export default function CameraScreen() {
 
   const cameraReady = perm?.granted && !camFailed && Platform.OS !== 'web';
   return (
-    <Screen top={false}>
+    <Screen
+      top={false}
+      banner={{
+        world: 'food',
+        title: t('ban.camera.title'),
+        line: t('ban.camera.line'),
+        pulse: 'idle',
+      }}
+    >
       {config.authMode === 'mock' ? <Notice tone="warning">{t('cam.mockBanner')}</Notice> : null}
       {cameraReady ? (
         <View style={{ height: 320, borderRadius: radius.lg, overflow: 'hidden' }}>

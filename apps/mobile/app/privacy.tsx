@@ -58,7 +58,15 @@ export default function Privacy() {
   };
 
   return (
-    <Screen top={false}>
+    <Screen
+      top={false}
+      banner={{
+        world: 'me',
+        title: t('ban.privacy.title'),
+        line: t('ban.privacy.line'),
+        pulse: 'idle',
+      }}
+    >
       <Card>
         <TextField
           label={t('privacy.displayName')}

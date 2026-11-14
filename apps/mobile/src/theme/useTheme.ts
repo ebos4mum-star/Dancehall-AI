@@ -1,4 +1,5 @@
 import { useColorScheme } from 'react-native';
+import { useReview } from '@/preview/review';
 import { darkColors, lightColors, radius, spacing, typography, type ColorTokens } from './tokens';
 
 export function useTheme(): {
@@ -8,6 +9,8 @@ export function useTheme(): {
   typography: typeof typography;
   isDark: boolean;
 } {
-  const isDark = useColorScheme() === 'dark';
+  const device = useColorScheme() === 'dark';
+  const review = useReview();
+  const isDark = review.dark ?? device;
   return { colors: isDark ? darkColors : lightColors, spacing, radius, typography, isDark };
 }

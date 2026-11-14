@@ -67,7 +67,14 @@ export default function SignIn() {
   if (ready && session) return <Redirect href="/" />;
 
   return (
-    <Screen title={t('signIn.title')}>
+    <Screen
+      banner={{
+        world: 'today',
+        title: t('signIn.title'),
+        line: t('signIn.subtitle'),
+        pulse: 'welcome',
+      }}
+    >
       <AppText muted>{t('signIn.subtitle')}</AppText>
       <Notice>{t('signIn.adultsOnly')}</Notice>
       {config.authMode === 'mock' ? (

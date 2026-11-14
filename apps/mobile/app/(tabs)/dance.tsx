@@ -137,7 +137,7 @@ export default function Dance() {
   return (
     <Screen title={t('tabs.dance')}>
       <Reveal>
-        <HeroCard>
+        <HeroCard world="dance">
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
             <View style={{ flex: 1, gap: spacing.sm }}>
               <AppText variant="title" accessibilityRole="header" style={{ color: colors.onHero }}>
@@ -145,7 +145,7 @@ export default function Dance() {
               </AppText>
               <AppText style={{ color: colors.onHero }}>{t('dance.heroBody')}</AppText>
             </View>
-            <CharacterStage size={92} />
+            <CharacterStage size={104} state="dance" />
           </View>
           <AppText variant="label" style={{ color: colors.onHero }}>
             {t('dance.quickFit')}

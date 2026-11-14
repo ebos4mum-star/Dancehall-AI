@@ -59,7 +59,15 @@ export default function AddFood() {
     : null;
 
   return (
-    <Screen top={false}>
+    <Screen
+      top={false}
+      banner={{
+        world: 'food',
+        title: t('ban.foodAdd.title'),
+        line: t('ban.foodAdd.line'),
+        pulse: 'idle',
+      }}
+    >
       <Choice
         value={tab}
         onChange={setTab}

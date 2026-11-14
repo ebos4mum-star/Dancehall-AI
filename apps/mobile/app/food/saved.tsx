@@ -18,7 +18,15 @@ export default function Saved() {
   const { data, error } = useLoad((s) => s.listSavedMeals());
   const [err, setErr] = useState<string | null>(null);
   return (
-    <Screen top={false}>
+    <Screen
+      top={false}
+      banner={{
+        world: 'food',
+        title: t('ban.foodSaved.title'),
+        line: t('ban.foodSaved.line'),
+        pulse: 'idle',
+      }}
+    >
       {error || err ? <Notice tone="warning">{String(error ?? err)}</Notice> : null}
       {data && data.length === 0 ? <Notice>{t('saved.empty')}</Notice> : null}
       {(data ?? []).map((m) => (

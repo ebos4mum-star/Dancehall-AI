@@ -1,3 +1,5 @@
+import { showMoment } from '@/pulse/moment';
+import { ProgressBar } from '@/ui/ProgressBar';
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, Switch, View } from 'react-native';
 import { Redirect, router } from 'expo-router';
@@ -184,6 +186,7 @@ export default function Onboarding() {
         await once('goal', () => store.createGoal(proposal.goal!));
       await once('complete', () => store.completeOnboarding());
       await refresh();
+      showMoment(t('moment.welcomeAboard'), 'celebrate');
       router.replace('/');
     } catch (e) {
       setError(errorMessage(e));
@@ -202,7 +205,15 @@ export default function Onboarding() {
   const selectedCountry = COUNTRY_OPTIONS.find((c) => c.code === country);
 
   return (
-    <Screen>
+    <Screen
+      banner={{
+        world: 'today',
+        title: t(`onb.ban${step}.title` as StringKey),
+        line: t(`onb.ban${step}.line` as StringKey),
+        pulse: step === 4 ? 'encourage' : step === 1 || step === 5 ? 'welcome' : 'idle',
+      }}
+    >
+      <ProgressBar fraction={step / TOTAL} label={t('onb.step', { n: step, total: TOTAL })} />
       <AppText variant="caption" muted accessibilityLiveRegion="polite">
         {t('onb.step', { n: step, total: TOTAL })}
       </AppText>

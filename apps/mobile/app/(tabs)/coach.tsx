@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { PulseStage, usePulse } from '@/pulse/PulseStage';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -30,6 +31,7 @@ export default function Coach() {
   const { store, config } = useApp();
   const { colors, typography } = useTheme();
   const insets = useSafeAreaInsets();
+  const pulse = usePulse();
   const params = useLocalSearchParams<{ prompt?: string }>();
   const supported = typeof store.sendCoachMessage === 'function';
   const { data: convs } = useLoad(async (st) =>
@@ -73,6 +75,8 @@ export default function Coach() {
         const r = await store.sendCoachMessage({ conversationId: activeId, text: msg });
         setActiveId(r.conversation.id);
         haptics.tap();
+        // Pulse acknowledges a reply gently; a comeback question gets the encouraging pose.
+        pulse.send(msg === t('coach.prompt.comeback') ? 'comeback' : 'appOpened');
       } catch (e) {
         haptics.warning();
         setErr(errorMessage(e));
@@ -84,6 +88,7 @@ export default function Coach() {
         setBusy(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [activeId, busy, store],
   );
 
@@ -94,7 +99,8 @@ export default function Coach() {
     }
   }, [params.prompt, send, supported]);
   useEffect(() => {
-    scroll.current?.scrollToEnd({ animated: false });
+    // Only follow a conversation; an empty chat stays at the top so the welcome scene is visible.
+    if (chat.length > 0 || busy) scroll.current?.scrollToEnd({ animated: false });
   }, [chat.length, busy]);
 
   const decide = async (a: CoachAction, d: 'applied' | 'dismissed') => {
@@ -137,9 +143,18 @@ export default function Coach() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm }}>
-          <AppText variant="title" accessibilityRole="header">
-            {t('coach.title')}
-          </AppText>
+          <View
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+          >
+            <AppText variant="title" accessibilityRole="header">
+              {t('coach.title')}
+            </AppText>
+            {chat.length > 0 ? (
+              <View style={{ width: 64, height: 58, overflow: 'hidden' }}>
+                <PulseStage state={busy ? 'idle' : pulse.state} size={64} />
+              </View>
+            ) : null}
+          </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
             {activeId ? (
               <Button
@@ -168,7 +183,7 @@ export default function Coach() {
             <Notice tone="warning">{t('coach.mockBanner')}</Notice>
           ) : null}
           {chat.length === 0 ? (
-            <HeroCard>
+            <HeroCard world="coach">
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
                 <View style={{ flex: 1, gap: spacing.sm }}>
                   <AppText
@@ -180,7 +195,7 @@ export default function Coach() {
                   </AppText>
                   <AppText style={{ color: colors.onHero }}>{t('coach.heroBody')}</AppText>
                 </View>
-                <CharacterStage size={84} />
+                <CharacterStage size={96} />
               </View>
             </HeroCard>
           ) : null}
