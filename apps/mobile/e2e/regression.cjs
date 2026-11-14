@@ -15,7 +15,15 @@ async function step(name, fn) {
     console.log('PASS ', name);
   } catch (e) {
     results.push(['FAIL', name]);
-    console.log('FAIL ', name, '\n     ', String(e.message).split('\n')[0]);
+    console.log(
+      'FAIL ',
+      name,
+      '\n     ',
+      String(e.message)
+        .split('\n')
+        .slice(0, process.env.E2E_VERBOSE ? 6 : 1)
+        .join(' | '),
+    );
   }
 }
 
@@ -232,6 +240,33 @@ async function step(name, fn) {
     assert.ok(grams(two) >= grams(one) * 2 - 10 && grams(two) > grams(one), `${one} -> ${two}`);
     await p.goBack();
     await p.waitForTimeout(500);
+  });
+  await step('G: an empty meal diary offers a clear next step', async () => {
+    await btn('History').click();
+    await seen('Your meal diary starts here');
+    await btn('Log a meal').click();
+    await seen('Add food');
+    await p.goBack();
+    await p.waitForTimeout(400);
+    await p.goBack();
+    await p.waitForTimeout(400);
+  });
+  await step('G: a logged meal appears in the diary with a neutral 7-day summary', async () => {
+    await btn('Add food').click();
+    await p.getByLabel('Search foods').fill('rice');
+    await p.waitForTimeout(500);
+    await p.locator('[role="button"][aria-label*="ice"]').first().click();
+    await btn(/^Add to meal|^Add$/).click();
+    await btn('Save to diary').click();
+    await p.waitForTimeout(800);
+    await btn('History').click();
+    await seen('Last 7 days');
+    await seen('1 of 7 days logged');
+    for (const bad of ['over your', 'too much', 'you failed']) {
+      assert.equal(await p.getByText(bad, { exact: false }).count(), 0, bad);
+    }
+    await p.goBack();
+    await p.waitForTimeout(400);
   });
   await step('Privacy: data survives a reload (device storage), no page errors', async () => {
     await p.goto(base);

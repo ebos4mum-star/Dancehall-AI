@@ -20,7 +20,9 @@ import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
 import { Choice } from '@/ui/Choice';
 import { DepthCard } from '@/ui/Depth';
+import { formatDate } from '@/lib/format';
 import { foodEmoji } from './emoji';
+import type { NutritionWeek } from './summary';
 
 /** Says how far to trust a value. Words carry the meaning; color only reinforces it. */
 export function EstimateTag({ status }: { status: EstimateStatus }) {
@@ -302,6 +304,48 @@ export function MacroBars({ totals }: { totals: Pick<Totals, 'proteinG' | 'carbs
           </View>
         </View>
       ))}
+    </View>
+  );
+}
+
+/** Seven small bars of what was logged each day. Neutral on purpose: no colour for "too much" or "too little". */
+export function NutritionWeekBars({ week }: { week: NutritionWeek }) {
+  const { colors, spacing } = useTheme();
+  const max = Math.max(1, ...week.days.map((d) => d.kcal));
+  return (
+    <View style={{ gap: spacing.sm }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, height: 96 }}>
+        {week.days.map((d, i) => (
+          <View
+            key={d.date}
+            accessible
+            accessibilityLabel={
+              d.meals > 0
+                ? t('nutweek.day', { date: formatDate(d.date), kcal: d.kcal })
+                : t('nutweek.dayNone', { date: formatDate(d.date) })
+            }
+            style={{ flex: 1, alignItems: 'center', gap: 4 }}
+          >
+            <View
+              style={{
+                width: '70%',
+                height: d.meals > 0 ? Math.max(6, (d.kcal / max) * 64) : 4,
+                borderRadius: 6,
+                backgroundColor: d.meals > 0 ? colors.primary : colors.border,
+                opacity: i === week.days.length - 1 || d.meals === 0 ? 1 : 0.7,
+              }}
+            />
+            <AppText variant="caption" muted>
+              {d.date.slice(8)}
+            </AppText>
+          </View>
+        ))}
+      </View>
+      <AppText variant="caption" muted>
+        {week.avgKcal === null
+          ? t('nutweek.empty')
+          : t('nutweek.summary', { days: week.daysLogged, kcal: week.avgKcal })}
+      </AppText>
     </View>
   );
 }

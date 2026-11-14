@@ -1,13 +1,16 @@
 import { View } from 'react-native';
+import { router } from 'expo-router';
 import { localDateKey, totals } from '@dancehall/shared';
 import { DiaryItem } from '@/food/DiaryItem';
 import { useFoodData } from '@/food/hooks';
-import { kcalText } from '@/food/ui';
+import { weeklyNutrition } from '@/food/summary';
+import { NutritionWeekBars, kcalText } from '@/food/ui';
 import { t, type StringKey } from '@/i18n';
 import { formatDate } from '@/lib/format';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
 import { DepthCard } from '@/ui/Depth';
+import { EmptyState } from '@/ui/EmptyState';
 import { Notice } from '@/ui/Banner';
 import { Screen } from '@/ui/Screen';
 import { SkeletonList } from '@/ui/Skeleton';
@@ -20,12 +23,29 @@ export default function History() {
     const k = localDateKey(l.loggedAt, timeZone);
     days.set(k, [...(days.get(k) ?? []), l]);
   }
+  const week = weeklyNutrition(logs, timeZone, new Date());
   const keys = [...days.keys()].sort().reverse().slice(0, 30);
   return (
     <Screen top={false}>
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {loading && logs.length === 0 ? <SkeletonList label={t('common.loading')} /> : null}
-      {!loading && keys.length === 0 ? <Notice>{t('hist.empty')}</Notice> : null}
+      {!loading && keys.length === 0 ? (
+        <EmptyState
+          icon="restaurant-outline"
+          title={t('hist.emptyTitle')}
+          body={t('hist.empty')}
+          actionLabel={t('hist.emptyCta')}
+          onAction={() => router.push('/food/add')}
+        />
+      ) : null}
+      {keys.length > 0 ? (
+        <DepthCard>
+          <AppText variant="heading" accessibilityRole="header">
+            {t('nutweek.title')}
+          </AppText>
+          <NutritionWeekBars week={week} />
+        </DepthCard>
+      ) : null}
       {keys.map((k) => {
         const ls = days.get(k)!;
         const sum = totals(ls.flatMap((l) => l.items));
