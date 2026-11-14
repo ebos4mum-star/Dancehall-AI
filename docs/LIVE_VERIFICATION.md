@@ -22,7 +22,7 @@ Status as of this document: **read-only inspection done; nothing was applied, cr
 | Edge functions | none deployed                                                                                                                                                                             | `supabase/functions` is a placeholder; the AI route is not deployed      |
 | Jobs           | no `pg_cron`/`pg_net`; no scheduled jobs                                                                                                                                                  | retention, photo-expiry and deletion jobs are server code, not scheduled |
 
-Security advisor (hosted): 5 warnings, all "signed-in users can execute a SECURITY DEFINER function": `audit_verify`, `cancel_account_deletion`, `complete_onboarding`, `request_account_deletion`, `workout_playable_media`. The grants exist in the repo migrations on purpose (user-callable RPCs that check `auth.uid()` or the caller inside). **Owner/reviewer decision:** confirm each is intended, in particular `audit_verify`, which a staff-only function may be better suited for. No change was made.
+Security advisor (hosted): 5 warnings, all "signed-in users can execute a SECURITY DEFINER function": `audit_verify`, `cancel_account_deletion`, `complete_onboarding`, `request_account_deletion`, `workout_playable_media`. The grants exist in the repo migrations on purpose (user-callable RPCs that check `auth.uid()` or the caller inside). **Owner/reviewer decision:** confirm each is intended, `docs/SECURITY_DEFINER_REVIEW.md` reviews each against its definition and recommends **no hosted change**; an optional `audit_verify` tightening is documented there. No change was made.
 
 ## 3. Non-destructive migration plan (not executed)
 
@@ -39,7 +39,12 @@ Apply (needs explicit owner approval): one migration at a time, in the order abo
 After each: re-run `supabase/tests`-equivalent checks that can run hosted (RLS enabled on the new tables, advisor output, policy count), then the live suite (section 4).
 Rollback (no data exists yet): drop only the objects that migration created. Do not touch earlier migrations.
 
-**History numbering:** the hosted history uses apply-time versions (`20261114...`), the repository uses `20261201...` file names. The migration _names_ match. If the Supabase CLI is used later, run `supabase migration repair --status applied <repo versions>` for the 8 already-applied migrations first so `db push` does not try to re-apply them; otherwise apply the three pending files by name through the dashboard or MCP. Do not rename repository files.
+**History reconciliation (not executed).** The record of what is applied is `supabase/hosted-history.json`: eight hosted rows (versions `20261114150446` to `20261114150755`) mapped by name to eight repository files, each pinned by SHA-256 (`scripts/migration-history.test.mjs` fails if an applied migration is edited, a record stops matching a file, or a pending file sorts before an applied one). The hosted rows are real history and are never rewritten or deleted. Two ways to apply the three pending files; choose one:
+
+- **A. By name through the dashboard or MCP (recommended, simplest).** Apply the three files, one at a time, as migrations named `habits`, `household`, `wellness`. Each gets a new hosted version at apply time; the history then holds eleven rows whose names match the repository one-to-one. No history repair, no renaming. Afterwards update `hosted-history.json` (applied list and fingerprint) in a PR.
+- **B. Supabase CLI `db push`.** The CLI matches by version, and the repository file versions (`20261201...`) differ from the hosted ones (`20261114...`), so a plain `db push` would try to re-run the eight applied migrations and fail. To use it safely, first `git mv` the eight applied files to their hosted versions (contents unchanged, so the pinned hashes still hold; the order stays the same because `20261114...` sorts before `20261207...`), update `hosted-history.json` `file` fields, and run `db push --dry-run` to confirm it lists only the three pending files. This keeps hosted history exactly as it is. Do **not** use `migration repair --status reverted`, which deletes real history rows.
+
+Either way, before and after every apply: run the fingerprint query in section 6 and compare with the baseline (before) and with `bash supabase/tests/replica.sh`'s clean-build result (after).
 
 Fingerprint query (read-only, run on both databases and compare): see section 6.
 
