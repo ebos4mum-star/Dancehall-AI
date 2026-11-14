@@ -315,3 +315,57 @@ describe('session recovery', () => {
     expect(await store().getSession()).toBeNull();
   });
 });
+
+describe('fit challenge persistence', () => {
+  it('starts a challenge with only the committed fields and maps the row', async () => {
+    respond = () => ({
+      data: {
+        id: 'c1',
+        length_days: 14,
+        target_days: 6,
+        start_date: '2026-06-01',
+        status: 'active',
+        created_at: 't',
+      },
+      error: null,
+    });
+    const c = await store().startChallenge({
+      lengthDays: 14,
+      targetDays: 6,
+      startDate: '2026-06-01',
+    });
+    expect(last()).toMatchObject({ table: 'fit_challenges', op: 'insert' });
+    expect(last().payload).toEqual({ length_days: 14, target_days: 6, start_date: '2026-06-01' });
+    expect(c).toMatchObject({ id: 'c1', lengthDays: 14, targetDays: 6, status: 'active' });
+  });
+  it.each([
+    [
+      {
+        code: '23505',
+        message: 'duplicate key value violates unique constraint "fit_challenges_one_active"',
+      },
+      'active_challenge_exists',
+    ],
+    [
+      { code: '23514', message: 'violates check constraint "target_leaves_rest_days"' },
+      'invalid_input',
+    ],
+    [{ message: 'new row violates row-level security policy' }, 'consent_required'],
+  ])('maps %j to %s', async (error, expected) => {
+    respond = () => ({ data: null, error });
+    expect(
+      await codeOf(
+        store().startChallenge({ lengthDays: 7, targetDays: 3, startDate: '2026-06-01' }),
+      ),
+    ).toBe(expected);
+  });
+  it('changes only the status, for the targeted challenge', async () => {
+    await store().setChallengeStatus('c1', 'completed');
+    expect(last()).toMatchObject({
+      table: 'fit_challenges',
+      op: 'update',
+      payload: { status: 'completed' },
+    });
+    expect(last().filters).toContainEqual(['id', 'c1']);
+  });
+});

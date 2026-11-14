@@ -30,6 +30,9 @@ import {
   type NewSession,
   type SessionPatch,
   type WorkoutSession,
+  type ChallengeStatus,
+  type FitChallenge,
+  type NewFitChallenge,
   type SavedMeal,
 } from './types';
 
@@ -56,6 +59,8 @@ export function mapSupabaseError(
   const msg = e?.message ?? '';
   const m = CODES.exec(msg);
   if (m) return new StoreError(m[1] as StoreErrorCode, msg);
+  if (/fit_challenges_one_active/.test(msg)) return new StoreError('active_challenge_exists', msg);
+  if (/target_leaves_rest_days/.test(msg)) return new StoreError('invalid_input', msg);
   if (e?.code === '23505' || /goals_one_active_per_period/.test(msg))
     return new StoreError('active_goal_exists', msg);
   if (/row-level security/i.test(msg)) return new StoreError('consent_required', msg);
@@ -105,6 +110,15 @@ const fromLogRow = (r: Row): FoodLog => ({
   source: r.source as FoodLog['source'],
   photoAnalysisId: (r.photo_analysis_id as string | null) ?? null,
   items: ((r.food_log_items as Row[] | undefined) ?? []).map(fromItemRow),
+});
+
+const fromChallengeRow = (r: Row): FitChallenge => ({
+  id: r.id as string,
+  lengthDays: Number(r.length_days) as FitChallenge['lengthDays'],
+  targetDays: Number(r.target_days),
+  startDate: r.start_date as string,
+  status: r.status as ChallengeStatus,
+  createdAt: r.created_at as string,
 });
 
 const fromSessionRow = (r: Row): WorkoutSession => ({
@@ -580,6 +594,38 @@ function createBaseStore(
     },
     async deleteSession(id) {
       ok(await db.from('workout_sessions').delete().eq('id', id));
+      emit();
+    },
+    async listChallenges() {
+      return (
+        ok(
+          await db
+            .from('fit_challenges')
+            .select('*')
+            .order('start_date', { ascending: false })
+            .limit(200),
+        ) as Row[]
+      ).map(fromChallengeRow);
+    },
+    async startChallenge(input: NewFitChallenge) {
+      const r = fromChallengeRow(
+        ok(
+          await db
+            .from('fit_challenges')
+            .insert({
+              length_days: input.lengthDays,
+              target_days: input.targetDays,
+              start_date: input.startDate,
+            })
+            .select('*')
+            .single(),
+        ) as Row,
+      );
+      emit();
+      return r;
+    },
+    async setChallengeStatus(id, status: ChallengeStatus) {
+      ok(await db.from('fit_challenges').update({ status }).eq('id', id));
       emit();
     },
 

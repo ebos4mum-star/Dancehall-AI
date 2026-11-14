@@ -104,18 +104,18 @@ Weight goals must not encourage extreme restriction, guaranteed results or unsaf
 
 ### E. Community and Growth
 
-| ID  | Feature                                | Ver.                                  | Phase | Gates             | Status                                               |
-| --- | -------------------------------------- | ------------------------------------- | ----- | ----------------- | ---------------------------------------------------- |
-| E1  | Free 7-, 14- and 30-day Fit Challenges | Later                                 | 8     | M1                | Not started                                          |
-| E2  | Dance Buddies                          | Later                                 | 8     | M1, P3            | Not started                                          |
-| E3  | Private teams and team activity goals  | Later                                 | 8     | M1, P3            | Not started                                          |
-| E4  | Invitations and referral links         | Later                                 | 8     | P3                | Not started                                          |
-| E5  | Dance-to-Share clips                   | Later                                 | 8     | M1, M2, L3        | Not started                                          |
-| E6  | Personal Milestone Stories             | Later                                 | 8     | P3                | Not started                                          |
-| E7  | Community Milestone Events             | Later                                 | 11    | M1, C1            | Not started                                          |
-| E8  | Optional sponsored challenges          | Later                                 | 11    | legal review (C2) | Not started                                          |
-| E9  | Privacy-preserving achievement sharing | Later                                 | 8     | P3                | Not started                                          |
-| E10 | Reporting, blocking and moderation     | Later (required before any E feature) | 8     | M1                | Foundation (moderation role and admin area prepared) |
+| ID  | Feature                                | Ver.                                  | Phase | Gates             | Status                                                                                                                                                           |
+| --- | -------------------------------------- | ------------------------------------- | ----- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E1  | Free 7-, 14- and 30-day Fit Challenges | Later                                 | 8     | M1                | Partially implemented locally (free solo 7/14/30-day challenge with rest-day cap, new table with RLS; friends, teams and rankings blocked on moderation gate M1) |
+| E2  | Dance Buddies                          | Later                                 | 8     | M1, P3            | Not started                                                                                                                                                      |
+| E3  | Private teams and team activity goals  | Later                                 | 8     | M1, P3            | Not started                                                                                                                                                      |
+| E4  | Invitations and referral links         | Later                                 | 8     | P3                | Not started                                                                                                                                                      |
+| E5  | Dance-to-Share clips                   | Later                                 | 8     | M1, M2, L3        | Not started                                                                                                                                                      |
+| E6  | Personal Milestone Stories             | Later                                 | 8     | P3                | Not started                                                                                                                                                      |
+| E7  | Community Milestone Events             | Later                                 | 11    | M1, C1            | Not started                                                                                                                                                      |
+| E8  | Optional sponsored challenges          | Later                                 | 11    | legal review (C2) | Not started                                                                                                                                                      |
+| E9  | Privacy-preserving achievement sharing | Later                                 | 8     | P3                | Not started                                                                                                                                                      |
+| E10 | Reporting, blocking and moderation     | Later (required before any E feature) | 8     | M1                | Foundation (moderation role and admin area prepared)                                                                                                             |
 
 ### F. Family and Household
 
