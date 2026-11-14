@@ -6,14 +6,14 @@ Approved feature. Built on the existing animated Pulse moment system (`apps/mobi
 
 All from the person's own records and the goals they set. Pure logic: `packages/shared/src/celebrations.ts`.
 
-| Period  | Achievement                                                                                       | Needs                                      |
-| ------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| Daily   | Water goal reached (their own goal, or the general guide)                                         | logged water                               |
-| Daily   | Every active habit ticked                                                                         | at least one habit                         |
-| Daily   | Moved today: 10 minutes or more of dance, walking and strength together                           | recorded movement                          |
-| Weekly  | Weekly movement-minutes goal reached (Monday week, dance + walks + strength)                      | the person's own weekly minutes goal       |
-| Monthly | Weekly goal met in at least 3 weeks that start in the month                                       | the same weekly goal                       |
-| Yearly  | Weekly goal met in at least 26 weeks that start in the year                                       | the same weekly goal                       |
+| Period  | Achievement                                                                  | Needs                                |
+| ------- | ---------------------------------------------------------------------------- | ------------------------------------ |
+| Daily   | Water goal reached (their own goal, or the general guide)                    | logged water                         |
+| Daily   | Every active habit ticked                                                    | at least one habit                   |
+| Daily   | Moved today: 10 minutes or more of dance, walking and strength together      | recorded movement                    |
+| Weekly  | Weekly movement-minutes goal reached (Monday week, dance + walks + strength) | the person's own weekly minutes goal |
+| Monthly | Weekly goal met in at least 3 weeks that start in the month                  | the same weekly goal                 |
+| Yearly  | Weekly goal met in at least 26 weeks that start in the year                  | the same weekly goal                 |
 
 The monthly and yearly thresholds and the 10-minute daily bar are **provisional defaults**, all in one object (`CELEBRATION_RULES`), pending owner approval of the goal model. Existing challenge celebrations are unchanged and not duplicated.
 
