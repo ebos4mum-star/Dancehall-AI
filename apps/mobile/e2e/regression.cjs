@@ -31,7 +31,8 @@ async function step(name, fn) {
   const { serve } = await import('./serve.mjs');
   const srv = await serve(8099);
   const browser = await chromium.launch();
-  const p = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const scheme = process.env.E2E_SCHEME || 'light';
+  const p = await browser.newPage({ viewport: { width: 390, height: 844 }, colorScheme: scheme });
   p.setDefaultTimeout(5000);
   const errors = [];
   p.on('pageerror', (e) => errors.push(e.message));
@@ -40,9 +41,17 @@ async function step(name, fn) {
   const btn = (n) => p.getByRole('button', { name: n }).last();
   const text = (t) => p.getByText(t, { exact: false }).last();
   const seen = async (t, ms = 4000) => text(t).waitFor({ state: 'visible', timeout: ms });
+  // Optional visual capture: SHOTS_DIR=/path E2E_SCHEME=dark node e2e/regression.cjs (first visit of each tab, web render only).
+  const shotsSeen = new Set();
+  const shot = async (name) => {
+    if (!process.env.SHOTS_DIR || shotsSeen.has(name)) return;
+    shotsSeen.add(name);
+    await p.screenshot({ path: `${process.env.SHOTS_DIR}/${scheme}-${name}.png` });
+  };
   const tab = async (name) => {
     await p.getByRole('tab', { name, exact: true }).click();
     await p.waitForTimeout(900);
+    await shot(`tab-${name.toLowerCase()}`);
   };
   const lastSwitch = (n) => p.getByRole('switch', { name: n }).last();
 
@@ -268,6 +277,19 @@ async function step(name, fn) {
     await p.goBack();
     await p.waitForTimeout(400);
   });
+  await step(
+    'H: Me shows identity, this week, and the milestone from the finished workout',
+    async () => {
+      await tab('Me');
+      await seen('Sessions this week');
+      await seen('Recent milestones');
+      await seen('First dance session');
+      await btn('See progress and milestones').click();
+      await seen('Your milestones');
+      await p.goBack();
+      await p.waitForTimeout(400);
+    },
+  );
   await step('Privacy: data survives a reload (device storage), no page errors', async () => {
     await p.goto(base);
     await p.waitForTimeout(2500);
