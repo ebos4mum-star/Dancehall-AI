@@ -127,15 +127,24 @@ require('node:fs').mkdirSync(out, { recursive: true });
     await scrollTo(-3000);
     await btn('Start guided session').click();
     await shot('session-ready');
+    await scrollTo(1200);
+    await shot('session-ready-lower');
+    await scrollTo(-3000);
     await btn('Start', { exact: true }).click();
-    await p.waitForTimeout(2200);
+    await shot('session-prep');
+    await p.waitForTimeout(4200);
     await shot('session-running');
+    await btn('Pause').click();
+    await shot('session-paused');
+    await btn('Resume').click();
+    await btn('End session').click();
+    await shot('session-end-confirm');
     await btn('End session').click();
     await shot('complete');
     await btn('Hard')
       .click()
       .catch(() => {});
-    await btn('Save to my activity').click();
+    await btn('Save what I did').click();
     await shot('complete-saved');
     await btn('Continue').click();
     await p.waitForTimeout(800);

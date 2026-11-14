@@ -17,7 +17,9 @@ import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { Notice } from '@/ui/Banner';
-import { Choice } from '@/ui/Choice';
+import { FoodHero } from '@/food/kit';
+import { IconBadge, IconChoice } from '@/ui/kit';
+import { brand } from '@/theme/tokens';
 import { ProgressBar } from '@/ui/ProgressBar';
 import { Screen } from '@/ui/Screen';
 import { SkeletonList } from '@/ui/Skeleton';
@@ -71,15 +73,24 @@ export default function Challenges() {
   };
 
   return (
-    <Screen
-      top={false}
-      banner={{
-        world: 'me',
-        title: t('ban.challenges.title'),
-        line: t('ban.challenges.line'),
-        pulse: 'encourage',
-      }}
-    >
+    <Screen>
+      <FoodHero
+        world="me"
+        title={t('ban.challenges.title')}
+        line={t('ban.challenges.line')}
+        pulse={progress?.met ? 'celebrate' : 'encourage'}
+        stats={
+          progress
+            ? [
+                {
+                  label: t('chal.activeDaysLabel'),
+                  value: `${progress.activeDays} / ${progress.targetDays}`,
+                },
+                { label: t('chal.daysLeftLabel'), value: String(progress.daysLeft) },
+              ]
+            : []
+        }
+      />
       <AppText muted>{t('chal.intro')}</AppText>
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {msg ? <Notice tone="warning">{msg}</Notice> : null}
@@ -145,24 +156,36 @@ export default function Challenges() {
           <AppText variant="heading" accessibilityRole="header">
             {t('chal.startTitle')}
           </AppText>
-          <Choice
-            label={t('chal.length')}
-            value={length}
-            onChange={(v) => {
-              setLength(v);
-              setTarget(null);
-            }}
-            options={CHALLENGE_LENGTHS.map((n) => ({
-              value: String(n) as '7' | '14' | '30',
-              label: t('chal.days', { n }),
-            }))}
-          />
-          <Choice
-            label={t('chal.target')}
-            value={String(safeChosen)}
-            onChange={setTarget}
-            options={options.map((n) => ({ value: String(n), label: t('chal.activeDays', { n }) }))}
-          />
+          <AppText variant="label">{t('chal.length')}</AppText>
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            {CHALLENGE_LENGTHS.map((n) => (
+              <View key={n} style={{ flex: 1 }}>
+                <IconChoice
+                  icon="calendar"
+                  label={t('chal.days', { n })}
+                  selected={length === String(n)}
+                  onPress={() => {
+                    setLength(String(n) as '7' | '14' | '30');
+                    setTarget(null);
+                  }}
+                />
+              </View>
+            ))}
+          </View>
+          <AppText variant="label">{t('chal.target')}</AppText>
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            {options.map((n) => (
+              <View key={n} style={{ flex: 1 }}>
+                <IconChoice
+                  icon="flash"
+                  label={t('chal.activeDays', { n })}
+                  selected={safeChosen === n}
+                  onPress={() => setTarget(String(n))}
+                  tint={brand.lime}
+                />
+              </View>
+            ))}
+          </View>
           <AppText variant="caption" muted>
             {t('chal.targetNote', { max: maxTargetDays(len), length: len })}
           </AppText>
@@ -190,10 +213,20 @@ export default function Challenges() {
           </AppText>
           {past.map((c) => (
             <Card key={c.id}>
-              <AppText>{`${t('chal.days', { n: c.lengthDays })} · ${formatDate(c.startDate)}`}</AppText>
-              <AppText variant="caption" muted>
-                {t(`chal.status.${c.status}` as StringKey)}
-              </AppText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                <IconBadge
+                  name={c.status === 'completed' ? 'checkmark-circle' : 'pause-circle'}
+                  size={36}
+                  fill={c.status === 'completed' ? colors.successBg : brand.violet}
+                  color={c.status === 'completed' ? colors.success : brand.plum}
+                />
+                <View style={{ flex: 1 }}>
+                  <AppText variant="label">{`${t('chal.days', { n: c.lengthDays })} · ${formatDate(c.startDate)}`}</AppText>
+                  <AppText variant="caption" muted>
+                    {t(`chal.status.${c.status}` as StringKey)}
+                  </AppText>
+                </View>
+              </View>
             </Card>
           ))}
         </View>

@@ -22,3 +22,5 @@ export * from './coach-context';
 export * from './daily-plan';
 export * from './weekly';
 export * from './recommend';
+export * from './instruction-media';
+export * from './session-clock';
