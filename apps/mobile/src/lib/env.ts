@@ -5,6 +5,8 @@ export interface AppConfig {
   authMode: 'mock' | 'supabase';
   supabaseUrl?: string;
   supabasePublishableKey?: string;
+  /** Server AI gateway base URL. Not a secret. Absent until the owner deploys the gateway. */
+  aiApiUrl?: string;
 }
 
 export class ConfigError extends Error {
@@ -53,5 +55,14 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
     throw new ConfigError(
       'A secret or service-role key must never be used in the app. Use the publishable key.',
     );
-  return { appEnv, authMode: 'supabase', supabaseUrl: url, supabasePublishableKey: key };
+  const ai = env.EXPO_PUBLIC_AI_API_URL?.trim().replace(/\/+$/, '') || undefined;
+  if (ai && !/^https:\/\//.test(ai) && !/^http:\/\/(localhost|127\.0\.0\.1)/.test(ai))
+    throw new ConfigError('The AI service URL must use https.');
+  return {
+    appEnv,
+    authMode: 'supabase',
+    supabaseUrl: url,
+    supabasePublishableKey: key,
+    aiApiUrl: ai,
+  };
 }

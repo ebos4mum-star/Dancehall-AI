@@ -23,6 +23,9 @@ export default function CoachSettings() {
   );
   const { data: convs } = useLoad(async (s) => (s.listConversations ? s.listConversations() : []));
   const { data: usage } = useLoad(async (s) => (s.getAiUsage ? s.getAiUsage() : null));
+  const { data: deletion } = useLoad(async (s) =>
+    s.getAccountDeletionRequest ? s.getAccountDeletionRequest() : null,
+  );
   const [err, setErr] = useState<string | null>(null);
   const [confirmAll, setConfirmAll] = useState(false);
   const guard = async (fn: () => Promise<unknown>) => {
@@ -130,7 +133,61 @@ export default function CoachSettings() {
           </View>
         ))}
         {usage?.paused ? <Notice>{t('coach.paused')}</Notice> : null}
+        {usage?.staffPaused ? <Notice>{t('coachset.staffPaused')}</Notice> : null}
       </DepthCard>
+
+      {store.setAiPaused ? (
+        <DepthCard>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: spacing.md,
+            }}
+          >
+            <AppText variant="label" style={{ flex: 1 }}>
+              {t('coachset.pause')}
+            </AppText>
+            <Switch
+              accessibilityLabel={t('coachset.pause')}
+              value={usage?.userPaused === true}
+              onValueChange={(v) => guard(() => store.setAiPaused!(v))}
+              trackColor={{ true: colors.primary, false: colors.border }}
+            />
+          </View>
+          <AppText variant="caption" muted>
+            {t('coachset.pauseNote')}
+          </AppText>
+        </DepthCard>
+      ) : null}
+
+      {store.requestAccountDeletion ? (
+        <DepthCard>
+          <AppText variant="heading" accessibilityRole="header">
+            {t('coachset.deleteAccount')}
+          </AppText>
+          <AppText variant="caption" muted>
+            {t('coachset.deleteAccountNote')}
+          </AppText>
+          {deletion ? (
+            <>
+              <Notice>{`${t('coachset.deleteRequested')} ${formatDate(deletion.scheduledFor)}`}</Notice>
+              <Button
+                variant="secondary"
+                label={t('coachset.deleteCancel')}
+                onPress={() => guard(() => store.cancelAccountDeletion!())}
+              />
+            </>
+          ) : (
+            <Button
+              variant="secondary"
+              label={t('coachset.deleteAccount')}
+              onPress={() => guard(() => store.requestAccountDeletion!())}
+            />
+          )}
+        </DepthCard>
+      ) : null}
 
       {config.authMode === 'mock' ? (
         <DepthCard>
@@ -150,7 +207,7 @@ export default function CoachSettings() {
             </AppText>
             <Switch
               accessibilityLabel={t('coachset.kill')}
-              value={usage?.paused === true}
+              value={(usage?.staffPaused ?? usage?.paused) === true}
               onValueChange={(v) => guard(() => store.devSetKillSwitch!(v))}
               trackColor={{ true: colors.primary, false: colors.border }}
             />

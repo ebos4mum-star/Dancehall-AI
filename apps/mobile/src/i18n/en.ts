@@ -321,6 +321,16 @@ export const en = {
   'err.quota_exceeded':
     'You have used this month’s free allowance for that feature. Everything else keeps working, and it resets next month.',
   'err.budget_exhausted': 'AI features are paused for now. You can still log food by hand.',
+  'err.ai_paused': 'AI is paused in your settings. You can turn it back on in Coach privacy.',
+  'coachset.pause': 'Pause AI for me',
+  'coachset.pauseNote':
+    'While paused, the coach, weekly reviews and photo analysis stay off for you. Your plan, workouts and food logging keep working.',
+  'coachset.staffPaused': 'AI is temporarily switched off by the DanceHall team.',
+  'coachset.deleteAccount': 'Delete my account',
+  'coachset.deleteAccountNote':
+    'This starts a 30-day waiting period. You can cancel any time before it ends; afterwards your account and data are permanently deleted.',
+  'coachset.deleteRequested': 'Deletion requested. Scheduled for',
+  'coachset.deleteCancel': 'Cancel deletion',
   'err.feature_disabled': 'This feature is not available right now.',
   'err.ai_unavailable': 'Photo analysis is not available right now. You can log food by hand.',
   'err.photo_already_deleted': 'That photo has already been deleted.',

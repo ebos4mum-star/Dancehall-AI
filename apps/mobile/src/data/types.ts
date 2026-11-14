@@ -87,6 +87,7 @@ export type StoreErrorCode =
   | 'budget_exhausted'
   | 'feature_disabled'
   | 'ai_unavailable'
+  | 'ai_paused'
   | 'photo_already_deleted'
   | 'coach_consent_required'
   | 'goal_blocked';
@@ -186,6 +187,12 @@ export interface DataStore {
   /** What the coach would use from your records right now, in plain words. */
   getCoachContextSummary?(): Promise<string[]>;
   purgeOldCoachData?(): Promise<number>;
+  /** The person's own AI pause. Never changes the staff kill switch. */
+  setAiPaused?(on: boolean): Promise<void>;
+  /** Account deletion: a request with a 30-day cancellable grace period. */
+  requestAccountDeletion?(): Promise<{ id: string; scheduledFor: string }>;
+  cancelAccountDeletion?(): Promise<boolean>;
+  getAccountDeletionRequest?(): Promise<{ id: string; scheduledFor: string } | null>;
   /** Development only. */
   devSetKillSwitch?(on: boolean): Promise<void>;
   devSetBudgetCeiling?(usd: number): Promise<void>;
@@ -394,6 +401,10 @@ export interface AiUsageSummary {
   }>;
   /** True when AI is switched off (kill switch) or the monthly budget is used up: the rule-based parts of the app keep working. */
   paused: boolean;
+  /** The person's own pause (their setting). Separate from the staff kill switch below. */
+  userPaused?: boolean;
+  /** Staff kill switch is on. */
+  staffPaused?: boolean;
   personalization: boolean;
 }
 

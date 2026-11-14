@@ -7,6 +7,7 @@ import {
   type MealType,
   type ReadinessQuestion,
 } from '@dancehall/shared';
+import { createCoachAdapter } from './supabaseCoach';
 import {
   CURRENT_POLICY_VERSION,
   StoreError,
@@ -36,6 +37,8 @@ export interface SupabaseStoreConfig {
   url: string;
   publishableKey: string;
   /** Secure storage for the auth session (Keychain/Keystore on device). */
+  /** Base URL of the server AI gateway. Optional: without it the AI features report "unavailable". */
+  aiApiUrl?: string;
   storage: {
     getItem(k: string): Promise<string | null>;
     setItem(k: string, v: string): Promise<void>;
@@ -136,6 +139,12 @@ const toSessionRow = (i: NewSession): Row => ({
 });
 
 export function createSupabaseStore(cfg: SupabaseStoreConfig): DataStore {
+  return withCoach(createBaseStore(cfg), cfg);
+}
+
+function createBaseStore(
+  cfg: SupabaseStoreConfig,
+): DataStore & { __db: SupabaseClient; __emit: () => void } {
   const db: SupabaseClient = createClient(cfg.url, cfg.publishableKey, {
     auth: {
       storage: cfg.storage,
@@ -188,6 +197,8 @@ export function createSupabaseStore(cfg: SupabaseStoreConfig): DataStore {
   });
 
   return {
+    __db: db,
+    __emit: emit,
     mode: 'supabase',
     subscribe(l) {
       listeners.add(l);
@@ -587,5 +598,16 @@ export function createSupabaseStore(cfg: SupabaseStoreConfig): DataStore {
       emit();
       return { answers, outcome, createdAt: r.created_at as string };
     },
+  };
+}
+
+function withCoach(
+  base: DataStore & { __db: SupabaseClient; __emit: () => void },
+  cfg: SupabaseStoreConfig,
+): DataStore {
+  const { __db, __emit, ...store } = base;
+  return {
+    ...store,
+    ...createCoachAdapter({ db: __db, base: store, aiApiUrl: cfg.aiApiUrl, emit: __emit }),
   };
 }

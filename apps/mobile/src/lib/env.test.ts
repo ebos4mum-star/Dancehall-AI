@@ -42,4 +42,17 @@ describe('resolveConfig', () => {
       resolveConfig({ ...base, EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: jwt('anon') }).authMode,
     ).toBe('supabase');
   });
+  it('accepts an https AI service URL, trims it, and rejects insecure ones', () => {
+    const base = {
+      EXPO_PUBLIC_SUPABASE_URL: 'https://x.example.test',
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_abc',
+    };
+    expect(
+      resolveConfig({ ...base, EXPO_PUBLIC_AI_API_URL: 'https://ai.example.test/' }).aiApiUrl,
+    ).toBe('https://ai.example.test');
+    expect(resolveConfig(base).aiApiUrl).toBeUndefined();
+    expect(() =>
+      resolveConfig({ ...base, EXPO_PUBLIC_AI_API_URL: 'http://ai.example.test' }),
+    ).toThrow(ConfigError);
+  });
 });

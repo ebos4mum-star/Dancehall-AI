@@ -12,6 +12,7 @@ export function readConfig(): AppConfig {
     EXPO_PUBLIC_AUTH_MODE: process.env.EXPO_PUBLIC_AUTH_MODE,
     EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
     EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_AI_API_URL: process.env.EXPO_PUBLIC_AI_API_URL,
   });
 }
 
@@ -20,6 +21,7 @@ export function createStore(config: AppConfig): DataStore {
     return createSupabaseStore({
       url: config.supabaseUrl!,
       publishableKey: config.supabasePublishableKey!,
+      aiApiUrl: config.aiApiUrl,
       storage: secureStorage,
     });
   }

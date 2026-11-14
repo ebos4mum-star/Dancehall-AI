@@ -98,7 +98,8 @@ interface State {
   conversations: Conversation[];
   dailyPlans: DailyPlan[];
   weeklyReviews: WeeklyReviewRecord[];
-  aiControls: { killAll: boolean };
+  aiControls: { killAll: boolean; userPaused?: boolean };
+  deletionRequest?: { id: string; scheduledFor: string } | null;
 }
 
 const KEY = 'dh.mock.v1';
@@ -171,7 +172,9 @@ function mapAiError(e: unknown): StoreError {
           ? 'budget_exhausted'
           : e.code === 'feature_disabled'
             ? 'feature_disabled'
-            : 'ai_unavailable';
+            : e.code === 'ai_paused'
+              ? 'ai_paused'
+              : 'ai_unavailable';
     return new StoreError(code, e.userMessage);
   }
   return new StoreError('ai_unavailable');
@@ -720,6 +723,7 @@ export class MockStore implements DataStore {
         } as never,
       },
       { ...s.aiBudget },
+      { userPause: { isPaused: async () => s.aiControls.userPaused === true } },
     );
     return { gateway, usage };
   }
@@ -1232,11 +1236,40 @@ export class MockStore implements DataStore {
         allowance: monthlyAllowance('free', feature),
       })),
       // Paused when AI is switched off, or less than one request's worst case (about half a cent) of the monthly budget remains.
+      userPaused: s.aiControls.userPaused === true,
+      staffPaused: s.aiControls.killAll,
       paused:
         s.aiControls.killAll ||
+        s.aiControls.userPaused === true ||
         s.aiBudget.settledUsd + s.aiBudget.reservedUsd + 0.005 > s.aiBudget.ceilingUsd,
       personalization: this.consented(s, 'ai_coach_personalization'),
     };
+  }
+  /** The person's own AI pause. Never touches the staff kill switch. */
+  async setAiPaused(on: boolean) {
+    const s = await this.authed();
+    s.aiControls = { ...s.aiControls, userPaused: on };
+    await this.commit();
+  }
+  async requestAccountDeletion() {
+    const s = await this.authed();
+    s.deletionRequest ??= {
+      id: newId(),
+      scheduledFor: new Date(this.now().getTime() + 30 * DAY_MS).toISOString(),
+    };
+    await this.commit();
+    return { ...s.deletionRequest };
+  }
+  async cancelAccountDeletion() {
+    const s = await this.authed();
+    const had = !!s.deletionRequest;
+    s.deletionRequest = null;
+    await this.commit();
+    return had;
+  }
+  async getAccountDeletionRequest() {
+    const s = await this.authed();
+    return s.deletionRequest ? { ...s.deletionRequest } : null;
   }
   /** DEVELOPMENT ONLY: stands in for the staff-controlled kill switch. */
   async devSetKillSwitch(on: boolean) {
