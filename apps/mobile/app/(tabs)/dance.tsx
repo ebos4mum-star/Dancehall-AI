@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Animated, Pressable, View } from 'react-native';
+import { Animated, Pressable, ScrollView, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import {
@@ -21,6 +21,8 @@ import {
 } from '@dancehall/shared';
 import { useDanceData } from '@/dance/hooks';
 import { StyleCarousel, WorkoutCard } from '@/dance/ui';
+import { IconChoice, Disclosure, IconBadge, SectionTitle, type IconName } from '@/ui/kit';
+import { Ionicons } from '@expo/vector-icons';
 import { t, type StringKey } from '@/i18n';
 import { brand, radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -134,18 +136,40 @@ export default function Dance() {
     if (w) router.push({ pathname: '/dance/[id]', params: { id: w.id } });
   };
 
+  const MOOD_ICON: Record<Mood, IconName> = {
+    energized: 'flash',
+    tired: 'moon',
+    stressed: 'water',
+    happy: 'sunny',
+    motivation: 'rocket',
+  };
+  const filterSummary = [
+    level === 'any'
+      ? `${t('dance.any')} ${t('dance.level').toLowerCase()}`
+      : t(`level.${level}` as StringKey),
+    intensity === 'any'
+      ? `${t('dance.any')} ${t('dance.intensity').toLowerCase()}`
+      : t(`intensity.${intensity}` as StringKey),
+    duration === 'any'
+      ? `${t('dance.any')} ${t('dance.duration').toLowerCase()}`
+      : duration === '20'
+        ? '20+ min'
+        : `${duration} min`,
+    ...(lowOnly ? [t('dance.lowImpactOnly')] : []),
+  ].join(' · ');
+
   return (
     <Screen title={t('tabs.dance')}>
       <Reveal>
         <HeroCard world="dance">
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-            <View style={{ flex: 1, gap: spacing.sm }}>
+            <View style={{ flex: 1, gap: spacing.xs }}>
               <AppText variant="title" accessibilityRole="header" style={{ color: colors.onHero }}>
                 {t('dance.heroTitle')}
               </AppText>
               <AppText style={{ color: colors.onHero }}>{t('dance.heroBody')}</AppText>
             </View>
-            <CharacterStage size={104} state="dance" />
+            <CharacterStage size={112} state="dance" />
           </View>
           <AppText variant="label" style={{ color: colors.onHero }}>
             {t('dance.quickFit')}
@@ -164,48 +188,148 @@ export default function Dance() {
       </Reveal>
 
       {pending && pendingWorkout ? (
-        <DepthCard>
-          <AppText variant="heading" accessibilityRole="header">
-            {t('dance.resumeTitle')}
-          </AppText>
-          <AppText muted>{t('dance.resumeBody', { title: pendingWorkout.title })}</AppText>
-          <Button
-            label={t('dance.resume')}
-            onPress={() =>
-              router.push({
-                pathname: '/dance/session',
-                params: {
-                  id: pending.workoutId,
-                  low: pending.lowImpact ? '1' : '0',
-                  ...(pending.sessionId ? { sessionId: pending.sessionId } : {}),
-                },
-              })
-            }
-          />
-          <Button
-            variant="secondary"
-            label={t('dance.resumeDiscard')}
-            onPress={async () => {
-              await clearSnapshot(deviceSnapshotStore);
-              setPending(null);
-            }}
-          />
-        </DepthCard>
+        <View
+          style={{
+            backgroundColor: colors.primary,
+            borderRadius: radius.lg,
+            padding: spacing.md,
+            gap: spacing.sm,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <IconBadge name="play" size={40} fill={colors.onPrimary} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <AppText
+                variant="label"
+                accessibilityRole="header"
+                style={{ color: colors.onPrimary }}
+              >
+                {t('dance.resumeTitle')}
+              </AppText>
+              <AppText variant="caption" style={{ color: colors.onPrimary }}>
+                {t('dance.resumeBody', { title: pendingWorkout.title })}
+              </AppText>
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('dance.resume')}
+              onPress={() =>
+                router.push({
+                  pathname: '/dance/session',
+                  params: {
+                    id: pending.workoutId,
+                    low: pending.lowImpact ? '1' : '0',
+                    ...(pending.sessionId ? { sessionId: pending.sessionId } : {}),
+                  },
+                })
+              }
+              style={{
+                flex: 1,
+                minHeight: 48,
+                borderRadius: radius.pill,
+                backgroundColor: colors.onPrimary,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <AppText variant="label" style={{ color: colors.primary }}>
+                {t('dance.resume')}
+              </AppText>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('dance.resumeDiscard')}
+              onPress={async () => {
+                await clearSnapshot(deviceSnapshotStore);
+                setPending(null);
+              }}
+              style={{ minHeight: 48, justifyContent: 'center', paddingHorizontal: spacing.md }}
+            >
+              <AppText variant="label" style={{ color: colors.onPrimary }}>
+                {t('dance.resumeDiscard')}
+              </AppText>
+            </Pressable>
+          </View>
+        </View>
       ) : null}
 
+      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+        {(
+          [
+            { icon: 'dice', label: t('dance.surprise'), go: surprise },
+            {
+              icon: 'calendar',
+              label: t('dance.schedule'),
+              go: () => router.push('/dance/schedule'),
+            },
+            {
+              icon: 'stats-chart',
+              label: t('dance.activity'),
+              go: () => router.push('/dance/history'),
+            },
+          ] as Array<{ icon: IconName; label: string; go: () => void }>
+        ).map((a) => (
+          <Pressable
+            key={a.label}
+            accessibilityRole="button"
+            accessibilityLabel={a.label}
+            onPress={() => {
+              haptics.tap();
+              a.go();
+            }}
+            style={{
+              flex: 1,
+              minHeight: 84,
+              borderRadius: radius.md,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: spacing.xs,
+              padding: spacing.sm,
+            }}
+          >
+            <IconBadge name={a.icon} size={36} fill={colors.primary} color={colors.onPrimary} />
+            <AppText variant="caption" style={{ fontWeight: '600', textAlign: 'center' }}>
+              {a.label}
+            </AppText>
+          </Pressable>
+        ))}
+      </View>
+
       <DepthCard>
-        <Choice
-          label={t('mood.title')}
-          value={mood}
-          onChange={(v: Mood | 'none') => {
-            setMood(v);
-            setMoodSeed(0);
-          }}
-          options={[
-            { value: 'none', label: t('mood.skip') },
-            ...MOODS.map((m) => ({ value: m, label: t(`mood.${m}` as StringKey) })),
-          ]}
-        />
+        <SectionTitle icon="happy" title={t('mood.title')} />
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.xs }}
+        >
+          <IconChoice
+            icon="remove-circle"
+            label={t('mood.skip')}
+            selected={mood === 'none'}
+            onPress={() => {
+              setMood('none');
+              setMoodSeed(0);
+            }}
+          />
+          {MOODS.map((m) => (
+            <IconChoice
+              key={m}
+              icon={MOOD_ICON[m]}
+              label={t(`mood.${m}` as StringKey)}
+              selected={mood === m}
+              tint={brand.lime}
+              onPress={() => {
+                setMood(m);
+                setMoodSeed(0);
+              }}
+            />
+          ))}
+        </ScrollView>
         {mood === 'none' ? (
           <AppText variant="caption" muted>
             {t('mood.hint')}
@@ -225,9 +349,14 @@ export default function Dance() {
                     router.push({ pathname: '/dance/[id]', params: { id: p.workout.id } })
                   }
                 />
-                <AppText variant="caption" muted>
-                  {p.why}
-                </AppText>
+                <View
+                  style={{ flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.xs }}
+                >
+                  <Ionicons name="information-circle" size={16} color={colors.textMuted} />
+                  <AppText variant="caption" muted style={{ flex: 1 }}>
+                    {p.why}
+                  </AppText>
+                </View>
               </View>
             ))}
             <Button
@@ -239,30 +368,12 @@ export default function Dance() {
         )}
       </DepthCard>
 
-      <Notice>{t('dance.sampleNotice')}</Notice>
-
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-        <Button variant="secondary" label={t('dance.surprise')} onPress={surprise} />
-        <Button
-          variant="secondary"
-          label={t('dance.schedule')}
-          onPress={() => router.push('/dance/schedule')}
-        />
-        <Button
-          variant="secondary"
-          label={t('dance.activity')}
-          onPress={() => router.push('/dance/history')}
-        />
-      </View>
-
       <Reveal delay={60}>
-        <AppText variant="heading" accessibilityRole="header">
-          {t('dance.styles')}
-        </AppText>
+        <SectionTitle icon="color-palette" title={t('dance.styles')} />
         <StyleCarousel value={style} onChange={setStyle} styles={DANCE_STYLES} />
       </Reveal>
 
-      <DepthCard>
+      <Disclosure title={t('dance.filters')} summary={filterSummary}>
         <Choice
           label={t('dance.level')}
           value={level}
@@ -304,12 +415,9 @@ export default function Dance() {
             { value: 'yes', label: t('dance.lowImpactOnly') },
           ]}
         />
-      </DepthCard>
+      </Disclosure>
 
-      <AppText
-        variant="heading"
-        accessibilityRole="header"
-      >{`${t('dance.browse')} (${results.length})`}</AppText>
+      <SectionTitle icon="musical-notes" title={`${t('dance.browse')} (${results.length})`} />
       {results.length === 0 ? <Notice>{t('dance.noResults')}</Notice> : null}
       {results.map((w, i) => (
         <Reveal key={w.id} delay={Math.min(i, 6) * 40}>
@@ -320,9 +428,7 @@ export default function Dance() {
         </Reveal>
       ))}
 
-      <AppText variant="heading" accessibilityRole="header">
-        {t('dance.programs')}
-      </AppText>
+      <SectionTitle icon="trail-sign" title={t('dance.programs')} />
       {PROGRAMS.map((p) => (
         <Pressable
           key={p.id}
@@ -332,18 +438,28 @@ export default function Dance() {
         >
           <LinearGradient
             colors={[colors.heroFrom, colors.heroTo]}
-            style={{ borderRadius: radius.lg, padding: spacing.lg, gap: spacing.xs }}
+            style={{
+              borderRadius: radius.lg,
+              padding: spacing.lg,
+              gap: spacing.sm,
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
           >
-            <AppText variant="heading" style={{ color: colors.onHero }}>
-              {p.title}
-            </AppText>
-            <AppText
-              variant="caption"
-              style={{ color: colors.onHero }}
-            >{`${p.weeks} weeks · ${p.sessionsPerWeek} sessions a week · ${t(`level.${p.level}` as StringKey)}`}</AppText>
+            <IconBadge name="trail-sign" size={52} fill={brand.lime} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <AppText variant="heading" style={{ color: colors.onHero }}>
+                {p.title}
+              </AppText>
+              <AppText variant="caption" style={{ color: colors.onHero }}>
+                {`${p.weeks} weeks · ${p.sessionsPerWeek} sessions a week · ${t(`level.${p.level}` as StringKey)}`}
+              </AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={22} color={colors.onHero} />
           </LinearGradient>
         </Pressable>
       ))}
+      <Notice>{t('dance.sampleNotice')}</Notice>
       <AppText variant="caption" muted>
         {WORKOUT_DATA_NOTICE}
       </AppText>

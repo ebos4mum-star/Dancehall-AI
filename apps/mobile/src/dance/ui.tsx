@@ -8,7 +8,9 @@ import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
 import { haptics } from '@/ui/haptics';
 import { usePressScale } from '@/ui/motion';
-import { STYLE_META } from './meta';
+import { Ionicons } from '@expo/vector-icons';
+import { IconBadge, Meter } from '@/ui/kit';
+import { INTENSITY_NUM, LEVEL_NUM, STYLE_ICON, STYLE_META } from './meta';
 
 const LEVEL_DOTS: Record<Level, number> = { beginner: 1, intermediate: 2, advanced: 3 };
 
@@ -40,7 +42,7 @@ export const workoutSummaryLabel = (
 ) =>
   `${w.title}, ${t(`style.${w.style}` as StringKey)}, ${t('dance.minutes', { n: w.minutes })}, ${t(`level.${w.level}` as StringKey)}, ${t(`intensity.${w.intensity}` as StringKey)}, ${t(`impact.${w.impact}` as StringKey)}`;
 
-/** Rich workout card: style gradient, clear duration, level and intensity labels, press feedback. */
+/** Workout card: a duration disc, the title and summary, and three facts (level, pace, impact) each with a meter and a text label. */
 export function WorkoutCard({ w, onPress }: { w: WorkoutDef; onPress: () => void }) {
   const meta = STYLE_META[w.style];
   const press = usePressScale();
@@ -73,39 +75,60 @@ export function WorkoutCard({ w, onPress }: { w: WorkoutDef; onPress: () => void
           colors={[meta.from, meta.to]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={{ padding: spacing.lg, gap: spacing.sm, minHeight: 148 }}
+          style={{ padding: spacing.md, gap: spacing.md, minHeight: 148 }}
         >
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-            }}
-          >
-            <View style={{ flex: 1, gap: 2, paddingRight: spacing.sm }}>
-              <AppText variant="caption" style={{ color: '#FFFFFF', opacity: 0.9 }}>
+          <Ionicons
+            name={STYLE_ICON[w.style]}
+            size={120}
+            color="#FFFFFF"
+            style={{ position: 'absolute', right: -14, bottom: -18, opacity: 0.12 }}
+            accessibilityElementsHidden
+          />
+          <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
+            <View
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={{
+                width: 68,
+                height: 68,
+                borderRadius: 34,
+                backgroundColor: brand.ivory,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <AppText variant="title" style={{ color: brand.plum, fontSize: 26, lineHeight: 28 }}>
+                {w.minutes}
+              </AppText>
+              <AppText variant="caption" style={{ color: brand.plum, lineHeight: 14 }}>
+                min
+              </AppText>
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <AppText
+                variant="caption"
+                style={{ color: '#FFFFFF', opacity: 0.92, letterSpacing: 1 }}
+              >
                 {t(`style.${w.style}` as StringKey).toUpperCase()}
               </AppText>
               <AppText variant="heading" style={{ color: '#FFFFFF' }}>
                 {w.title}
               </AppText>
             </View>
-            <AppText
-              accessibilityElementsHidden
-              importantForAccessibility="no"
-              style={{ fontSize: 40, lineHeight: 48 }}
-            >
-              {meta.emoji}
-            </AppText>
           </View>
           <AppText variant="caption" numberOfLines={2} style={{ color: '#FFFFFF' }}>
             {w.summary}
           </AppText>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-            <Chip strong label={t('dance.minutes', { n: w.minutes })} />
-            <Chip label={levelLabel(w.level)} />
-            <Chip label={t(`intensity.${w.intensity}` as StringKey)} />
-            <Chip label={t(`impact.${w.impact}` as StringKey)} />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+            <Fact meter={LEVEL_NUM[w.level]} label={t(`level.${w.level}` as StringKey)} />
+            <Fact
+              meter={INTENSITY_NUM[w.intensity]}
+              label={t(`intensity.${w.intensity}` as StringKey)}
+            />
+            <Fact
+              icon={w.impact === 'low' ? 'leaf' : 'footsteps'}
+              label={t(`impact.${w.impact}` as StringKey)}
+            />
           </View>
         </LinearGradient>
       </Animated.View>
@@ -113,7 +136,40 @@ export function WorkoutCard({ w, onPress }: { w: WorkoutDef; onPress: () => void
   );
 }
 
-/** A big tappable style tile for the horizontal carousel. */
+export function Fact({
+  meter,
+  icon,
+  label,
+}: {
+  meter?: 1 | 2 | 3;
+  icon?: 'leaf' | 'footsteps' | 'time';
+  label: string;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        borderRadius: radius.pill,
+        paddingHorizontal: spacing.sm + 2,
+        paddingVertical: 5,
+      }}
+    >
+      {meter ? (
+        <Meter level={meter} />
+      ) : icon ? (
+        <Ionicons name={icon} size={14} color="#FFFFFF" />
+      ) : null}
+      <AppText variant="caption" style={{ color: '#FFFFFF', fontWeight: '600' }}>
+        {label}
+      </AppText>
+    </View>
+  );
+}
+
+/** A tall style tile: an icon badge on the style's gradient. Selected shows a lime ring, a check and a text state. */
 export function StyleTile({
   style,
   selected,
@@ -123,7 +179,6 @@ export function StyleTile({
   selected: boolean;
   onPress: () => void;
 }) {
-  const { colors } = useTheme();
   const press = usePressScale();
   const meta = style === 'all' ? null : STYLE_META[style];
   const label = style === 'all' ? t('dance.all') : t(`style.${style}` as StringKey);
@@ -144,28 +199,26 @@ export function StyleTile({
         style={[
           press.style,
           {
-            width: 104,
-            height: 96,
+            width: 108,
+            height: 118,
             borderRadius: radius.lg,
             overflow: 'hidden',
             borderWidth: selected ? 3 : 0,
-            borderColor: colors.accent,
+            borderColor: brand.lime,
           },
         ]}
       >
         <LinearGradient
-          colors={meta ? [meta.from, meta.to] : [colors.heroFrom, colors.heroTo]}
+          colors={meta ? [meta.from, meta.to] : [brand.plum, '#4A2B8C']}
           style={{ flex: 1, padding: spacing.sm, justifyContent: 'space-between' }}
         >
-          <AppText
-            accessibilityElementsHidden
-            importantForAccessibility="no"
-            style={{ fontSize: 28, lineHeight: 34 }}
-          >
-            {meta?.emoji ?? '🔥'}
-          </AppText>
+          <IconBadge
+            name={selected ? 'checkmark' : style === 'all' ? 'apps' : STYLE_ICON[style]}
+            size={40}
+            fill={brand.ivory}
+          />
           <AppText variant="label" style={{ color: '#FFFFFF' }}>
-            {selected ? `✓ ${label}` : label}
+            {label}
           </AppText>
         </LinearGradient>
       </Animated.View>

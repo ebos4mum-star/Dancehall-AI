@@ -1,5 +1,9 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { AppState, Switch, View } from 'react-native';
+import { AppState, Pressable, Switch, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { HeroScene } from '@/scene/HeroScene';
+import { IconBadge, IconChoice, InfoTile, SegmentedBar } from '@/ui/kit';
+import { brand } from '@/theme/tokens';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   WORKOUT_BY_ID,
@@ -10,7 +14,7 @@ import {
 } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage } from '@/data/hooks';
-import { EFFORT_CHOICES, STYLE_META, mmss } from '@/dance/meta';
+import { EFFORT_CHOICES, mmss } from '@/dance/meta';
 import { t, type StringKey } from '@/i18n';
 import { spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -20,9 +24,7 @@ import { useDanceData } from '@/dance/hooks';
 import { PulseStage } from '@/pulse/PulseStage';
 import { CharacterStage, DepthCard, HeroCard } from '@/ui/Depth';
 import { Notice } from '@/ui/Banner';
-import { Choice } from '@/ui/Choice';
 import { Ring } from '@/ui/motion';
-import { ProgressBar } from '@/ui/ProgressBar';
 import { Screen } from '@/ui/Screen';
 import { haptics } from '@/ui/haptics';
 import { once } from '@/dance/once';
@@ -128,7 +130,6 @@ export default function Session() {
   }
   const seg = s.segments[s.index]!;
   const next = s.segments[s.index + 1];
-  const meta = STYLE_META[workout.style];
   const fraction = seg.seconds > 0 ? 1 - s.remainingS / seg.seconds : 1;
   const totalS = s.segments.reduce((a, g) => a + g.seconds, 0);
   const doneS =
@@ -169,12 +170,16 @@ export default function Session() {
     }
   };
 
+  const KIND_TINT = { warmup: brand.coral, main: brand.violet, cooldown: brand.lime } as const;
+  const EFFORT_ICON = { easy: 'leaf', moderate: 'walk', hard: 'flame', veryHard: 'flash' } as const;
+
   if (s.status === 'finished') {
     const m = Math.floor(s.elapsedS / 60);
+    const blocksDone = s.index + (s.status === 'finished' && s.remainingS === 0 ? 1 : 0);
     return (
-      <Screen top={false}>
+      <Screen key="finished" top={false}>
         <HeroCard world="dance" style={{ alignItems: 'center' }}>
-          <CharacterStage size={120} state="celebrate" />
+          <CharacterStage size={132} state="celebrate" />
           <AppText
             variant="title"
             accessibilityRole="header"
@@ -185,32 +190,52 @@ export default function Session() {
           <AppText style={{ color: colors.onHero, textAlign: 'center' }}>
             {t('ses.doneBody', { m, s: s.elapsedS % 60 })}
           </AppText>
-          {saved ? (
-            <AppText
-              variant="label"
-              style={{ color: colors.onHero }}
-              accessibilityLiveRegion="polite"
-            >
-              {t('ses.weekCount', { n: dance.summary.thisWeek.sessions })}
-            </AppText>
-          ) : null}
         </HeroCard>
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <InfoTile icon="time" label={t('ses.statTime')} value={mmss(s.elapsedS)} />
+          <InfoTile
+            icon="layers"
+            label={t('ses.statBlocks')}
+            value={`${Math.min(blocksDone, s.segments.length)}/${s.segments.length}`}
+          />
+          {saved ? (
+            <InfoTile
+              icon="calendar"
+              label={t('ses.statWeek')}
+              value={String(dance.summary.thisWeek.sessions)}
+            />
+          ) : null}
+        </View>
         <DepthCard>
           {s.elapsedS < 1 ? (
             <Notice>{t('ses.nothing')}</Notice>
           ) : saved ? (
-            <Notice>{t('ses.saved')}</Notice>
+            <View
+              accessibilityLiveRegion="polite"
+              style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}
+            >
+              <IconBadge name="checkmark" size={36} fill={colors.success} color="#FFFFFF" />
+              <AppText variant="label" style={{ flex: 1 }}>
+                {t('ses.saved')}
+              </AppText>
+            </View>
           ) : (
             <>
-              <Choice
-                label={t('ses.effort')}
-                value={effort}
-                onChange={setEffort}
-                options={EFFORT_CHOICES.map((e) => ({
-                  value: e.key,
-                  label: t(`ses.effort.${e.key}` as StringKey),
-                }))}
-              />
+              <AppText variant="heading" accessibilityRole="header">
+                {t('ses.effort')}
+              </AppText>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+                {EFFORT_CHOICES.map((e) => (
+                  <IconChoice
+                    key={e.key}
+                    icon={EFFORT_ICON[e.key]}
+                    label={t(`ses.effort.${e.key}` as StringKey)}
+                    selected={effort === e.key}
+                    onPress={() => setEffort(e.key)}
+                    tint={brand.lime}
+                  />
+                ))}
+              </View>
               <Button label={t('ses.save')} onPress={save} />
             </>
           )}
@@ -228,105 +253,185 @@ export default function Session() {
     );
   }
 
+  const barSegments = s.segments.map((g, i) => ({
+    weight: g.seconds,
+    fill: i < s.index ? 1 : i === s.index ? fraction : 0,
+    tint: KIND_TINT[g.kind],
+  }));
+  const circle = (
+    icon: 'play-back' | 'play-forward',
+    label: string,
+    onPress: () => void,
+    disabled = false,
+  ) => (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={() => {
+        haptics.tap();
+        onPress();
+      }}
+      style={{
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: disabled ? 0.4 : 1,
+      }}
+    >
+      <Ionicons name={icon} size={24} color={colors.text} />
+    </Pressable>
+  );
   return (
     <Screen top={false}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-        <View style={{ flex: 1 }}>
+      <HeroScene world="dance" height={376}>
+        <View
+          style={{ position: 'absolute', top: spacing.md, left: spacing.lg, right: spacing.lg }}
+        >
           <AppText
             variant="caption"
-            muted
+            style={{ color: brand.ivory, opacity: 0.9 }}
             accessibilityLiveRegion="polite"
-          >{`${workout.title} · ${t('ses.block', { n: s.index + 1, total: s.segments.length })} · ${t(`wk.${seg.kind}` as StringKey)}`}</AppText>
+          >
+            {`${workout.title} · ${t('ses.block', { n: s.index + 1, total: s.segments.length })}`}
+          </AppText>
+          <AppText
+            variant="label"
+            style={{
+              color: KIND_TINT[seg.kind] === brand.violet ? brand.ivory : KIND_TINT[seg.kind],
+            }}
+          >
+            {t(`wk.${seg.kind}` as StringKey).toUpperCase()}
+          </AppText>
         </View>
-        <View style={{ width: 72, height: 66, overflow: 'hidden' }}>
-          <PulseStage state={s.status === 'running' ? 'dance' : 'idle'} size={72} />
+        <View style={{ position: 'absolute', top: 64, left: 0, right: 0, alignItems: 'center' }}>
+          <Ring
+            size={232}
+            stroke={16}
+            fraction={fraction}
+            color={KIND_TINT[seg.kind]}
+            track="rgba(247,244,238,0.18)"
+          >
+            <View
+              style={{ alignItems: 'center' }}
+              accessible
+              accessibilityLabel={`${mmss(s.remainingS)} ${t('ses.left')}`}
+            >
+              <AppText variant="title" style={{ fontSize: 50, lineHeight: 56, color: brand.ivory }}>
+                {mmss(s.remainingS)}
+              </AppText>
+              <AppText variant="caption" style={{ color: brand.ivory, opacity: 0.85 }}>
+                {t('ses.left')}
+              </AppText>
+            </View>
+          </Ring>
         </View>
-      </View>
-      <ProgressBar
-        fraction={overall}
+        <View style={{ position: 'absolute', right: 4, bottom: 18 }}>
+          <PulseStage state={s.status === 'running' ? 'dance' : 'idle'} size={104} />
+        </View>
+        {restored && s.status === 'paused' ? (
+          <View
+            style={{ position: 'absolute', left: spacing.md, bottom: spacing.md, maxWidth: '58%' }}
+          >
+            <AppText variant="caption" style={{ color: brand.ivory }}>
+              {t('ses.restored')}
+            </AppText>
+          </View>
+        ) : null}
+      </HeroScene>
+
+      <SegmentedBar
+        segments={barSegments}
         label={t('ses.progress', {
           n: s.index + 1,
           total: s.segments.length,
           pct: Math.round(overall * 100),
         })}
       />
-      {restored && s.status === 'paused' ? <Notice>{t('ses.restored')}</Notice> : null}
-      <View style={{ alignItems: 'center', paddingVertical: spacing.md }}>
-        <Ring
-          size={220}
-          stroke={16}
-          fraction={fraction}
-          color={meta.from === '#1F1633' ? colors.primary : meta.from}
-          track={colors.border}
-        >
-          <View
-            style={{ alignItems: 'center' }}
-            accessible
-            accessibilityLabel={`${mmss(s.remainingS)} ${t('ses.left')}`}
-          >
-            <AppText variant="title" style={{ fontSize: 44, lineHeight: 52 }}>
-              {mmss(s.remainingS)}
-            </AppText>
-            <AppText variant="caption" muted>
-              {t('ses.left')}
-            </AppText>
-          </View>
-        </Ring>
-      </View>
+
       <DepthCard>
-        <AppText variant="heading" accessibilityRole="header" accessibilityLiveRegion="polite">
-          {seg.title}
-        </AppText>
+        <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
+          <IconBadge name="walk" size={36} fill={KIND_TINT[seg.kind]} />
+          <AppText
+            variant="heading"
+            accessibilityRole="header"
+            accessibilityLiveRegion="polite"
+            style={{ flex: 1 }}
+          >
+            {seg.title}
+          </AppText>
+        </View>
         <AppText style={{ fontSize: 18, lineHeight: 26 }}>{seg.cue}</AppText>
         {next ? (
-          <AppText variant="caption" muted>
-            {t('ses.next', { title: next.title })}
-          </AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+            <Ionicons name="arrow-forward-circle" size={18} color={colors.textMuted} />
+            <AppText variant="caption" muted>
+              {t('ses.next', { title: next.title })}
+            </AppText>
+          </View>
         ) : null}
       </DepthCard>
-      <View style={{ gap: spacing.sm }}>
-        {s.status === 'ready' ? (
-          <Button
-            label={t('ses.start')}
-            onPress={() => {
+
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: spacing.lg,
+        }}
+      >
+        {circle('play-back', t('ses.back'), () => dispatch({ type: 'back' }), s.index === 0)}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            s.status === 'ready'
+              ? t('ses.start')
+              : s.status === 'running'
+                ? t('ses.pause')
+                : t('ses.resume')
+          }
+          onPress={() => {
+            if (s.status === 'ready') {
               haptics.capture();
               dispatch({ type: 'start' });
-            }}
-          />
-        ) : null}
-        {s.status === 'running' ? (
-          <Button label={t('ses.pause')} onPress={() => dispatch({ type: 'pause' })} />
-        ) : null}
-        {s.status === 'paused' ? (
-          <Button label={t('ses.resume')} onPress={() => dispatch({ type: 'resume' })} />
-        ) : null}
-        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          <View style={{ flex: 1 }}>
-            <Button
-              variant="secondary"
-              label={t('ses.back')}
-              disabled={s.index === 0}
-              onPress={() => dispatch({ type: 'back' })}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Button
-              variant="secondary"
-              label={t('ses.skip')}
-              onPress={() => dispatch({ type: 'skip' })}
-            />
-          </View>
-        </View>
-      </View>
-      <DepthCard>
-        <View
+            } else if (s.status === 'running') dispatch({ type: 'pause' });
+            else dispatch({ type: 'resume' });
+          }}
           style={{
-            flexDirection: 'row',
+            width: 84,
+            height: 84,
+            borderRadius: 42,
+            backgroundColor: brand.lime,
             alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: spacing.md,
+            justifyContent: 'center',
+            shadowColor: brand.lime,
+            shadowOpacity: 0.45,
+            shadowRadius: 16,
+            shadowOffset: { width: 0, height: 6 },
+            elevation: 6,
           }}
         >
+          <Ionicons name={s.status === 'running' ? 'pause' : 'play'} size={38} color={brand.plum} />
+        </Pressable>
+        {circle('play-forward', t('ses.skip'), () => dispatch({ type: 'skip' }))}
+      </View>
+      <AppText variant="caption" muted style={{ textAlign: 'center' }}>
+        {s.status === 'ready'
+          ? t('ses.start')
+          : s.status === 'running'
+            ? t('ses.pause')
+            : t('ses.resume')}
+      </AppText>
+
+      <DepthCard>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <IconBadge name="leaf" size={32} fill={brand.lime} />
           <AppText variant="label" style={{ flex: 1 }}>
             {t('wk.lowImpact')}
           </AppText>

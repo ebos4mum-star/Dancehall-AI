@@ -261,7 +261,7 @@ async function step(name, fn) {
     await btn('End session').click();
     await seen('You moved for');
     await btn('Save to my activity').click();
-    await seen('Sessions this week: 1');
+    await p.getByLabel('Sessions this week: 1').last().waitFor({ state: 'visible', timeout: 4000 });
     await shot('session-done');
     await btn('Continue').click();
     await p.waitForTimeout(600);

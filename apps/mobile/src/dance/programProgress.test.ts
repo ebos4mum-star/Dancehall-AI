@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { programProgress } from './programProgress';
+import { programProgress, programSlots } from './programProgress';
 
 const s = (
   status: 'planned' | 'completed' | 'skipped',
@@ -45,5 +45,27 @@ describe('programProgress', () => {
       started: false,
       completed: 0,
     });
+  });
+});
+
+describe('programSlots', () => {
+  const sched = [
+    { week: 1, day: 3, workoutId: 'b' },
+    { week: 1, day: 1, workoutId: 'a' },
+    { week: 2, day: 1, workoutId: 'c' },
+  ];
+  it('orders slots by week and day and pairs them with sessions by date', () => {
+    const r = programSlots(
+      sched,
+      [s('planned', '2026-06-08'), s('completed', '2026-06-01'), s('skipped', '2026-06-03')],
+      'p',
+    );
+    expect(r.map((x) => x.workoutId)).toEqual(['a', 'b', 'c']);
+    expect(r.map((x) => x.status)).toEqual(['completed', 'skipped', 'planned']);
+  });
+  it('marks slots without a session as not scheduled and ignores other programs', () => {
+    expect(
+      programSlots(sched, [s('completed', '2026-06-01', 'other')], 'p').map((x) => x.status),
+    ).toEqual(['notScheduled', 'notScheduled', 'notScheduled']);
   });
 });

@@ -34,3 +34,30 @@ export function programProgress(
     started: mine.length > 0,
   };
 }
+
+export type SlotStatus = 'completed' | 'skipped' | 'planned' | 'notScheduled';
+export interface ProgramSlot {
+  week: number;
+  day: number;
+  workoutId: string;
+  status: SlotStatus;
+}
+
+/**
+ * Pairs each scheduled slot of a program with the person's matching session by date order (enrolment creates sessions in the same order as
+ * the schedule). Slots without a session are "notScheduled". Used to draw the program as a timeline.
+ */
+export function programSlots(
+  schedule: ReadonlyArray<{ week: number; day: number; workoutId: string }>,
+  sessions: readonly ProgramSessionLike[],
+  programId: string,
+): ProgramSlot[] {
+  const slots = [...schedule].sort((a, b) => a.week - b.week || a.day - b.day);
+  const mine = sessions
+    .filter((s) => s.programId === programId)
+    .sort((a, b) => (a.plannedFor ?? '').localeCompare(b.plannedFor ?? ''));
+  return slots.map((s, i) => ({
+    ...s,
+    status: (mine[i]?.status ?? 'notScheduled') as SlotStatus,
+  }));
+}
