@@ -1,6 +1,6 @@
 # Running the HTTP live suite
 
-The build sandbox's network policy blocks the project's API host, so the HTTP suite has to run from an environment that can reach `https://vvwjhbsyxetnktimgaxg.supabase.co` (your own machine, or CI with outbound access). Until it is run there, the HTTP adapter path, GoTrue sign-in and the Storage API are **not verified**. The database-level results (`supabase/live/db_live_suite.sql`) are real hosted-database tests but are not signed-in HTTP requests and do not replace this suite.
+The build sandbox's network policy blocks the project's API host, so the HTTP suite has to run from an environment that can reach `https://<approved-project-ref>.supabase.co` (your own machine, or CI with outbound access). Until it is run there, the HTTP adapter path, GoTrue sign-in and the Storage API are **not verified**. The database-level results (`supabase/live/db_live_suite.sql`) are real hosted-database tests but are not signed-in HTTP requests and do not replace this suite.
 
 ## Preconditions
 
@@ -13,7 +13,7 @@ The build sandbox's network policy blocks the project's API host, so the HTTP su
 Put the values in a git-ignored file (`apps/mobile/.env.live`, already in `.gitignore`) or in your shell:
 
 ```
-LIVE_SUPABASE_URL=https://vvwjhbsyxetnktimgaxg.supabase.co
+LIVE_SUPABASE_URL=https://<approved-project-ref>.supabase.co
 LIVE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 LIVE_USER_A_EMAIL=live-a@example.test
 LIVE_USER_A_PASSWORD=...
