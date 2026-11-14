@@ -45,5 +45,6 @@ Only the migrations listed as `pending` in `supabase/hosted-history.json` (files
 2. `20261208000100_household.sql`: five tables, helper functions in `app`, five RPCs in `public`, one trigger.
 3. `20261209000100_wellness.sql`: `wellness_entries`, `wellness_prefs`.
 4. `20261211000100_household_join_limit.sql`: `household_join_attempts`; replaces `household_join` in place (see above).
+5. `20261212000100_celebrations.sql`: `celebrations`; no functions, nothing `SECURITY DEFINER`.
 
-No existing table or data is altered or dropped; the only replaced object is `household_join` (same signature, owner, search path and grants). Verified locally: clean database (all 15 SQL test files), and a replica of the hosted eight-migration state with only these applied on top (`bash supabase/tests/replica.sh`: the replica first matches the hosted catalog fingerprint, the result equals a clean build of all 12 migrations, and all SQL tests pass on it).
+No existing table or data is altered or dropped; the only replaced object is `household_join` (same signature, owner, search path and grants). Verified locally: clean database (all 15 SQL test files), and a replica of the hosted eight-migration state with only these applied on top (`bash supabase/tests/replica.sh`: the replica first matches the hosted catalog fingerprint, the result equals a clean build of all 13 migrations, and all SQL tests pass on it).
