@@ -164,6 +164,14 @@ export default function Onboarding() {
         await store.setConsent('health_data_processing', true);
         for (const p of OPTIONAL_CONSENTS) if (consents[p]) await store.setConsent(p, true);
       });
+      await once(
+        'intent',
+        () =>
+          store.setWellnessPrefs?.({
+            goalIntent:
+              goalType === 'lose' ? 'lose' : goalType === 'maintain' ? 'maintain' : 'fitness',
+          }) ?? Promise.resolve(),
+      );
       await once('profile', () =>
         store.updateProfile({
           displayName: name.trim(),
@@ -499,9 +507,9 @@ export default function Onboarding() {
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {(
                 [
-                  ['none', 'remove-circle', t('onb.goalSkip')],
-                  ['lose', 'trending-down', t('goals.lose')],
-                  ['maintain', 'swap-horizontal', t('goals.maintain')],
+                  ['none', 'fitness', t('wl.intent.fitness')],
+                  ['lose', 'trending-down', t('wl.intent.lose')],
+                  ['maintain', 'swap-horizontal', t('wl.intent.maintain')],
                   ['gain', 'trending-up', t('goals.gain')],
                 ] as const
               ).map(([v, icon, label]) => (
@@ -516,6 +524,11 @@ export default function Onboarding() {
                 </View>
               ))}
             </View>
+            <AppText variant="caption" muted accessibilityLiveRegion="polite">
+              {t(
+                `wl.intentNote.${goalType === 'gain' ? 'fitness' : goalType === 'none' ? 'fitness' : goalType}` as StringKey,
+              )}
+            </AppText>
           </StepCard>
           {goalType !== 'none' && (
             <StepCard icon="calendar" title={t('goals.period')}>

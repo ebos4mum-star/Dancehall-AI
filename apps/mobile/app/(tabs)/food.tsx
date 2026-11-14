@@ -10,6 +10,7 @@ import { useApp } from '@/data/AppProvider';
 import { DiaryItem } from '@/food/DiaryItem';
 import { useFoodData } from '@/food/hooks';
 import { MacroBars } from '@/food/ui';
+import { HydrationCard, TargetsCard } from '@/wellness/ui';
 import { t, type StringKey } from '@/i18n';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
@@ -185,6 +186,8 @@ export default function FoodDashboard() {
         </DepthCard>
       </Reveal>
 
+      <HydrationCard />
+
       <SectionTitle icon="restaurant" title={t('food.mealsTitle')} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
         {MEAL_TYPES.map((m) => {
@@ -248,6 +251,7 @@ export default function FoodDashboard() {
           </Reveal>
         ) : null,
       )}
+      <TargetsCard />
     </Screen>
   );
 }

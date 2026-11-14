@@ -18,6 +18,8 @@ export interface PlanItemDraft {
     minutes?: number;
     lowImpact?: boolean;
     foodId?: string;
+    /** A one-tap logging shortcut the screen may offer for this item. */
+    action?: 'log_water' | 'log_walk';
   };
   done?: boolean;
 }
@@ -40,6 +42,17 @@ export interface DailyPlanInput {
   daysSinceWeight: number | null;
   /** Distinct days in the 3 days before `date` on which the person completed a session. Optional; absent means no suggestion changes. */
   recentActiveDays?: number;
+  /** Optional wellness context. When absent the plan is exactly the original dance, food, habit and goal plan. */
+  wellness?: {
+    intent: 'lose' | 'maintain' | 'fitness';
+    tracking: 'detailed' | 'light' | 'none';
+    activities: ReadonlyArray<'dance' | 'walking' | 'strength'>;
+    hydrationMl: number;
+    waterGoalMl: number;
+    walkedToday: boolean;
+    /** Sleep logged for last night, if any. */
+    sleepHours?: number | null;
+  };
   seed?: number;
 }
 
@@ -176,9 +189,47 @@ export function generateDailyPlan(i: DailyPlanInput): {
     });
   }
 
-  // Goals (optional, never pressure)
+  // Wellness: water and walking, only when the person has opted into them. All optional, none a requirement.
+  const w = i.wellness;
+  if (w) {
+    if (w.waterGoalMl > 0 && w.hydrationMl < w.waterGoalMl && i.localHour >= 10)
+      items.push({
+        kind: 'habit',
+        title: 'Sip some water',
+        detail: `A glass is about 250 ml. A general guide is around ${w.waterGoalMl} ml a day; you can change it.`,
+        why: 'Water helps energy and appetite cues. The amount is a general guide you can change.',
+        ref: { action: 'log_water' },
+      });
+    if (
+      w.activities.includes('walking') &&
+      !w.walkedToday &&
+      i.doneToday.length === 0 &&
+      i.mode !== 'travel'
+    )
+      items.push({
+        kind: 'workout',
+        title: 'A 10-minute walk counts',
+        detail: 'Log it by hand when you finish. There is no step counting here.',
+        why:
+          i.mode === 'busy'
+            ? 'Short on time: a brisk ten minutes still counts as movement.'
+            : 'Walking is an easy way to move on days dance is not the plan.',
+        ref: { action: 'log_walk', minutes: 10 },
+      });
+    if (w.sleepHours != null && w.sleepHours < 6)
+      items.push({
+        kind: 'habit',
+        title: 'Go gently today',
+        detail: 'A shorter night happens. A lighter session or an early wind-down are both fine.',
+        why: `You logged about ${w.sleepHours} hours last night. This is general wellness guidance, not advice about your health.`,
+      });
+  }
+
+  // Goals (optional, never pressure). With wellness preferences, weigh-ins are offered only to people who chose weight numbers.
+  const wantsWeight = w ? w.tracking !== 'none' && w.intent !== 'fitness' : true;
   if (
     i.mode === 'normal' &&
+    wantsWeight &&
     i.activeGoalTypes.length > 0 &&
     (i.daysSinceWeight === null || i.daysSinceWeight >= 7)
   ) {

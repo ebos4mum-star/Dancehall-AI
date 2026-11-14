@@ -16,6 +16,9 @@ export interface DataExport {
   challenges: unknown[];
   habits: unknown[];
   habitCheckins: unknown[];
+  /** Optional wellness logs and preferences (water, sleep, walks, strength, measurements, check-ins). */
+  wellness: unknown[];
+  wellnessPrefs: unknown;
   /** Coach conversations, weekly reviews and shared household lists, when the adapter provides them. */
   conversations: unknown[];
   weeklyReviews: unknown[];
@@ -46,6 +49,8 @@ export async function buildDataExport(
     challenges,
     habits,
     habitCheckins,
+    wellness,
+    wellnessPrefs,
     conversations,
     weeklyReviews,
     household,
@@ -65,6 +70,8 @@ export async function buildDataExport(
     store.listChallenges(),
     store.listHabits(),
     store.listHabitCheckins('0000-01-01'),
+    store.listWellness?.() ?? [],
+    store.getWellnessPrefs?.() ?? null,
     store.listConversations?.() ?? [],
     store.listWeeklyReviews?.() ?? [],
     store.getHousehold?.() ?? null,
@@ -87,6 +94,8 @@ export async function buildDataExport(
     challenges,
     habits,
     habitCheckins,
+    wellness,
+    wellnessPrefs,
     conversations,
     weeklyReviews,
     household,

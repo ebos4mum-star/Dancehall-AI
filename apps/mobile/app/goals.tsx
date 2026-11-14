@@ -18,6 +18,7 @@ import { goalFraction } from '@/progress/goalDisplay';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage, useLoad } from '@/data/hooks';
 import type { Goal } from '@/data/types';
+import { FocusCard } from '@/wellness/ui';
 import { t, type StringKey } from '@/i18n';
 import { formatDate, formatWeight, parseDecimal, todayIso } from '@/lib/format';
 import { useTheme } from '@/theme/useTheme';
@@ -103,6 +104,7 @@ export default function Goals() {
         pulse: 'idle',
       }}
     >
+      <FocusCard />
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {goals.length === 0 ? (
         <EmptyState icon="flag" title={t('goals.emptyTitle')} body={t('goals.empty')} />
