@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider } from '@/data/AppProvider';
 import { DraftProvider } from '@/food/draft';
+import { CelebrationWatcher } from '@/celebrations/CelebrationWatcher';
 import { MomentHost } from '@/pulse/MomentHost';
 import { t } from '@/i18n';
 import { AppText } from '@/ui/AppText';
@@ -109,6 +110,7 @@ export default function RootLayout() {
             />
           </Stack>
           <MomentHost />
+          <CelebrationWatcher />
         </DraftProvider>
       </AppProvider>
     </SafeAreaProvider>

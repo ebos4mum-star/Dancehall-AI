@@ -3,6 +3,8 @@ export interface GlanceInput {
   plannedToday: number;
   mealsLogged: number;
   loggedKcal: number;
+  /** True when the person chose no calorie or nutrient numbers. */
+  hideNumbers?: boolean;
 }
 export interface GlanceLine {
   key: 'move' | 'food';
@@ -24,7 +26,7 @@ export function todayGlance(i: GlanceInput): GlanceLine[] {
       ? {
           key: 'food',
           done: true,
-          text: `${i.mealsLogged} ${i.mealsLogged === 1 ? 'meal' : 'meals'} logged (about ${i.loggedKcal} kcal)`,
+          text: `${i.mealsLogged} ${i.mealsLogged === 1 ? 'meal' : 'meals'} logged${i.hideNumbers ? '' : ` (about ${i.loggedKcal} kcal)`}`,
         }
       : { key: 'food', done: false, text: 'No food logged yet' };
   return [move, food];

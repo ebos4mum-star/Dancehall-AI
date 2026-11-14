@@ -7,6 +7,7 @@ import { useFoodData } from '@/food/hooks';
 import { sessionMinutes } from '@dancehall/shared';
 import { accomplishments, accomplishmentScore, type AccomplishmentInput } from './accomplishments';
 import { nextUp } from './nextUp';
+import { useNumbersHidden } from '@/wellness/hooks';
 
 /** Everything Today shows about "today", read from the same stores and hooks the other tabs use. No new data source. */
 export function useTodaySummary() {
@@ -21,6 +22,7 @@ export function useTodaySummary() {
     checkins: await s.listHabitCheckins(today),
   }));
   const comeback = useLoad(async (s) => (s.comebackStatus ? s.comebackStatus() : null));
+  const hideNumbers = useNumbersHidden();
 
   return useMemo(() => {
     const items = plan.data?.items ?? [];
@@ -32,6 +34,7 @@ export function useTodaySummary() {
       sessionsDone: dance.doneToday.map((x) => ({ title: x.title, minutes: sessionMinutes(x) })),
       mealsLogged: food.todayLogs.length,
       loggedKcal: food.todayTotals.kcal,
+      hideNumbers,
       habitsDone: habitList.filter((h) => doneHabitIds.has(h.id)).map((h) => h.name),
       planItemsDone: items.filter((i) => i.doneAt !== null).length,
       planItemsTotal: items.length,
@@ -47,5 +50,15 @@ export function useTodaySummary() {
       habitsDoneCount: input.habitsDone.length,
       comeback: comeback.data ?? null,
     };
-  }, [plan.data, habits.data, comeback.data, dance, food, today, plan.loading, habits.loading]);
+  }, [
+    plan.data,
+    habits.data,
+    comeback.data,
+    dance,
+    food,
+    today,
+    plan.loading,
+    habits.loading,
+    hideNumbers,
+  ]);
 }

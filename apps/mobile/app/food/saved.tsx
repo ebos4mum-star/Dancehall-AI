@@ -17,8 +17,10 @@ import { Notice } from '@/ui/Banner';
 import { Screen } from '@/ui/Screen';
 import { SkeletonList } from '@/ui/Skeleton';
 import { haptics } from '@/ui/haptics';
+import { useNumbersHidden } from '@/wellness/hooks';
 
 export default function Saved() {
+  const hideNumbers = useNumbersHidden();
   const { store } = useApp();
   const { dispatch } = useDraft();
   const { colors } = useTheme();
@@ -69,9 +71,11 @@ export default function Saved() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <AppText variant="heading">{m.name}</AppText>
-                  <AppText variant="caption" muted>
-                    {kcalText(totals(m.items))}
-                  </AppText>
+                  {hideNumbers ? null : (
+                    <AppText variant="caption" muted>
+                      {kcalText(totals(m.items))}
+                    </AppText>
+                  )}
                 </View>
               </View>
               <AppText variant="caption" muted>

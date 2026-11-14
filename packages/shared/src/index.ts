@@ -27,3 +27,4 @@ export * from './session-clock';
 export * from './wellness';
 export * from './nutrition-plan';
 export * from './strength';
+export * from './celebrations';

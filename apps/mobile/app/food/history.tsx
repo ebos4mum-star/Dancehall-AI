@@ -17,6 +17,7 @@ import { EmptyState } from '@/ui/EmptyState';
 import { Notice } from '@/ui/Banner';
 import { Screen } from '@/ui/Screen';
 import { SkeletonList } from '@/ui/Skeleton';
+import { useNumbersHidden } from '@/wellness/hooks';
 
 const MEAL_ICON: Record<string, IconName> = {
   breakfast: 'sunny',
@@ -26,6 +27,7 @@ const MEAL_ICON: Record<string, IconName> = {
 };
 
 export default function History() {
+  const hideNumbers = useNumbersHidden();
   const { logs, timeZone, error, loading } = useFoodData();
   const { spacing } = useTheme();
   const days = new Map<string, typeof logs>();
@@ -75,7 +77,7 @@ export default function History() {
           <Disclosure
             key={k}
             title={formatDate(k)}
-            summary={`${ls.length} ${ls.length === 1 ? 'meal' : 'meals'} · ${kcalText(sum)}`}
+            summary={`${ls.length} ${ls.length === 1 ? 'meal' : 'meals'}${hideNumbers ? '' : ` · ${kcalText(sum)}`}`}
             initiallyOpen={idx === 0}
           >
             {ls.map((l) => (

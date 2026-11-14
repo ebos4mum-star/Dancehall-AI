@@ -26,6 +26,7 @@ import { DepthCard } from '@/ui/Depth';
 import { Notice } from '@/ui/Banner';
 import { Screen } from '@/ui/Screen';
 import { haptics } from '@/ui/haptics';
+import { useNumbersHidden } from '@/wellness/hooks';
 
 const REGIONS = [
   'any',
@@ -45,6 +46,7 @@ const MEAL_ICON: Record<string, IconName> = {
 };
 
 export default function Plan() {
+  const hideNumbers = useNumbersHidden();
   const { store } = useApp();
   const { guide } = useFoodData();
   const { spacing } = useTheme();
@@ -107,12 +109,16 @@ export default function Plan() {
         title={t('ban.foodPlan.title')}
         line={t('food2.planLine')}
         pulse={preview ? 'welcome' : 'idle'}
-        stats={guide ? [{ label: t('food2.planGuide'), value: `${guide.guideKcal} kcal` }] : []}
+        stats={
+          guide && !hideNumbers
+            ? [{ label: t('food2.planGuide'), value: `${guide.guideKcal} kcal` }]
+            : []
+        }
       />
       <AppText muted>{t('plan.intro')}</AppText>
       {!guide ? (
         <Notice>{t('plan.needProfile')}</Notice>
-      ) : (
+      ) : hideNumbers ? null : (
         <AppText
           variant="caption"
           muted
@@ -202,9 +208,11 @@ export default function Plan() {
                 <AppText variant="heading" style={{ flex: 1 }}>
                   {t('plan.day', { n: d.dayIndex + 1 })}
                 </AppText>
-                <AppText variant="caption" muted>
-                  {kcalText(d.totals)}
-                </AppText>
+                {hideNumbers ? null : (
+                  <AppText variant="caption" muted>
+                    {kcalText(d.totals)}
+                  </AppText>
+                )}
               </View>
               {d.meals.map((m) => (
                 <View key={m.mealType} style={{ flexDirection: 'row', gap: spacing.sm }}>

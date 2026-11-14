@@ -2,6 +2,7 @@ export interface AccomplishmentInput {
   sessionsDone: Array<{ title: string; minutes: number }>;
   mealsLogged: number;
   loggedKcal: number;
+  hideNumbers?: boolean;
   habitsDone: string[];
   planItemsDone: number;
   planItemsTotal: number;
@@ -22,7 +23,7 @@ export function accomplishments(i: AccomplishmentInput): Accomplishment[] {
     out.push({
       key: 'food',
       kind: 'food',
-      text: `${i.mealsLogged} ${i.mealsLogged === 1 ? 'meal' : 'meals'} logged (about ${i.loggedKcal} kcal)`,
+      text: `${i.mealsLogged} ${i.mealsLogged === 1 ? 'meal' : 'meals'} logged${i.hideNumbers ? '' : ` (about ${i.loggedKcal} kcal)`}`,
     });
   i.habitsDone.forEach((h, k) => out.push({ key: `habit-${k}`, kind: 'habit', text: h }));
   if (i.planItemsTotal > 0 && i.planItemsDone > 0)

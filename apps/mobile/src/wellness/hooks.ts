@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   DEFAULT_PREFS,
+  parsePrefs,
   ageYearsOn,
   localDateKey,
   nutritionTargets,
@@ -142,4 +143,15 @@ export function useWellness(): WellnessData {
     busy,
     problem,
   };
+}
+
+/**
+ * True when the person said food or weight can be hard, is pregnant or postpartum, or chose no numbers. Screens that show calorie totals,
+ * energy guides or macro summaries hide them. Also true while the setting is still loading or could not be read, so numbers are never shown by mistake.
+ */
+export function useNumbersHidden(): boolean {
+  const { data, loading, error } = useLoad(async (s) => (await s.getWellnessPrefs?.()) ?? null);
+  if (loading || error) return true;
+  const p = parsePrefs(data);
+  return p.eatingConcern || p.pregnantOrPostpartum || p.tracking === 'none';
 }
