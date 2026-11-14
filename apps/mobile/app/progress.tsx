@@ -6,6 +6,8 @@ import { useDanceData } from '@/dance/hooks';
 import { ActivityBars } from '@/dance/ui';
 import { errorMessage, useLoad } from '@/data/hooks';
 import { t } from '@/i18n';
+import { useProgressInsights } from '@/progress/hooks';
+import { AchievementList, Celebration, HabitWeek } from '@/progress/ui';
 import { formatChange, formatDate, formatWeight, parseDecimal } from '@/lib/format';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
@@ -19,6 +21,7 @@ import { WeightChart } from '@/ui/WeightChart';
 export default function Progress() {
   const { store, profile } = useApp();
   const dance = useDanceData();
+  const insights = useProgressInsights();
   const { spacing } = useTheme();
   const units = profile?.unitSystem ?? 'metric';
   const { data, error } = useLoad(async (s) => ({
@@ -83,6 +86,14 @@ export default function Progress() {
           </AppText>
         </Card>
       )}
+      <Celebration ids={insights.fresh} />
+      <Card>
+        <AppText variant="heading" accessibilityRole="header">
+          {t('habit.title')}
+        </AppText>
+        <HabitWeek habits={insights.habits} />
+      </Card>
+      <AchievementList items={insights.achievements} />
       <Card>
         <AppText variant="heading" accessibilityRole="header">
           {t('dance.activity')}

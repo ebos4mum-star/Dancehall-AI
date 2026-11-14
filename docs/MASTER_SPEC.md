@@ -85,20 +85,20 @@ One unified assistant over the person's approved fitness, nutrition, goals and l
 
 ### D. Weight Management and Progress
 
-| ID  | Feature                                            | Ver.  | Phase | Gates            | Status                                                      |
-| --- | -------------------------------------------------- | ----- | ----- | ---------------- | ----------------------------------------------------------- |
-| D1  | Optional weight-loss and weight-maintenance goals  | V1    | 2     | N3, S1           | Implemented locally (Batch A; mock data, not live)          |
-| D2  | Weekly, monthly and yearly weight goals            | V1    | 2     | N3, S1           | Implemented locally (Batch A; mock data, not live)          |
-| D3  | Imperial or metric measurements chosen by the user | V1    | 2     | none             | Implemented locally (Batch A; mock data, not live)          |
-| D4  | Weight history and trends                          | V1    | 2     | P1               | Implemented locally (Batch A; mock data, not live)          |
-| D5  | Activity progress                                  | V1    | 3     | P1               | Implemented locally (weekly activity totals, Batch C)       |
-| D6  | Habit tracking                                     | V1    | 2-3   | P1               | Not started                                                 |
-| D7  | Weekly AI progress reviews                         | V1    | 5     | S1               | Implemented locally (Batch D; simulated coach, not live AI) |
-| D8  | Optional weight projections with uncertainty       | V1.5  | 5     | N3, S1           | Not started                                                 |
-| D9  | Non-scale achievements                             | V1    | 3     | none             | Not started                                                 |
-| D10 | Private milestone celebrations                     | V1    | 3     | none             | Not started                                                 |
-| D11 | Flexible goal adjustment                           | V1    | 2     | S1               | Implemented locally (Batch A; mock data, not live)          |
-| D12 | Optional supported health-platform integration     | Later | 9     | P2, store review | Not started                                                 |
+| ID  | Feature                                            | Ver.  | Phase | Gates            | Status                                                                                                                            |
+| --- | -------------------------------------------------- | ----- | ----- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Optional weight-loss and weight-maintenance goals  | V1    | 2     | N3, S1           | Implemented locally (Batch A; mock data, not live)                                                                                |
+| D2  | Weekly, monthly and yearly weight goals            | V1    | 2     | N3, S1           | Implemented locally (Batch A; mock data, not live)                                                                                |
+| D3  | Imperial or metric measurements chosen by the user | V1    | 2     | none             | Implemented locally (Batch A; mock data, not live)                                                                                |
+| D4  | Weight history and trends                          | V1    | 2     | P1               | Implemented locally (Batch A; mock data, not live)                                                                                |
+| D5  | Activity progress                                  | V1    | 3     | P1               | Implemented locally (weekly activity totals, Batch C)                                                                             |
+| D6  | Habit tracking                                     | V1    | 2-3   | P1               | Partially implemented locally (derived weekly habit view of active days and food-log days; no streaks; custom habits not started) |
+| D7  | Weekly AI progress reviews                         | V1    | 5     | S1               | Implemented locally (Batch D; simulated coach, not live AI)                                                                       |
+| D8  | Optional weight projections with uncertainty       | V1.5  | 5     | N3, S1           | Not started                                                                                                                       |
+| D9  | Non-scale achievements                             | V1    | 3     | none             | Implemented locally (11 cumulative, never-lost milestones derived from activity; none involve body weight)                        |
+| D10 | Private milestone celebrations                     | V1    | 3     | none             | Implemented locally (private celebration card with haptic, on-device only; never shared)                                          |
+| D11 | Flexible goal adjustment                           | V1    | 2     | S1               | Implemented locally (Batch A; mock data, not live)                                                                                |
+| D12 | Optional supported health-platform integration     | Later | 9     | P2, store review | Not started                                                                                                                       |
 
 Weight goals must not encourage extreme restriction, guaranteed results or unsafe exercise. See [NUTRITION_SAFETY.md](NUTRITION_SAFETY.md) and [FITNESS_SAFETY.md](FITNESS_SAFETY.md).
 
