@@ -259,8 +259,20 @@ async function step(name, fn) {
     // Before the session: honest presentation modes and a preview.
     await seen('How you will be guided');
     await seen('No demonstration has been recorded');
-    assert.equal(await p.getByRole('radio', { name: /^Real dancer\. Unavailable/ }).last().isEnabled(), false);
-    assert.equal(await p.getByRole('radio', { name: /^3D dancer\. Unavailable/ }).last().isEnabled(), false);
+    assert.equal(
+      await p
+        .getByRole('radio', { name: /^Real dancer\. Unavailable/ })
+        .last()
+        .isEnabled(),
+      false,
+    );
+    assert.equal(
+      await p
+        .getByRole('radio', { name: /^3D dancer\. Unavailable/ })
+        .last()
+        .isEnabled(),
+      false,
+    );
     await seen('What is in this session');
     await p.getByRole('button', { name: 'Start', exact: true }).last().click();
     await seen('Get ready');
