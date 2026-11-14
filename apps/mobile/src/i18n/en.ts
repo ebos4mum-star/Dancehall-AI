@@ -510,6 +510,25 @@ export const en = {
     'Guided by text and a timer. Video and music are not available until licensed content is added.',
   'wk.notFound': 'That workout could not be found.',
   'ses.title': 'Guided session',
+  'ses.restored':
+    'Welcome back. Your session was paused where you left it. Carry on when you are ready.',
+  'ses.progress': 'Block {n} of {total} · {pct}% done',
+  'dance.resumeTitle': 'Pick up where you left off',
+  'dance.resumeBody': '{title} is paused. No time was counted while you were away.',
+  'dance.resume': 'Resume session',
+  'dance.resumeDiscard': 'Not now',
+  'wk.beginnerTitle': 'New to this? Start here',
+  'wk.beginnerBody':
+    'This is a beginner outline. Go at your own pace, keep your movements small, and use the low-impact version or skip a block whenever you like. Stopping early is always fine.',
+  'wk.fasterTitle': 'A step up',
+  'wk.fasterBody':
+    'This one moves faster. If the pace feels like too much, switch on the low-impact version, slow the moves down, or try a beginner outline first.',
+  'wk.pace.low': 'Gentle: an easy pace where you can talk in full sentences.',
+  'wk.pace.moderate': 'Moderate: a steady pace where you can talk in short sentences.',
+  'wk.pace.high': 'High energy: a brisk pace where talking takes effort. Rest whenever you need.',
+  'wk.stepsTitle': 'How it works',
+  'wk.stepsBody':
+    'Warm-up, then the main dance blocks, then a cool-down. Each block has a timer and plain-text instructions. Pause, skip or go back at any time.',
   'ses.block': 'Block {n} of {total}',
   'ses.ready': 'Ready when you are',
   'ses.start': 'Start',
