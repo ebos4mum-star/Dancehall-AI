@@ -27,6 +27,7 @@ export function householdError(message: string | undefined): StoreError {
     'already_in_household',
     'invalid_invite',
     'household_full',
+    'too_many_attempts',
     'not_owner',
   ] as const)
     if (m.includes(c)) return new StoreError(c, m);
