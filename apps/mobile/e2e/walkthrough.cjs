@@ -93,13 +93,7 @@ require('node:fs').mkdirSync(out, { recursive: true });
     window.dispatchEvent(new PopStateEvent('popstate'));
   });
   await p.waitForTimeout(900);
-  await p
-    .getByText('10', { exact: true })
-    .last()
-    .click()
-    .catch(() => {});
-  await text('Amapiano Groove 10').click();
-  await shot('dance-workout-detail');
+  await go('/dance/qf10-amapiano-groove', 'dance-workout-detail');
   const start = p.getByRole('button', { name: /(Start|Begin)/ }).last();
   if (await start.isVisible().catch(() => false)) {
     await start.click();
