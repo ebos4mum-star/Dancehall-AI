@@ -8,12 +8,15 @@ export function Button({
   label,
   onPress,
   disabled = false,
+  variant = 'primary',
 }: {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  variant?: 'primary' | 'secondary';
 }) {
   const { colors, radius, spacing } = useTheme();
+  const primary = variant === 'primary';
   return (
     <Pressable
       accessibilityRole="button"
@@ -21,7 +24,7 @@ export function Button({
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={() => {
-        // Light, meaningful feedback on a deliberate action only. Failures (e.g. unsupported devices) are ignored.
+        // Light, meaningful feedback on a deliberate action only; unsupported devices are ignored.
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
         onPress();
       }}
@@ -31,11 +34,13 @@ export function Button({
         alignItems: 'center',
         paddingHorizontal: spacing.lg,
         borderRadius: radius.pill,
-        backgroundColor: colors.primary,
+        backgroundColor: primary ? colors.primary : 'transparent',
+        borderWidth: primary ? 0 : 1,
+        borderColor: colors.border,
         opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
       })}
     >
-      <AppText variant="label" style={{ color: colors.onPrimary }}>
+      <AppText variant="label" style={{ color: primary ? colors.onPrimary : colors.text }}>
         {label}
       </AppText>
     </Pressable>

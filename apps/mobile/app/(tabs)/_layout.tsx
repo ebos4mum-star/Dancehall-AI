@@ -1,4 +1,5 @@
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
+import { useApp } from '@/data/AppProvider';
 import { Ionicons } from '@expo/vector-icons';
 import { t, type StringKey } from '@/i18n';
 import { useTheme } from '@/theme/useTheme';
@@ -14,6 +15,8 @@ const TABS: Array<{ name: string; label: StringKey; icon: IconName }> = [
 
 export default function TabLayout() {
   const { colors } = useTheme();
+  const { ready, session, profile } = useApp();
+  if (ready && (!session || !profile?.onboardedAt)) return <Redirect href="/" />;
   return (
     <Tabs
       screenOptions={{

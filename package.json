@@ -17,7 +17,8 @@
     "check:workspace": "node scripts/check-workspace.mjs",
     "check:ci": "node scripts/check-ci-config.mjs",
     "test:scripts": "node --test scripts/*.test.mjs",
-    "verify": "pnpm check:secrets && pnpm check:workspace && pnpm check:ci && pnpm test:scripts && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
+    "verify": "pnpm check:secrets && pnpm check:workspace && pnpm check:ci && pnpm test:scripts && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm db:test",
+    "db:test": "bash supabase/tests/run.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

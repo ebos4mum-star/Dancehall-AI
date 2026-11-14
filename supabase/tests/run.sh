@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Applies the test shim, every migration in order, and every *.test.sql file to a throwaway database on plain Postgres.
+# Connection uses the standard PG* environment variables (CI sets them for a Postgres service container).
+# Locally, if no server answers, this tries to start the Ubuntu-packaged cluster (see docs/DEVELOPMENT.md).
+set -euo pipefail
+cd "$(dirname "$0")/../.."
+DB="${DH_TEST_DB:-dh_test}"
+q() { psql -X -q -v ON_ERROR_STOP=1 "$@"; }
+
+if ! pg_isready -q 2>/dev/null; then
+  if command -v pg_lsclusters >/dev/null && pg_lsclusters -h | grep -q down; then
+    ver=$(pg_lsclusters -h | awk 'NR==1{print $1}'); name=$(pg_lsclusters -h | awk 'NR==1{print $2}')
+    echo "Starting local Postgres cluster $ver/$name"
+    pg_ctlcluster "$ver" "$name" start; for _ in 1 2 3 4 5 6 7 8 9 10; do pg_isready -q && break; sleep 1; done
+  fi
+fi
+pg_isready -q || { echo "No Postgres server reachable. Set PGHOST/PGUSER/PGPASSWORD or see docs/DEVELOPMENT.md." >&2; exit 2; }
+
+q -d postgres -c "drop database if exists $DB" -c "create database $DB"
+q -d "$DB" -f supabase/tests/shim.sql
+for f in supabase/migrations/*.sql; do echo "migrate  $f"; q -d "$DB" -f "$f"; done
+q -d "$DB" -f supabase/tests/helpers.sql
+fail=0
+for f in supabase/tests/*.test.sql; do
+  if out=$(q -d "$DB" -f "$f" 2>&1); then echo "PASS     $f"; else echo "FAIL     $f"; echo "$out" | sed 's/^/         /'; fail=1; fi
+done
+q -d postgres -c "drop database if exists $DB" >/dev/null
+[ "$fail" = 0 ] && echo "Database tests passed." || { echo "Database tests FAILED." >&2; exit 1; }

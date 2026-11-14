@@ -1,0 +1,283 @@
+{
+  "adult": {
+    "birthDate": "1990-01-01",
+    "ageYears": 36
+  },
+  "cases": [
+    {
+      "name": "lose weekly at the cap",
+      "type": "lose",
+      "period": "weekly",
+      "startDate": "2026-03-01",
+      "endDate": "2026-03-08",
+      "startKg": 80,
+      "targetKg": 79.2,
+      "heightCm": 170,
+      "expect": null
+    },
+    {
+      "name": "lose weekly just over the cap",
+      "type": "lose",
+      "period": "weekly",
+      "startDate": "2026-03-01",
+      "endDate": "2026-03-08",
+      "startKg": 80,
+      "targetKg": 79.19,
+      "heightCm": 170,
+      "expect": "goal_pace_too_fast"
+    },
+    {
+      "name": "lose monthly 31 days moderate",
+      "type": "lose",
+      "period": "monthly",
+      "startDate": "2026-03-01",
+      "endDate": "2026-04-01",
+      "startKg": 80,
+      "targetKg": 77,
+      "heightCm": 170,
+      "expect": null
+    },
+    {
+      "name": "lose monthly 28 days too fast",
+      "type": "lose",
+      "period": "monthly",
+      "startDate": "2026-02-01",
+      "endDate": "2026-03-01",
+      "startKg": 80,
+      "targetKg": 76,
+      "heightCm": 170,
+      "expect": "goal_pace_too_fast"
+    },
+    {
+      "name": "lose monthly rounded just under cap",
+      "type": "lose",
+      "period": "monthly",
+      "startDate": "2026-03-01",
+      "endDate": "2026-04-01",
+      "startKg": 80,
+      "targetKg": 76.46,
+      "heightCm": 170,
+      "expect": null
+    },
+    {
+      "name": "lose monthly rounded just over cap",
+      "type": "lose",
+      "period": "monthly",
+      "startDate": "2026-03-01",
+      "endDate": "2026-04-01",
+      "startKg": 80,
+      "targetKg": 76.45,
+      "heightCm": 170,
+      "expect": "goal_pace_too_fast"
+    },
+    {
+      "name": "lose weekly odd weight under cap",
+      "type": "lose",
+      "period": "weekly",
+      "startDate": "2026-03-01",
+      "endDate": "2026-03-08",
+      "startKg": 82.37,
+      "targetKg": 81.55,
+      "heightCm": 170,
+      "expect": null
+    },
+    {
+      "name": "lose weekly odd weight over cap",
+      "type": "lose",
+      "period": "weekly",
+      "startDate": "2026-03-01",
+      "endDate": "2026-03-08",
+      "startKg": 82.37,
+      "targetKg": 81.54,
+      "heightCm": 170,
+      "expect": "goal_pace_too_fast"
+    },
+    {
+      "name": "lose yearly healthy",
+      "type": "lose",
+      "period": "yearly",
+      "startDate": "2026-03-01",
+      "endDate": "2027-03-01",
+      "startKg": 85,
+      "targetKg": 60,
+      "heightCm": 170,
+      "expect": null
+    },
+    {
+      "name": "lose yearly below healthy BMI target",
+      "type": "lose",
+      "period": "yearly",
+      "startDate": "2026-03-01",
+      "endDate": "2027-03-01",
+      "startKg": 85,
+      "targetKg": 52,
+      "heightCm": 170,
+      "expect": "goal_target_below_healthy_range"
+    },
+    {
+      "name": "lose when already underweight",
+      "type": "lose",
+      "period": "yearly",
+      "startDate": "2026-03-01",
+      "endDate": "2027-03-01",
+      "startKg": 52,
+      "targetKg": 51,
+      "heightCm": 170,
+      "expect": "goal_unsafe_underweight"
+    },
+    {
+      "name": "short person target just below BMI limit",
+      "type": "lose",
+      "period": "yearly",
+      "startDate": "2026-03-01",
+      "endDate": "2027-03-01",
+      "startKg": 60,
+      "targetKg": 41.5,
+      "heightCm": 150,
+      "expect": "goal_target_below_healthy_range"
+    },
+    {
+      "name": "short person target at healthy BMI",
+      "type": "lose",
+      "period": "yearly",
+      "startDate": "2026-03-01",
+      "endDate": "2027-03-01",
+      "startKg": 60,
+      "targetKg": 42,
+      "heightCm": 150,
+      "expect": null
+    },
+    {
+      "name": "lose with equal target",
+      "type": "lose",
+      "period": "weekly",
+      "startDate": "2026-03-01",
+      "endDate": "2026-03-08",
+      "startKg": 80,
+      "targetKg": 80,
+      "heightCm": 170,
+      "expect": "goal_direction_mismatch"
+    },
+    {
+      "name": "lose with higher target",
+      "type": "lose",
+      "period": "monthly",
+      "startDate": "2026-03-01",
+      "endDate": "2026-04-01",
+      "startKg": 80,
+      "targetKg": 82,
+      "heightCm": 170,
+      "expect": "goal_direction_mismatch"
+    },
+    {
+      "name": "gain weekly at the cap",
+      "type": "gain",
+      "period": "weekly",
+      "startDate": "2026-03-01",
+      "endDate": "2026-03-08",
+      "startKg": 60,
+      "targetKg": 60.3,
+      "heightCm": 170,
+      "expect": null
+    },
+    {
+      "name": "gain weekly over the cap",
+      "type": "gain",
+      "period": "weekly",
+      "startDate": "2026-03-01",
+      "endDate": "2026-03-08",
+      "startKg": 60,
+      "targetKg": 60.31,
+      "heightCm": 170,
+      "expect": "goal_pace_too_fast"
+    },
+    {
+      "name": "gain with lower target",
+      "type": "gain",
+      "period": "monthly",
+      "startDate": "2026-03-01",
+      "endDate": "2026-04-01",
+      "startKg": 60,
+      "targetKg": 58,
+      "heightCm": 170,
+      "expect": "goal_direction_mismatch"
+    },
+    {
+      "name": "maintain equal",
+      "type": "maintain",
+      "period": "weekly",
+      "startDate": "2026-03-01",
+      "endDate": "2026-03-08",
+      "startKg": 70,
+      "targetKg": 70,
+      "heightCm": 170,
+      "expect": null
+    },
+    {
+      "name": "maintain with different target",
+      "type": "maintain",
+      "period": "weekly",
+      "startDate": "2026-03-01",
+      "endDate": "2026-03-08",
+      "startKg": 70,
+      "targetKg": 69,
+      "heightCm": 170,
+      "expect": "goal_direction_mismatch"
+    },
+    {
+      "name": "weekly with 10 days",
+      "type": "maintain",
+      "period": "weekly",
+      "startDate": "2026-03-01",
+      "endDate": "2026-03-11",
+      "startKg": 70,
+      "targetKg": 70,
+      "heightCm": 170,
+      "expect": "goal_period_mismatch"
+    },
+    {
+      "name": "monthly with 27 days",
+      "type": "maintain",
+      "period": "monthly",
+      "startDate": "2026-03-01",
+      "endDate": "2026-03-28",
+      "startKg": 70,
+      "targetKg": 70,
+      "heightCm": 170,
+      "expect": "goal_period_mismatch"
+    },
+    {
+      "name": "monthly with 32 days",
+      "type": "maintain",
+      "period": "monthly",
+      "startDate": "2026-03-01",
+      "endDate": "2026-04-02",
+      "startKg": 70,
+      "targetKg": 70,
+      "heightCm": 170,
+      "expect": "goal_period_mismatch"
+    },
+    {
+      "name": "yearly with 364 days",
+      "type": "maintain",
+      "period": "yearly",
+      "startDate": "2026-03-01",
+      "endDate": "2027-02-28",
+      "startKg": 70,
+      "targetKg": 70,
+      "heightCm": 170,
+      "expect": "goal_period_mismatch"
+    },
+    {
+      "name": "yearly with 366 days (leap)",
+      "type": "maintain",
+      "period": "yearly",
+      "startDate": "2027-03-01",
+      "endDate": "2028-03-01",
+      "startKg": 70,
+      "targetKg": 70,
+      "heightCm": 170,
+      "expect": null
+    }
+  ]
+}

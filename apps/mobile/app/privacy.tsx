@@ -1,0 +1,115 @@
+import { Switch, View } from 'react-native';
+import { router } from 'expo-router';
+import { consentPurposeSchema, type ConsentPurpose } from '@dancehall/shared';
+import { useApp } from '@/data/AppProvider';
+import { errorMessage, useLoad } from '@/data/hooks';
+import { t, type StringKey } from '@/i18n';
+import { useTheme } from '@/theme/useTheme';
+import { useState } from 'react';
+import { AppText } from '@/ui/AppText';
+import { Button } from '@/ui/Button';
+import { Card } from '@/ui/Card';
+import { Notice } from '@/ui/Banner';
+import { Choice } from '@/ui/Choice';
+import { Screen } from '@/ui/Screen';
+
+const LABELS: Record<ConsentPurpose, [StringKey, StringKey]> = {
+  health_data_processing: ['privacy.healthData', 'privacy.healthDataBody'],
+  ai_processing_of_food_photos: ['privacy.aiPhotos', 'privacy.aiPhotosBody'],
+  ai_coach_personalization: ['privacy.aiCoach', 'privacy.aiCoachBody'],
+  health_platform_sync: ['privacy.healthSync', 'privacy.healthSyncBody'],
+  social_sharing: ['privacy.sharing', 'privacy.sharingBody'],
+};
+
+export default function Privacy() {
+  const { store, profile, config, refresh } = useApp();
+  const { colors, spacing } = useTheme();
+  const { data } = useLoad((s) => s.getConsents());
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const guard = async (fn: () => Promise<unknown>) => {
+    try {
+      setMsg(null);
+      await fn();
+    } catch (e) {
+      setMsg(errorMessage(e));
+    }
+  };
+
+  return (
+    <Screen top={false}>
+      <Card>
+        <AppText variant="heading" accessibilityRole="header">
+          {t('privacy.units')}
+        </AppText>
+        <Choice
+          value={profile?.unitSystem ?? 'metric'}
+          onChange={(u) => guard(() => store.updateProfile({ unitSystem: u }))}
+          options={[
+            { value: 'metric', label: t('common.metric') },
+            { value: 'imperial', label: t('common.imperial') },
+          ]}
+        />
+      </Card>
+      <AppText variant="heading" accessibilityRole="header">
+        {t('privacy.consents')}
+      </AppText>
+      {consentPurposeSchema.options.map((p) => {
+        const [labelKey, bodyKey] = LABELS[p];
+        return (
+          <Card key={p}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: spacing.md,
+              }}
+            >
+              <AppText variant="label" style={{ flex: 1 }}>
+                {t(labelKey)}
+              </AppText>
+              <Switch
+                accessibilityLabel={t(labelKey)}
+                value={data?.[p] ?? false}
+                onValueChange={(v) => guard(() => store.setConsent(p, v))}
+                trackColor={{ true: colors.primary, false: colors.border }}
+              />
+            </View>
+            <AppText variant="caption" muted>
+              {t(bodyKey)}
+            </AppText>
+          </Card>
+        );
+      })}
+      {msg ? <Notice tone="warning">{msg}</Notice> : null}
+      <Notice>{t('privacy.exportNote')}</Notice>
+      <Card>
+        <AppText variant="heading" accessibilityRole="header">
+          {t('privacy.account')}
+        </AppText>
+        <Button
+          variant="secondary"
+          label={t('privacy.signOut')}
+          onPress={async () => {
+            await store.signOut();
+            await refresh();
+            router.replace('/');
+          }}
+        />
+        {config.authMode === 'mock' ? (
+          <Button
+            variant="secondary"
+            label={t('privacy.resetDev')}
+            onPress={async () => {
+              await store.resetDevData?.();
+              await store.signOut();
+              await refresh();
+              router.replace('/');
+            }}
+          />
+        ) : null}
+      </Card>
+    </Screen>
+  );
+}

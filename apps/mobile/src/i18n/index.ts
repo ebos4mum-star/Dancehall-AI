@@ -7,7 +7,10 @@ let current: Locale = 'en';
 export function setLocale(locale: string): void {
   current = (locale in catalogs ? locale : 'en') as Locale;
 }
-export function t(key: StringKey): string {
-  return catalogs[current][key] ?? en[key];
+
+/** Looks up a string and fills `{name}` placeholders. */
+export function t(key: StringKey, params?: Record<string, string | number>): string {
+  const raw: string = catalogs[current][key] ?? en[key];
+  return params ? raw.replace(/\{(\w+)\}/g, (_, k: string) => String(params[k] ?? `{${k}}`)) : raw;
 }
 export type { StringKey };

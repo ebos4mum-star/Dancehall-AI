@@ -1,5 +1,9 @@
 # Implementation Roadmap
 
+> **Accelerated delivery (owner-approved amendment):** work proceeds in complete vertical slices instead of separate infrastructure phases.
+> Batch A (identity, goals, weight, onboarding, Today) is implemented locally. Batch B (food), C (dance fitness) and D (AI concierge, challenges) follow, each needing approval.
+> Every gate and the full feature list below still apply; the phase table remains the dependency map.
+
 Only **Phase 0B** is complete. Every later phase needs the owner's explicit approval before it starts. Order favors a focused paid beta (Phases 1-7) before expensive expansion.
 
 | Phase | Name                           | Scope                                                                                                                                                                     | New external cost                              | Exit criteria                                      |

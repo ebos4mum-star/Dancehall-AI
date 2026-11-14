@@ -1,13 +1,16 @@
-# Supabase (prepared, not created)
+# Supabase (prepared locally, no cloud project exists)
 
-No Supabase project exists yet and nothing here connects to one. This folder holds the local files for a **new, independent** project
-(United States region, approved for DanceHall Fit AI only). It must never share a project, database, auth users or keys with any other product.
+No Supabase cloud project has been created and nothing here connects to one. These files are for a **new, independent** project
+(United States region, owned by the DanceHall Fit AI owner and never shared with any other product).
 
-- `migrations/`: SQL migrations. Empty until Phase 1 is authorized. The planned data model and RLS rules are specified in
-  [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) and [docs/SECURITY_PRIVACY.md](../docs/SECURITY_PRIVACY.md).
-- `tests/`: database tests, including a structural test that fails if any table lacks row-level security. Added with the first migration.
-- `functions/`: Edge Functions. The AI gateway design is in [docs/AI_COST_CONTROLS.md](../docs/AI_COST_CONTROLS.md); its reference logic and mock provider
-  already live in `packages/ai` and are unit-tested without any network access.
+- `migrations/`: SQL migrations, applied in file-name order.
+  - `20261201000100_identity_consent.sql`: profiles, private profile (adults only), append-only consents, onboarding function.
+  - `20261201000200_weight_goals_readiness.sql`: weight history, weekly/monthly/yearly goals with database-enforced safety limits, readiness screening.
+- `tests/`: plain-SQL tests run by `tests/run.sh` on a throwaway database. `shim.sql` stands in for Supabase's `auth` schema and API roles
+  (test-only). `goal-cases.json` is shared with the TypeScript tests so the app and the database apply identical goal rules.
+- `functions/`: Edge Functions (none yet).
 
-Rules for every future migration: RLS enabled on every table in the same migration that creates it; explicit grants (nothing exposed by default);
-`SECURITY DEFINER` functions pin `search_path`; health data is owner-only; the service-role key never ships in a client.
+Run the tests: `pnpm db:test` (see [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md)).
+
+Rules for every migration: RLS enabled in the same file that creates the table; explicit grants (nothing exposed by default, column-level where possible);
+`SECURITY DEFINER` functions pin `search_path`; health data is owner-only; writes to health data require consent; the service-role key never ships in a client.
