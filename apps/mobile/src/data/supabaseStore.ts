@@ -798,14 +798,19 @@ function createBaseStore(
       ).map((r) => r.achievement_id as string);
     },
     async recordCelebrations(items: Array<{ id: string; mode: 'full' | 'gentle' | 'off' }>) {
-      if (items.length === 0) return;
-      // Ignore duplicates: another device may have recorded the same achievement first, which is exactly the outcome we want.
-      ok(
-        await db.from('celebrations').upsert(
-          items.map((i) => ({ achievement_id: i.id, mode: i.mode })),
-          { onConflict: 'user_id,achievement_id', ignoreDuplicates: true },
-        ),
-      );
+      if (items.length === 0) return [];
+      // Insert, ignoring duplicates: with ignore-duplicates the response contains ONLY the rows this call actually inserted, so the ids returned are
+      // exactly the achievements this device claimed. One another device (or an earlier call) already recorded are simply absent, not errors.
+      const rows = ok(
+        await db
+          .from('celebrations')
+          .upsert(
+            items.map((i) => ({ achievement_id: i.id, mode: i.mode })),
+            { onConflict: 'user_id,achievement_id', ignoreDuplicates: true },
+          )
+          .select('achievement_id'),
+      ) as Row[] | null;
+      return (rows ?? []).map((r) => r.achievement_id as string);
     },
 
     // ---------- Household (shared meals and grocery only; RLS limits every row to members) ----------

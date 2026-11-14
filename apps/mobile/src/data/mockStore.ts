@@ -859,20 +859,23 @@ export class MockStore implements DataStore {
   }
   async recordCelebrations(
     items: Array<{ id: string; mode: 'full' | 'gentle' | 'off' }>,
-  ): Promise<void> {
+  ): Promise<string[]> {
     const s = await this.authed();
     this.requireConsent(s);
     const have = new Set((s.celebrations ?? []).map((c) => c.id));
     const re =
       /^(daily|weekly|monthly|yearly):(water|habits|movement|movement_minutes|movement_weeks):\d{4}(-\d{2}){0,2}$/;
+    const claimed: string[] = [];
     for (const it of items) {
       if (!re.test(it.id) || !['full', 'gentle', 'off'].includes(it.mode))
         throw new StoreError('invalid_input');
       if (have.has(it.id)) continue;
       have.add(it.id);
+      claimed.push(it.id);
       (s.celebrations ??= []).push({ id: it.id, mode: it.mode, at: this.now().toISOString() });
     }
     await this.commit();
+    return claimed;
   }
 
   // ---------- Habits (personal, gentle: counts only) ----------

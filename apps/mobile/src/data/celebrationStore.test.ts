@@ -26,11 +26,16 @@ async function setup(consent = true, kv: KeyValue = memory()) {
 describe('mock celebration ledger', () => {
   it('records achievements once: first write wins, repeats are harmless', async () => {
     const { s } = await setup();
-    await s.recordCelebrations!([{ id: 'daily:water:2026-06-15', mode: 'full' }]);
-    await s.recordCelebrations!([
-      { id: 'daily:water:2026-06-15', mode: 'off' },
-      { id: 'weekly:movement_minutes:2026-06-15', mode: 'gentle' },
+    expect(await s.recordCelebrations!([{ id: 'daily:water:2026-06-15', mode: 'full' }])).toEqual([
+      'daily:water:2026-06-15',
     ]);
+    // Only what this call newly recorded is returned: the repeat is not claimed again.
+    expect(
+      await s.recordCelebrations!([
+        { id: 'daily:water:2026-06-15', mode: 'off' },
+        { id: 'weekly:movement_minutes:2026-06-15', mode: 'gentle' },
+      ]),
+    ).toEqual(['weekly:movement_minutes:2026-06-15']);
     expect((await s.listCelebrations!()).sort()).toEqual([
       'daily:water:2026-06-15',
       'weekly:movement_minutes:2026-06-15',

@@ -39,8 +39,12 @@ The synced ledger is the `celebrations` table (migration `20261212000100_celebra
 
 Verified: shared engine, runner (restoration, first sync, two devices racing, offline then upload, retries, off then on), mock store, Supabase adapter, SQL (RLS, consent, first-write-wins, no forging or rewriting, id and mode checks, isolation, deletion cascade), and the browser (no celebration without a goal, no retroactive celebration, Off shows nothing and does not replay, a weekly goal reached after it was set celebrates once).
 
+## Claim before display (two devices, one achievement)
+
+The runner records handled achievements in the synced ledger **before** showing anything, and shows only the ids that call actually recorded (`recordCelebrations` returns the newly recorded ids; with ignore-duplicates the database returns only inserted rows, so a loser gets nothing back). Two devices handling the same new achievement at the same instant therefore cannot both show it: the database's unique key picks one. Verified in the runner with an interleaved fake ledger (two and five devices racing), in the mock store and adapter, and in SQL (`on conflict do nothing returning` claims once). The HTTP version (two real sessions racing) is in the live suite and is not yet run.
+
 ## Known limits
 
-- Two devices that handle the very same new achievement at the same instant, before either has synced, can both show it once; the ledger keeps one record.
-- Until the migration is applied, the ledger is device-only (the app handles an unreachable or missing synced ledger).
+- If the synced ledger is unreachable (offline), the device ledger decides, so a second device that is also offline can show the same achievement once; when both reconnect the ledger keeps one record.
+- Until the migration is applied everywhere, the ledger is device-only (the app handles an unreachable or missing synced ledger).
 - Weight-goal and body-measurement celebrations are intentionally absent; adding them needs owner approval and the same safety rules as weight goals.
