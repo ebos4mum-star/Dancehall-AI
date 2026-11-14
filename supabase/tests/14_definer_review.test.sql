@@ -34,3 +34,30 @@ begin
   perform test.as_user(a);
   perform test.assert(public.cancel_account_deletion(), 'the owner can cancel their own request');
 end $$;
+
+-- 4. The household trigger function (SECURITY DEFINER, in the unexposed `app` schema) must not be executable through PUBLIC, anon or signed-in
+--    roles, yet the trigger must keep working: deleting a membership still promotes an heir or removes an empty household.
+do $$
+declare f oid := 'app.household_after_member_delete()'::regprocedure; a uuid; b uuid; h uuid; code text;
+begin
+  perform test.assert(not exists (select 1 from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) x where p.oid = f and x.grantee = 0 and x.privilege_type = 'EXECUTE'),
+    'PUBLIC has no execute on app.household_after_member_delete()');
+  perform test.assert(not has_function_privilege('anon', f, 'execute'), 'anon cannot execute the household trigger function');
+  perform test.assert(not has_function_privilege('authenticated', f, 'execute'), 'signed-in users cannot execute the household trigger function');
+  perform test.assert((select p.prosecdef and 'search_path=""' = any (p.proconfig) from pg_proc p where p.oid = f), 'its SECURITY DEFINER and empty search_path are unchanged');
+  perform test.assert(exists (select 1 from pg_trigger where tgname = 'household_members_after_delete' and tgfoid = f and not tgisinternal), 'the trigger still points at it');
+
+  -- The trigger still fires for signed-in users (who hold no execute privilege on the function): owner leaves -> the member inherits ownership;
+  -- last member leaves -> the household is deleted.
+  perform test.as_admin();
+  a := test.make_user('trigger-a@example.test'); b := test.make_user('trigger-b@example.test');
+  perform test.as_user(a); h := public.household_create('Trigger test');
+  code := public.household_create_invite(h);
+  perform test.as_user(b); perform public.household_join(code);
+  -- Deleting an account cascades to the membership, which fires the trigger.
+  perform test.as_admin();
+  delete from public.profiles where id = a;
+  perform test.assert((select role = 'owner' from public.household_members where household_id = h and member_id = b), 'the remaining member inherits ownership');
+  delete from public.profiles where id = b;
+  perform test.assert(not exists (select 1 from public.households where id = h), 'the last member leaving removes the household');
+end $$;

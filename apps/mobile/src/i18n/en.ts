@@ -487,6 +487,11 @@ export const en = {
   'err.feature_disabled': 'This feature is not available right now.',
   'err.ai_unavailable': 'Photo analysis is not available right now. You can log food by hand.',
   'err.photo_already_deleted': 'That photo has already been deleted.',
+  'err.photo_too_large': 'That photo is too large. Try a smaller one, or log your meal by hand.',
+  'err.photo_invalid_type':
+    'Only JPEG photos can be used. Try another photo, or log your meal by hand.',
+  'err.photo_upload_failed':
+    'The photo could not be uploaded. Check your connection and try again, or log your meal by hand.',
   'region.any': 'No preference',
   'region.west_african': 'West African',
   'region.caribbean': 'Caribbean',

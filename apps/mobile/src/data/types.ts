@@ -100,6 +100,9 @@ export type StoreErrorCode =
   | 'ai_unavailable'
   | 'ai_paused'
   | 'photo_already_deleted'
+  | 'photo_too_large'
+  | 'photo_invalid_type'
+  | 'photo_upload_failed'
   | 'coach_consent_required'
   | 'goal_blocked';
 
@@ -161,7 +164,7 @@ export interface DataStore {
   deleteSavedMeal(id: string): Promise<void>;
 
   /** Meal photo analysis. In development this is SIMULATED (mock); the Supabase adapter has no analysis service yet. */
-  analyzeMealPhoto?(input: { seed: number }): Promise<PhotoAnalysisResult>;
+  analyzeMealPhoto?(input: { seed: number; photo?: PhotoUpload }): Promise<PhotoAnalysisResult>;
   listPhotoAnalyses?(): Promise<PhotoAnalysisRecord[]>;
   setPhotoSaved?(analysisId: string, saved: boolean): Promise<void>;
   /** Marks temporary photos whose retention window has passed as deleted. Returns how many. */
@@ -306,6 +309,11 @@ export interface PhotoAnalysisRecord {
   deleteAfter: string | null;
   saved: boolean;
   deletedAt: string | null;
+}
+/** A prepared (resized, re-encoded) JPEG. The Supabase adapter uploads it to the private bucket; the mock ignores it. */
+export interface PhotoUpload {
+  data: ArrayBuffer;
+  contentType: string;
 }
 export interface PhotoAnalysisResult {
   analysisId: string;

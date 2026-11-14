@@ -260,4 +260,28 @@ describe.skipIf(!cfg.enabled)('live: approved development project', () => {
     expect(bad.error).not.toBeNull();
     void idB;
   });
+
+  it('storage: the bucket itself refuses non-JPEG and over-5 MB uploads, and unauthenticated writes', async () => {
+    const a = await open(live.a);
+    const bucket = a.auth.storage.from('food-photos');
+    const stamp = Date.now();
+    const png = `${idA}/live-test-${stamp}.png`;
+    const big = `${idA}/live-test-${stamp}-big.jpg`;
+    made.push(async () => void (await bucket.remove([png, big])));
+    const wrongType = await bucket.upload(png, new Uint8Array([0x89, 0x50, 0x4e, 0x47]), {
+      contentType: 'image/png',
+    });
+    expect(wrongType.error).not.toBeNull();
+    const oversize = new Uint8Array(5 * 1024 * 1024 + 1);
+    oversize.set([0xff, 0xd8, 0xff]);
+    const tooBig = await bucket.upload(big, oversize, { contentType: 'image/jpeg' });
+    expect(tooBig.error).not.toBeNull();
+    const anon = createClient(live.url, live.key);
+    const noAuth = await anon.storage
+      .from('food-photos')
+      .upload(`${idA}/anon-${stamp}.jpg`, new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), {
+        contentType: 'image/jpeg',
+      });
+    expect(noAuth.error).not.toBeNull();
+  });
 });
