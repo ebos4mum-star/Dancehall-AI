@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { Switch, View } from 'react-native';
+import { AppState, Switch, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   WORKOUT_BY_ID,
@@ -21,11 +21,25 @@ import { CharacterStage, DepthCard, HeroCard } from '@/ui/Depth';
 import { Notice } from '@/ui/Banner';
 import { Choice } from '@/ui/Choice';
 import { Ring } from '@/ui/motion';
+import { ProgressBar } from '@/ui/ProgressBar';
 import { Screen } from '@/ui/Screen';
 import { haptics } from '@/ui/haptics';
+import { once } from '@/dance/once';
+import {
+  clearSnapshot,
+  deviceSnapshotStore,
+  readSnapshot,
+  restoreSession,
+  snapshotOf,
+  writeSnapshot,
+} from '@/dance/resume';
 
 type Wrapped = { s: SessionState; changes: number };
-const reducer = (w: Wrapped, e: SessionEvent): Wrapped => {
+const reducer = (
+  w: Wrapped,
+  e: SessionEvent | { type: 'restore'; state: SessionState },
+): Wrapped => {
+  if (e.type === 'restore') return { s: e.state, changes: w.changes };
   const r = sessionReduce(w.s, e);
   return { s: r.state, changes: w.changes + (r.segmentChanged ? 1 : 0) };
 };
@@ -47,7 +61,46 @@ export default function Session() {
   const [effort, setEffort] = useState<string>('moderate');
   const [err, setErr] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [restored, setRestored] = useState(false);
   const s = state.s;
+  // One guarded save per session screen: a double tap or a retry after success can never record the workout twice.
+  const saver = useRef(once(async (fn: () => Promise<void>) => fn())).current;
+
+  // Recover an interrupted session of this same workout (always comes back paused; no time is added).
+  useEffect(() => {
+    if (!workout) return;
+    let alive = true;
+    void readSnapshot(deviceSnapshotStore).then((snap) => {
+      if (!alive || !snap || snap.workoutId !== workout.id) return;
+      const r = restoreSession(snap, workout);
+      if (!r) return void clearSnapshot(deviceSnapshotStore);
+      dispatch({ type: 'restore', state: r });
+      setRestored(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [workout]);
+
+  // Keep a recovery point while the session is under way; remove it once saved or discarded.
+  useEffect(() => {
+    if (!workout || saved) return;
+    if (s.status === 'paused' || s.status === 'running') {
+      if (s.elapsedS % 5 === 0 || s.status === 'paused')
+        void writeSnapshot(
+          deviceSnapshotStore,
+          snapshotOf(s, sessionId ? String(sessionId) : null),
+        );
+    }
+  }, [s, saved, workout, sessionId]);
+
+  // Leaving the app pauses the workout, so time away is never counted as exercise.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st !== 'active') dispatch({ type: 'pause' });
+    });
+    return () => sub.remove();
+  }, []);
 
   // One tick per second while running.
   useEffect(() => {
@@ -76,30 +129,37 @@ export default function Session() {
   const next = s.segments[s.index + 1];
   const meta = STYLE_META[workout.style];
   const fraction = seg.seconds > 0 ? 1 - s.remainingS / seg.seconds : 1;
+  const totalS = s.segments.reduce((a, g) => a + g.seconds, 0);
+  const doneS =
+    s.segments.slice(0, s.index).reduce((a, g) => a + g.seconds, 0) + (seg.seconds - s.remainingS);
+  const overall = totalS > 0 ? doneS / totalS : 0;
 
   const save = async () => {
     setErr(null);
     const rpe = EFFORT_CHOICES.find((e) => e.key === effort)?.value ?? 5;
     try {
-      if (sessionId)
-        await store.updateSession(String(sessionId), {
-          status: 'completed',
-          durationS: s.elapsedS,
-          perceivedExertion: rpe,
-          lowImpact: s.lowImpact,
-        });
-      else
-        await store.createSession({
-          workoutId: workout.id,
-          title: workout.title,
-          style: workout.style,
-          minutes: workout.minutes,
-          status: 'completed',
-          durationS: s.elapsedS,
-          perceivedExertion: rpe,
-          lowImpact: s.lowImpact,
-          source: 'manual',
-        });
+      await saver.run(async () => {
+        if (sessionId)
+          await store.updateSession(String(sessionId), {
+            status: 'completed',
+            durationS: s.elapsedS,
+            perceivedExertion: rpe,
+            lowImpact: s.lowImpact,
+          });
+        else
+          await store.createSession({
+            workoutId: workout.id,
+            title: workout.title,
+            style: workout.style,
+            minutes: workout.minutes,
+            status: 'completed',
+            durationS: s.elapsedS,
+            perceivedExertion: rpe,
+            lowImpact: s.lowImpact,
+            source: 'manual',
+          });
+      });
+      await clearSnapshot(deviceSnapshotStore);
       haptics.celebrate();
       setSaved(true);
     } catch (e) {
@@ -157,7 +217,10 @@ export default function Session() {
           <Button
             variant="secondary"
             label={saved ? t('common.continue') : t('ses.discard')}
-            onPress={() => router.replace('/(tabs)/dance')}
+            onPress={async () => {
+              if (!saved) await clearSnapshot(deviceSnapshotStore);
+              router.replace('/(tabs)/dance');
+            }}
           />
         </DepthCard>
       </Screen>
@@ -171,6 +234,15 @@ export default function Session() {
         muted
         accessibilityLiveRegion="polite"
       >{`${workout.title} · ${t('ses.block', { n: s.index + 1, total: s.segments.length })} · ${t(`wk.${seg.kind}` as StringKey)}`}</AppText>
+      <ProgressBar
+        fraction={overall}
+        label={t('ses.progress', {
+          n: s.index + 1,
+          total: s.segments.length,
+          pct: Math.round(overall * 100),
+        })}
+      />
+      {restored && s.status === 'paused' ? <Notice>{t('ses.restored')}</Notice> : null}
       <View style={{ alignItems: 'center', paddingVertical: spacing.md }}>
         <Ring
           size={220}

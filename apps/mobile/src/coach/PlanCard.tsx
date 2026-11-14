@@ -13,13 +13,18 @@ import { DepthCard } from '@/ui/Depth';
 import { Notice } from '@/ui/Banner';
 import { Choice } from '@/ui/Choice';
 import { haptics } from '@/ui/haptics';
+import { SkeletonList } from '@/ui/Skeleton';
 
 /** The Daily Fit Plan: a few optional, explained suggestions. Ticking an item is the person's own action (no confirmation needed). */
 export function PlanCard() {
   const { store } = useApp();
   const { colors } = useTheme();
   const supported = typeof store.getDailyPlan === 'function';
-  const { data: plan } = useLoad(async (s) => (s.getDailyPlan ? s.getDailyPlan() : null));
+  const {
+    data: plan,
+    loading: planLoading,
+    error: planError,
+  } = useLoad(async (s) => (s.getDailyPlan ? s.getDailyPlan() : null));
   const { data: comeback } = useLoad(async (s) => (s.comebackStatus ? s.comebackStatus() : null));
   const [open, setOpen] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -56,6 +61,19 @@ export function PlanCard() {
         <AppText variant="caption" muted>
           {t('dfp.intro')}
         </AppText>
+        {planLoading && !plan ? <SkeletonList label={t('common.loading')} cards={1} /> : null}
+        {planError ? <Notice tone="warning">{planError}</Notice> : null}
+        {plan && plan.items.length > 0 ? (
+          <AppText
+            variant="label"
+            accessibilityLiveRegion="polite"
+            style={{ color: colors.primary }}
+          >
+            {plan.items.every((i) => i.doneAt !== null)
+              ? t('dfp.allDone')
+              : t('dfp.nextUp', { title: plan.items.find((i) => i.doneAt === null)!.title })}
+          </AppText>
+        ) : null}
         {plan ? (
           <>
             <Choice

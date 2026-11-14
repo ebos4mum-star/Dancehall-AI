@@ -3,13 +3,13 @@ import { View } from 'react-native';
 import {
   ageYearsOn,
   goalEndDate,
-  goalProgress,
   lbToKg,
   proposeGoal,
   summarizeWeights,
   type GoalPeriod,
   type GoalType,
 } from '@dancehall/shared';
+import { goalFraction } from '@/progress/goalDisplay';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage, useLoad } from '@/data/hooks';
 import type { Goal } from '@/data/types';
@@ -92,9 +92,7 @@ export default function Goals() {
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {goals.length === 0 ? <AppText muted>{t('goals.empty')}</AppText> : null}
       {goals.map((g) => {
-        const p = summary.latest
-          ? goalProgress(g, summary.latest.weightKg)
-          : { fraction: 0, onTrack: false };
+        const fraction = goalFraction(g, summary.latest?.weightKg);
         return (
           <Card key={g.id}>
             <AppText variant="heading">{`${t(`goals.${g.type}` as StringKey)} · ${t(`goals.${g.period}` as StringKey)}`}</AppText>
@@ -106,10 +104,16 @@ export default function Goals() {
             </AppText>
             {g.status === 'active' ? (
               <>
-                <ProgressBar
-                  fraction={p.fraction}
-                  label={`${t(`goals.${g.type}` as StringKey)} ${t(`goals.${g.period}` as StringKey)}`}
-                />
+                {fraction !== null ? (
+                  <ProgressBar
+                    fraction={fraction}
+                    label={`${t(`goals.${g.type}` as StringKey)} ${t(`goals.${g.period}` as StringKey)}`}
+                  />
+                ) : (
+                  <AppText variant="caption" muted>
+                    {t('today.goalNeedsWeight')}
+                  </AppText>
+                )}
                 <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
                   <Button label={t('goals.complete')} onPress={() => setStatus(g, 'completed')} />
                   <Button

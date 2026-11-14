@@ -32,6 +32,7 @@ export default function WorkoutDetail() {
   const [when, setWhen] = useState('today');
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   // Start in the low-impact version when the readiness screening asked for it (until the person chooses otherwise).
   useEffect(() => {
@@ -60,6 +61,8 @@ export default function WorkoutDetail() {
 
   const schedule = async () => {
     setErr(null);
+    if (busy) return;
+    setBusy(true);
     try {
       const date = when === 'today' ? dance.todayKey : when;
       await store.createSession({
@@ -76,6 +79,8 @@ export default function WorkoutDetail() {
     } catch (e) {
       haptics.warning();
       setErr(errorMessage(e));
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -112,6 +117,26 @@ export default function WorkoutDetail() {
       </Reveal>
 
       <Notice>{t('wk.textOnly')}</Notice>
+
+      {w.level === 'beginner' ? (
+        <DepthCard>
+          <AppText variant="heading" accessibilityRole="header">
+            {t('wk.beginnerTitle')}
+          </AppText>
+          <AppText muted>{t('wk.beginnerBody')}</AppText>
+        </DepthCard>
+      ) : w.level === 'advanced' || w.intensity === 'high' ? (
+        <DepthCard>
+          <AppText variant="heading" accessibilityRole="header">
+            {t('wk.fasterTitle')}
+          </AppText>
+          <AppText muted>{t('wk.fasterBody')}</AppText>
+        </DepthCard>
+      ) : null}
+      <AppText
+        variant="caption"
+        muted
+      >{`${t(`wk.pace.${w.intensity}` as StringKey)} ${t('wk.stepsBody')}`}</AppText>
 
       <DepthCard>
         <View
@@ -201,7 +226,7 @@ export default function WorkoutDetail() {
           onChange={setWhen}
           options={days.map((d, i) => ({ value: i === 0 ? 'today' : d, label: dayLabel(d, i) }))}
         />
-        <Button variant="secondary" label={t('wk.schedule')} onPress={schedule} />
+        <Button variant="secondary" label={t('wk.schedule')} onPress={schedule} disabled={busy} />
         {msg ? <Notice>{msg}</Notice> : null}
         {err ? <Notice tone="warning">{err}</Notice> : null}
       </DepthCard>

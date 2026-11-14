@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Animated, Pressable, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -7,6 +7,7 @@ import {
   LEVELS,
   PROGRAMS,
   QUICK_FIT_MINUTES,
+  WORKOUT_BY_ID,
   WORKOUT_DATA_NOTICE,
   filterWorkouts,
   suggestQuickFit,
@@ -28,6 +29,12 @@ import { Choice } from '@/ui/Choice';
 import { Reveal, usePressScale } from '@/ui/motion';
 import { Screen } from '@/ui/Screen';
 import { haptics } from '@/ui/haptics';
+import {
+  clearSnapshot,
+  deviceSnapshotStore,
+  readSnapshot,
+  type SessionSnapshot,
+} from '@/dance/resume';
 
 let pickCounter = 0;
 
@@ -76,6 +83,15 @@ export default function Dance() {
   const [intensity, setIntensity] = useState<Intensity | 'any'>('any');
   const [duration, setDuration] = useState<'any' | '5' | '10' | '15' | '20'>('any');
   const [lowOnly, setLowOnly] = useState(false);
+  const [pending, setPending] = useState<SessionSnapshot | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void readSnapshot(deviceSnapshotStore).then((p) => alive && setPending(p));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const pendingWorkout = pending ? WORKOUT_BY_ID.get(pending.workoutId) : undefined;
 
   const results = useMemo(
     () =>
@@ -133,6 +149,36 @@ export default function Dance() {
           ) : null}
         </HeroCard>
       </Reveal>
+
+      {pending && pendingWorkout ? (
+        <DepthCard>
+          <AppText variant="heading" accessibilityRole="header">
+            {t('dance.resumeTitle')}
+          </AppText>
+          <AppText muted>{t('dance.resumeBody', { title: pendingWorkout.title })}</AppText>
+          <Button
+            label={t('dance.resume')}
+            onPress={() =>
+              router.push({
+                pathname: '/dance/session',
+                params: {
+                  id: pending.workoutId,
+                  low: pending.lowImpact ? '1' : '0',
+                  ...(pending.sessionId ? { sessionId: pending.sessionId } : {}),
+                },
+              })
+            }
+          />
+          <Button
+            variant="secondary"
+            label={t('dance.resumeDiscard')}
+            onPress={async () => {
+              await clearSnapshot(deviceSnapshotStore);
+              setPending(null);
+            }}
+          />
+        </DepthCard>
+      ) : null}
 
       <Notice>{t('dance.sampleNotice')}</Notice>
 
