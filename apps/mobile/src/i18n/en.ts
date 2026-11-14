@@ -74,6 +74,38 @@ export const en = {
   'habit.dayDone': '{day}: {what}',
   'habit.dayNone': '{day}: rest or nothing logged',
 
+  'grocery.show': 'Grocery list',
+  'grocery.hide': 'Hide grocery list',
+  'grocery.title': 'Shopping list',
+  'grocery.note':
+    'Amounts are the planned portions added together. Check packaging and what you already have at home.',
+  'grocery.share': 'Share list',
+
+  'me.challenges': 'Fit Challenge',
+  'chal.title': 'Fit Challenge',
+  'chal.intro':
+    'A free, personal challenge at your own pace. No stakes, no ranking, and rest days are built in.',
+  'chal.startTitle': 'Start a challenge',
+  'chal.length': 'Length',
+  'chal.days': '{n} days',
+  'chal.target': 'Your goal',
+  'chal.activeDays': '{n} active days',
+  'chal.targetNote': 'Goals stop at {max} active days in {length}, so you always have rest days.',
+  'chal.start': 'Start challenge',
+  'chal.activeTitle': '{n}-day challenge',
+  'chal.progress': '{done} of {target} active days',
+  'chal.daysLeft': '{n} days left.',
+  'chal.rest': 'Rest days are part of the plan.',
+  'chal.met': 'You reached your goal. Well done.',
+  'chal.ended':
+    'The challenge window has ended. You were active on {done} days, and that is real progress.',
+  'chal.stop': 'Stop challenge',
+  'chal.close': 'Close challenge',
+  'chal.history': 'Past challenges',
+  'chal.status.completed': 'Completed',
+  'chal.status.abandoned': 'Ended without reaching the goal',
+  'chal.communityNote': 'Challenges with friends and teams are not available yet.',
+
   'onb.step': 'Step {n} of {total}',
   'onb.aboutTitle': 'Let’s start with you',
   'onb.aboutBody': 'We use this to personalize your plan. You can change it later.',
@@ -593,6 +625,8 @@ export const en = {
   'err.active_goal_exists': 'You already have an active goal for that timeframe.',
   'err.invalid_input': 'Please check what you entered.',
   'err.not_found': 'We could not find that.',
+  'err.active_challenge_exists':
+    'You already have a challenge in progress. Finish or stop it first.',
   'err.unknown': 'Something went wrong. Please try again.',
 } as const;
 export type StringKey = keyof typeof en;

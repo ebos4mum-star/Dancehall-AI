@@ -26,6 +26,7 @@ Nothing here has been run for you: no project, build, or paid service has been c
 5. `20261204000100_coach.sql`
 6. `20261205000100_integration.sql`
 7. `20261205000200_deletion_config.sql`
+8. `20261206000100_fit_challenges.sql`
 
 - [ ] Link with the Supabase CLI (`supabase link --project-ref <project-ref>`), review with `supabase db push --dry-run`, then apply.
 - [ ] Load `supabase/seed.sql` only if the catalogue is not populated by a migration.

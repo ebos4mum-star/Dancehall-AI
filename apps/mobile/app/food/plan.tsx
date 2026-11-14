@@ -10,6 +10,7 @@ import {
 import { useApp } from '@/data/AppProvider';
 import { errorMessage, useLoad } from '@/data/hooks';
 import { useFoodData } from '@/food/hooks';
+import { GroceryList } from '@/food/GroceryList';
 import { kcalText } from '@/food/ui';
 import { t, type StringKey } from '@/i18n';
 import { formatDate, parseDecimal, todayIso } from '@/lib/format';
@@ -48,6 +49,7 @@ export default function Plan() {
   const [preview, setPreview] = useState<MealPlanDraft | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [openList, setOpenList] = useState<string | null>(null);
 
   const build = (sd: number) => {
     if (!guide) return;
@@ -195,6 +197,12 @@ export default function Plan() {
             variant="caption"
             muted
           >{`${p.items.length} items · ~${Math.round(totals(p.items.map((i) => ({ name: i.name, foodId: i.foodId, grams: i.grams, kcal: i.kcal, proteinG: i.proteinG, carbsG: i.carbsG, fatG: i.fatG, kcalLow: i.kcal, kcalHigh: i.kcal, source: 'curated', confidence: 'medium', userEdited: false }))).kcal / p.days)} kcal/day`}</AppText>
+          <Button
+            variant="secondary"
+            label={openList === p.id ? t('grocery.hide') : t('grocery.show')}
+            onPress={() => setOpenList(openList === p.id ? null : p.id)}
+          />
+          {openList === p.id ? <GroceryList planName={p.name} items={p.items} /> : null}
           <Button
             variant="secondary"
             label={t('common.delete')}

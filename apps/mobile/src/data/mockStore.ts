@@ -56,6 +56,9 @@ import {
   type NewSession,
   type SessionPatch,
   type WorkoutSession,
+  type ChallengeStatus,
+  type FitChallenge,
+  type NewFitChallenge,
   type PhotoAnalysisRecord,
   type PhotoAnalysisResult,
   type PrivateProfile,
@@ -73,6 +76,7 @@ import {
   type DailyPlanItem,
   type WeeklyReviewRecord,
 } from './types';
+import { isValidChallenge } from '../challenges/logic';
 
 export interface KeyValue {
   get(key: string): Promise<string | null>;
@@ -95,6 +99,7 @@ interface State {
   aiEvents: UsageEvent[];
   aiBudget: BudgetState;
   sessions: WorkoutSession[];
+  challenges: FitChallenge[];
   conversations: Conversation[];
   dailyPlans: DailyPlan[];
   weeklyReviews: WeeklyReviewRecord[];
@@ -126,6 +131,7 @@ const emptyState = (): State => ({
   aiEvents: [],
   aiBudget: newBudget(),
   sessions: [],
+  challenges: [],
   conversations: [],
   dailyPlans: [],
   weeklyReviews: [],
@@ -702,6 +708,50 @@ export class MockStore implements DataStore {
   async deleteSession(id: string) {
     const s = await this.authed();
     s.sessions = s.sessions.filter((x) => x.id !== id);
+    await this.commit();
+  }
+
+  // ---------- Fit challenges (solo, free) ----------
+  async listChallenges(): Promise<FitChallenge[]> {
+    const s = await this.authed();
+    return [...(s.challenges ?? [])]
+      .sort(
+        (a, b) => b.startDate.localeCompare(a.startDate) || b.createdAt.localeCompare(a.createdAt),
+      )
+      .map((c) => ({ ...c }));
+  }
+  async startChallenge(input: NewFitChallenge): Promise<FitChallenge> {
+    const s = await this.authed();
+    this.requireConsent(s);
+    if (
+      !isValidChallenge(input.lengthDays, input.targetDays) ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(input.startDate)
+    )
+      throw new StoreError('invalid_input', 'challenge');
+    s.challenges ??= [];
+    if (s.challenges.some((c) => c.status === 'active'))
+      throw new StoreError('active_challenge_exists');
+    const rec: FitChallenge = {
+      id: newId(),
+      lengthDays: input.lengthDays as FitChallenge['lengthDays'],
+      targetDays: input.targetDays,
+      startDate: input.startDate,
+      status: 'active',
+      createdAt: this.now().toISOString(),
+    };
+    s.challenges.push(rec);
+    await this.commit();
+    return { ...rec };
+  }
+  async setChallengeStatus(id: string, status: ChallengeStatus): Promise<void> {
+    const s = await this.authed();
+    const rec = (s.challenges ?? []).find((c) => c.id === id);
+    if (!rec) throw new StoreError('not_found');
+    if (status === 'active' && rec.status !== 'active') {
+      if ((s.challenges ?? []).some((c) => c.status === 'active'))
+        throw new StoreError('active_challenge_exists');
+    }
+    rec.status = status;
     await this.commit();
   }
 

@@ -18,6 +18,11 @@ export default function MeScreen() {
           <Button variant="secondary" label={t('me.goals')} onPress={() => router.push('/goals')} />
           <Button
             variant="secondary"
+            label={t('me.challenges')}
+            onPress={() => router.push('/challenges')}
+          />
+          <Button
+            variant="secondary"
             label={t('me.privacy')}
             onPress={() => router.push('/privacy')}
           />

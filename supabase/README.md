@@ -11,6 +11,7 @@ No Supabase cloud project has been created and nothing here connects to one. The
   - `20261204000100_coach.sql`: AI kill-switch flags, usage events, atomic budget and quota functions, conversations, confirmed actions, Daily Fit Plans, weekly reviews, retention function.
   - `20261205000100_integration.sql`: user AI pause, account-deletion requests and related integration functions.
   - `20261205000200_deletion_config.sql`: `app_config` (configurable account-deletion grace period).
+  - `20261206000100_fit_challenges.sql`: free solo Fit Challenges (7/14/30 days) with a database-enforced rest-day cap and owner-only RLS.
 - `seed.sql`: GENERATED from `packages/shared/src/food-data.json` and `workout-data.json` (synthetic data) by `scripts/gen-seed.mjs`; `pnpm check:seed` fails if it is stale.
 - `tests/`: plain-SQL tests run by `tests/run.sh` on a throwaway database. `shim.sql` stands in for Supabase's `auth` and `storage` schemas and API roles
   (test-only). `goal-cases.json` is shared with the TypeScript tests so the app and the database apply identical goal rules.
