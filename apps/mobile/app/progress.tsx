@@ -15,6 +15,7 @@ import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { Notice } from '@/ui/Banner';
 import { Screen } from '@/ui/Screen';
+import { SkeletonList } from '@/ui/Skeleton';
 import { TextField } from '@/ui/TextField';
 import { WeightChart } from '@/ui/WeightChart';
 
@@ -24,7 +25,7 @@ export default function Progress() {
   const insights = useProgressInsights();
   const { spacing } = useTheme();
   const units = profile?.unitSystem ?? 'metric';
-  const { data, error } = useLoad(async (s) => ({
+  const { data, error, loading } = useLoad(async (s) => ({
     weights: await s.listWeights(),
     goals: await s.listGoals(),
   }));
@@ -57,7 +58,8 @@ export default function Progress() {
   return (
     <Screen top={false}>
       {error ? <Notice tone="warning">{error}</Notice> : null}
-      {weights.length === 0 ? (
+      {loading && !data ? <SkeletonList label={t('common.loading')} cards={2} /> : null}
+      {!data ? null : weights.length === 0 ? (
         <Notice>{t('progress.empty')}</Notice>
       ) : (
         <Card>

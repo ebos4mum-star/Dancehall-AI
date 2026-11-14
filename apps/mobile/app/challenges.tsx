@@ -18,12 +18,13 @@ import { Notice } from '@/ui/Banner';
 import { Choice } from '@/ui/Choice';
 import { ProgressBar } from '@/ui/ProgressBar';
 import { Screen } from '@/ui/Screen';
+import { SkeletonList } from '@/ui/Skeleton';
 import { haptics } from '@/ui/haptics';
 
 export default function Challenges() {
   const { store, profile } = useApp();
   const { spacing } = useTheme();
-  const { data, error } = useLoad(async (s) => ({
+  const { data, error, loading } = useLoad(async (s) => ({
     challenges: await s.listChallenges(),
     sessions: await s.listSessions(),
   }));
@@ -46,7 +47,7 @@ export default function Challenges() {
     completing.current = active.id;
     store
       .setChallengeStatus(active.id, 'completed')
-      .then(() => haptics.success())
+      .then(() => haptics.celebrate())
       .catch(() => {
         completing.current = null;
       });
@@ -72,8 +73,9 @@ export default function Challenges() {
       <AppText muted>{t('chal.intro')}</AppText>
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {msg ? <Notice tone="warning">{msg}</Notice> : null}
+      {loading && !data ? <SkeletonList label={t('common.loading')} cards={2} /> : null}
 
-      {active && progress ? (
+      {!data ? null : active && progress ? (
         <Card>
           <AppText variant="heading" accessibilityRole="header">
             {t('chal.activeTitle', { n: active.lengthDays })}
