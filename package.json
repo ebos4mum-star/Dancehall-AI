@@ -1,0 +1,31 @@
+{
+  "name": "dancehall-fit-ai",
+  "private": true,
+  "version": "0.0.0",
+  "description": "DanceHall Fit AI monorepo: mobile app, admin portal, shared domain package, AI gateway package and Supabase files.",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "check:workspace": "node scripts/check-workspace.mjs",
+    "check:ci": "node scripts/check-ci-config.mjs",
+    "test:scripts": "node --test scripts/*.test.mjs",
+    "verify": "pnpm check:secrets && pnpm check:workspace && pnpm check:ci && pnpm test:scripts && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "eslint": "^9.39.0",
+    "eslint-plugin-react-hooks": "^7.0.0",
+    "globals": "^17.0.0",
+    "prettier": "^3.6.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.0"
+  }
+}

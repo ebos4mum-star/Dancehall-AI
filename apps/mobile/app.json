@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "DanceHall Fit AI",
+    "slug": "dancehall-fit-ai",
+    "scheme": "dancehallfit",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "plugins": ["expo-router", "expo-localization"],
+    "experiments": { "typedRoutes": true },
+    "web": { "bundler": "metro", "output": "single" }
+  }
+}

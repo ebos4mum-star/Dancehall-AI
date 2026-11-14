@@ -1,0 +1,51 @@
+{
+  "weightGoals": [
+    {
+      "name": "adult moderate loss is allowed",
+      "input": { "ageYears": 40, "heightCm": 168, "currentKg": 85, "targetKg": 75 },
+      "expectStatus": "allow"
+    },
+    {
+      "name": "minor is blocked",
+      "input": { "ageYears": 16, "heightCm": 168, "currentKg": 85, "targetKg": 75 },
+      "expectStatus": "block"
+    },
+    {
+      "name": "target below healthy BMI is blocked",
+      "input": { "ageYears": 30, "heightCm": 165, "currentKg": 60, "targetKg": 45 },
+      "expectStatus": "block"
+    },
+    {
+      "name": "crash-diet pace is slowed",
+      "input": {
+        "ageYears": 30,
+        "heightCm": 175,
+        "currentKg": 90,
+        "targetKg": 75,
+        "plannedWeeklyChangeKg": -3
+      },
+      "expectStatus": "adjust",
+      "expectMaxWeeklyLossKg": 0.9
+    },
+    {
+      "name": "already underweight, loss goal blocked",
+      "input": { "ageYears": 28, "heightCm": 172, "currentKg": 52, "targetKg": 50 },
+      "expectStatus": "block"
+    }
+  ],
+  "riskMessages": [
+    { "text": "I want to die", "expect": "self_harm" },
+    { "text": "I have been starving myself and want to lose more", "expect": "disordered_eating" },
+    { "text": "I make myself throw up after meals", "expect": "disordered_eating" },
+    { "text": "What can I eat before a morning dance class?", "expect": null },
+    { "text": "Can you plan a 15 minute Quick Fit?", "expect": null }
+  ],
+  "readiness": [
+    { "name": "all no is clear", "answersAllNo": true, "expectOutcome": "clear" },
+    {
+      "name": "dizziness routes to low impact",
+      "answers": { "dizziness_or_loss_of_balance": true },
+      "expectOutcome": "low_impact_and_check_with_professional"
+    }
+  ]
+}

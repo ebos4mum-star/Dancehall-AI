@@ -1,0 +1,27 @@
+node_modules/
+.pnpm-store/
+dist/
+build/
+.next/
+.expo/
+.turbo/
+coverage/
+*.tsbuildinfo
+.DS_Store
+# Secrets: never commit real values. Placeholders live in .env.example only.
+.env
+.env.*
+!.env.example
+*.pem
+*.p8
+*.p12
+*.key
+*.jks
+*.keystore
+google-services.json
+GoogleService-Info.plist
+supabase/.branches/
+supabase/.temp/
+next-env.d.ts
+# Local-only list of other products' names/identifiers to keep out of this public repo (see scripts/check-workspace.mjs)
+scripts/forbidden-references.local.txt
