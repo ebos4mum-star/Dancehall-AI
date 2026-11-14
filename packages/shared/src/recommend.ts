@@ -59,7 +59,11 @@ export function recommendByMood(
   // One per style first, for variety.
   const seen = new Set<string>();
   const picks: WorkoutDef[] = [];
-  for (const w of rotated) if (!seen.has(w.style)) (seen.add(w.style), picks.push(w));
+  for (const w of rotated) {
+    if (seen.has(w.style)) continue;
+    seen.add(w.style);
+    picks.push(w);
+  }
   for (const w of rotated) if (!picks.includes(w)) picks.push(w);
   return picks.slice(0, limit).map((workout) => ({ workout, why: whyOf(mood, workout) }));
 }
