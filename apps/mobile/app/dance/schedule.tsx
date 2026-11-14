@@ -16,7 +16,15 @@ import { Notice } from '@/ui/Banner';
 import { Screen } from '@/ui/Screen';
 import { haptics } from '@/ui/haptics';
 
-export function SessionRow({ s, onError }: { s: WorkoutSession; onError: (m: string) => void }) {
+export function SessionRow({
+  s,
+  onError,
+  todayKey,
+}: {
+  s: WorkoutSession;
+  onError: (m: string) => void;
+  todayKey: string;
+}) {
   const { store } = useApp();
   const run = async (fn: () => Promise<unknown>) => {
     try {
@@ -61,7 +69,7 @@ export function SessionRow({ s, onError }: { s: WorkoutSession; onError: (m: str
           onPress={() =>
             run(() =>
               store.updateSession(s.id, {
-                plannedFor: addDaysIso(s.plannedFor ?? new Date().toISOString().slice(0, 10), 1),
+                plannedFor: addDaysIso(todayKey, 1),
               }),
             )
           }
@@ -95,7 +103,7 @@ export default function Schedule() {
         </AppText>
       ) : null}
       {dance.overdue.map((s) => (
-        <SessionRow key={s.id} s={s} onError={setErr} />
+        <SessionRow key={s.id} s={s} onError={setErr} todayKey={dance.todayKey} />
       ))}
       {dance.todayPlanned.length > 0 ? (
         <AppText variant="heading" accessibilityRole="header">
@@ -103,7 +111,7 @@ export default function Schedule() {
         </AppText>
       ) : null}
       {dance.todayPlanned.map((s) => (
-        <SessionRow key={s.id} s={s} onError={setErr} />
+        <SessionRow key={s.id} s={s} onError={setErr} todayKey={dance.todayKey} />
       ))}
       {dance.upcoming.length > 0 ? (
         <AppText variant="heading" accessibilityRole="header">
@@ -111,7 +119,7 @@ export default function Schedule() {
         </AppText>
       ) : null}
       {dance.upcoming.map((s) => (
-        <SessionRow key={s.id} s={s} onError={setErr} />
+        <SessionRow key={s.id} s={s} onError={setErr} todayKey={dance.todayKey} />
       ))}
     </Screen>
   );

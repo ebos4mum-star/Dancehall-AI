@@ -8,6 +8,7 @@ import {
   contextSummaryLines,
   detectComeback,
   generateDailyPlan,
+  recentActiveDayCount,
   localDateKey,
   monthlyAllowance,
   proposeGoal,
@@ -203,6 +204,7 @@ export function createCoachAdapter(d: CoachAdapterDeps): Partial<DataStore> {
       daysSinceWeight: latestW
         ? Math.floor((now().getTime() - Date.parse(latestW.measuredAt)) / 86_400_000)
         : null,
+      recentActiveDays: recentActiveDayCount(sessions, date, tz),
       seed: Number(date.replace(/-/g, '')) % 97,
     });
   }

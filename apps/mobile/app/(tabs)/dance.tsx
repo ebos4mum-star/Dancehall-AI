@@ -5,6 +5,9 @@ import { router } from 'expo-router';
 import {
   DANCE_STYLES,
   LEVELS,
+  MOODS,
+  recommendByMood,
+  type Mood,
   PROGRAMS,
   QUICK_FIT_MINUTES,
   WORKOUT_BY_ID,
@@ -83,6 +86,16 @@ export default function Dance() {
   const [intensity, setIntensity] = useState<Intensity | 'any'>('any');
   const [duration, setDuration] = useState<'any' | '5' | '10' | '15' | '20'>('any');
   const [lowOnly, setLowOnly] = useState(false);
+  // Voluntary and temporary: never stored, never inferred.
+  const [mood, setMood] = useState<Mood | 'none'>('none');
+  const [moodSeed, setMoodSeed] = useState(0);
+  const moodPicks = useMemo(
+    () =>
+      mood === 'none'
+        ? []
+        : recommendByMood(mood, { lowImpactOnly: dance.lowImpactDefault, seed: moodSeed }),
+    [mood, moodSeed, dance.lowImpactDefault],
+  );
   const [pending, setPending] = useState<SessionSnapshot | null>(null);
   useEffect(() => {
     let alive = true;
@@ -179,6 +192,52 @@ export default function Dance() {
           />
         </DepthCard>
       ) : null}
+
+      <DepthCard>
+        <Choice
+          label={t('mood.title')}
+          value={mood}
+          onChange={(v: Mood | 'none') => {
+            setMood(v);
+            setMoodSeed(0);
+          }}
+          options={[
+            { value: 'none', label: t('mood.skip') },
+            ...MOODS.map((m) => ({ value: m, label: t(`mood.${m}` as StringKey) })),
+          ]}
+        />
+        {mood === 'none' ? (
+          <AppText variant="caption" muted>
+            {t('mood.hint')}
+          </AppText>
+        ) : moodPicks.length === 0 ? (
+          <Notice>{t('mood.none')}</Notice>
+        ) : (
+          <>
+            <AppText variant="caption" muted accessibilityLiveRegion="polite">
+              {t('mood.intro')}
+            </AppText>
+            {moodPicks.map((p) => (
+              <View key={p.workout.id} style={{ gap: spacing.xs }}>
+                <WorkoutCard
+                  w={p.workout}
+                  onPress={() =>
+                    router.push({ pathname: '/dance/[id]', params: { id: p.workout.id } })
+                  }
+                />
+                <AppText variant="caption" muted>
+                  {p.why}
+                </AppText>
+              </View>
+            ))}
+            <Button
+              variant="secondary"
+              label={t('mood.more')}
+              onPress={() => setMoodSeed((n) => n + 1)}
+            />
+          </>
+        )}
+      </DepthCard>
 
       <Notice>{t('dance.sampleNotice')}</Notice>
 

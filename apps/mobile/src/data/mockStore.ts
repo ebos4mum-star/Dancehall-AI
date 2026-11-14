@@ -35,6 +35,7 @@ import {
   detectComeback,
   energyGuideFor,
   generateDailyPlan,
+  recentActiveDayCount,
   localDateKey,
   monthlyAllowance,
   proposeGoal,
@@ -91,6 +92,7 @@ import {
   cleanMealTitle,
   cleanQuantity,
   isDay,
+  isDuplicateGrocery,
   normalizeInviteCode,
 } from '../food/householdLogic';
 
@@ -912,6 +914,7 @@ export class MockStore implements DataStore {
     this.requireHousehold(s);
     const name = cleanGroceryName(input.name);
     if (!name) throw new StoreError('invalid_input', 'name');
+    if (isDuplicateGrocery(s.householdGrocery ?? [], name)) throw new StoreError('duplicate_item');
     const rec = { id: newId(), name, quantity: cleanQuantity(input.quantity), checked: false };
     (s.householdGrocery ??= []).push(rec);
     await this.commit();
@@ -1018,6 +1021,7 @@ export class MockStore implements DataStore {
       daysSinceWeight: latestW
         ? Math.floor((this.now().getTime() - Date.parse(latestW.measuredAt)) / 86_400_000)
         : null,
+      recentActiveDays: recentActiveDayCount(s.sessions, date, tz),
       seed: Number(date.replace(/-/g, '')) % 97,
     });
     return {

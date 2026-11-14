@@ -5,6 +5,8 @@ import { PROGRAMS, WORKOUT_BY_ID, addDaysIso, programSessions } from '@dancehall
 import { useApp } from '@/data/AppProvider';
 import { errorMessage } from '@/data/hooks';
 import { useDanceData } from '@/dance/hooks';
+import { programProgress } from '@/dance/programProgress';
+import { ProgressBar } from '@/ui/ProgressBar';
 import { t, type StringKey } from '@/i18n';
 import { formatDate } from '@/lib/format';
 import { spacing } from '@/theme/tokens';
@@ -31,6 +33,22 @@ export default function Program() {
       </Screen>
     );
 
+  const prog = programProgress(p.id, p.schedule.length, dance.sessions, dance.todayKey);
+  const earlierSessions = dance.sessions.filter(
+    (x) => x.programId === p.id && x.status === 'planned' && (x.plannedFor ?? '') < dance.todayKey,
+  );
+  const moveEarlier = async () => {
+    setErr(null);
+    try {
+      // One per day starting today, so nothing piles up on a single day.
+      for (const [idx, x] of earlierSessions.entries())
+        await store.updateSession(x.id, { plannedFor: addDaysIso(dance.todayKey, idx) });
+      haptics.success();
+    } catch (e) {
+      haptics.warning();
+      setErr(errorMessage(e));
+    }
+  };
   const already = dance.sessions.some((s) => s.programId === p.id && s.status === 'planned');
   // Next Monday on or after tomorrow.
   const dow = (new Date(`${dance.todayKey}T00:00:00Z`).getUTCDay() + 6) % 7;
@@ -74,6 +92,31 @@ export default function Program() {
       </AppText>
       <AppText muted>{p.description}</AppText>
       <Notice>{t('prg.sample')}</Notice>
+      {prog.started ? (
+        <DepthCard>
+          <AppText variant="heading" accessibilityRole="header">
+            {prog.finished ? t('prg.finished') : t('prg.progressTitle')}
+          </AppText>
+          <ProgressBar
+            fraction={prog.total > 0 ? prog.completed / prog.total : 0}
+            label={t('prg.progress', { done: prog.completed, total: prog.total })}
+          />
+          <AppText muted>{t('prg.progress', { done: prog.completed, total: prog.total })}</AppText>
+          {prog.upcoming > 0 ? (
+            <AppText variant="caption" muted>
+              {t('prg.upcoming', { n: prog.upcoming })}
+            </AppText>
+          ) : null}
+          {prog.earlier > 0 ? (
+            <>
+              <AppText variant="caption" muted>
+                {t('prg.earlier', { n: prog.earlier })}
+              </AppText>
+              <Button variant="secondary" label={t('prg.moveEarlier')} onPress={moveEarlier} />
+            </>
+          ) : null}
+        </DepthCard>
+      ) : null}
       {Array.from({ length: p.weeks }, (_, i) => i + 1).map((wk) => (
         <DepthCard key={wk}>
           <AppText variant="heading">{t('prg.week', { n: wk })}</AppText>

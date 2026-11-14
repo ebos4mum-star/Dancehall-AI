@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { lbToKg, summarizeWeights } from '@dancehall/shared';
+import { RecapCard } from '@/progress/RecapCard';
 import { useApp } from '@/data/AppProvider';
 import { useDanceData } from '@/dance/hooks';
 import { ActivityBars } from '@/dance/ui';
@@ -62,6 +63,7 @@ export default function Progress() {
 
   return (
     <Screen top={false}>
+      <RecapCard />
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {loading && !data ? <SkeletonList label={t('common.loading')} cards={2} /> : null}
       {!data ? null : weights.length === 0 ? (

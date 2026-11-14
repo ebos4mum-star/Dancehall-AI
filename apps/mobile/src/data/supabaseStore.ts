@@ -5,6 +5,7 @@ import {
   cleanQuantity,
   householdError,
   isDay,
+  isDuplicateGrocery,
   normalizeInviteCode,
 } from '../food/householdLogic';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -817,6 +818,11 @@ function createBaseStore(
       const quantity = cleanQuantity(input.quantity);
       const h = await this.getHousehold!();
       if (!h) throw new StoreError('not_found', 'household');
+      const current = (await this.listHouseholdGrocery!()) as Array<{
+        name: string;
+        checked: boolean;
+      }>;
+      if (isDuplicateGrocery(current, name)) throw new StoreError('duplicate_item');
       const r = ok(
         await db
           .from('household_grocery_items')
