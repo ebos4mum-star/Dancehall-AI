@@ -95,6 +95,7 @@ async function step(name, fn) {
   });
   await step('A/D: Today shows the Daily Fit Plan with reasons', async () => {
     await seen('Your Daily Fit Plan');
+    await shot('today-plan');
     await btn(/^Why\?/).click();
     assert.ok(await p.getByText(/./).count());
   });
@@ -195,6 +196,7 @@ async function step(name, fn) {
     await seen('3 active days');
     await btn('Start challenge').click();
     await seen('0 of 3 active days');
+    await shot('challenge');
     await p.goBack();
     await tab('Today');
     await seen('7-day challenge');
@@ -205,6 +207,7 @@ async function step(name, fn) {
       await tab('Me');
       await btn('Weight progress').click();
       await seen('Your milestones');
+      await shot('progress');
       await seen('This week');
       for (const bad of ['You missed', 'You lost', 'failed']) {
         assert.equal(await p.getByText(bad, { exact: false }).count(), 0, bad);
@@ -231,6 +234,7 @@ async function step(name, fn) {
     await seen('You moved for');
     await btn('Save to my activity').click();
     await seen('Sessions this week: 1');
+    await shot('session-done');
     await btn('Continue').click();
     await p.waitForTimeout(600);
   });
@@ -241,6 +245,7 @@ async function step(name, fn) {
     await btn('Save plan').click();
     await btn('Grocery list').click();
     await seen('Shopping list');
+    await shot('grocery');
     const one = await p.getByRole('checkbox').first().getAttribute('aria-label');
     await p.getByRole('radio', { name: '2', exact: true }).last().click();
     await p.waitForTimeout(400);
@@ -271,6 +276,7 @@ async function step(name, fn) {
     await btn('History').click();
     await seen('Last 7 days');
     await seen('1 of 7 days logged');
+    await shot('food-diary');
     for (const bad of ['over your', 'too much', 'you failed']) {
       assert.equal(await p.getByText(bad, { exact: false }).count(), 0, bad);
     }
