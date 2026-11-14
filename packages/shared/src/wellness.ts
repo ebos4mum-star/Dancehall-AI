@@ -295,5 +295,16 @@ export function wellnessPlanContext(args: {
     waterGoalMl: goal,
     walkedToday: entriesOf(args.entries, 'walk').some((e) => e.day === args.day),
     sleepHours: sleep ? sleep.amount : null,
+    walkMinutesToday: entriesOf(args.entries, 'walk')
+      .filter((e) => e.day === args.day)
+      .reduce((a, e) => a + e.amount, 0),
+    strengthToday: entriesOf(args.entries, 'strength').some((e) => e.day === args.day),
+    strengthSessionsWeek: movementTotals(args.entries, addDay(args.day, -6), args.day)
+      .strengthSessions,
+    recovery:
+      (entriesOf(args.entries, 'recovery').find((e) => e.day === args.day)?.label as
+        'fresh' | 'ok' | 'sore' | 'worn' | undefined) ?? null,
+    hungerCheckinsToday: entriesOf(args.entries, 'hunger').filter((e) => e.day === args.day).length,
+    eatingConcern: args.prefs.eatingConcern,
   };
 }

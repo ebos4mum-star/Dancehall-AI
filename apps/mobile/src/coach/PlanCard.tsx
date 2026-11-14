@@ -32,6 +32,16 @@ export function PlanCard({ onAccomplished }: { onAccomplished?: () => void }) {
   } = useLoad(async (s) => (s.getDailyPlan ? s.getDailyPlan() : null));
   const { data: comeback } = useLoad(async (s) => (s.comebackStatus ? s.comebackStatus() : null));
   const [open, setOpen] = useState<string | null>(null);
+  const todayKey = localDateKey(new Date(), profile?.timeZone ?? null);
+  const { data: todays } = useLoad(async (s) => (s.listWellness ? s.listWellness(todayKey) : []));
+  /** An item whose logging shortcut has already been satisfied by the person's own log today, from any screen. No second completion is written. */
+  const loggedKinds = new Set((todays ?? []).filter((e) => e.day === todayKey).map((e) => e.kind));
+  const ACTION_KIND = {
+    log_water: 'hydration',
+    log_walk: 'walk',
+    log_strength: 'strength',
+    log_hunger: 'hunger',
+  } as const;
   const [err, setErr] = useState<string | null>(null);
   if (!supported) return null;
 
@@ -91,7 +101,8 @@ export function PlanCard({ onAccomplished }: { onAccomplished?: () => void }) {
               }))}
             />
             {plan.items.map((it) => {
-              const done = it.doneAt !== null;
+              const doneByLog = !!it.ref?.action && loggedKinds.has(ACTION_KIND[it.ref.action]);
+              const done = it.doneAt !== null || (doneByLog && it.ref?.action !== 'log_water');
               return (
                 <View key={it.id} style={{ gap: spacing.xs }}>
                   <Pressable
@@ -171,19 +182,35 @@ export function PlanCard({ onAccomplished }: { onAccomplished?: () => void }) {
                         }
                       />
                     ) : null}
-                    {!done && it.ref?.action && store.addWellness ? (
+                    {!done && it.ref?.action === 'log_hunger' ? (
+                      <Button
+                        variant="secondary"
+                        label={t('wl.openHunger')}
+                        onPress={() => router.push('/(tabs)/food')}
+                      />
+                    ) : null}
+                    {!done &&
+                    it.ref?.action &&
+                    it.ref.action !== 'log_hunger' &&
+                    store.addWellness ? (
                       <Button
                         variant="secondary"
                         disabled={logging}
-                        label={it.ref.action === 'log_water' ? t('wl.logGlass') : t('wl.logWalk')}
+                        label={
+                          it.ref.action === 'log_water'
+                            ? t('wl.logGlass')
+                            : it.ref.action === 'log_strength'
+                              ? t('wl.logStrengthQuick')
+                              : t('wl.logWalk')
+                        }
                         onPress={() =>
                           guard(async () => {
                             // One tap records it and ticks the item, so the same action cannot be logged twice from here.
                             setLogging(true);
                             try {
                               await store.addWellness!({
-                                kind: it.ref!.action === 'log_water' ? 'hydration' : 'walk',
-                                day: localDateKey(new Date(), profile?.timeZone ?? null),
+                                kind: ACTION_KIND[it.ref!.action!],
+                                day: todayKey,
                                 amount:
                                   it.ref!.action === 'log_water' ? 250 : (it.ref!.minutes ?? 10),
                                 clientKey: `plan-${it.id}`.slice(0, 64).padEnd(8, '0'),

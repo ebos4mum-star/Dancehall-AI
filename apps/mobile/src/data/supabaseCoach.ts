@@ -175,7 +175,7 @@ export function createCoachAdapter(d: CoachAdapterDeps): Partial<DataStore> {
         base.listWeights(),
         base.latestReadiness(),
         base.getWellnessPrefs?.() ?? parsePrefs(null),
-        base.listWellness?.(addDaysIso(date, -2)) ?? [],
+        base.listWellness?.(addDaysIso(date, -7)) ?? [],
       ]);
     const tz = profile.timeZone;
     const latestW = [...weights].sort((a, b) => b.measuredAt.localeCompare(a.measuredAt))[0];

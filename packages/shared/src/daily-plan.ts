@@ -19,7 +19,7 @@ export interface PlanItemDraft {
     lowImpact?: boolean;
     foodId?: string;
     /** A one-tap logging shortcut the screen may offer for this item. */
-    action?: 'log_water' | 'log_walk';
+    action?: 'log_water' | 'log_walk' | 'log_strength' | 'log_hunger';
   };
   done?: boolean;
 }
@@ -52,6 +52,15 @@ export interface DailyPlanInput {
     walkedToday: boolean;
     /** Sleep logged for last night, if any. */
     sleepHours?: number | null;
+    /** Recorded movement and check-ins. Optional so older callers are unchanged. */
+    walkMinutesToday?: number;
+    strengthToday?: boolean;
+    strengthSessionsWeek?: number;
+    /** Today's recovery check-in, if the person made one. */
+    recovery?: 'fresh' | 'ok' | 'sore' | 'worn' | null;
+    hungerCheckinsToday?: number;
+    /** When true, no food-awareness prompts are offered. */
+    eatingConcern?: boolean;
   };
   seed?: number;
 }
@@ -83,7 +92,8 @@ export function generateDailyPlan(i: DailyPlanInput): {
     (i.recentActiveDays ?? 0) >= 3 &&
     i.doneToday.length === 0 &&
     i.plannedToday.length === 0;
-  const lowOnly = i.lowImpact || i.mode === 'comeback' || i.mode === 'travel' || recovery;
+  const sore = i.wellness?.recovery === 'sore' || i.wellness?.recovery === 'worn';
+  const lowOnly = i.lowImpact || i.mode === 'comeback' || i.mode === 'travel' || recovery || sore;
 
   // Move
   if (i.doneToday.length > 0) {
@@ -215,6 +225,60 @@ export function generateDailyPlan(i: DailyPlanInput): {
             ? 'Short on time: a brisk ten minutes still counts as movement.'
             : 'Walking is an easy way to move on days dance is not the plan.',
         ref: { action: 'log_walk', minutes: 10 },
+      });
+    if (w.walkedToday && (w.walkMinutesToday ?? 0) > 0)
+      items.push({
+        kind: 'workout',
+        title: `You walked today: ${w.walkMinutesToday} min`,
+        detail: 'From your own log.',
+        why: 'Walking you logged counts as movement alongside dance.',
+        done: true,
+      });
+    if (w.strengthToday)
+      items.push({
+        kind: 'workout',
+        title: 'You did strength work today',
+        detail: 'From your own log.',
+        why: 'Strength sessions you logged count as movement.',
+        done: true,
+      });
+    else if (
+      w.activities.includes('strength') &&
+      !sore &&
+      i.mode !== 'travel' &&
+      (w.strengthSessionsWeek ?? 0) < 2 &&
+      i.doneToday.length === 0
+    )
+      items.push({
+        kind: 'workout',
+        title: 'A short strength session, if you like',
+        detail:
+          'Ten easy minutes at your own pace. Guided strength workouts are not available yet, so this is a self-directed log.',
+        why:
+          (w.strengthSessionsWeek ?? 0) === 0
+            ? 'You have not logged strength work this week. Two short sessions a week is a common general guide, not a requirement.'
+            : 'One session logged this week. A second is optional.',
+        ref: { action: 'log_strength', minutes: 10 },
+      });
+    if (sore)
+      items.push({
+        kind: 'habit',
+        title: 'Go easy on your body today',
+        detail: 'Gentle movement, stretching or rest are all good choices.',
+        why: `You said your body feels ${w.recovery === 'worn' ? 'worn out' : 'sore'}. This is general wellness guidance, not advice about an injury or illness.`,
+      });
+    if (
+      !w.eatingConcern &&
+      w.tracking !== 'none' &&
+      (w.hungerCheckinsToday ?? 0) === 0 &&
+      i.mode === 'normal'
+    )
+      items.push({
+        kind: 'meal',
+        title: 'Check in with your hunger before a meal',
+        detail: 'Hungry, comfortable or full. There is no right answer.',
+        why: 'Noticing hunger and fullness can make eating more mindful.',
+        ref: { action: 'log_hunger' },
       });
     if (w.sleepHours != null && w.sleepHours < 6)
       items.push({

@@ -563,6 +563,8 @@ export const en = {
   'wk.shape': 'The shape of this workout',
   'wl.logGlass': 'Log a glass of water',
   'wl.logWalk': 'Log a 10-minute walk',
+  'wl.logStrengthQuick': 'Log 10 minutes of strength',
+  'wl.openHunger': 'Open hunger check-in',
   'wl.focusTitle': 'Your focus',
   'wl.focusIntro':
     'Pick what fits you now. You can change it any time, and weight loss is never required.',

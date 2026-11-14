@@ -469,7 +469,7 @@ export interface DailyPlanItem {
     minutes?: number;
     lowImpact?: boolean;
     foodId?: string;
-    action?: 'log_water' | 'log_walk';
+    action?: 'log_water' | 'log_walk' | 'log_strength' | 'log_hunger';
   };
   doneAt: string | null;
 }
