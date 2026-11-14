@@ -34,11 +34,15 @@ export const sha = (s) => createHash('sha256').update(s).digest('hex');
 const TAG = '$dhmig$';
 const GUARD = '$guard$';
 
-export function build(step) {
+export function build(step, compact = false) {
   const sql = readFileSync(join(root, 'supabase', 'migrations', step.file), 'utf8');
   if (sql.includes(TAG)) throw new Error('migration contains the quoting tag');
   const needs = step.needs.map((n) => `'${n}'`).join(', ');
   const body = sql.trimEnd();
+  // Compact scripts embed the migration once (half the size, for small editors) and record a reference with the checksum instead of a second copy.
+  const historyStatements = compact
+    ? `array['Applied by the owner-operated script from supabase/migrations/${step.file} (sha256 ${sha(sql)}); the exact text is in the repository.']`
+    : `array[${TAG}${body}\n${TAG}]`;
   return `-- OWNER-APPLIED MIGRATION ${step.n} of ${STEPS.length}: ${step.name}
 -- Repository file: supabase/migrations/${step.file}
 -- SHA-256 of that file: ${sha(sql)}
@@ -69,8 +73,7 @@ ${body}
 
 -- History, in the same format the migration tool records: apply-time version, the migration's name, and its text.
 insert into supabase_migrations.schema_migrations (version, name, statements)
-values (to_char(now() at time zone 'utc', 'YYYYMMDDHH24MISS'), '${step.name}', array[${TAG}${body}
-${TAG}]);
+values (to_char(now() at time zone 'utc', 'YYYYMMDDHH24MISS'), '${step.name}', ${historyStatements});
 
 commit;
 `;
@@ -83,12 +86,22 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   for (const s of STEPS) {
     const p = join(out, `${String(s.n).padStart(2, '0')}_${s.name}.sql`);
     const want = build(s);
+    const pc = join(out, 'compact', `${String(s.n).padStart(2, '0')}_${s.name}.sql`);
+    const wantC = build(s, true);
     if (check) {
-      if (!existsSync(p) || readFileSync(p, 'utf8') !== want) {
-        console.error(`out of date: ${p}`);
-        bad++;
-      }
-    } else writeFileSync(p, want);
+      for (const [path, text] of [
+        [p, want],
+        [pc, wantC],
+      ])
+        if (!existsSync(path) || readFileSync(path, 'utf8') !== text) {
+          console.error(`out of date: ${path}`);
+          bad++;
+        }
+    } else {
+      mkdirSync(join(out, 'compact'), { recursive: true });
+      writeFileSync(p, want);
+      writeFileSync(pc, wantC);
+    }
   }
   if (check) process.exit(bad ? 1 : 0);
   console.log(`wrote ${STEPS.length} scripts to supabase/owner-apply`);

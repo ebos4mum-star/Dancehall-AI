@@ -23,6 +23,29 @@ test('the owner scripts are current and contain the exact repository migration t
   }
 });
 
+test('the compact scripts are current, embed the migration once, and keep every guard', () => {
+  for (const s of STEPS) {
+    const file = `${String(s.n).padStart(2, '0')}_${s.name}.sql`;
+    const script = read('supabase', 'owner-apply', 'compact', file);
+    assert.equal(
+      script,
+      build(s, true),
+      `compact/${file} is out of date: run node scripts/make-owner-apply.mjs`,
+    );
+    const mig = read('supabase', 'migrations', s.file).trimEnd();
+    assert.equal(script.split(mig).length - 1, 1);
+    assert.ok(script.includes(sha(read('supabase', 'migrations', s.file))));
+    for (const g of [
+      /Wrong project/,
+      /already recorded as applied/,
+      /Out of order/,
+      /^begin;$/m,
+      /^commit;$/m,
+    ])
+      assert.match(script, g);
+  }
+});
+
 test('the headers and the README carry the migration checksums', () => {
   for (const s of STEPS) {
     const h = sha(read('supabase', 'migrations', s.file));
@@ -63,9 +86,13 @@ test('the guards protect against the wrong project, a re-run and out-of-order ap
 });
 
 test('nothing in the owner pack contains credentials', () => {
-  for (const f of readdirSync(join(root, 'supabase', 'owner-apply')))
-    assert.doesNotMatch(
-      read('supabase', 'owner-apply', f),
-      /sb_secret|service_role_key|password\s*=|eyJ[A-Za-z0-9_-]{20,}/i,
-    );
+  const dirs = [[], ['compact']];
+  for (const d of dirs)
+    for (const f of readdirSync(join(root, 'supabase', 'owner-apply', ...d)).filter(
+      (x) => x.endsWith('.sql') || x.endsWith('.md'),
+    ))
+      assert.doesNotMatch(
+        read('supabase', 'owner-apply', ...d, f),
+        /sb_secret|service_role_key|password\s*=|eyJ[A-Za-z0-9_-]{20,}/i,
+      );
 });
