@@ -312,10 +312,27 @@ async function step(name, fn) {
       await p.waitForTimeout(400);
     },
   );
+  await step(
+    'J: a custom habit can be added, ticked, and removed, with no streak language',
+    async () => {
+      await tab('Today');
+      await p.getByLabel('New habit').last().fill('Stretch two minutes');
+      await btn('Add habit').click();
+      await seen('0 of 7 days this week');
+      await p
+        .getByRole('checkbox', { name: /Stretch two minutes: not done today/ })
+        .last()
+        .click();
+      await seen('1 of 7 days this week');
+      assert.equal(await p.getByText('streak', { exact: false }).count(), 0);
+      await btn('Add habit').isDisabled();
+    },
+  );
   await step('Privacy: data survives a reload (device storage), no page errors', async () => {
     await p.goto(base);
     await p.waitForTimeout(2500);
     await seen('Hello, Sam K');
+    await seen('1 of 7 days this week');
     assert.deepEqual(errors, []);
   });
 

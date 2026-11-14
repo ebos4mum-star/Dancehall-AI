@@ -58,6 +58,8 @@ import {
   type WorkoutSession,
   type ChallengeStatus,
   type FitChallenge,
+  type Habit,
+  type HabitCheckin,
   type NewFitChallenge,
   type PhotoAnalysisRecord,
   type PhotoAnalysisResult,
@@ -77,6 +79,7 @@ import {
   type WeeklyReviewRecord,
 } from './types';
 import { isValidChallenge } from '../challenges/logic';
+import { MAX_HABITS, cleanHabitName } from '../habits/logic';
 
 export interface KeyValue {
   get(key: string): Promise<string | null>;
@@ -100,6 +103,8 @@ interface State {
   aiBudget: BudgetState;
   sessions: WorkoutSession[];
   challenges: FitChallenge[];
+  habits: Array<Habit & { archivedAt: string | null }>;
+  habitCheckins: HabitCheckin[];
   conversations: Conversation[];
   dailyPlans: DailyPlan[];
   weeklyReviews: WeeklyReviewRecord[];
@@ -132,6 +137,8 @@ const emptyState = (): State => ({
   aiBudget: newBudget(),
   sessions: [],
   challenges: [],
+  habits: [],
+  habitCheckins: [],
   conversations: [],
   dailyPlans: [],
   weeklyReviews: [],
@@ -752,6 +759,54 @@ export class MockStore implements DataStore {
         throw new StoreError('active_challenge_exists');
     }
     rec.status = status;
+    await this.commit();
+  }
+
+  // ---------- Habits (personal, gentle: counts only) ----------
+  async listHabits(): Promise<Habit[]> {
+    const s = await this.authed();
+    return (s.habits ?? [])
+      .filter((h) => h.archivedAt === null)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      .map((h) => ({ id: h.id, name: h.name, createdAt: h.createdAt }));
+  }
+  async addHabit(name: string): Promise<Habit> {
+    const s = await this.authed();
+    this.requireConsent(s);
+    const clean = cleanHabitName(name);
+    if (!clean) throw new StoreError('invalid_input', 'habit name');
+    s.habits ??= [];
+    if (s.habits.filter((h) => h.archivedAt === null).length >= MAX_HABITS)
+      throw new StoreError('habit_limit_reached');
+    const rec = { id: newId(), name: clean, createdAt: this.now().toISOString(), archivedAt: null };
+    s.habits.push(rec);
+    await this.commit();
+    return { id: rec.id, name: rec.name, createdAt: rec.createdAt };
+  }
+  async archiveHabit(id: string): Promise<void> {
+    const s = await this.authed();
+    const h = (s.habits ?? []).find((x) => x.id === id);
+    if (!h) throw new StoreError('not_found');
+    h.archivedAt = this.now().toISOString();
+    await this.commit();
+  }
+  async listHabitCheckins(sinceDay: string): Promise<HabitCheckin[]> {
+    const s = await this.authed();
+    return (s.habitCheckins ?? []).filter((c) => c.day >= sinceDay).map((c) => ({ ...c }));
+  }
+  async setHabitDone(habitId: string, day: string, done: boolean): Promise<void> {
+    const s = await this.authed();
+    s.habitCheckins ??= [];
+    const has = s.habitCheckins.some((c) => c.habitId === habitId && c.day === day);
+    if (done && !has) {
+      this.requireConsent(s);
+      const h = (s.habits ?? []).find((x) => x.id === habitId && x.archivedAt === null);
+      if (!h) throw new StoreError('not_found');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new StoreError('invalid_input', 'day');
+      s.habitCheckins.push({ habitId, day });
+    } else if (!done && has) {
+      s.habitCheckins = s.habitCheckins.filter((c) => !(c.habitId === habitId && c.day === day));
+    } else return;
     await this.commit();
   }
 

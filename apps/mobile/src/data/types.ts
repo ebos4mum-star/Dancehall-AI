@@ -82,6 +82,7 @@ export type StoreErrorCode =
   | 'invalid_input'
   | 'not_found'
   | 'active_challenge_exists'
+  | 'habit_limit_reached'
   | 'unknown'
   | 'ai_consent_required'
   | 'quota_exceeded'
@@ -171,6 +172,13 @@ export interface DataStore {
   listChallenges(): Promise<FitChallenge[]>;
   startChallenge(input: NewFitChallenge): Promise<FitChallenge>;
   setChallengeStatus(id: string, status: ChallengeStatus): Promise<void>;
+
+  /** Active habits only (archived ones are kept in history but not listed). */
+  listHabits(): Promise<Habit[]>;
+  addHabit(name: string): Promise<Habit>;
+  archiveHabit(id: string): Promise<void>;
+  listHabitCheckins(sinceDay: string): Promise<HabitCheckin[]>;
+  setHabitDone(habitId: string, day: string, done: boolean): Promise<void>;
 
   // Fit Concierge. Optional: only the development mock implements these today (no coach service exists yet).
   listConversations?(): Promise<Conversation[]>;
@@ -291,6 +299,15 @@ export interface NewMealPlan {
 // ---------- Dance sessions ----------
 export type SessionStatus = 'planned' | 'completed' | 'skipped';
 export type SessionSource = 'manual' | 'quick_fit' | 'program' | 'plan';
+export interface Habit {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+export interface HabitCheckin {
+  habitId: string;
+  day: string; // YYYY-MM-DD in the person's time zone
+}
 export type ChallengeStatus = 'active' | 'completed' | 'abandoned';
 /** A free, personal Fit Challenge. Solo only; there is no stake of any kind. */
 export interface FitChallenge {

@@ -132,7 +132,7 @@ let exists = false;
 const USER = { id: 'u-contract-1', email: 'c@example.test' };
 function builder(c: Call) {
   const b: Record<string, unknown> = {};
-  for (const m of ['select', 'order', 'limit', 'gte', 'lt', 'eq']) b[m] = () => b;
+  for (const m of ['select', 'order', 'limit', 'gte', 'lt', 'eq', 'is']) b[m] = () => b;
   for (const m of ['insert', 'update', 'delete', 'upsert'])
     b[m] = (payload?: unknown) => {
       c.op = m;
@@ -272,6 +272,9 @@ describe('grant contract: every column the adapter writes is granted to authenti
     await s.startChallenge({ lengthDays: 7, targetDays: 3, startDate: '2026-06-01' });
     await s.setChallengeStatus('c', 'completed');
     await s.saveReadiness({} as never);
+    await s.addHabit('Stretch');
+    await s.archiveHabit('h');
+    await s.setHabitDone('h', '2026-06-01', true);
   }
 
   it('covers inserts and updates for onboarding, goals, weight, food, workouts and challenges', async () => {
@@ -306,6 +309,8 @@ describe('grant contract: every column the adapter writes is granted to authenti
       'workout_sessions',
       'fit_challenges',
       'readiness_screenings',
+      'habits',
+      'habit_checkins',
     ])
       expect(tables.has(t), `${t} was exercised`).toBe(true);
   });

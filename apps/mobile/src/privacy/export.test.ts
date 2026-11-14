@@ -18,6 +18,8 @@ async function seeded() {
   await s.addWeight({ weightKg: 70 });
   await s.createSession({ title: 'Synthetic', minutes: 10, status: 'completed' });
   await s.startChallenge({ lengthDays: 7, targetDays: 3, startDate: '2026-06-15' });
+  const h = await s.addHabit('Walk');
+  await s.setHabitDone(h.id, '2026-06-15', true);
   return s;
 }
 
@@ -29,6 +31,8 @@ describe('buildDataExport', () => {
     expect(d.weights).toHaveLength(1);
     expect(d.workoutSessions).toHaveLength(1);
     expect(d.challenges).toHaveLength(1);
+    expect(d.habits).toHaveLength(1);
+    expect(d.habitCheckins).toHaveLength(1);
     expect(d.consents).toMatchObject({ health_data_processing: true });
   });
   it('produces valid JSON that round-trips', async () => {
