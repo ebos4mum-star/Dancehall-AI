@@ -10,16 +10,20 @@ import { AppText } from '@/ui/AppText';
 import { DepthCard } from '@/ui/Depth';
 import { Notice } from '@/ui/Banner';
 import { Screen } from '@/ui/Screen';
+import { SkeletonList } from '@/ui/Skeleton';
 
 export default function History() {
-  const { sessions, summary, error } = useDanceData();
+  const { sessions, summary, error, loading } = useDanceData();
   const done = sessions
     .filter((s) => s.status === 'completed')
     .sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''));
   return (
     <Screen top={false}>
       {error ? <Notice tone="warning">{error}</Notice> : null}
-      {done.length === 0 ? <Notice>{t('hst.empty')}</Notice> : null}
+      {loading && sessions.length === 0 ? (
+        <SkeletonList label={t('common.loading')} cards={2} />
+      ) : null}
+      {!loading && done.length === 0 ? <Notice>{t('hst.empty')}</Notice> : null}
       <DepthCard>
         <AppText variant="heading" accessibilityRole="header">
           {t('hst.thisWeek')}

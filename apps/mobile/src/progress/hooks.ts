@@ -46,7 +46,7 @@ export function useProgressInsights(seenStore: SeenStore = deviceSeenStore): Pro
       if (add.length > 0) {
         add.forEach((id) => celebrated.current.add(id));
         setFresh(add);
-        haptics.success();
+        haptics.celebrate();
       }
       await writeSeen(seenStore, userId, ids);
     })();

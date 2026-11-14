@@ -22,6 +22,7 @@ import { Notice } from '@/ui/Banner';
 import { FadeIn } from '@/ui/FadeIn';
 import { ProgressBar } from '@/ui/ProgressBar';
 import { Screen } from '@/ui/Screen';
+import { SkeletonList } from '@/ui/Skeleton';
 import { TextField } from '@/ui/TextField';
 
 export default function Today() {
@@ -79,7 +80,7 @@ export default function Today() {
         <AppText muted>{t('today.subtitle')}</AppText>
       </View>
       {error ? <Notice tone="warning">{error}</Notice> : null}
-      {loading && !data ? <AppText muted>{t('common.loading')}</AppText> : null}
+      {loading && !data ? <SkeletonList label={t('common.loading')} /> : null}
 
       {data?.readiness?.outcome === 'low_impact_and_check_with_professional' ? (
         <FadeIn>

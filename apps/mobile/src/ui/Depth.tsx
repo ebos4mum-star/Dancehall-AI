@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Image, View, type ImageSourcePropType, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { radius, spacing } from '@/theme/tokens';
+import { brand, radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 import { Floating } from './motion';
 
@@ -18,7 +18,7 @@ export function DepthCard({ children, style }: { children: ReactNode; style?: Vi
           borderColor: colors.border,
           padding: spacing.lg,
           gap: spacing.sm,
-          shadowColor: '#1F1633',
+          shadowColor: brand.plum,
           shadowOpacity: 0.1,
           shadowRadius: 18,
           shadowOffset: { width: 0, height: 8 },
@@ -91,19 +91,19 @@ export function CharacterStage({
                 width: size,
                 height: size,
                 borderRadius: size / 2,
-                backgroundColor: colors.accent,
-                opacity: 0.25,
+                backgroundColor: brand.violet,
+                opacity: 0.3,
               }}
             />
             <LinearGradient
-              colors={['#FFD166', '#FF7AA8', colors.heroFrom]}
+              colors={[brand.lime, brand.violet, colors.heroTo]}
               start={{ x: 0.2, y: 0 }}
               end={{ x: 0.9, y: 1 }}
               style={{
                 width: size * 0.74,
                 height: size * 0.74,
                 borderRadius: size,
-                shadowColor: colors.heroFrom,
+                shadowColor: brand.violet,
                 shadowOpacity: 0.5,
                 shadowRadius: 16,
                 shadowOffset: { width: 0, height: 10 },
@@ -117,7 +117,7 @@ export function CharacterStage({
                 width: size * 0.3,
                 height: size * 0.16,
                 borderRadius: size,
-                backgroundColor: '#FFFFFF',
+                backgroundColor: brand.ivory,
                 opacity: 0.45,
                 transform: [{ rotate: '-25deg' }],
               }}

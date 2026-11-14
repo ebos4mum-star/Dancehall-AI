@@ -10,9 +10,10 @@ import { AppText } from '@/ui/AppText';
 import { DepthCard } from '@/ui/Depth';
 import { Notice } from '@/ui/Banner';
 import { Screen } from '@/ui/Screen';
+import { SkeletonList } from '@/ui/Skeleton';
 
 export default function History() {
-  const { logs, timeZone, error } = useFoodData();
+  const { logs, timeZone, error, loading } = useFoodData();
   const { spacing } = useTheme();
   const days = new Map<string, typeof logs>();
   for (const l of logs) {
@@ -23,7 +24,8 @@ export default function History() {
   return (
     <Screen top={false}>
       {error ? <Notice tone="warning">{error}</Notice> : null}
-      {keys.length === 0 ? <Notice>{t('hist.empty')}</Notice> : null}
+      {loading && logs.length === 0 ? <SkeletonList label={t('common.loading')} /> : null}
+      {!loading && keys.length === 0 ? <Notice>{t('hist.empty')}</Notice> : null}
       {keys.map((k) => {
         const ls = days.get(k)!;
         const sum = totals(ls.flatMap((l) => l.items));

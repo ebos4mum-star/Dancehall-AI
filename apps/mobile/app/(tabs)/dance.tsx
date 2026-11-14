@@ -18,7 +18,7 @@ import {
 import { useDanceData } from '@/dance/hooks';
 import { StyleCarousel, WorkoutCard } from '@/dance/ui';
 import { t, type StringKey } from '@/i18n';
-import { radius, spacing } from '@/theme/tokens';
+import { brand, radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
@@ -51,16 +51,16 @@ function QuickPill({ minutes, onPress }: { minutes: QuickFitMinutes; onPress: ()
           {
             minHeight: 64,
             borderRadius: radius.lg,
-            backgroundColor: '#FFFFFF',
+            backgroundColor: brand.lime,
             alignItems: 'center',
             justifyContent: 'center',
           },
         ]}
       >
-        <AppText variant="title" style={{ color: '#B3124F', fontSize: 26, lineHeight: 30 }}>
+        <AppText variant="title" style={{ color: brand.plum, fontSize: 26, lineHeight: 30 }}>
           {minutes}
         </AppText>
-        <AppText variant="caption" style={{ color: '#1F1633' }}>
+        <AppText variant="caption" style={{ color: brand.plum }}>
           min
         </AppText>
       </Animated.View>

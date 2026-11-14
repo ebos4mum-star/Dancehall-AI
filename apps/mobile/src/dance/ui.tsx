@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { ActivitySummary, DanceStyle, Intensity, Level, WorkoutDef } from '@dancehall/shared';
 import { t, type StringKey } from '@/i18n';
 import { formatDate } from '@/lib/format';
-import { radius, spacing } from '@/theme/tokens';
+import { brand, radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
 import { haptics } from '@/ui/haptics';
@@ -17,7 +17,7 @@ export function Chip({ label, strong = false }: { label: string; strong?: boolea
   return (
     <View
       style={{
-        backgroundColor: strong ? '#FFFFFF' : 'rgba(0,0,0,0.28)',
+        backgroundColor: strong ? brand.ivory : 'rgba(0,0,0,0.28)',
         borderRadius: radius.pill,
         paddingHorizontal: spacing.sm,
         paddingVertical: 3,
@@ -25,7 +25,7 @@ export function Chip({ label, strong = false }: { label: string; strong?: boolea
     >
       <AppText
         variant="caption"
-        style={{ color: strong ? '#1F1633' : '#FFFFFF', fontWeight: '600' }}
+        style={{ color: strong ? brand.plum : '#FFFFFF', fontWeight: '600' }}
       >
         {label}
       </AppText>

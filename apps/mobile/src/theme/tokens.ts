@@ -1,7 +1,7 @@
 /**
  * Design tokens. Pure data (no React Native imports) so they can be unit-tested, including contrast.
  * Pairs below are verified to meet WCAG AA (4.5:1 for text) by tokens.test.ts.
- * The final visual identity requires owner approval; these are a foundation, not the brand.
+ * Palette: Midnight Plum, Electric Lime, Warm Coral, Warm Ivory, Soft Violet (owner-specified; final values remain subject to owner approval).
  */
 export interface ColorTokens {
   background: string;
@@ -23,42 +23,53 @@ export interface ColorTokens {
   successBg: string;
 }
 
+/** Approved brand palette (docs/UI_UX_DESIGN_DIRECTION.md section 2). Lime, Coral and Violet are never text on a light surface. */
+export const brand = {
+  plum: '#24143D',
+  lime: '#B8F244',
+  coral: '#FF785E',
+  ivory: '#F7F4EE',
+  violet: '#9D80EB',
+} as const;
+
+/** Light: plum actions with lime labels on ivory. `primary` is also the text-safe accent, so it is plum here. */
 export const lightColors: ColorTokens = {
-  background: '#FFF9F4',
+  background: brand.ivory,
   surface: '#FFFFFF',
-  text: '#1F1633',
-  textMuted: '#5B5170',
-  primary: '#B3124F',
-  onPrimary: '#FFFFFF',
-  accent: '#FFD166',
-  onAccent: '#1F1633',
+  text: brand.plum,
+  textMuted: '#5A4B73',
+  primary: brand.plum,
+  onPrimary: brand.lime,
+  accent: brand.coral,
+  onAccent: brand.plum,
   success: '#0B6B4F',
   warningBg: '#FFF1D6',
   warningText: '#8A4B00',
-  border: '#E6DCEB',
-  heroFrom: '#B3124F',
-  heroTo: '#4B1D9E',
-  onHero: '#FFFFFF',
+  border: '#DDD3EA',
+  heroFrom: brand.plum,
+  heroTo: '#4A2B8C',
+  onHero: brand.ivory,
   successBg: '#E3F5EE',
 };
 
+/** Dark: midnight plum surfaces, ivory text, lime actions. */
 export const darkColors: ColorTokens = {
-  background: '#150E26',
-  surface: '#241A3D',
-  text: '#F6F0FF',
-  textMuted: '#B9AED0',
-  primary: '#FF7AA8',
-  onPrimary: '#150E26',
-  accent: '#FFD166',
-  onAccent: '#150E26',
-  success: '#6EE7B7',
+  background: '#1A0E2E',
+  surface: brand.plum,
+  text: brand.ivory,
+  textMuted: '#C5B8DD',
+  primary: brand.lime,
+  onPrimary: brand.plum,
+  accent: brand.coral,
+  onAccent: brand.plum,
+  success: brand.lime,
   warningBg: '#3A2A12',
   warningText: '#FFD166',
-  border: '#3A2D5C',
-  heroFrom: '#9C1A55',
-  heroTo: '#36207F',
-  onHero: '#FFFFFF',
-  successBg: '#12382E',
+  border: '#3D2C63',
+  heroFrom: brand.plum,
+  heroTo: '#4A2B8C',
+  onHero: brand.ivory,
+  successBg: '#26401A',
 };
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 } as const;
