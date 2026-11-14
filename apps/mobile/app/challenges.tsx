@@ -31,6 +31,7 @@ export default function Challenges() {
   const { data, error, loading } = useLoad(async (s) => ({
     challenges: await s.listChallenges(),
     sessions: await s.listSessions(),
+    wellness: (await s.listWellness?.('0000-01-01')) ?? [],
   }));
   const [length, setLength] = useState<'7' | '14' | '30'>('7');
   const [target, setTarget] = useState<string | null>(null);
@@ -40,7 +41,10 @@ export default function Challenges() {
   const active = data?.challenges.find((c) => c.status === 'active') ?? null;
   const past = (data?.challenges ?? []).filter((c) => c.status !== 'active');
   const progress = useMemo(
-    () => (active ? challengeProgress(active, data?.sessions ?? [], tz, new Date()) : null),
+    () =>
+      active
+        ? challengeProgress(active, data?.sessions ?? [], tz, new Date(), data?.wellness ?? [])
+        : null,
     [active, data, tz],
   );
 
@@ -143,6 +147,16 @@ export default function Challenges() {
               {t('chal.daysLeft', { n: progress.daysLeft })} {t('chal.rest')}
             </AppText>
           )}
+          <AppText variant="caption" muted>
+            {t('chal.breakdown', {
+              dance: progress.byKind.dance,
+              walking: progress.byKind.walking,
+              strength: progress.byKind.strength,
+            })}
+          </AppText>
+          <AppText variant="caption" muted>
+            {t('chal.counts')}
+          </AppText>
           {!progress.met ? (
             <Button
               variant="secondary"

@@ -53,13 +53,20 @@ export default function Today() {
     goals: await s.listGoals(),
     readiness: await s.latestReadiness(),
     challenges: await s.listChallenges(),
+    wellness: (await s.listWellness?.('0000-01-01')) ?? [],
   }));
   const food = useFoodData();
   const dance = useDanceData();
   const insights = useProgressInsights();
   const activeChallenge = (data?.challenges ?? []).find((c) => c.status === 'active') ?? null;
   const challengeNow = activeChallenge
-    ? challengeProgress(activeChallenge, dance.sessions, profile?.timeZone ?? null, new Date())
+    ? challengeProgress(
+        activeChallenge,
+        dance.sessions,
+        profile?.timeZone ?? null,
+        new Date(),
+        data?.wellness ?? [],
+      )
     : null;
   const summary2 = useTodaySummary();
   const pulse = usePulse();

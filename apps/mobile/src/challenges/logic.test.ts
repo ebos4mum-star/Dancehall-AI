@@ -76,3 +76,24 @@ describe('challengeProgress', () => {
     expect(p.activeDays).toBe(1);
   });
 });
+
+describe('challengeProgress with walking and strength', () => {
+  it('counts walks and strength as active days, once per day, inside the window only', () => {
+    const p = challengeProgress(c, [done('2026-06-01')], 'UTC', at('2026-06-05'), [
+      { kind: 'walk', day: '2026-06-01' },
+      { kind: 'walk', day: '2026-06-02' },
+      { kind: 'strength', day: '2026-06-03' },
+      { kind: 'strength', day: '2026-05-31' },
+      { kind: 'hydration', day: '2026-06-04' },
+      { kind: 'sleep', day: '2026-06-04' },
+    ]);
+    expect(p.activeDays).toBe(3);
+    expect(p.byKind).toEqual({ dance: 1, walking: 2, strength: 1 });
+    expect(p.met).toBe(true);
+  });
+  it('is unchanged when no wellness entries are given', () => {
+    const p = challengeProgress(c, [done('2026-06-02')], 'UTC', at('2026-06-05'));
+    expect(p.activeDays).toBe(1);
+    expect(p.byKind).toEqual({ dance: 1, walking: 0, strength: 0 });
+  });
+});
