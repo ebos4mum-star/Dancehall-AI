@@ -81,3 +81,11 @@ Pure logic is tested with unit tests (Vitest). Database policy tests will run on
 - **Tables:** `staff_roles` (+ `app.has_permission`, MFA required), tamper-evident `audit_log`, `licences`, `instructors`, `workouts`, `media_assets`, `content_reviews`, `programs`/`program_workouts`, and the private `workout_sessions`. The sample catalog is seeded from `workout-data.json`.
 - **App:** the catalog comes from the shared package (as with foods); sessions go through the `DataStore`. A pure session engine (`session-engine.ts`) drives the guided timer; `playbackFor` decides between licensed media and the text session.
 - **Dance UI:** gradient workout cards, a style carousel, filters (style, level, intensity, duration, low impact), Quick Fit pills, workout detail with safety information, a guided session screen, schedule, activity history, a sample program, and Today and Progress integration.
+
+## Batch D additions (Fit Concierge, local)
+
+- **One coach.** A single conversational Concierge, built from shared pieces: intent detection, a privacy-minimizing context builder (`CoachContext`: no name, birth date or exact weight; only with the separate personalization consent), a system prompt, strict zod output schemas, input screening and output validation, all behind the one gateway that also serves food photos and weekly reviews. There are no per-feature assistants.
+- **Rule-based where possible.** The Daily Fit Plan, comeback detection and week facts are pure, on-device code (no AI cost). The coach explains and adjusts them; changes arrive as typed proposals that the person confirms.
+- **Mock vs real.** `composeCoachReply` / `composeWeeklyReview` are deterministic simulations behind the same provider interface a real model will use; the UI labels every reply as simulated.
+- **Tables:** `ai_conversations`, `ai_messages` (people write only their own user messages), `coach_actions` (server-created, person-decided, immutable otherwise), `daily_plans`/`daily_plan_items`, `weekly_reviews`, `ai_usage_events`, `ai_user_usage`, `ai_budget`, `feature_flags`.
+- **Not connected to a server yet:** coach, plans and reviews are implemented in the development mock store only; see LIVE_INTEGRATION.md for the path to a real gateway.

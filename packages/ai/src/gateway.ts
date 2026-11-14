@@ -1,7 +1,9 @@
 import {
   AppError,
   checkAiAccess,
-  screenMessageForRiskSignals,
+  SAFE_REDIRECT_MESSAGES,
+  screenCoachInput,
+  unsafeOutputProblems,
   type AiFeature,
   type Entitlement,
   type FeatureFlag,
@@ -18,7 +20,13 @@ export interface UsageEvent {
   inputTokens: number;
   outputTokens: number;
   costUsd: number;
-  outcome: 'ok' | 'schema_rejected' | 'provider_error' | 'risk_referral';
+  outcome:
+    | 'ok'
+    | 'schema_rejected'
+    | 'output_rejected'
+    | 'provider_error'
+    | 'risk_referral'
+    | 'safety_redirect';
   at: string;
 }
 
@@ -36,7 +44,8 @@ export class InMemoryUsageStore implements UsageStore {
         e.userId === userId &&
         e.feature === feature &&
         e.at.startsWith(month) &&
-        e.outcome !== 'risk_referral',
+        e.outcome !== 'risk_referral' &&
+        e.outcome !== 'safety_redirect',
     ).length;
   }
   async record(e: UsageEvent) {
@@ -61,6 +70,8 @@ export interface GatewayRequest {
   entitlement: Entitlement;
   feature: SchemaFeature & AiFeature;
   prompt: string;
+  /** What the person typed, for safety screening (the prompt also carries context and instructions). Defaults to the prompt. */
+  userText?: string;
   hasImage?: boolean;
 }
 
@@ -82,25 +93,28 @@ export class AiGateway {
     if (this.cfg.killAll || this.cfg.killFeatures[req.feature]) {
       throw new AppError('feature_disabled', 'This feature is temporarily unavailable.');
     }
-    // 2. Safety screen BEFORE any billable call: crisis / disordered-eating signals get support resources, not coaching.
-    if (req.feature === 'concierge_chat' && screenMessageForRiskSignals(req.prompt)) {
-      await this.usage.record({
-        userId: req.userId,
-        feature: req.feature,
-        model: 'none',
-        inputTokens: 0,
-        outputTokens: 0,
-        costUsd: 0,
-        outcome: 'risk_referral',
-        at: at.toISOString(),
-      });
-      return {
-        message:
-          'It sounds like things may be hard right now. You deserve support from a person; please reach out to a local support line or a health professional.',
-        because: [],
-        proposedChanges: [],
-        supportReferral: true,
-      };
+    // 2. Safety screen BEFORE any billable call: crisis, extreme-restriction, symptom and under-18 messages get a fixed, safe response and cost nothing.
+    if (req.feature === 'concierge_chat') {
+      const screen = screenCoachInput(req.userText ?? req.prompt);
+      if (screen.kind !== 'ok') {
+        await this.usage.record({
+          userId: req.userId,
+          feature: req.feature,
+          model: 'none',
+          inputTokens: 0,
+          outputTokens: 0,
+          costUsd: 0,
+          outcome: screen.kind === 'risk' ? 'risk_referral' : 'safety_redirect',
+          at: at.toISOString(),
+        });
+        const r = SAFE_REDIRECT_MESSAGES[screen.kind];
+        return {
+          message: r.message,
+          because: r.because,
+          proposedChanges: [],
+          supportReferral: r.supportReferral,
+        };
+      }
     }
     // 3. Entitlement and per-user quota.
     const used = await this.usage.monthlyCount(req.userId, req.feature, month);
@@ -153,8 +167,17 @@ export class AiGateway {
         costUsd: actual,
         at: at.toISOString(),
       };
-      if (!parsed.success || containsGuiltLanguage(JSON.stringify(raw.json))) {
+      if (!parsed.success) {
         await this.usage.record({ ...base, outcome: 'schema_rejected' });
+        throw new AppError(
+          'upstream_failure',
+          'We could not prepare that safely. Please try again.',
+        );
+      }
+      // Unsafe or pressuring text never reaches the person, whatever the provider produced. The call's cost is still recorded.
+      const shown = JSON.stringify(parsed.data);
+      if (containsGuiltLanguage(shown) || unsafeOutputProblems(shown).length > 0) {
+        await this.usage.record({ ...base, outcome: 'output_rejected' });
         throw new AppError(
           'upstream_failure',
           'We could not prepare that safely. Please try again.',

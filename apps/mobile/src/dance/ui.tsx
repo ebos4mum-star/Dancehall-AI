@@ -131,6 +131,7 @@ export function StyleTile({
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
+      aria-selected={selected}
       accessibilityLabel={label}
       onPressIn={press.onPressIn}
       onPressOut={press.onPressOut}

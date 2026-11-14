@@ -28,13 +28,13 @@ Pro test price USD $9.99/month, Household Pro planned (price undecided).
 | --- | ----------------------------------------------------------------------------------------- | --------------------- | ----------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------- |
 | A1  | Global dance workout library (Afrobeats, Amapiano, hip-hop, Latin, Bollywood, low-impact) | V1 (small launch set) | 3                             | L1, L2, F1        | Foundation (catalog, filters and 14 sample text outlines, Batch C; no licensed content yet)                         |
 | A2  | Quick Fit workouts of 5, 10 or 15 minutes                                                 | V1                    | 3                             | F1                | Implemented locally (Batch C; sample text outlines only)                                                            |
-| A3  | Personalized dance fitness plans                                                          | V1                    | 3 (rules), 5 (AI adjustments) | F1, S1            | Foundation (readiness-aware Quick Fit suggestions, Batch C)                                                         |
+| A3  | Personalized dance fitness plans                                                          | V1                    | 3 (rules), 5 (AI adjustments) | F1, S1            | Foundation (readiness-aware Quick Fit and a rule-based Daily Fit Plan, Batches C and D)                             |
 | A4  | Beginner, intermediate and advanced levels                                                | V1                    | 3                             | F1                | Implemented locally (Batch C; sample text outlines only)                                                            |
 | A5  | Workout scheduling and history                                                            | V1                    | 3                             | none              | Implemented locally (Batch C; sample text outlines only)                                                            |
 | A6  | Activity and workout completion tracking                                                  | V1                    | 3                             | P1                | Implemented locally (Batch C; sample text outlines only)                                                            |
 | A7  | Instructor-led 4-, 6- and 8-week programs                                                 | Later                 | 11                            | L1, L3, F1, C1    | Foundation (program structure and a sample 4-week outline, Batch C; instructor-led programs need signed agreements) |
 | A8  | Dance Party Mode with workout playlists                                                   | Later                 | 11                            | L2 (music rights) | Not started                                                                                                         |
-| A9  | Travel and Busy-Day workout adaptations                                                   | V1                    | 5                             | F1                | Not started                                                                                                         |
+| A9  | Travel and Busy-Day workout adaptations                                                   | V1                    | 5                             | F1                | Implemented locally (Busy-Day and Travel plan modes, Batch D)                                                       |
 | A10 | Accessible, low-impact alternatives                                                       | V1                    | 3                             | F1                | Implemented locally (a low-impact version of every block, Batch C)                                                  |
 | A11 | Licensed music and video content                                                          | V1                    | 3                             | L1, L2            | Foundation (licence register, territorial clearance and publish gates, Batch C; nothing is licensed)                |
 | A12 | Warm-ups, recovery guidance, exercise-safety screening                                    | V1                    | 2-3                           | F1                | Implemented locally (warm-up, cool-down and safety notes required; readiness screening, Batches A and C)            |
@@ -67,38 +67,38 @@ labeled "Estimate", editable, and grounded in nutrition reference data. See [NUT
 
 One unified assistant over the person's approved fitness, nutrition, goals and lifestyle data. No disconnected per-feature assistants.
 
-| ID  | Feature                                           | Ver.  | Phase | Gates       | Status                                                         |
-| --- | ------------------------------------------------- | ----- | ----- | ----------- | -------------------------------------------------------------- |
-| C1  | Personalized conversational coaching              | V1    | 5     | S1, P2, A1g | Foundation (response schema, risk screen, gateway with mock)   |
-| C2  | Daily Fit Plan adjustments                        | V1    | 5     | S1          | Not started                                                    |
-| C3  | Workout recommendations                           | V1    | 5     | F1          | Not started                                                    |
-| C4  | Meal planning and substitutions                   | V1    | 5     | N3          | Not started                                                    |
-| C5  | Lifestyle and habit guidance                      | V1    | 5     | S1          | Not started                                                    |
-| C6  | Weekly progress reviews                           | V1    | 5     | S1          | Foundation (response schema, tone guard)                       |
-| C7  | Comeback Plan after missed activity               | V1    | 5     | S1          | Not started                                                    |
-| C8  | Travel and Busy-Day Mode                          | V1.5  | 5     | F1          | Not started                                                    |
-| C9  | Voice coaching                                    | Later | 12    | P2, A1g     | Not started                                                    |
-| C10 | Context-aware suggestions                         | V1    | 5     | P2          | Not started                                                    |
-| C11 | User-confirmed changes to saved plans and records | V1    | 5     | none        | Foundation (`proposedChanges` are never applied automatically) |
-| C12 | Transparent recommendations ("because...")        | V1    | 5     | none        | Foundation (`because` field in the response schema)            |
-| C13 | Safe, non-judgmental communication                | V1    | 5     | S1          | Foundation (guilt-language rejection, risk routing)            |
+| ID  | Feature                                           | Ver.  | Phase | Gates       | Status                                                                                |
+| --- | ------------------------------------------------- | ----- | ----- | ----------- | ------------------------------------------------------------------------------------- |
+| C1  | Personalized conversational coaching              | V1    | 5     | S1, P2, A1g | Implemented locally (Batch D; simulated coach, not live AI)                           |
+| C2  | Daily Fit Plan adjustments                        | V1    | 5     | S1          | Implemented locally (rule-based Daily Fit Plan plus confirmed coach changes, Batch D) |
+| C3  | Workout recommendations                           | V1    | 5     | F1          | Implemented locally (Batch D; simulated coach, not live AI)                           |
+| C4  | Meal planning and substitutions                   | V1    | 5     | N3          | Foundation (coach-proposed food swaps added to the plan after confirmation, Batch D)  |
+| C5  | Lifestyle and habit guidance                      | V1    | 5     | S1          | Implemented locally (habit ideas in the plan, Batch D)                                |
+| C6  | Weekly progress reviews                           | V1    | 5     | S1          | Implemented locally (Batch D; simulated coach, not live AI)                           |
+| C7  | Comeback Plan after missed activity               | V1    | 5     | S1          | Implemented locally (detection, gentle 3-session return, Batch D)                     |
+| C8  | Travel and Busy-Day Mode                          | V1.5  | 5     | F1          | Implemented locally (Busy-Day and Travel plan modes, Batch D)                         |
+| C9  | Voice coaching                                    | Later | 12    | P2, A1g     | Not started                                                                           |
+| C10 | Context-aware suggestions                         | V1    | 5     | P2          | Implemented locally (consent-gated, minimal context, Batch D)                         |
+| C11 | User-confirmed changes to saved plans and records | V1    | 5     | none        | Implemented locally (nothing changes until confirmed, Batch D)                        |
+| C12 | Transparent recommendations ("because...")        | V1    | 5     | none        | Implemented locally ("Why this?" and "What I used", Batch D)                          |
+| C13 | Safe, non-judgmental communication                | V1    | 5     | S1          | Implemented locally (provisional safeguards, unreviewed, Batch D)                     |
 
 ### D. Weight Management and Progress
 
-| ID  | Feature                                            | Ver.  | Phase | Gates            | Status                                                |
-| --- | -------------------------------------------------- | ----- | ----- | ---------------- | ----------------------------------------------------- |
-| D1  | Optional weight-loss and weight-maintenance goals  | V1    | 2     | N3, S1           | Implemented locally (Batch A; mock data, not live)    |
-| D2  | Weekly, monthly and yearly weight goals            | V1    | 2     | N3, S1           | Implemented locally (Batch A; mock data, not live)    |
-| D3  | Imperial or metric measurements chosen by the user | V1    | 2     | none             | Implemented locally (Batch A; mock data, not live)    |
-| D4  | Weight history and trends                          | V1    | 2     | P1               | Implemented locally (Batch A; mock data, not live)    |
-| D5  | Activity progress                                  | V1    | 3     | P1               | Implemented locally (weekly activity totals, Batch C) |
-| D6  | Habit tracking                                     | V1    | 2-3   | P1               | Not started                                           |
-| D7  | Weekly AI progress reviews                         | V1    | 5     | S1               | See C6                                                |
-| D8  | Optional weight projections with uncertainty       | V1.5  | 5     | N3, S1           | Not started                                           |
-| D9  | Non-scale achievements                             | V1    | 3     | none             | Not started                                           |
-| D10 | Private milestone celebrations                     | V1    | 3     | none             | Not started                                           |
-| D11 | Flexible goal adjustment                           | V1    | 2     | S1               | Implemented locally (Batch A; mock data, not live)    |
-| D12 | Optional supported health-platform integration     | Later | 9     | P2, store review | Not started                                           |
+| ID  | Feature                                            | Ver.  | Phase | Gates            | Status                                                      |
+| --- | -------------------------------------------------- | ----- | ----- | ---------------- | ----------------------------------------------------------- |
+| D1  | Optional weight-loss and weight-maintenance goals  | V1    | 2     | N3, S1           | Implemented locally (Batch A; mock data, not live)          |
+| D2  | Weekly, monthly and yearly weight goals            | V1    | 2     | N3, S1           | Implemented locally (Batch A; mock data, not live)          |
+| D3  | Imperial or metric measurements chosen by the user | V1    | 2     | none             | Implemented locally (Batch A; mock data, not live)          |
+| D4  | Weight history and trends                          | V1    | 2     | P1               | Implemented locally (Batch A; mock data, not live)          |
+| D5  | Activity progress                                  | V1    | 3     | P1               | Implemented locally (weekly activity totals, Batch C)       |
+| D6  | Habit tracking                                     | V1    | 2-3   | P1               | Not started                                                 |
+| D7  | Weekly AI progress reviews                         | V1    | 5     | S1               | Implemented locally (Batch D; simulated coach, not live AI) |
+| D8  | Optional weight projections with uncertainty       | V1.5  | 5     | N3, S1           | Not started                                                 |
+| D9  | Non-scale achievements                             | V1    | 3     | none             | Not started                                                 |
+| D10 | Private milestone celebrations                     | V1    | 3     | none             | Not started                                                 |
+| D11 | Flexible goal adjustment                           | V1    | 2     | S1               | Implemented locally (Batch A; mock data, not live)          |
+| D12 | Optional supported health-platform integration     | Later | 9     | P2, store review | Not started                                                 |
 
 Weight goals must not encourage extreme restriction, guaranteed results or unsafe exercise. See [NUTRITION_SAFETY.md](NUTRITION_SAFETY.md) and [FITNESS_SAFETY.md](FITNESS_SAFETY.md).
 
@@ -133,22 +133,22 @@ Individual weight, food and health records stay private unless explicitly shared
 
 ### G. Monetization and Operations
 
-| ID  | Feature                                                              | Ver.  | Phase | Gates    | Status                                                                   |
-| --- | -------------------------------------------------------------------- | ----- | ----- | -------- | ------------------------------------------------------------------------ |
-| G1  | Free tier                                                            | V1    | 6     | none     | Foundation (tier model)                                                  |
-| G2  | Pro subscription (test price USD $9.99/month)                        | V1    | 6     | B1s, B2s | Foundation (entitlement interfaces)                                      |
-| G3  | Subscription entitlements (server-written)                           | V1    | 6     | B1s      | Foundation (types, expiry logic, tests)                                  |
-| G4  | Usage-based AI allowances                                            | V1    | 5-6   | none     | Foundation (proposed allowances, quota checks, tests)                    |
-| G5  | Future Household Pro                                                 | Later | 10    | B1s      | Foundation (tier reserved)                                               |
-| G6  | Admin portal                                                         | V1    | 6     | none     | Foundation (Next.js shell, sections, permissions)                        |
-| G7  | Content and licensing management                                     | V1    | 3     | none     | Foundation (licensing records, publish gates and admin views, Batch C)   |
-| G8  | Fitness and nutrition review workflows                               | V1    | 3-4   | none     | Foundation (independent fitness review records, Batch C)                 |
-| G9  | User support                                                         | V1    | 6     | P2       | Foundation (support role: account state only)                            |
-| G10 | Moderation                                                           | Later | 8     | M1       | Foundation (role and area)                                               |
-| G11 | Feature flags                                                        | V1    | 1     | none     | Foundation (all flags default off)                                       |
-| G12 | Privacy and consent management                                       | V1    | 1-2   | P1, P2   | Foundation; consent capture and withdrawal implemented locally (Batch A) |
-| G13 | Subscription and retention analytics (privacy-preserving, aggregate) | V1.5  | 7     | P2       | Not started                                                              |
-| G14 | AI cost tracking and alerts                                          | V1    | 5     | none     | Foundation (budget, cost, alert thresholds, tests)                       |
+| ID  | Feature                                                              | Ver.  | Phase | Gates    | Status                                                                                                                        |
+| --- | -------------------------------------------------------------------- | ----- | ----- | -------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| G1  | Free tier                                                            | V1    | 6     | none     | Foundation (tier model)                                                                                                       |
+| G2  | Pro subscription (test price USD $9.99/month)                        | V1    | 6     | B1s, B2s | Foundation (entitlement interfaces)                                                                                           |
+| G3  | Subscription entitlements (server-written)                           | V1    | 6     | B1s      | Foundation (types, expiry logic, tests)                                                                                       |
+| G4  | Usage-based AI allowances                                            | V1    | 5-6   | none     | Implemented locally (metered through the gateway; atomic database quota and budget functions with concurrency tests, Batch D) |
+| G5  | Future Household Pro                                                 | Later | 10    | B1s      | Foundation (tier reserved)                                                                                                    |
+| G6  | Admin portal                                                         | V1    | 6     | none     | Foundation (Next.js shell, sections, permissions)                                                                             |
+| G7  | Content and licensing management                                     | V1    | 3     | none     | Foundation (licensing records, publish gates and admin views, Batch C)                                                        |
+| G8  | Fitness and nutrition review workflows                               | V1    | 3-4   | none     | Foundation (independent fitness review records, Batch C)                                                                      |
+| G9  | User support                                                         | V1    | 6     | P2       | Foundation (support role: account state only)                                                                                 |
+| G10 | Moderation                                                           | Later | 8     | M1       | Foundation (role and area)                                                                                                    |
+| G11 | Feature flags                                                        | V1    | 1     | none     | Foundation (AI kill switches in the database with staff-only, audited changes, Batch D)                                       |
+| G12 | Privacy and consent management                                       | V1    | 1-2   | P1, P2   | Foundation; consent capture and withdrawal implemented locally (Batch A)                                                      |
+| G13 | Subscription and retention analytics (privacy-preserving, aggregate) | V1.5  | 7     | P2       | Not started                                                                                                                   |
+| G14 | AI cost tracking and alerts                                          | V1    | 5     | none     | Foundation (usage events, atomic budget reservation; alert delivery not built, Batch D)                                       |
 
 ## 4. Validation gates
 

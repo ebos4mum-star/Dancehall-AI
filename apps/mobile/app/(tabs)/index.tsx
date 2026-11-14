@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { router } from 'expo-router';
 import { goalProgress, lbToKg, summarizeWeights, type UnitSystem } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
+import { PlanCard } from '@/coach/PlanCard';
 import { useDanceData } from '@/dance/hooks';
 import { useFoodData } from '@/food/hooks';
 import { MacroBars } from '@/food/ui';
@@ -130,6 +131,8 @@ export default function Today() {
           ) : null}
         </Card>
       </FadeIn>
+
+      <PlanCard />
 
       <FadeIn>
         <Card>

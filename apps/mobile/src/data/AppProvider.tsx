@@ -60,6 +60,7 @@ export function AppProvider({
       const s = await boot.store.getSession();
       // Housekeeping: temporary photo records past their 24-hour window are marked deleted (the server job does this for stored originals).
       if (s) await boot.store.purgeExpiredPhotos?.().catch(() => 0);
+      if (s) await boot.store.purgeOldCoachData?.().catch(() => 0);
       const p = s ? await boot.store.getProfile() : null;
       if (!alive.current) return;
       setSession(s);

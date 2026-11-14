@@ -74,6 +74,14 @@ export default function RootLayout() {
               name="dance/program"
               options={{ headerShown: true, title: t('dance.programs') }}
             />
+            <Stack.Screen
+              name="coach/settings"
+              options={{ headerShown: true, title: t('coachset.title') }}
+            />
+            <Stack.Screen
+              name="coach/review"
+              options={{ headerShown: true, title: t('wr.title') }}
+            />
           </Stack>
         </DraftProvider>
       </AppProvider>

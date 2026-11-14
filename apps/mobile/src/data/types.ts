@@ -1,5 +1,7 @@
 import type {
   BudgetLevel,
+  PlanItemKind,
+  PlanMode,
   FoodItemValues,
   GroundedItem,
   MealType,
@@ -85,7 +87,9 @@ export type StoreErrorCode =
   | 'budget_exhausted'
   | 'feature_disabled'
   | 'ai_unavailable'
-  | 'photo_already_deleted';
+  | 'photo_already_deleted'
+  | 'coach_consent_required'
+  | 'goal_blocked';
 
 export class StoreError extends Error {
   constructor(
@@ -161,6 +165,31 @@ export interface DataStore {
   createSessions(inputs: NewSession[]): Promise<WorkoutSession[]>;
   updateSession(id: string, patch: SessionPatch): Promise<WorkoutSession>;
   deleteSession(id: string): Promise<void>;
+
+  // Fit Concierge. Optional: only the development mock implements these today (no coach service exists yet).
+  listConversations?(): Promise<Conversation[]>;
+  getConversation?(id: string): Promise<Conversation | null>;
+  sendCoachMessage?(input: {
+    conversationId?: string | null;
+    text: string;
+  }): Promise<{ conversation: Conversation; reply: CoachMessage }>;
+  deleteConversation?(id: string): Promise<void>;
+  deleteAllConversations?(): Promise<void>;
+  /** Confirms or dismisses a proposed change. Nothing changes until it is applied here. */
+  decideCoachAction?(id: string, decision: 'applied' | 'dismissed'): Promise<CoachAction>;
+  getDailyPlan?(date?: string): Promise<DailyPlan | null>;
+  regenerateDailyPlan?(mode: PlanMode, date?: string): Promise<DailyPlan>;
+  setPlanItemDone?(itemId: string, done: boolean): Promise<void>;
+  listWeeklyReviews?(): Promise<WeeklyReviewRecord[]>;
+  generateWeeklyReview?(weekStart?: string): Promise<WeeklyReviewRecord>;
+  getAiUsage?(): Promise<AiUsageSummary>;
+  /** What the coach would use from your records right now, in plain words. */
+  getCoachContextSummary?(): Promise<string[]>;
+  purgeOldCoachData?(): Promise<number>;
+  /** Development only. */
+  devSetKillSwitch?(on: boolean): Promise<void>;
+  devSetBudgetCeiling?(usd: number): Promise<void>;
+  comebackStatus?(): Promise<{ daysAway: number; missedPlanned: number } | null>;
 
   latestReadiness(): Promise<ReadinessResultRecord | null>;
   saveReadiness(
@@ -287,6 +316,85 @@ export interface SessionPatch {
   durationS?: number | null;
   perceivedExertion?: number | null;
   lowImpact?: boolean;
+}
+
+// ---------- Fit Concierge ----------
+export type CoachActionKind =
+  'update_daily_plan' | 'add_workout' | 'swap_meal' | 'adjust_goal' | 'add_habit';
+export interface CoachAction {
+  id: string;
+  messageId: string;
+  kind: CoachActionKind;
+  summary: string;
+  payload: Record<string, unknown>;
+  status: 'proposed' | 'applied' | 'dismissed';
+  decidedAt: string | null;
+}
+export interface CoachMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  /** Why the coach said this (transparent recommendations). */
+  because: string[];
+  supportReferral: boolean;
+  usedPersonalData: boolean;
+  /** 'mock' means SIMULATED: a rule-based stand-in, not a language model. The UI must say so. */
+  provider: 'mock' | 'live';
+  createdAt: string;
+  actions: CoachAction[];
+}
+export interface Conversation {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: CoachMessage[];
+}
+export interface DailyPlanItem {
+  id: string;
+  position: number;
+  kind: PlanItemKind;
+  title: string;
+  detail: string;
+  why: string;
+  ref?: {
+    workoutId?: string;
+    sessionId?: string;
+    minutes?: number;
+    lowImpact?: boolean;
+    foodId?: string;
+  };
+  doneAt: string | null;
+}
+export interface DailyPlan {
+  id: string;
+  planDate: string;
+  mode: PlanMode;
+  generatedBy: 'rules' | 'coach';
+  items: DailyPlanItem[];
+}
+export interface WeeklyReviewRecord {
+  id: string;
+  weekStart: string;
+  content: {
+    highlights: string[];
+    nonScaleWins: string[];
+    suggestions: string[];
+    tone: 'encouraging';
+  };
+  provider: 'mock' | 'live';
+  createdAt: string;
+}
+export interface AiUsageSummary {
+  month: string;
+  features: Array<{
+    feature: 'concierge_chat' | 'weekly_review' | 'food_photo';
+    used: number;
+    allowance: number;
+  }>;
+  /** True when AI is switched off (kill switch) or the monthly budget is used up: the rule-based parts of the app keep working. */
+  paused: boolean;
+  personalization: boolean;
 }
 
 export const CURRENT_POLICY_VERSION = 'dev-0';

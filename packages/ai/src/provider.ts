@@ -1,4 +1,6 @@
 import { FOOD_BY_ID, type AiFeature, type Confidence } from '@dancehall/shared';
+import { composeCoachReply, composeWeeklyReview } from './coach-mock';
+import { parseCoachPrompt, parseReviewPrompt } from './prompts';
 import type { TokenUsage } from './cost';
 
 export interface AiRequest {
@@ -39,7 +41,9 @@ export class MockAiProvider implements AiProvider {
     switch (req.feature) {
       case 'food_photo':
         return { usage, json: mockFoodPhotoResponse(req.prompt) };
-      case 'weekly_review':
+      case 'weekly_review': {
+        const facts = parseReviewPrompt(req.prompt);
+        if (facts) return { usage, json: composeWeeklyReview(facts) };
         return {
           usage,
           json: {
@@ -49,22 +53,20 @@ export class MockAiProvider implements AiProvider {
             tone: 'encouraging',
           },
         };
-      default:
+      }
+      default: {
+        const parsed = parseCoachPrompt(req.prompt);
+        if (parsed) return { usage, json: composeCoachReply(parsed.userText, parsed.ctx) };
         return {
           usage,
           json: {
             message: 'Sample mock reply: a 10-minute low-impact dance session could suit today.',
             because: ['You asked for a short option.'],
-            proposedChanges: [
-              {
-                kind: 'add_workout',
-                summary: 'Add a 10-minute low-impact session today',
-                payload: { minutes: 10 },
-              },
-            ],
+            proposedChanges: [],
             supportReferral: false,
           },
         };
+      }
     }
   }
 }

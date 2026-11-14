@@ -5,6 +5,12 @@ import {
   newBudget,
   type BudgetState,
   type UsageEvent,
+  buildCoachPrompt,
+  buildReviewPrompt,
+  conciergeResponseSchema,
+  proposedChangeSchema,
+  weeklyReviewResponseSchema,
+  type AiProvider,
 } from '@dancehall/ai';
 import {
   AppError,
@@ -21,6 +27,20 @@ import {
   type FoodItemValues,
   type MealType,
   type ReadinessQuestion,
+  FOOD_BY_ID,
+  PLAN_MODES,
+  buildCoachContext,
+  buildWeekFacts,
+  contextSummaryLines,
+  detectComeback,
+  energyGuideFor,
+  generateDailyPlan,
+  localDateKey,
+  monthlyAllowance,
+  proposeGoal,
+  summarizeWeights,
+  weekStartOf,
+  type PlanMode,
 } from '@dancehall/shared';
 import {
   StoreError,
@@ -45,6 +65,13 @@ import {
   type Session,
   type StoreErrorCode,
   type WeightEntry,
+  type AiUsageSummary,
+  type CoachAction,
+  type CoachMessage,
+  type Conversation,
+  type DailyPlan,
+  type DailyPlanItem,
+  type WeeklyReviewRecord,
 } from './types';
 
 export interface KeyValue {
@@ -68,6 +95,10 @@ interface State {
   aiEvents: UsageEvent[];
   aiBudget: BudgetState;
   sessions: WorkoutSession[];
+  conversations: Conversation[];
+  dailyPlans: DailyPlan[];
+  weeklyReviews: WeeklyReviewRecord[];
+  aiControls: { killAll: boolean };
 }
 
 const KEY = 'dh.mock.v1';
@@ -94,6 +125,10 @@ const emptyState = (): State => ({
   aiEvents: [],
   aiBudget: newBudget(),
   sessions: [],
+  conversations: [],
+  dailyPlans: [],
+  weeklyReviews: [],
+  aiControls: { killAll: false },
 });
 
 const DAY_MS = 86_400_000;
@@ -159,6 +194,7 @@ export class MockStore implements DataStore {
   constructor(
     private readonly kv: KeyValue,
     private readonly now: () => Date = () => new Date(),
+    private readonly ai: AiProvider = new MockAiProvider(),
   ) {}
 
   subscribe(l: () => void) {
@@ -462,25 +498,7 @@ export class MockStore implements DataStore {
     };
     s.photos.push(rec);
     // The same gateway the server will use: kill switches, quota, budget reservation, schema validation, usage metering.
-    const usage = new InMemoryUsageStore();
-    usage.events = [...s.aiEvents];
-    const gateway = new AiGateway(
-      new MockAiProvider(),
-      usage,
-      {
-        flags: { ai_gateway: true },
-        killAll: false,
-        killFeatures: {},
-        maxOutputTokens: 800,
-        now: () => this.now(),
-        models: {
-          food_photo: 'mock-large',
-          concierge_chat: 'mock-small',
-          weekly_review: 'mock-small',
-        } as never,
-      },
-      { ...s.aiBudget },
-    );
+    const { gateway, usage } = this.makeGateway(s);
     try {
       const out = (await gateway.run({
         userId: 'dev-user-synthetic',
@@ -679,6 +697,557 @@ export class MockStore implements DataStore {
   async deleteSession(id: string) {
     const s = await this.authed();
     s.sessions = s.sessions.filter((x) => x.id !== id);
+    await this.commit();
+  }
+
+  // ---------- Shared AI plumbing (the same gateway the server will use) ----------
+  private makeGateway(s: State) {
+    const usage = new InMemoryUsageStore();
+    usage.events = [...s.aiEvents];
+    const gateway = new AiGateway(
+      this.ai,
+      usage,
+      {
+        flags: { ai_gateway: true },
+        killAll: s.aiControls.killAll,
+        killFeatures: {},
+        maxOutputTokens: 800,
+        now: () => this.now(),
+        models: {
+          food_photo: 'mock-large',
+          concierge_chat: 'mock-small',
+          weekly_review: 'mock-small',
+        } as never,
+      },
+      { ...s.aiBudget },
+    );
+    return { gateway, usage };
+  }
+  /** Runs one request and ALWAYS saves the usage events and budget afterwards, success or failure. */
+  private async runGateway(
+    s: State,
+    req: Parameters<AiGateway['run']>[0],
+  ): Promise<{ out: unknown; lastOutcome: UsageEvent['outcome'] | undefined }> {
+    const { gateway, usage } = this.makeGateway(s);
+    try {
+      const out = await gateway.run(req);
+      return { out, lastOutcome: usage.events[usage.events.length - 1]?.outcome };
+    } finally {
+      s.aiEvents = usage.events;
+      s.aiBudget = gateway.budget;
+    }
+  }
+
+  private timeZone(s: State) {
+    return s.profile.timeZone;
+  }
+  private todayKey(s: State) {
+    return localDateKey(this.now(), this.timeZone(s));
+  }
+  private lowImpactPreferred(s: State) {
+    return (
+      s.readiness[s.readiness.length - 1]?.outcome === 'low_impact_and_check_with_professional'
+    );
+  }
+
+  // ---------- Daily Fit Plan (rule-based, on the device, no AI cost) ----------
+  private buildPlan(s: State, date: string, mode: PlanMode): DailyPlan {
+    const tz = this.timeZone(s);
+    const latestW = [...s.weights].sort((a, b) => b.measuredAt.localeCompare(a.measuredAt))[0];
+    const hour =
+      Number(
+        new Intl.DateTimeFormat('en', {
+          hour: 'numeric',
+          hour12: false,
+          timeZone: tz ?? 'UTC',
+        }).format(this.now()),
+      ) % 24;
+    const draft = generateDailyPlan({
+      date,
+      mode,
+      localHour: hour,
+      lowImpact: this.lowImpactPreferred(s),
+      plannedToday: s.sessions
+        .filter((x) => x.status === 'planned' && x.plannedFor === date)
+        .map((x) => ({
+          id: x.id,
+          workoutId: x.workoutId,
+          title: x.title,
+          minutes: x.minutes,
+          lowImpact: x.lowImpact,
+        })),
+      doneToday: s.sessions
+        .filter(
+          (x) =>
+            x.status === 'completed' && x.completedAt && localDateKey(x.completedAt, tz) === date,
+        )
+        .map((x) => ({ title: x.title })),
+      mealsLoggedToday: s.foodLogs.filter((l) => localDateKey(l.loggedAt, tz) === date).length,
+      activeGoalTypes: s.goals.filter((g) => g.status === 'active').map((g) => g.type),
+      daysSinceWeight: latestW
+        ? Math.floor((this.now().getTime() - Date.parse(latestW.measuredAt)) / 86_400_000)
+        : null,
+      seed: Number(date.replace(/-/g, '')) % 97,
+    });
+    return {
+      id: newId(),
+      planDate: date,
+      mode,
+      generatedBy: 'rules',
+      items: draft.items.map((it, position): DailyPlanItem => ({
+        id: newId(),
+        position,
+        kind: it.kind,
+        title: it.title,
+        detail: it.detail,
+        why: it.why,
+        ref: it.ref,
+        doneAt: it.done ? this.now().toISOString() : null,
+      })),
+    };
+  }
+  async getDailyPlan(date?: string): Promise<DailyPlan | null> {
+    const s = await this.authed();
+    const d = date ?? this.todayKey(s);
+    const existing = s.dailyPlans.find((p) => p.planDate === d);
+    if (existing) return { ...existing, items: existing.items.map((i) => ({ ...i })) };
+    if (!this.consented(s)) return null;
+    const plan = this.buildPlan(s, d, 'normal');
+    s.dailyPlans.push(plan);
+    await this.commit();
+    return { ...plan, items: plan.items.map((i) => ({ ...i })) };
+  }
+  async regenerateDailyPlan(mode: PlanMode, date?: string): Promise<DailyPlan> {
+    const s = await this.authed();
+    this.requireConsent(s);
+    if (!PLAN_MODES.includes(mode)) throw new StoreError('invalid_input', 'mode');
+    const d = date ?? this.todayKey(s);
+    const plan = this.buildPlan(s, d, mode);
+    s.dailyPlans = s.dailyPlans.filter((p) => p.planDate !== d).concat(plan);
+    await this.commit();
+    return { ...plan, items: plan.items.map((i) => ({ ...i })) };
+  }
+  async setPlanItemDone(itemId: string, done: boolean) {
+    const s = await this.authed();
+    this.requireConsent(s);
+    const item = s.dailyPlans.flatMap((p) => p.items).find((i) => i.id === itemId);
+    if (!item) throw new StoreError('not_found');
+    item.doneAt = done ? this.now().toISOString() : null;
+    await this.commit();
+  }
+  private appendPlanItem(
+    s: State,
+    date: string,
+    it: Omit<DailyPlanItem, 'id' | 'position' | 'doneAt'>,
+  ) {
+    let plan = s.dailyPlans.find((p) => p.planDate === date);
+    if (!plan) {
+      plan = this.buildPlan(s, date, 'normal');
+      s.dailyPlans.push(plan);
+    }
+    plan.items.push({ ...it, id: newId(), position: plan.items.length, doneAt: null });
+  }
+  async comebackStatus() {
+    const s = await this.authed();
+    return detectComeback(s.sessions, { now: this.now(), timeZone: this.timeZone(s) });
+  }
+
+  // ---------- Fit Concierge ----------
+  private coachContext(s: State, personalized: boolean) {
+    const tz = this.timeZone(s);
+    const today = this.todayKey(s);
+    const plan = s.dailyPlans.find((p) => p.planDate === today);
+    const weights = summarizeWeights(
+      s.weights.map((w) => ({ weightKg: w.weightKg, measuredAt: w.measuredAt })),
+    );
+    const change = weights.change30dKg;
+    const wk = weekStartOf(today);
+    const doneThisWeek = s.sessions.filter(
+      (x) =>
+        x.status === 'completed' &&
+        x.completedAt &&
+        weekStartOf(localDateKey(x.completedAt, tz)) === wk,
+    );
+    const lastDone = s.sessions
+      .filter((x) => x.status === 'completed' && x.completedAt)
+      .map((x) => localDateKey(x.completedAt!, tz))
+      .sort()
+      .pop();
+    const todaysLogs = s.foodLogs.filter((l) => localDateKey(l.loggedAt, tz) === today);
+    const latest = [...s.weights].sort((a, b) => b.measuredAt.localeCompare(a.measuredAt))[0];
+    let guide: number | undefined;
+    if (s.private && latest) {
+      const age = Math.floor(
+        (this.now().getTime() - Date.parse(`${s.private.birthDate}T00:00:00Z`)) /
+          (365.25 * 86_400_000),
+      );
+      guide = energyGuideFor({
+        weightKg: latest.weightKg,
+        heightCm: s.private.heightCm,
+        ageYears: age,
+        sex: s.private.sex,
+        activity: s.private.activityLevel,
+        weeklyChangeKg: s.goals.find((g) => g.status === 'active')?.plannedWeeklyChangeKg ?? 0,
+      }).guideKcal;
+    }
+    const lastItems = [...todaysLogs]
+      .sort((a, b) => b.loggedAt.localeCompare(a.loggedAt))[0]
+      ?.items.map((i) => ({ name: i.name, foodId: i.foodId, grams: i.grams, kcal: i.kcal }));
+    return buildCoachContext({
+      personalized,
+      unitSystem: s.profile.unitSystem,
+      now: this.now(),
+      timeZone: tz,
+      mode: plan?.mode ?? null,
+      lowImpact: this.lowImpactPreferred(s),
+      goals: s.goals
+        .filter((g) => g.status === 'active')
+        .map((g) => ({ type: g.type, period: g.period })),
+      weightTrend:
+        change === null ? null : Math.abs(change) < 0.3 ? 'steady' : change < 0 ? 'down' : 'up',
+      activity: {
+        sessionsThisWeek: doneThisWeek.length,
+        minutesThisWeek: doneThisWeek.reduce(
+          (n, x) => n + (x.durationS ? Math.max(1, Math.round(x.durationS / 60)) : x.minutes),
+          0,
+        ),
+        activeDaysThisWeek: new Set(doneThisWeek.map((x) => localDateKey(x.completedAt!, tz))).size,
+        daysSinceLastSession: lastDone
+          ? Math.round(
+              (Date.parse(`${today}T00:00:00Z`) - Date.parse(`${lastDone}T00:00:00Z`)) / 86_400_000,
+            )
+          : null,
+        plannedToday: s.sessions
+          .filter((x) => x.status === 'planned' && x.plannedFor === today)
+          .map((x) => x.title),
+        missedPlannedLast7: s.sessions.filter(
+          (x) =>
+            (x.status === 'planned' || x.status === 'skipped') &&
+            x.plannedFor &&
+            x.plannedFor < today,
+        ).length,
+      },
+      food: {
+        mealsToday: todaysLogs.length,
+        kcalToday: todaysLogs.flatMap((l) => l.items).reduce((n, i) => n + i.kcal, 0),
+        lastMealItems: lastItems,
+      },
+      plan: plan
+        ? {
+            mode: plan.mode,
+            items: plan.items.map((i) => ({
+              kind: i.kind,
+              title: i.title,
+              done: i.doneAt !== null,
+            })),
+          }
+        : null,
+      comeback: detectComeback(s.sessions, { now: this.now(), timeZone: tz }),
+      guideKcal: guide,
+    });
+  }
+  async getCoachContextSummary() {
+    const s = await this.authed();
+    return contextSummaryLines(this.coachContext(s, this.consented(s, 'ai_coach_personalization')));
+  }
+  private view(c: Conversation): Conversation {
+    return {
+      ...c,
+      messages: c.messages.map((m) => ({
+        ...m,
+        because: [...m.because],
+        actions: m.actions.map((a) => ({ ...a })),
+      })),
+    };
+  }
+  async listConversations() {
+    const s = await this.authed();
+    // Newest first; conversations touched at the same instant keep creation order (later first).
+    return s.conversations
+      .map((c, i) => ({ c, i }))
+      .sort((a, b) => b.c.updatedAt.localeCompare(a.c.updatedAt) || b.i - a.i)
+      .map((x) => this.view(x.c));
+  }
+  async getConversation(id: string) {
+    const s = await this.authed();
+    const c = s.conversations.find((x) => x.id === id);
+    return c ? this.view(c) : null;
+  }
+  async sendCoachMessage(input: { conversationId?: string | null; text: string }) {
+    const s = await this.authed();
+    this.requireConsent(s);
+    const text = input.text.trim();
+    if (text.length < 1 || text.length > 1000) throw new StoreError('invalid_input', 'message');
+    const now = this.now().toISOString();
+    let conv = input.conversationId
+      ? s.conversations.find((c) => c.id === input.conversationId)
+      : undefined;
+    if (input.conversationId && !conv) throw new StoreError('not_found');
+    if (!conv) {
+      conv = {
+        id: newId(),
+        title: text.slice(0, 40),
+        createdAt: now,
+        updatedAt: now,
+        messages: [],
+      };
+      s.conversations.push(conv);
+    }
+    const history = conv.messages.map((m) => ({ role: m.role, content: m.content }));
+    conv.messages.push({
+      id: newId(),
+      role: 'user',
+      content: text,
+      because: [],
+      supportReferral: false,
+      usedPersonalData: false,
+      provider: 'mock',
+      createdAt: now,
+      actions: [],
+    });
+    conv.updatedAt = now;
+    const personalized = this.consented(s, 'ai_coach_personalization');
+    let result: Awaited<ReturnType<MockStore['runGateway']>>;
+    try {
+      result = await this.runGateway(s, {
+        userId: 'dev-user-synthetic',
+        entitlement: FREE_ENTITLEMENT,
+        feature: 'concierge_chat',
+        prompt: buildCoachPrompt(this.coachContext(s, personalized), text, history),
+        userText: text,
+      });
+    } catch (e) {
+      await this.commit(); // the question stays in history; the failure is shown, not hidden
+      throw mapAiError(e);
+    }
+    const out = conciergeResponseSchema.parse(result.out);
+    const redirected =
+      result.lastOutcome === 'risk_referral' || result.lastOutcome === 'safety_redirect';
+    const messageId = newId();
+    const reply: CoachMessage = {
+      id: messageId,
+      role: 'assistant',
+      content: out.message,
+      because: out.because,
+      supportReferral: out.supportReferral,
+      usedPersonalData: personalized && !redirected,
+      provider: 'mock',
+      createdAt: this.now().toISOString(),
+      actions: out.proposedChanges.slice(0, 5).map((c): CoachAction => ({
+        id: newId(),
+        messageId,
+        kind: c.kind,
+        summary: c.summary,
+        payload: c.payload as Record<string, unknown>,
+        status: 'proposed',
+        decidedAt: null,
+      })),
+    };
+    conv.messages.push(reply);
+    conv.updatedAt = reply.createdAt;
+    await this.commit();
+    return {
+      conversation: this.view(conv),
+      reply: { ...reply, actions: reply.actions.map((a) => ({ ...a })) },
+    };
+  }
+  async deleteConversation(id: string) {
+    const s = await this.authed();
+    s.conversations = s.conversations.filter((c) => c.id !== id);
+    await this.commit();
+  }
+  async deleteAllConversations() {
+    const s = await this.authed();
+    s.conversations = [];
+    await this.commit();
+  }
+  /** OWNER DECISION PENDING: 90 days proposed. */
+  async purgeOldCoachData() {
+    await this.load();
+    if (!this.state.signedIn) return 0;
+    const cutoff = new Date(this.now().getTime() - 90 * DAY_MS).toISOString();
+    const before = this.state.conversations.length;
+    this.state.conversations = this.state.conversations.filter((c) => c.updatedAt >= cutoff);
+    const n = before - this.state.conversations.length;
+    if (n > 0) await this.commit();
+    return n;
+  }
+
+  /** The person's decision on a proposed change. Nothing changes until 'applied'; if applying fails the proposal stays open. */
+  async decideCoachAction(id: string, decision: 'applied' | 'dismissed'): Promise<CoachAction> {
+    const s = await this.authed();
+    const action = s.conversations
+      .flatMap((c) => c.messages)
+      .flatMap((m) => m.actions)
+      .find((a) => a.id === id);
+    if (!action) throw new StoreError('not_found');
+    if (action.status !== 'proposed') throw new StoreError('invalid_input', 'already decided');
+    if (decision === 'applied') {
+      this.requireConsent(s);
+      await this.applyChange(s, action);
+    }
+    action.status = decision;
+    action.decidedAt = this.now().toISOString();
+    await this.commit();
+    return { ...action };
+  }
+  private async applyChange(s: State, a: CoachAction) {
+    const parsed = proposedChangeSchema.safeParse({
+      kind: a.kind,
+      summary: a.summary,
+      payload: a.payload,
+    });
+    if (!parsed.success) throw new StoreError('invalid_input', 'proposal');
+    const c = parsed.data;
+    const today = this.todayKey(s);
+    switch (c.kind) {
+      case 'add_workout': {
+        const w = WORKOUT_BY_ID.get(c.payload.workoutId);
+        if (!w) throw new StoreError('invalid_input', 'workout');
+        await this.createSession({
+          workoutId: w.id,
+          title: w.title,
+          style: w.style,
+          minutes: w.minutes,
+          plannedFor: c.payload.plannedFor,
+          lowImpact: c.payload.lowImpact ?? false,
+          source: 'quick_fit',
+        });
+        return;
+      }
+      case 'update_daily_plan':
+        await this.regenerateDailyPlan(c.payload.mode, c.payload.date);
+        return;
+      case 'add_habit':
+        this.appendPlanItem(s, today, {
+          kind: 'habit',
+          title: c.payload.title,
+          detail: 'Added from your coach. Tick it off whenever you do it.',
+          why: 'You asked your coach to add this habit.',
+        });
+        return;
+      case 'swap_meal': {
+        const to = FOOD_BY_ID.get(c.payload.toFoodId);
+        const from = FOOD_BY_ID.get(c.payload.fromFoodId);
+        if (!to || !from) throw new StoreError('invalid_input', 'food');
+        this.appendPlanItem(s, today, {
+          kind: 'meal',
+          title: `Try ${to.name} instead of ${from.name}`,
+          detail: `About ${Math.round(c.payload.grams)} g, whenever it suits.`,
+          why: 'A comparable swap from the reference data. An idea, not a rule.',
+          ref: { foodId: to.id },
+        });
+        return;
+      }
+      case 'adjust_goal': {
+        // A coach-proposed goal goes through the SAME safety rules as any other goal; the model never supplies a target.
+        const latest = [...s.weights].sort((x, y) => y.measuredAt.localeCompare(x.measuredAt))[0];
+        if (!s.private || !latest) throw new StoreError('profile_incomplete');
+        const proposal = proposeGoal({
+          type: c.payload.type,
+          period: c.payload.period,
+          startDate: today,
+          startKg: latest.weightKg,
+          heightCm: s.private.heightCm,
+          ageYears: ageYearsOn(s.private.birthDate, this.now()),
+        });
+        if (proposal.status === 'block' || !proposal.goal)
+          throw new StoreError('goal_blocked', proposal.reasons[0]);
+        // End the goal being replaced (and any active goal of the new period: only one may be active per period); restore them if creating fails.
+        const ending = s.goals.filter(
+          (g) =>
+            g.status === 'active' &&
+            (g.period === c.payload.period || g.period === c.payload.replacePeriod),
+        );
+        ending.forEach((g) => (g.status = 'abandoned'));
+        try {
+          await this.createGoal(proposal.goal);
+        } catch (e) {
+          ending.forEach((g) => (g.status = 'active'));
+          throw e;
+        }
+        return;
+      }
+    }
+  }
+
+  // ---------- Weekly reviews ----------
+  async listWeeklyReviews() {
+    const s = await this.authed();
+    return [...s.weeklyReviews]
+      .sort((a, b) => b.weekStart.localeCompare(a.weekStart))
+      .map((r) => ({ ...r }));
+  }
+  async generateWeeklyReview(weekStart?: string): Promise<WeeklyReviewRecord> {
+    const s = await this.authed();
+    this.requireConsent(s);
+    if (!this.consented(s, 'ai_coach_personalization'))
+      throw new StoreError('coach_consent_required');
+    const week = weekStart ?? weekStartOf(this.todayKey(s));
+    const facts = buildWeekFacts({
+      weekStart: week,
+      timeZone: this.timeZone(s),
+      sessions: s.sessions,
+      foodLogTimes: s.foodLogs.map((l) => l.loggedAt),
+      weights: s.weights.map((w) => ({ weightKg: w.weightKg, measuredAt: w.measuredAt })),
+      activeGoals: s.goals.filter((g) => g.status === 'active').length,
+    });
+    let result: Awaited<ReturnType<MockStore['runGateway']>>;
+    try {
+      result = await this.runGateway(s, {
+        userId: 'dev-user-synthetic',
+        entitlement: FREE_ENTITLEMENT,
+        feature: 'weekly_review',
+        prompt: buildReviewPrompt(facts),
+      });
+    } catch (e) {
+      await this.commit();
+      throw mapAiError(e);
+    }
+    const content = weeklyReviewResponseSchema.parse(result.out);
+    const rec: WeeklyReviewRecord = {
+      id: newId(),
+      weekStart: week,
+      content,
+      provider: 'mock',
+      createdAt: this.now().toISOString(),
+    };
+    s.weeklyReviews = s.weeklyReviews.filter((r) => r.weekStart !== week).concat(rec);
+    await this.commit();
+    return { ...rec };
+  }
+
+  // ---------- Usage and controls ----------
+  async getAiUsage(): Promise<AiUsageSummary> {
+    const s = await this.authed();
+    const month = this.now().toISOString().slice(0, 7);
+    const used = (f: string) =>
+      s.aiEvents.filter((e) => e.feature === f && e.at.startsWith(month) && e.outcome === 'ok')
+        .length;
+    return {
+      month,
+      features: (['concierge_chat', 'weekly_review', 'food_photo'] as const).map((feature) => ({
+        feature,
+        used: used(feature),
+        allowance: monthlyAllowance('free', feature),
+      })),
+      // Paused when AI is switched off, or less than one request's worst case (about half a cent) of the monthly budget remains.
+      paused:
+        s.aiControls.killAll ||
+        s.aiBudget.settledUsd + s.aiBudget.reservedUsd + 0.005 > s.aiBudget.ceilingUsd,
+      personalization: this.consented(s, 'ai_coach_personalization'),
+    };
+  }
+  /** DEVELOPMENT ONLY: stands in for the staff-controlled kill switch. */
+  async devSetKillSwitch(on: boolean) {
+    const s = await this.authed();
+    s.aiControls.killAll = on;
+    await this.commit();
+  }
+  /** DEVELOPMENT/TEST ONLY. */
+  async devSetBudgetCeiling(usd: number) {
+    const s = await this.authed();
+    s.aiBudget = { ...s.aiBudget, ceilingUsd: usd };
     await this.commit();
   }
 

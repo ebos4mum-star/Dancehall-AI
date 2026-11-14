@@ -23,6 +23,7 @@ export function Button({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled }}
+      aria-disabled={disabled}
       disabled={disabled}
       onPress={() => {
         // Light, meaningful feedback on a deliberate action only; unsupported devices are ignored.

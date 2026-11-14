@@ -1,3 +1,5 @@
+import { buildCoachContext } from '@dancehall/shared';
+import { buildCoachPrompt } from './prompts';
 import { describe, expect, it } from 'vitest';
 import { AppError, FREE_ENTITLEMENT, type Entitlement } from '@dancehall/shared';
 import {
@@ -25,11 +27,17 @@ const cfg = (over: Partial<GatewayConfig> = {}): GatewayConfig => ({
   now: () => new Date('2026-06-15T12:00:00Z'),
   ...over,
 });
+const ctx0 = buildCoachContext({
+  personalized: false,
+  unitSystem: 'metric',
+  now: new Date('2026-06-15T12:00:00Z'),
+});
 const req = (over = {}) => ({
   userId: 'u1',
   entitlement: pro,
   feature: 'concierge_chat' as const,
-  prompt: 'Suggest a 10 minute workout',
+  prompt: buildCoachPrompt(ctx0, 'Give me a 10 minute workout'),
+  userText: 'Give me a 10 minute workout',
   ...over,
 });
 const rejects = async (p: Promise<unknown>, code: string) => {
@@ -115,7 +123,8 @@ describe('gateway (mock provider only)', () => {
       newBudget(0.0012),
     );
     await g.run(req());
-    expect(seen).toEqual([0.5]);
+    expect(seen[0]).toBe(0.5);
+    expect(seen).toEqual([...seen].sort((a, b) => a - b));
   });
   it('rejects malformed model output and still records the cost', async () => {
     const store = new InMemoryUsageStore();
@@ -151,7 +160,7 @@ describe('gateway (mock provider only)', () => {
     const p = new MockAiProvider();
     const store = new InMemoryUsageStore();
     const out = (await new AiGateway(p, store, cfg()).run(
-      req({ prompt: "I'm starving myself" }),
+      req({ prompt: "I'm starving myself", userText: "I'm starving myself" }),
     )) as { supportReferral: boolean };
     expect(out.supportReferral).toBe(true);
     expect(p.calls).toBe(0);

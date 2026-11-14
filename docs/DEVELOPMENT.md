@@ -47,3 +47,7 @@ serve the output with any static server and open it at phone width. This checks 
 ## Trying the food flow without a camera
 
 In the development build, **Snap a meal → Try a sample plate (simulated)** runs the full pipeline with no photo. **Choose a photo** exercises the real resize-and-discard path with any image; the result is still simulated and says so.
+
+## Trying the coach in the development build
+
+The Coach tab and Daily Fit Plan run entirely on the device against a **simulated** coach (rule-based; no AI service). In **Coach, Privacy and history** you can turn personalization on or off, delete conversations, see monthly usage, and flip a "Pause all AI" switch that simulates the staff kill switch. Free-tier allowances (20 messages, 1 weekly review a month) are enforced, so you will hit them quickly while testing; **Me, Privacy and settings, Reset development data** clears usage.

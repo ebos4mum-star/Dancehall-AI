@@ -1,6 +1,6 @@
 # DanceHall Fit AI
 
-A standalone, global, AI-powered dance fitness, nutrition, weight-management and lifestyle coaching app. **Status: Phase 0B foundation plus Batch A.** No cloud backend, AI service, subscription or content exists yet.
+A standalone, global, AI-powered dance fitness, nutrition, weight-management and lifestyle coaching app. **Status: Phase 0B foundation plus Batches A-D, on a development mock.** No cloud backend, AI service, subscription or content exists yet.
 
 This repository is **public during development** so its source can be read, but it is **all rights reserved**: no open-source or other licence is granted. Never commit real secrets, private health data or real food photographs.
 
@@ -13,9 +13,9 @@ This repository is **public during development** so its source can be read, but 
 | `supabase`                 | Prepared for a new independent project; nothing created                               |
 | `evals`, `scripts`, `docs` | Safety cases, repository checks, specification                                        |
 
-Status: Phase 0B foundation plus Batch A (identity, consent, goals, weight, onboarding, Today) running on a development mock. No cloud project, AI service or content exists.
+Status: Phase 0B foundation plus Batches A-D (identity and goals, nutrition with simulated photo logging, dance fitness, and the Fit Concierge with a simulated coach) running on a development mock. No cloud project, AI service or content exists.
 
-Start with [docs/MASTER_SPEC.md](docs/MASTER_SPEC.md) and [docs/IMPLEMENTATION_ROADMAP.md](docs/IMPLEMENTATION_ROADMAP.md).
+To go live, see [docs/LIVE_INTEGRATION.md](docs/LIVE_INTEGRATION.md). Start with [docs/MASTER_SPEC.md](docs/MASTER_SPEC.md) and [docs/IMPLEMENTATION_ROADMAP.md](docs/IMPLEMENTATION_ROADMAP.md).
 
 ## Develop
 

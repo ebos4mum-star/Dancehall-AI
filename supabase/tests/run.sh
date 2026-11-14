@@ -25,5 +25,6 @@ fail=0
 for f in supabase/tests/*.test.sql; do
   if out=$(q -d "$DB" -f "$f" 2>&1); then echo "PASS     $f"; else echo "FAIL     $f"; echo "$out" | sed 's/^/         /'; fail=1; fi
 done
+if bash supabase/tests/concurrency.sh "$DB"; then :; else fail=1; fi
 q -d postgres -c "drop database if exists $DB" >/dev/null
 [ "$fail" = 0 ] && echo "Database tests passed." || { echo "Database tests FAILED." >&2; exit 1; }

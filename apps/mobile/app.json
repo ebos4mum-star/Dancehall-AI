@@ -7,8 +7,33 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "plugins": ["expo-router", "expo-localization"],
-    "experiments": { "typedRoutes": true },
-    "web": { "bundler": "metro", "output": "single" }
+    "plugins": [
+      "expo-router",
+      "expo-localization",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "DanceHall Fit uses the camera so you can photograph a meal to estimate its nutrition. The photo is resized on your device and removed from it right after analysis.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "DanceHall Fit can use a photo you choose from your library to estimate a meal. It is resized on your device and removed from it right after analysis.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    }
   }
 }

@@ -17,3 +17,7 @@ export * from './workouts';
 export * from './session-engine';
 export * from './licensing';
 export * from './activity';
+export * from './coach-safety';
+export * from './coach-context';
+export * from './daily-plan';
+export * from './weekly';

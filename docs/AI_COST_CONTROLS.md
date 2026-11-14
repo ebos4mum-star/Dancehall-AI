@@ -40,3 +40,13 @@ Status: the gateway's decision logic is implemented in `packages/ai` and tested 
 - `PLACEHOLDER_PRICES` in `packages/ai/src/cost.ts` are fake. Replace with the provider's current published prices before any live call.
 - Choose provider-side limit values (suggest 80% of the application ceiling) once the provider is chosen.
 - Persist the budget in Postgres with row locking (the in-memory state is for logic and tests only).
+
+## Implemented in Batch D (local)
+
+- **The gateway now runs real coach traffic** (chat and weekly reviews) as well as food photos, against the mock provider only. No live AI service is connected and nothing has been spent.
+- **Safety runs before cost.** Crisis, extreme-restriction, symptom and under-18 messages get a fixed safe reply with no provider call, no cost and no quota use, so a person is never blocked from safety information by an allowance, budget or kill switch on normal chat. Unsafe or pressuring model output (guilt, streak pressure, diagnoses, very low calorie prescriptions, weight competition) and any proposed change that breaks its strict schema is rejected after the call; the cost is still recorded (`output_rejected`, `schema_rejected`).
+- **Database enforcement** (migration `20261204000100_coach.sql`): `ai_usage_events` (append-only, owner-readable, detached rather than deleted when an account is deleted), `ai_user_usage` and `ai_budget` (server-only), and four service-only functions: `ai_budget_reserve`, `ai_budget_settle`, `ai_quota_consume`, `ai_quota_refund`. The reservation and quota updates take a row lock, so concurrent requests cannot oversubscribe them.
+- **Concurrency is tested for real:** `supabase/tests/concurrency.sh` races 10 separate database sessions: 60 simultaneous reservations against a $5 ceiling grant exactly 5, and 60 simultaneous quota requests against a limit of 3 grant exactly 3. A deliberately non-atomic version of the function was caught by it (8 granted instead of 5).
+- **Kill switches:** `feature_flags` rows `ai.kill_all` and `ai.kill.<feature>` (all start off), changeable only by staff with `flags.manage` and MFA, every change audited. In the development build a switch in Coach privacy stands in for it. Everything rule-based (the Daily Fit Plan, workouts, food logging) keeps working while AI is paused.
+- **Allowances (proposed, free tier):** 20 coach messages, 1 weekly review and 5 photo analyses per month. Pro allowances are larger. These are placeholders to tune from measured cost.
+- **Still application-side only:** as above, these controls cannot guarantee the provider's bill. Set the provider's own limit (see LIVE_INTEGRATION.md).

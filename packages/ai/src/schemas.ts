@@ -22,12 +22,59 @@ export const foodPhotoResponseSchema = z
   .refine((r) => r.items.every((i) => i.gramsHigh >= i.gramsLow), 'gramsHigh must be >= gramsLow');
 export type FoodPhotoResponse = z.infer<typeof foodPhotoResponseSchema>;
 
-/** A change the assistant proposes. It is never applied until the user confirms it in the app. */
-export const proposedChangeSchema = z.object({
-  kind: z.enum(['update_daily_plan', 'add_workout', 'swap_meal', 'adjust_goal', 'add_habit']),
-  summary: z.string().min(1).max(200),
-  payload: z.record(z.string(), z.unknown()),
-});
+/**
+ * A change the assistant proposes. It is NEVER applied until the person confirms it in the app, and each kind has a strict payload so the model
+ * cannot smuggle in anything else (for example it cannot set a weight target directly: goal changes go through the safety rules like any other goal).
+ */
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const planModeSchema = z.enum(['normal', 'busy', 'travel', 'comeback']);
+export const proposedChangeSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('update_daily_plan'),
+    summary: z.string().min(1).max(200),
+    payload: z.object({ mode: planModeSchema, date: isoDate.optional() }).strict(),
+  }),
+  z.object({
+    kind: z.literal('add_workout'),
+    summary: z.string().min(1).max(200),
+    payload: z
+      .object({
+        workoutId: z.string().min(1).max(80),
+        plannedFor: isoDate,
+        lowImpact: z.boolean().optional(),
+      })
+      .strict(),
+  }),
+  z.object({
+    kind: z.literal('swap_meal'),
+    summary: z.string().min(1).max(200),
+    payload: z
+      .object({
+        fromFoodId: z.string().max(60),
+        toFoodId: z.string().max(60),
+        grams: z.number().positive().max(2000),
+      })
+      .strict(),
+  }),
+  z.object({
+    kind: z.literal('adjust_goal'),
+    summary: z.string().min(1).max(200),
+    // `replacePeriod` names the goal this one replaces (so it can be ended on confirmation). There is deliberately no target field.
+    payload: z
+      .object({
+        type: z.enum(['lose', 'maintain', 'gain']),
+        period: z.enum(['weekly', 'monthly', 'yearly']),
+        replacePeriod: z.enum(['weekly', 'monthly', 'yearly']).optional(),
+      })
+      .strict(),
+  }),
+  z.object({
+    kind: z.literal('add_habit'),
+    summary: z.string().min(1).max(200),
+    payload: z.object({ title: z.string().min(1).max(80) }).strict(),
+  }),
+]);
+export type ProposedChange = z.infer<typeof proposedChangeSchema>;
 export const conciergeResponseSchema = z.object({
   message: z.string().min(1).max(1500),
   /** Why the assistant suggested this, in plain language (transparent recommendations). */
