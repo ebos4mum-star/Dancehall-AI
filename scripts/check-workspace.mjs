@@ -40,6 +40,7 @@ const REQUIRED_DOCS = [
   'FITNESS_SAFETY',
   'CONTENT_LICENSING',
   'GLOBAL_READINESS',
+  'UI_UX_DESIGN_DIRECTION',
 ];
 for (const d of REQUIRED_DOCS) if (!existsSync(`docs/${d}.md`)) fail(`missing doc: docs/${d}.md`);
 

@@ -15,7 +15,7 @@ This repository is **public during development** so its source can be read, but 
 
 Status: Phase 0B foundation plus Batches A-D (identity and goals, nutrition with simulated photo logging, dance fitness, and the Fit Concierge with a simulated coach) running on a development mock. No cloud project, AI service or content exists.
 
-To go live, see [docs/LIVE_INTEGRATION.md](docs/LIVE_INTEGRATION.md). Start with [docs/MASTER_SPEC.md](docs/MASTER_SPEC.md) and [docs/IMPLEMENTATION_ROADMAP.md](docs/IMPLEMENTATION_ROADMAP.md).
+To go live, see [docs/LIVE_INTEGRATION.md](docs/LIVE_INTEGRATION.md). Start with [docs/MASTER_SPEC.md](docs/MASTER_SPEC.md) and [docs/IMPLEMENTATION_ROADMAP.md](docs/IMPLEMENTATION_ROADMAP.md). **All UI work follows [docs/UI_UX_DESIGN_DIRECTION.md](docs/UI_UX_DESIGN_DIRECTION.md), the authoritative design direction.**
 
 ## Develop
 
