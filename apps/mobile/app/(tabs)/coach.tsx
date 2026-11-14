@@ -28,7 +28,17 @@ import { DevBanner } from '@/ui/DevBanner';
 import { Notice } from '@/ui/Banner';
 import { haptics } from '@/ui/haptics';
 
-const PROMPTS = ['plan', 'busy', 'travel', 'comeback', 'week', 'swap'] as const;
+const PROMPTS = [
+  'plan',
+  'busy',
+  'travel',
+  'comeback',
+  'week',
+  'swap',
+  'why',
+  'plateau',
+  'recover',
+] as const;
 const PROMPT_ICON = {
   plan: 'sunny',
   busy: 'timer',

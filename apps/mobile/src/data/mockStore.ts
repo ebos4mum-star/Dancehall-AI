@@ -42,6 +42,8 @@ import {
   summarizeWeights,
   weekStartOf,
   entryProblem,
+  entriesOf,
+  addDaysIso,
   parsePrefs,
   wellnessPlanContext,
   type PlanMode,
@@ -1247,12 +1249,38 @@ export class MockStore implements DataStore {
               kind: i.kind,
               title: i.title,
               done: i.doneAt !== null,
+              why: i.why,
             })),
           }
         : null,
+      wellness: this.coachWellness(s, today),
       comeback: detectComeback(s.sessions, { now: this.now(), timeZone: tz }),
       guideKcal: guide,
     });
+  }
+  /** Only what the person recorded. Returns undefined when nothing was logged and no preferences were set, so the coach says nothing about it. */
+  private coachWellness(s: State, today: string) {
+    const prefs = parsePrefs(s.wellnessPrefs);
+    const entries = (s.wellness ?? []).filter(
+      (e) => e.day >= addDaysIso(today, -6) && e.day <= today,
+    );
+    if (entries.length === 0 && !s.wellnessPrefs) return undefined;
+    const sleep = entriesOf(entries, 'sleep');
+    return {
+      walkMinutesWeek: entriesOf(entries, 'walk').reduce((a, e) => a + e.amount, 0),
+      strengthSessionsWeek: entriesOf(entries, 'strength').length,
+      sleepNightsWeek: sleep.length,
+      sleepAvgHours:
+        sleep.length >= 3
+          ? Math.round((sleep.reduce((a, e) => a + e.amount, 0) / sleep.length) * 10) / 10
+          : null,
+      recoveryToday:
+        (entriesOf(entries, 'recovery').find((e) => e.day === today)?.label as
+          'fresh' | 'ok' | 'sore' | 'worn' | undefined) ?? null,
+      hungerCheckinsWeek: entriesOf(entries, 'hunger').length,
+      intent: prefs.goalIntent,
+      numbersHidden: prefs.eatingConcern || prefs.pregnantOrPostpartum || prefs.tracking === 'none',
+    };
   }
   async getCoachContextSummary() {
     const s = await this.authed();
@@ -1499,6 +1527,7 @@ export class MockStore implements DataStore {
       foodLogTimes: s.foodLogs.map((l) => l.loggedAt),
       weights: s.weights.map((w) => ({ weightKg: w.weightKg, measuredAt: w.measuredAt })),
       activeGoals: s.goals.filter((g) => g.status === 'active').length,
+      wellness: (s.wellness ?? []).map(({ clientKey: _k, ...e }) => e),
     });
     let result: Awaited<ReturnType<MockStore['runGateway']>>;
     try {

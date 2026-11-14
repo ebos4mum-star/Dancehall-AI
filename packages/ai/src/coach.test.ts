@@ -117,6 +117,10 @@ describe('the simulated coach', () => {
     'My goal is too hard',
     'What about my weight?',
     'How was my week?',
+    'Why is this in my plan?',
+    'My weight has plateaued',
+    'I feel sore and tired',
+    'How do I build habits?',
     'hello',
   ];
   it('produces schema-valid, safe, strictly-typed output for every intent, with and without personalization', () => {
@@ -472,5 +476,93 @@ describe('gateway: safety, metering and controls for the concierge', () => {
   });
   it('uses the classifier consistently with what the mock answers', () => {
     expect(classifyIntent('I only have 5 minutes').intent).toBe('busy');
+  });
+});
+
+describe('weight-management coach topics (simulated, rules-based)', () => {
+  const wellness: NonNullable<CoachContext['wellness']> = {
+    walkMinutesWeek: 0,
+    strengthSessionsWeek: 0,
+    sleepNightsWeek: 4,
+    sleepAvgHours: 5.8,
+    recoveryToday: 'sore',
+    hungerCheckinsWeek: 0,
+    intent: 'lose',
+    numbersHidden: false,
+  };
+  const ctx = (w?: Partial<typeof wellness>) =>
+    buildCoachContext({
+      personalized: true,
+      unitSystem: 'metric',
+      now: new Date('2026-06-03T10:00:00Z'),
+      timeZone: 'UTC',
+      wellness: { ...wellness, ...w },
+      plan: {
+        mode: 'normal',
+        items: [
+          { kind: 'habit', title: 'Sip some water', done: false, why: 'Water helps energy.' },
+        ],
+      },
+    });
+  it('routes the new intents', () => {
+    expect(classifyIntent('my weight has plateaued').intent).toBe('plateau');
+    expect(classifyIntent('why is this in my plan').intent).toBe('plan_explain');
+    expect(classifyIntent('I am sore').intent).toBe('recovery');
+    expect(classifyIntent('help me build a routine').intent).toBe('habits');
+  });
+  it('explains plan items using their own reasons', () => {
+    expect(composeCoachReply('why is this in my plan', ctx()).message).toMatch(
+      /Water helps energy/,
+    );
+  });
+  it('plateau education uses only recorded data and never diagnoses', () => {
+    const r = composeCoachReply('stuck on a plateau', ctx());
+    expect(r.message).toMatch(/5\.8 hours/);
+    expect(r.message).toMatch(/no movement is logged/);
+    expect(r.message).not.toMatch(/you have (a|an) /i);
+    expect(
+      composeCoachReply('stuck on a plateau', ctx({ sleepAvgHours: null })).message,
+    ).not.toMatch(/hours of sleep/);
+  });
+  it('shares no numbers and points to support when numbers are hidden', () => {
+    const r = composeCoachReply('stuck on a plateau', ctx({ numbersHidden: true }));
+    expect(r.supportReferral).toBe(true);
+    expect(r.message).not.toMatch(/\d/);
+  });
+  it('recovery suggests gentle options, rest and a professional for lasting pain', () => {
+    const r = composeCoachReply('I feel sore', ctx());
+    expect(r.message).toMatch(/sore today/);
+    expect(r.message).toMatch(/health professional/);
+    expect(r.proposedChanges.some((c) => c.kind === 'update_daily_plan')).toBe(true);
+  });
+  it('weekly review reports recorded wellness only', () => {
+    const base = {
+      weekStart: '2026-06-01',
+      sessions: 0,
+      minutes: 0,
+      activeDays: 2,
+      foodLoggedDays: 0,
+      styles: [],
+      lowImpactSessions: 0,
+      weightTrend: null,
+      activeGoals: 0,
+    };
+    const none = composeWeeklyReview(base);
+    expect(JSON.stringify(none)).not.toMatch(/walked|strength session|nights of sleep/);
+    const some = composeWeeklyReview({
+      ...base,
+      wellness: {
+        walkDays: 2,
+        walkMinutes: 40,
+        strengthSessions: 1,
+        sleepNights: 4,
+        sleepAvgHours: 6,
+        hungerCheckins: 0,
+        waterLoggedDays: 0,
+      },
+    });
+    weeklyReviewResponseSchema.parse(some);
+    expect(JSON.stringify(some)).toMatch(/walked on 2 day/);
+    expect(JSON.stringify(some)).toMatch(/1 strength session/);
   });
 });

@@ -358,6 +358,16 @@ export interface WeekFacts {
   lowImpactSessions: number;
   weightTrend: 'down' | 'up' | 'steady' | null;
   activeGoals: number;
+  /** Recorded walking, strength, sleep and check-ins for the week. Absent when the person logged none of these. */
+  wellness?: {
+    walkDays: number;
+    walkMinutes: number;
+    strengthSessions: number;
+    sleepNights: number;
+    sleepAvgHours: number | null;
+    hungerCheckins: number;
+    waterLoggedDays: number;
+  };
 }
 
 /** How many of the three days before `date` (in the person's time zone) include a completed session. */
