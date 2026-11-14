@@ -27,6 +27,7 @@ Nothing here has been run for you: no project, build, or paid service has been c
 6. `20261205000100_integration.sql`
 7. `20261205000200_deletion_config.sql`
 8. `20261206000100_fit_challenges.sql`
+9. `20261207000100_habits.sql` (written after the first eight were applied to the dev project; apply it the same way before testing habits against Supabase)
 
 The development project has all eight applied (verified: the live schema fingerprint matches a database built from these files) plus the synthetic reference data from `supabase/seed.sql`, loaded outside the migration history.
 

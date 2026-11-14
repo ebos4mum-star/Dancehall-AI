@@ -20,7 +20,7 @@ const USER = { id: 'u-synthetic-1', email: 'dancer@example.test' };
 
 function builder(c: Call) {
   const b: Record<string, unknown> = {};
-  for (const m of ['select', 'order', 'limit', 'gte', 'lt']) b[m] = () => b;
+  for (const m of ['select', 'order', 'limit', 'gte', 'lt', 'is']) b[m] = () => b;
   for (const m of ['insert', 'update', 'delete', 'upsert'])
     b[m] = (payload?: unknown) => {
       c.op = m;
@@ -367,5 +367,48 @@ describe('fit challenge persistence', () => {
       payload: { status: 'completed' },
     });
     expect(last().filters).toContainEqual(['id', 'c1']);
+  });
+});
+
+describe('habit persistence', () => {
+  it('adds a habit with only the name, and maps the row', async () => {
+    respond = () => ({ data: { id: 'h1', name: 'Walk', created_at: 't' }, error: null });
+    const h = await store().addHabit('Walk');
+    expect(last()).toMatchObject({ table: 'habits', op: 'insert', payload: { name: 'Walk' } });
+    expect(h).toEqual({ id: 'h1', name: 'Walk', createdAt: 't' });
+  });
+  it('maps the database limit and consent errors', async () => {
+    respond = () => ({
+      data: null,
+      error: { code: '23514', message: 'habit_limit_reached: at most 5 active habits' },
+    });
+    expect(await codeOf(store().addHabit('Sixth'))).toBe('habit_limit_reached');
+    respond = () => ({
+      data: null,
+      error: { message: 'new row violates row-level security policy' },
+    });
+    expect(await codeOf(store().addHabit('Walk'))).toBe('consent_required');
+  });
+  it('archives by setting a time, never by deleting the habit', async () => {
+    await store().archiveHabit('h1');
+    expect(last()).toMatchObject({ table: 'habits', op: 'update' });
+    expect(Object.keys(last().payload as object)).toEqual(['archived_at']);
+    expect(last().filters).toContainEqual(['id', 'h1']);
+  });
+  it('checks a day on with an insert and off with a scoped delete', async () => {
+    await store().setHabitDone('h1', '2026-06-01', true);
+    expect(last()).toMatchObject({
+      table: 'habit_checkins',
+      op: 'insert',
+      payload: { habit_id: 'h1', day: '2026-06-01' },
+    });
+    await store().setHabitDone('h1', '2026-06-01', false);
+    expect(last()).toMatchObject({ table: 'habit_checkins', op: 'delete' });
+    expect(last().filters).toEqual(
+      expect.arrayContaining([
+        ['habit_id', 'h1'],
+        ['day', '2026-06-01'],
+      ]),
+    );
   });
 });

@@ -11,6 +11,7 @@ import { Ring } from '@/ui/motion';
 import { errorMessage, useLoad } from '@/data/hooks';
 import { t, type StringKey } from '@/i18n';
 import { challengeProgress } from '@/challenges/logic';
+import { HabitsCard } from '@/habits/HabitsCard';
 import { useProgressInsights } from '@/progress/hooks';
 import { Celebration, HabitWeek } from '@/progress/ui';
 import { formatChange, formatDate, formatWeight, parseDecimal } from '@/lib/format';
@@ -145,6 +146,9 @@ export default function Today() {
       <PlanCard />
 
       <Celebration ids={insights.fresh} />
+      <FadeIn>
+        <HabitsCard />
+      </FadeIn>
       {activeChallenge && challengeNow ? (
         <FadeIn>
           <Card>

@@ -137,7 +137,9 @@ describe('newlyEarned and seen-state', () => {
 });
 
 describe('tone', () => {
-  const copy = Object.entries(en).filter(([k]) => k.startsWith('ach.') || k.startsWith('habit.'));
+  const copy = Object.entries(en).filter(
+    ([k]) => k.startsWith('ach.') || k.startsWith('habit.') || k.startsWith('habits.'),
+  );
   it('has copy for every achievement id', () => {
     for (const id of [
       'first_session',

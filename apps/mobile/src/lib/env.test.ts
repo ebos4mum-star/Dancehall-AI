@@ -74,3 +74,41 @@ describe('resolveConfig: placeholder verification', () => {
     expect(() => resolveConfig({ EXPO_PUBLIC_APP_ENV: 'production' })).toThrow(ConfigError);
   });
 });
+
+describe('mock authentication can never be enabled in production', () => {
+  const urls = [undefined, 'https://x.supabase.example.test', 'http://localhost:54321', ''];
+  const keys = [undefined, 'sb_publishable_abc', ''];
+  const modes = [undefined, 'mock', 'supabase', 'MOCK', ' mock ', 'dev', ''];
+  it('no combination of settings yields mock mode when APP_ENV is production', () => {
+    let tried = 0;
+    for (const url of urls)
+      for (const key of keys)
+        for (const mode of modes) {
+          tried++;
+          let result: ReturnType<typeof resolveConfig> | null = null;
+          try {
+            result = resolveConfig({
+              EXPO_PUBLIC_APP_ENV: 'production',
+              EXPO_PUBLIC_AUTH_MODE: mode,
+              EXPO_PUBLIC_SUPABASE_URL: url,
+              EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: key,
+            });
+          } catch (e) {
+            expect(e).toBeInstanceOf(ConfigError);
+          }
+          if (result) {
+            expect(result.authMode).toBe('supabase');
+            expect(result.supabaseUrl).toBeTruthy();
+            expect(result.supabasePublishableKey).toBeTruthy();
+          }
+        }
+    expect(tried).toBe(urls.length * keys.length * modes.length);
+  });
+  it('the preview environment is treated like development (mock allowed) only when explicitly requested', () => {
+    expect(resolveConfig({ EXPO_PUBLIC_APP_ENV: 'preview' }).authMode).toBe('mock');
+  });
+  it('an unknown or misspelled environment is refused rather than defaulting to something permissive', () => {
+    for (const e of ['prod', 'Production', 'staging', 'live'])
+      expect(() => resolveConfig({ EXPO_PUBLIC_APP_ENV: e })).toThrow(ConfigError);
+  });
+});

@@ -14,6 +14,8 @@ export interface DataExport {
   mealPlans: unknown[];
   workoutSessions: unknown[];
   challenges: unknown[];
+  habits: unknown[];
+  habitCheckins: unknown[];
 }
 
 /**
@@ -36,6 +38,8 @@ export async function buildDataExport(
     mealPlans,
     sessions,
     challenges,
+    habits,
+    habitCheckins,
   ] = await Promise.all([
     store.getProfile(),
     store.getPrivate(),
@@ -48,6 +52,8 @@ export async function buildDataExport(
     store.listMealPlans(),
     store.listSessions(),
     store.listChallenges(),
+    store.listHabits(),
+    store.listHabitCheckins('0000-01-01'),
   ]);
   return {
     format: 'dancehall-fit-export-v1',
@@ -63,6 +69,8 @@ export async function buildDataExport(
     mealPlans,
     workoutSessions: sessions,
     challenges,
+    habits,
+    habitCheckins,
   };
 }
 

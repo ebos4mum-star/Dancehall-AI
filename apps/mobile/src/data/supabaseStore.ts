@@ -32,6 +32,8 @@ import {
   type WorkoutSession,
   type ChallengeStatus,
   type FitChallenge,
+  type Habit,
+  type HabitCheckin,
   type NewFitChallenge,
   type SavedMeal,
 } from './types';
@@ -50,7 +52,7 @@ export interface SupabaseStoreConfig {
 }
 
 const CODES =
-  /^(not_authenticated|adults_only|invalid_birth_date|consent_required|profile_incomplete|goal_period_mismatch|goal_direction_mismatch|goal_unsafe_underweight|goal_target_below_healthy_range|goal_pace_too_fast)/;
+  /^(not_authenticated|adults_only|invalid_birth_date|consent_required|profile_incomplete|goal_period_mismatch|goal_direction_mismatch|goal_unsafe_underweight|goal_target_below_healthy_range|goal_pace_too_fast|habit_limit_reached)/;
 
 /** Turns a PostgREST/Postgres error into the same StoreError codes the mock uses. */
 export function mapSupabaseError(
@@ -626,6 +628,46 @@ function createBaseStore(
     },
     async setChallengeStatus(id, status: ChallengeStatus) {
       ok(await db.from('fit_challenges').update({ status }).eq('id', id));
+      emit();
+    },
+
+    async listHabits() {
+      return (
+        ok(
+          await db
+            .from('habits')
+            .select('id,name,created_at')
+            .is('archived_at', null)
+            .order('created_at', { ascending: true })
+            .limit(50),
+        ) as Row[]
+      ).map((r): Habit => ({
+        id: r.id as string,
+        name: r.name as string,
+        createdAt: r.created_at as string,
+      }));
+    },
+    async addHabit(name: string) {
+      const r = ok(
+        await db.from('habits').insert({ name }).select('id,name,created_at').single(),
+      ) as Row;
+      emit();
+      return { id: r.id as string, name: r.name as string, createdAt: r.created_at as string };
+    },
+    async archiveHabit(id: string) {
+      ok(await db.from('habits').update({ archived_at: new Date().toISOString() }).eq('id', id));
+      emit();
+    },
+    async listHabitCheckins(sinceDay: string) {
+      return (
+        ok(
+          await db.from('habit_checkins').select('habit_id,day').gte('day', sinceDay).limit(1000),
+        ) as Row[]
+      ).map((r): HabitCheckin => ({ habitId: r.habit_id as string, day: r.day as string }));
+    },
+    async setHabitDone(habitId: string, day: string, done: boolean) {
+      if (done) ok(await db.from('habit_checkins').insert({ habit_id: habitId, day }));
+      else ok(await db.from('habit_checkins').delete().eq('habit_id', habitId).eq('day', day));
       emit();
     },
 

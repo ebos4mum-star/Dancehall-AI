@@ -21,11 +21,15 @@ function parse(text: string): Record<string, string> {
 
 describe.skipIf(!present)('apps/mobile/.env.local', () => {
   const env = present ? parse(readFileSync(file, 'utf8')) : {};
-  it('resolves to a valid Supabase configuration', () => {
-    const c = resolveConfig(env);
+  it('holds a valid Supabase configuration for later activation, whatever mode is set now', () => {
+    const c = resolveConfig({ ...env, EXPO_PUBLIC_AUTH_MODE: 'supabase' });
     expect(c.authMode).toBe('supabase');
     expect(c.supabaseUrl).toMatch(/^https:\/\/[a-z0-9]{20}\.supabase\.co$/);
     expect(c.supabasePublishableKey).toMatch(/^sb_publishable_/);
+  });
+  it('is in development, where mock sign-in is allowed, until real sign-in is activated', () => {
+    const c = resolveConfig(env);
+    expect(c.appEnv).toBe('development');
   });
   it('contains only EXPO_PUBLIC_* names, so no secret can ship in the app bundle', () => {
     const bad = Object.keys(env).filter((k) => !k.startsWith('EXPO_PUBLIC_'));

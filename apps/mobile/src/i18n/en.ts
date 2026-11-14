@@ -67,6 +67,17 @@ export const en = {
   'ach.first_meal.body': 'Knowing what you eat is a useful first step.',
   'ach.meals_7_days.title': 'Seven days of meal logging',
   'ach.meals_7_days.body': 'Seven different days with a meal logged.',
+  'habits.title': 'My habits',
+  'habits.intro':
+    'Small things you choose. Tick them when you do them. Skipping a day costs nothing.',
+  'habits.empty': 'Add something small you would like to do, like “Stretch for two minutes”.',
+  'habits.add': 'Add habit',
+  'habits.name': 'New habit',
+  'habits.remove': 'Remove',
+  'habits.week': '{n} of 7 days this week',
+  'habits.limit': 'You have 5 habits, the most you can keep at once.',
+  'habits.done': '{name}: done today',
+  'habits.notDone': '{name}: not done today',
   'habit.title': 'This week',
   'habit.moved': 'Moved',
   'habit.logged': 'Logged food',
@@ -238,7 +249,7 @@ export const en = {
   'privacy.resetDev': 'Reset development data',
   'privacy.exportTitle': 'Export my data',
   'privacy.exportBody':
-    'Get a copy of your profile, weight, goals, food diary, saved meals, meal plans, workouts and challenges as a JSON file you can keep.',
+    'Get a copy of your profile, weight, goals, food diary, saved meals, meal plans, workouts, challenges and habits as a JSON file you can keep.',
   'privacy.exportButton': 'Export my data',
   'privacy.exportReady': 'Your export is ready. Share it, or select and copy the text below.',
   'privacy.exportText': 'Export (JSON)',
@@ -655,6 +666,7 @@ export const en = {
   'err.not_found': 'We could not find that.',
   'err.active_challenge_exists':
     'You already have a challenge in progress. Finish or stop it first.',
+  'err.habit_limit_reached': 'You can keep up to 5 habits at a time. Remove one to add another.',
   'err.unknown': 'Something went wrong. Please try again.',
 } as const;
 export type StringKey = keyof typeof en;
