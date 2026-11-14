@@ -618,6 +618,21 @@ export const en = {
   'wl.diet.dairy_free': 'Dairy free',
   'wl.minutes': 'Minutes a week you would like to move (optional)',
   'wl.waterGoal': 'Daily water goal in ml (optional)',
+  'wl.celTitle': 'Pulse celebrations',
+  'wl.celIntro':
+    'Pulse celebrates goals you set, for a day, a week, a month or a year. It never celebrates weight, calories or food numbers.',
+  'wl.cel.off': 'Off',
+  'wl.cel.gentle': 'Gentle',
+  'wl.cel.full': 'Full',
+  'wl.celNote.off':
+    'No celebrations. Goals you reach are still remembered, so turning this on later will not replay them.',
+  'wl.celNote.gentle': 'A calm Pulse message, with no vibration.',
+  'wl.celNote.full': 'Pulse celebrates with a brief vibration. Reduced motion is respected.',
+  'wl.dailyMinutes': 'Daily movement goal',
+  'wl.monthlyWeeks': 'Weeks a month you want to reach your weekly goal',
+  'wl.yearlyWeeks': 'Weeks a year you want to reach your weekly goal',
+  'wl.weeksUnit': 'weeks',
+  'wl.saveCelGoals': 'Save celebration goals',
   'wl.careTitle': 'Looking after you',
   'wl.careIntro':
     'Optional. These help us avoid giving numbers that may not suit you. They stay private.',

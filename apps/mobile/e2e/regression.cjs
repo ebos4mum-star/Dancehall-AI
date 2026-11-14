@@ -440,20 +440,63 @@ async function step(name, fn) {
     await seen('Every suggestion is rule-based', 6000);
     await shot('wellness-coach');
   });
-  await step('M: Pulse celebrates reaching the daily water goal, once', async () => {
+  await step('M: Pulse celebrates only goals the person set, once, and respects Off', async () => {
+    // No goal set yet: passing the general water guide celebrates nothing.
     await tab('Food');
-    for (let i = 0; i < 10 && (await p.getByText('Daily water goal reached').count()) === 0; i++) {
+    for (let i = 0; i < 6; i++) {
       await btn('Add a bottle (500 ml)').click();
-      await p.waitForTimeout(350);
+      await p.waitForTimeout(250);
     }
-    await seen('Daily water goal reached', 6000);
-    await shot('wellness-celebration');
-    // Adding more water, or reloading data, does not celebrate the same goal again.
     await p.waitForTimeout(3500);
     assert.equal(await p.getByText('Daily water goal reached').count(), 0);
-    await btn('Add a glass (250 ml)').click();
-    await p.waitForTimeout(1200);
+    // Setting a goal the person has already passed is remembered silently, not celebrated retroactively.
+    await tab('Me');
+    await btn(/^Goals/).click();
+    await seen('Pulse celebrations');
+    await p.getByLabel('Daily water goal', { exact: false }).last().fill('2000');
+    await p
+      .getByRole('button', { name: 'Save', exact: true })
+      .locator('visible=true')
+      .nth(1)
+      .click();
+    await p.waitForTimeout(3500);
     assert.equal(await p.getByText('Daily water goal reached').count(), 0);
+    // Celebrations Off: a goal reached while off is remembered but shows nothing, and turning celebrations on again does not replay it.
+    await p.getByRole('button', { name: /^Off/ }).locator('visible=true').last().click();
+    await p.getByLabel('Daily movement goal', { exact: false }).last().fill('10');
+    await btn('Save celebration goals').click();
+    await p.waitForTimeout(3600);
+    assert.equal(await p.getByText('You moved today').count(), 0);
+    await p.getByRole('button', { name: /^Full/ }).locator('visible=true').last().click();
+    await p.waitForTimeout(3600);
+    assert.equal(await p.getByText('You moved today').count(), 0);
+    await p.goBack();
+    await p.waitForTimeout(400);
+  });
+  await step('M2: Pulse celebrates a weekly goal reached after it was set, once', async () => {
+    // Today's movement was already handled (and remembered) above, so a new goal level on the same day does not repeat it.
+    await tab('Me');
+    await btn(/^Goals/).click();
+    await p.getByLabel('Minutes a week', { exact: false }).last().fill('400');
+    await p
+      .getByRole('button', { name: 'Save', exact: true })
+      .locator('visible=true')
+      .nth(0)
+      .click();
+    await p.goBack();
+    await p.waitForTimeout(400);
+    await tab('Dance');
+    await p.getByLabel('Walk length').last().fill('400');
+    await btn('Log walk').click();
+    await seen('Weekly movement goal reached', 6000);
+    await shot('wellness-celebration');
+    await p.waitForTimeout(3500);
+    assert.equal(await p.getByText('Weekly movement goal reached').count(), 0);
+    await p.getByLabel('Walk length').last().fill('15');
+    await btn('Log walk').click();
+    await p.waitForTimeout(1500);
+    assert.equal(await p.getByText('Weekly movement goal reached').count(), 0);
+    assert.equal(await p.getByText('You moved today').count(), 0);
   });
   await step(
     'N: with numbers hidden, no calorie or nutrient figure appears on any screen',
