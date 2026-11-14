@@ -1,26 +1,27 @@
-import { useEffect, useReducer, useRef, useState } from 'react';
-import { AppState, Pressable, Switch, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { HeroScene } from '@/scene/HeroScene';
-import { IconBadge, IconChoice, InfoTile, SegmentedBar } from '@/ui/kit';
-import { brand } from '@/theme/tokens';
+import { Disclosure, IconBadge, IconChoice, InfoTile, SegmentedBar } from '@/ui/kit';
+import { brand, radius, spacing } from '@/theme/tokens';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
+  INSTRUCTORS,
   WORKOUT_BY_ID,
-  initSession,
-  sessionReduce,
-  type SessionEvent,
-  type SessionState,
+  completionSummary,
+  resolvePresentation,
+  type Presentation,
 } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage } from '@/data/hooks';
 import { EFFORT_CHOICES, mmss } from '@/dance/meta';
 import { t, type StringKey } from '@/i18n';
-import { spacing } from '@/theme/tokens';
+import { todayIso } from '@/lib/format';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
 import { useDanceData } from '@/dance/hooks';
+import { useReducedMotion } from '@/a11y/useReducedMotion';
 import { PulseStage } from '@/pulse/PulseStage';
 import { CharacterStage, DepthCard, HeroCard } from '@/ui/Depth';
 import { Notice } from '@/ui/Banner';
@@ -28,24 +29,10 @@ import { Ring } from '@/ui/motion';
 import { Screen } from '@/ui/Screen';
 import { haptics } from '@/ui/haptics';
 import { once } from '@/dance/once';
-import {
-  clearSnapshot,
-  deviceSnapshotStore,
-  readSnapshot,
-  restoreSession,
-  snapshotOf,
-  writeSnapshot,
-} from '@/dance/resume';
-
-type Wrapped = { s: SessionState; changes: number };
-const reducer = (
-  w: Wrapped,
-  e: SessionEvent | { type: 'restore'; state: SessionState },
-): Wrapped => {
-  if (e.type === 'restore') return { s: e.state, changes: w.changes };
-  const r = sessionReduce(w.s, e);
-  return { s: r.state, changes: w.changes + (r.segmentChanged ? 1 : 0) };
-};
+import { clearSnapshot, deviceSnapshotStore } from '@/dance/resume';
+import { usePlayer } from '@/player/usePlayer';
+import { INSTRUCTION_LICENCES, INSTRUCTION_TRACKS, stageRendererFor } from '@/player/catalog';
+import { AudioPanel, MovementPreview, PresentationPicker } from '@/player/ui';
 
 export default function Session() {
   const { id, low, sessionId } = useLocalSearchParams<{
@@ -54,72 +41,45 @@ export default function Session() {
     sessionId?: string;
   }>();
   const workout = WORKOUT_BY_ID.get(String(id));
-  const { store } = useApp();
+  const { store, profile } = useApp();
   const { colors } = useTheme();
+  const reduced = useReducedMotion();
   const dance = useDanceData();
-  const [state, dispatch] = useReducer(reducer, undefined, () => ({
-    s: initSession(workout ?? { id: '', blocks: [] }, low === '1'),
-    changes: 0,
-  }));
+  const { r, dispatch, restored, audio, updateAudio, voiceAvailable } = usePlayer(
+    workout,
+    low === '1',
+    sessionId ? String(sessionId) : null,
+  );
   const [effort, setEffort] = useState<string>('moderate');
   const [err, setErr] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-  const [restored, setRestored] = useState(false);
-  const s = state.s;
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  const [requested, setRequested] = useState<Presentation>('guided_text');
+  const s = r.session;
   // One guarded save per session screen: a double tap or a retry after success can never record the workout twice.
   const saver = useRef(once(async (fn: () => Promise<void>) => fn())).current;
-
-  // Recover an interrupted session of this same workout (always comes back paused; no time is added).
-  useEffect(() => {
-    if (!workout) return;
-    let alive = true;
-    void readSnapshot(deviceSnapshotStore).then((snap) => {
-      if (!alive || !snap || snap.workoutId !== workout.id) return;
-      const r = restoreSession(snap, workout);
-      if (!r) return void clearSnapshot(deviceSnapshotStore);
-      dispatch({ type: 'restore', state: r });
-      setRestored(true);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [workout]);
-
-  // Keep a recovery point while the session is under way; remove it once saved or discarded.
-  useEffect(() => {
-    if (!workout || saved) return;
-    if (s.status === 'paused' || s.status === 'running') {
-      if (s.elapsedS % 5 === 0 || s.status === 'paused')
-        void writeSnapshot(
-          deviceSnapshotStore,
-          snapshotOf(s, sessionId ? String(sessionId) : null),
-        );
-    }
-  }, [s, saved, workout, sessionId]);
-
-  // Leaving the app pauses the workout, so time away is never counted as exercise.
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (st) => {
-      if (st !== 'active') dispatch({ type: 'pause' });
-    });
-    return () => sub.remove();
-  }, []);
-
-  // One tick per second while running.
-  useEffect(() => {
-    if (s.status !== 'running') return;
-    const h = setInterval(() => dispatch({ type: 'tick' }), 1000);
-    return () => clearInterval(h);
-  }, [s.status]);
-
-  // A short, meaningful buzz when the block changes and when the workout ends.
-  const lastChanges = useRef(0);
-  useEffect(() => {
-    if (state.changes === lastChanges.current) return;
-    lastChanges.current = state.changes;
-    if (s.status === 'finished') haptics.success();
-    else haptics.capture();
-  }, [state.changes, s.status]);
+  // A track with no renderer registered cannot play, so it is reported as unable to load rather than offered.
+  const missing = useMemo(
+    () =>
+      new Set(
+        INSTRUCTION_TRACKS.filter((tr) => !stageRendererFor(tr.presentation)).map((tr) => tr.id),
+      ),
+    [],
+  );
+  const resolution = useMemo(
+    () =>
+      resolvePresentation({
+        workout: workout ?? { id: '', blocks: [] },
+        tracks: INSTRUCTION_TRACKS,
+        licences: INSTRUCTION_LICENCES,
+        country: profile?.country ?? null,
+        today: todayIso(),
+        lowImpact: s.lowImpact,
+        requested,
+        missing,
+      }),
+    [workout, profile?.country, s.lowImpact, requested, missing],
+  );
 
   if (!workout || workout.blocks.length === 0) {
     return (
@@ -135,6 +95,8 @@ export default function Session() {
   const doneS =
     s.segments.slice(0, s.index).reduce((a, g) => a + g.seconds, 0) + (seg.seconds - s.remainingS);
   const overall = totalS > 0 ? doneS / totalS : 0;
+  const summary = completionSummary(r);
+  const instructor = INSTRUCTORS.find((i) => i.id === workout.instructorId);
 
   const save = async () => {
     setErr(null);
@@ -173,19 +135,22 @@ export default function Session() {
   const KIND_TINT = { warmup: brand.coral, main: brand.violet, cooldown: brand.lime } as const;
   const EFFORT_ICON = { easy: 'leaf', moderate: 'walk', hard: 'flame', veryHard: 'flash' } as const;
 
+  // ---- After the session -------------------------------------------------------------------------------------------------------
   if (s.status === 'finished') {
     const m = Math.floor(s.elapsedS / 60);
-    const blocksDone = s.index + (s.status === 'finished' && s.remainingS === 0 ? 1 : 0);
     return (
       <Screen key="finished" top={false}>
         <HeroCard world="dance" style={{ alignItems: 'center' }}>
-          <CharacterStage size={132} state="celebrate" />
+          <CharacterStage
+            size={132}
+            state={summary.finishedNaturally ? 'celebrate' : 'encourage'}
+          />
           <AppText
             variant="title"
             accessibilityRole="header"
             style={{ color: colors.onHero, textAlign: 'center' }}
           >
-            {t('ses.done')}
+            {summary.finishedNaturally ? t('ses.done') : t('pl.endedTitle')}
           </AppText>
           <AppText style={{ color: colors.onHero, textAlign: 'center' }}>
             {t('ses.doneBody', { m, s: s.elapsedS % 60 })}
@@ -195,8 +160,8 @@ export default function Session() {
           <InfoTile icon="time" label={t('ses.statTime')} value={mmss(s.elapsedS)} />
           <InfoTile
             icon="layers"
-            label={t('ses.statBlocks')}
-            value={`${Math.min(blocksDone, s.segments.length)}/${s.segments.length}`}
+            label={t('pl.stepsDone')}
+            value={`${summary.segmentsCompleted}/${summary.segmentsTotal}`}
           />
           {saved ? (
             <InfoTile
@@ -207,7 +172,7 @@ export default function Session() {
           ) : null}
         </View>
         <DepthCard>
-          {s.elapsedS < 1 ? (
+          {!summary.recordable ? (
             <Notice>{t('ses.nothing')}</Notice>
           ) : saved ? (
             <View
@@ -221,6 +186,7 @@ export default function Session() {
             </View>
           ) : (
             <>
+              {!summary.finishedNaturally ? <Notice>{t('pl.endedEarly')}</Notice> : null}
               <AppText variant="heading" accessibilityRole="header">
                 {t('ses.effort')}
               </AppText>
@@ -236,7 +202,10 @@ export default function Session() {
                   />
                 ))}
               </View>
-              <Button label={t('ses.save')} onPress={save} />
+              <Button
+                label={summary.finishedNaturally ? t('ses.save') : t('pl.saveEarly')}
+                onPress={save}
+              />
             </>
           )}
           {err ? <Notice tone="warning">{err}</Notice> : null}
@@ -253,6 +222,162 @@ export default function Session() {
     );
   }
 
+  // ---- Before the session ------------------------------------------------------------------------------------------------------
+  if (r.phase === 'ready') {
+    return (
+      <Screen top={false}>
+        <HeroScene world="dance" height={230}>
+          <View style={{ position: 'absolute', left: spacing.lg, right: 120, top: spacing.lg }}>
+            <AppText
+              variant="caption"
+              style={{ color: brand.lime, fontWeight: '700', letterSpacing: 1.2 }}
+            >
+              {t(`style.${workout.style}` as StringKey).toUpperCase()}
+            </AppText>
+            <AppText variant="title" accessibilityRole="header" style={{ color: brand.ivory }}>
+              {workout.title}
+            </AppText>
+            <AppText style={{ color: brand.ivory, marginTop: spacing.xs }} numberOfLines={3}>
+              {workout.summary}
+            </AppText>
+          </View>
+          <View style={{ position: 'absolute', right: -8, bottom: 6 }}>
+            <PulseStage state="welcome" size={112} />
+          </View>
+        </HeroScene>
+        {restored ? <Notice>{t('ses.restored')}</Notice> : null}
+        <DepthCard>
+          {[
+            ['time', t('pl.facts.time'), t('dance.minutes', { n: workout.minutes })],
+            ['trending-up', t('pl.facts.level'), t(`level.${workout.level}` as StringKey)],
+            ['footsteps', t('pl.facts.impact'), t(`impact.${workout.impact}` as StringKey)],
+            ['fitness', t('pl.facts.kit'), workout.equipment],
+            [
+              'person',
+              t('pl.facts.guide'),
+              instructor ? instructor.displayName : t('pl.guideText'),
+            ],
+          ].map(([icon, label, value]) => (
+            <View
+              key={label}
+              accessible
+              accessibilityLabel={`${label}: ${value}`}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}
+            >
+              <IconBadge name={icon as 'time'} size={32} fill={brand.violet} />
+              <AppText variant="caption" muted style={{ width: 64 }}>
+                {label}
+              </AppText>
+              <AppText variant="label" style={{ flex: 1 }}>
+                {value}
+              </AppText>
+            </View>
+          ))}
+        </DepthCard>
+        <Button label={t('ses.start')} onPress={() => dispatch({ type: 'begin' })} />
+        <AppText variant="heading" accessibilityRole="header">
+          {t('pl.presentation')}
+        </AppText>
+        <DepthCard>
+          <PresentationPicker resolution={resolution} onPick={setRequested} />
+        </DepthCard>
+        <Disclosure title={t('wk.lowImpact')} summary={s.lowImpact ? t('pl.on') : t('pl.off')}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <IconBadge name="leaf" size={32} fill={brand.lime} />
+            <AppText variant="label" style={{ flex: 1 }}>
+              {t('wk.lowImpact')}
+            </AppText>
+            <Button
+              variant="secondary"
+              label={s.lowImpact ? t('pl.turnOff') : t('pl.turnOn')}
+              onPress={() => dispatch({ type: 'lowImpact', value: !s.lowImpact })}
+            />
+          </View>
+          <AppText variant="caption" muted>
+            {t('wk.lowImpactBody')}
+          </AppText>
+        </Disclosure>
+        <AppText variant="heading" accessibilityRole="header">
+          {t('pl.preview')}
+        </AppText>
+        <DepthCard>
+          <MovementPreview w={workout} lowImpact={s.lowImpact} />
+        </DepthCard>
+        {workout.safety.length > 0 ? (
+          <Disclosure title={t('wk.safety')} initiallyOpen>
+            {workout.safety.map((x) => (
+              <View key={x} style={{ flexDirection: 'row', gap: spacing.sm }}>
+                <Ionicons name="shield-checkmark" size={18} color={colors.success} />
+                <AppText variant="caption" style={{ flex: 1 }}>
+                  {x}
+                </AppText>
+              </View>
+            ))}
+          </Disclosure>
+        ) : null}
+        <Disclosure title={t('pl.audio')}>
+          <AudioPanel audio={audio} onChange={updateAudio} voiceAvailable={voiceAvailable} />
+        </Disclosure>
+      </Screen>
+    );
+  }
+
+  // ---- Preparation countdown ---------------------------------------------------------------------------------------------------
+  if (r.phase === 'prep') {
+    return (
+      <Screen top={false}>
+        <HeroScene world="dance" height={400}>
+          <View
+            style={{ position: 'absolute', top: spacing.lg, left: spacing.lg, right: spacing.lg }}
+          >
+            <AppText variant="label" style={{ color: brand.ivory }}>
+              {workout.title}
+            </AppText>
+          </View>
+          <View style={{ position: 'absolute', top: 70, left: 0, right: 0, alignItems: 'center' }}>
+            <View
+              accessible
+              accessibilityLiveRegion="assertive"
+              accessibilityLabel={`${t('pl.getReady')} ${r.prepS}`}
+              style={{ alignItems: 'center' }}
+            >
+              <AppText
+                variant="caption"
+                style={{ color: brand.lime, fontWeight: '700', letterSpacing: 1.2 }}
+              >
+                {t('pl.getReady').toUpperCase()}
+              </AppText>
+              <AppText
+                variant="title"
+                style={{ fontSize: 120, lineHeight: 132, color: brand.ivory }}
+              >
+                {String(r.prepS)}
+              </AppText>
+              <AppText
+                style={{ color: brand.ivory, textAlign: 'center', paddingHorizontal: spacing.lg }}
+              >
+                {seg.title}
+              </AppText>
+            </View>
+          </View>
+        </HeroScene>
+        <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
+          <Button
+            label={r.prepPaused ? t('ses.resume') : t('ses.pause')}
+            variant="secondary"
+            onPress={() => dispatch({ type: r.prepPaused ? 'resume' : 'pause' })}
+          />
+          <Button
+            variant="secondary"
+            label={t('pl.skipPrep')}
+            onPress={() => dispatch({ type: 'skipPrep' })}
+          />
+        </View>
+      </Screen>
+    );
+  }
+
+  // ---- During the session ------------------------------------------------------------------------------------------------------
   const barSegments = s.segments.map((g, i) => ({
     weight: g.seconds,
     fill: i < s.index ? 1 : i === s.index ? fraction : 0,
@@ -288,17 +413,25 @@ export default function Session() {
       <Ionicons name={icon} size={24} color={colors.text} />
     </Pressable>
   );
+  const Renderer =
+    resolution.active !== 'guided_text' ? stageRendererFor(resolution.active) : undefined;
+  const activeTrack = resolution.options.find((o) => o.kind === resolution.active)?.track;
   return (
     <Screen top={false}>
-      <HeroScene world="dance" height={376}>
+      <HeroScene world="dance" height={420}>
+        {Renderer && activeTrack ? (
+          <Renderer
+            track={activeTrack}
+            positionS={doneS}
+            playing={s.status === 'running'}
+            reducedMotion={reduced}
+            onError={() => undefined}
+          />
+        ) : null}
         <View
           style={{ position: 'absolute', top: spacing.md, left: spacing.lg, right: spacing.lg }}
         >
-          <AppText
-            variant="caption"
-            style={{ color: brand.ivory, opacity: 0.9 }}
-            accessibilityLiveRegion="polite"
-          >
+          <AppText variant="caption" style={{ color: brand.ivory, opacity: 0.9 }}>
             {`${workout.title} · ${t('ses.block', { n: s.index + 1, total: s.segments.length })}`}
           </AppText>
           <AppText
@@ -307,13 +440,15 @@ export default function Session() {
               color: KIND_TINT[seg.kind] === brand.violet ? brand.ivory : KIND_TINT[seg.kind],
             }}
           >
-            {t(`wk.${seg.kind}` as StringKey).toUpperCase()}
+            {s.status === 'paused'
+              ? `${t('pl.paused').toUpperCase()} · ${t(`wk.${seg.kind}` as StringKey).toUpperCase()}`
+              : t(`wk.${seg.kind}` as StringKey).toUpperCase()}
           </AppText>
         </View>
-        <View style={{ position: 'absolute', top: 64, left: 0, right: 0, alignItems: 'center' }}>
+        <View style={{ position: 'absolute', top: 58, left: 0, right: 0, alignItems: 'center' }}>
           <Ring
-            size={232}
-            stroke={16}
+            size={196}
+            stroke={14}
             fraction={fraction}
             color={KIND_TINT[seg.kind]}
             track="rgba(247,244,238,0.18)"
@@ -323,7 +458,7 @@ export default function Session() {
               accessible
               accessibilityLabel={`${mmss(s.remainingS)} ${t('ses.left')}`}
             >
-              <AppText variant="title" style={{ fontSize: 50, lineHeight: 56, color: brand.ivory }}>
+              <AppText variant="title" style={{ fontSize: 46, lineHeight: 52, color: brand.ivory }}>
                 {mmss(s.remainingS)}
               </AppText>
               <AppText variant="caption" style={{ color: brand.ivory, opacity: 0.85 }}>
@@ -332,16 +467,46 @@ export default function Session() {
             </View>
           </Ring>
         </View>
-        <View style={{ position: 'absolute', right: 4, bottom: 18 }}>
-          <PulseStage state={s.status === 'running' ? 'dance' : 'idle'} size={104} />
+        <View
+          style={{
+            position: 'absolute',
+            left: spacing.md,
+            right: 100,
+            bottom: spacing.md,
+            backgroundColor: 'rgba(36,20,61,0.82)',
+            borderRadius: radius.md,
+            padding: spacing.sm,
+          }}
+          accessibilityLiveRegion="polite"
+        >
+          <AppText variant="heading" accessibilityRole="header" style={{ color: brand.ivory }}>
+            {seg.title}
+          </AppText>
+          <AppText style={{ color: brand.ivory, fontSize: 17, lineHeight: 24 }} numberOfLines={4}>
+            {seg.cue}
+          </AppText>
         </View>
-        {restored && s.status === 'paused' ? (
+        <View style={{ position: 'absolute', right: -6, bottom: 6 }}>
+          <PulseStage state={s.status === 'running' ? 'dance' : 'idle'} size={92} />
+        </View>
+        {s.remainingS <= 3 && s.status === 'running' ? (
           <View
-            style={{ position: 'absolute', left: spacing.md, bottom: spacing.md, maxWidth: '58%' }}
+            pointerEvents="none"
+            style={{ position: 'absolute', right: spacing.lg, top: spacing.md }}
+            accessibilityElementsHidden
           >
-            <AppText variant="caption" style={{ color: brand.ivory }}>
-              {t('ses.restored')}
-            </AppText>
+            <View
+              style={{
+                backgroundColor: brand.lime,
+                borderRadius: radius.pill,
+                paddingHorizontal: spacing.md,
+                paddingVertical: 2,
+              }}
+            >
+              <AppText variant="label" style={{ color: brand.plum }}>
+                {String(s.remainingS)}
+              </AppText>
+            </View>
           </View>
         ) : null}
       </HeroScene>
@@ -355,28 +520,15 @@ export default function Session() {
         })}
       />
 
-      <DepthCard>
-        <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
-          <IconBadge name="walk" size={36} fill={KIND_TINT[seg.kind]} />
-          <AppText
-            variant="heading"
-            accessibilityRole="header"
-            accessibilityLiveRegion="polite"
-            style={{ flex: 1 }}
-          >
-            {seg.title}
-          </AppText>
-        </View>
-        <AppText style={{ fontSize: 18, lineHeight: 26 }}>{seg.cue}</AppText>
-        {next ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-            <Ionicons name="arrow-forward-circle" size={18} color={colors.textMuted} />
-            <AppText variant="caption" muted>
-              {t('ses.next', { title: next.title })}
-            </AppText>
-          </View>
-        ) : null}
-      </DepthCard>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+        <Ionicons name="arrow-forward-circle" size={18} color={colors.textMuted} />
+        <AppText variant="caption" muted style={{ flex: 1 }}>
+          {next ? `${t('pl.upNext')}: ${next.title}` : t('pl.lastOne')}
+        </AppText>
+        <AppText variant="caption" muted>
+          {t(`pl.active.${resolution.active}` as StringKey).split('.')[0]}
+        </AppText>
+      </View>
 
       <View
         style={{
@@ -389,19 +541,10 @@ export default function Session() {
         {circle('play-back', t('ses.back'), () => dispatch({ type: 'back' }), s.index === 0)}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={
-            s.status === 'ready'
-              ? t('ses.start')
-              : s.status === 'running'
-                ? t('ses.pause')
-                : t('ses.resume')
-          }
+          accessibilityLabel={s.status === 'running' ? t('ses.pause') : t('ses.resume')}
           onPress={() => {
-            if (s.status === 'ready') {
-              haptics.capture();
-              dispatch({ type: 'start' });
-            } else if (s.status === 'running') dispatch({ type: 'pause' });
-            else dispatch({ type: 'resume' });
+            haptics.tap();
+            dispatch({ type: s.status === 'running' ? 'pause' : 'resume' });
           }}
           style={{
             width: 84,
@@ -422,35 +565,45 @@ export default function Session() {
         {circle('play-forward', t('ses.skip'), () => dispatch({ type: 'skip' }))}
       </View>
       <AppText variant="caption" muted style={{ textAlign: 'center' }}>
-        {s.status === 'ready'
-          ? t('ses.start')
-          : s.status === 'running'
-            ? t('ses.pause')
-            : t('ses.resume')}
+        {s.status === 'running' ? t('ses.pause') : t('ses.resume')}
       </AppText>
 
-      <DepthCard>
+      <Disclosure title={t('pl.audio')}>
+        <AudioPanel audio={audio} onChange={updateAudio} voiceAvailable={voiceAvailable} />
+      </Disclosure>
+      <Disclosure title={t('wk.lowImpact')} summary={s.lowImpact ? t('pl.on') : t('pl.off')}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
           <IconBadge name="leaf" size={32} fill={brand.lime} />
           <AppText variant="label" style={{ flex: 1 }}>
             {t('wk.lowImpact')}
           </AppText>
-          <Switch
-            accessibilityLabel={t('wk.lowImpact')}
-            value={s.lowImpact}
-            onValueChange={(v) => {
-              haptics.tap();
-              dispatch({ type: 'lowImpact', value: v });
-            }}
-            trackColor={{ true: colors.primary, false: colors.border }}
+          <Button
+            variant="secondary"
+            label={s.lowImpact ? t('pl.turnOff') : t('pl.turnOn')}
+            onPress={() => dispatch({ type: 'lowImpact', value: !s.lowImpact })}
           />
         </View>
-      </DepthCard>
-      <Button
-        variant="secondary"
-        label={t('ses.endEarly')}
-        onPress={() => dispatch({ type: 'finish' })}
-      />
+      </Disclosure>
+      {confirmEnd ? (
+        <DepthCard>
+          <View accessibilityLiveRegion="polite" style={{ gap: spacing.sm }}>
+            <AppText variant="heading" accessibilityRole="header">
+              {t('pl.endTitle')}
+            </AppText>
+            <AppText muted>{t('pl.endBody')}</AppText>
+            <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
+              <Button label={t('pl.endConfirm')} onPress={() => dispatch({ type: 'finish' })} />
+              <Button
+                variant="secondary"
+                label={t('pl.keepGoing')}
+                onPress={() => setConfirmEnd(false)}
+              />
+            </View>
+          </View>
+        </DepthCard>
+      ) : (
+        <Button variant="secondary" label={t('ses.endEarly')} onPress={() => setConfirmEnd(true)} />
+      )}
     </Screen>
   );
 }
