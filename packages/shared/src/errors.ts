@@ -7,6 +7,7 @@ export type ErrorCode =
   | 'quota_exceeded'
   | 'budget_exhausted'
   | 'feature_disabled'
+  | 'ai_paused'
   | 'safety_blocked'
   | 'country_unavailable'
   | 'upstream_failure'
@@ -20,6 +21,7 @@ const HTTP_STATUS: Record<ErrorCode, number> = {
   quota_exceeded: 429,
   budget_exhausted: 503,
   feature_disabled: 503,
+  ai_paused: 409,
   safety_blocked: 422,
   country_unavailable: 451,
   upstream_failure: 502,

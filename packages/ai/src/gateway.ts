@@ -9,8 +9,15 @@ import {
   type FeatureFlag,
 } from '@dancehall/shared';
 import { maxCostUsd, costUsd, PLACEHOLDER_PRICES } from './cost';
-import { crossedThresholds, newBudget, reserve, settle, type BudgetState } from './budget';
+import { crossedThresholds, newBudget, type BudgetState } from './budget';
 import type { AiProvider } from './provider';
+import {
+  InMemoryBudgetPort,
+  type BudgetPort,
+  type QuotaPort,
+  type StaffControlsPort,
+  type UserAiPausePort,
+} from './ports';
 import { AI_RESPONSE_SCHEMAS, containsGuiltLanguage, type SchemaFeature } from './schemas';
 
 export interface UsageEvent {
@@ -61,6 +68,8 @@ export interface GatewayConfig {
   killFeatures: Partial<Record<AiFeature, boolean>>;
   models: Record<AiFeature, string>;
   maxOutputTokens: number;
+  /** Monthly ceiling passed to the budget port. Defaults to the $50 product ceiling. */
+  budgetCeilingUsd?: number;
   now: () => Date;
   onAlert?: (threshold: number, budget: BudgetState) => void;
 }
@@ -75,23 +84,50 @@ export interface GatewayRequest {
   hasImage?: boolean;
 }
 
+/** Optional async ports. Without them the gateway uses in-process state (development and tests). */
+export interface GatewayPorts {
+  budget?: BudgetPort;
+  quota?: QuotaPort;
+  /** Staff kill switch, read live on every request. Falls back to the static `killAll`/`killFeatures` config. */
+  staff?: StaffControlsPort;
+  /** The person's own AI pause. Separate from, and never able to change, the staff kill switch. */
+  userPause?: UserAiPausePort;
+}
+
 export class AiGateway {
-  budget: BudgetState;
+  private readonly budgetPort: BudgetPort;
   constructor(
     private readonly provider: AiProvider,
     private readonly usage: UsageStore,
     private readonly cfg: GatewayConfig,
     budget: BudgetState = newBudget(),
+    private readonly ports: GatewayPorts = {},
   ) {
-    this.budget = budget;
+    this.budgetPort = ports.budget ?? new InMemoryBudgetPort(budget);
+  }
+
+  /** In-process budget state (only when no external budget port is used). */
+  get budget(): BudgetState {
+    if (this.budgetPort instanceof InMemoryBudgetPort) return this.budgetPort.state;
+    throw new Error('Budget lives in the external budget port.');
   }
 
   async run(req: GatewayRequest): Promise<unknown> {
     const at = this.cfg.now();
     const month = at.toISOString().slice(0, 7);
     // 1. Kill switches come first: they cost nothing and must always win.
-    if (this.cfg.killAll || this.cfg.killFeatures[req.feature]) {
+    const staff = this.ports.staff
+      ? await this.ports.staff.load()
+      : { killAll: this.cfg.killAll, killFeatures: this.cfg.killFeatures };
+    if (staff.killAll || staff.killFeatures[req.feature]) {
       throw new AppError('feature_disabled', 'This feature is temporarily unavailable.');
+    }
+    // 1b. The person's own pause. A different code and message from the kill switch: it is their choice, and only theirs.
+    if (await this.ports.userPause?.isPaused(req.userId)) {
+      throw new AppError(
+        'ai_paused',
+        'AI is paused in your settings. You can turn it back on any time.',
+      );
     }
     // 2. Safety screen BEFORE any billable call: crisis, extreme-restriction, symptom and under-18 messages get a fixed, safe response and cost nothing.
     if (req.feature === 'concierge_chat') {
@@ -117,7 +153,9 @@ export class AiGateway {
       }
     }
     // 3. Entitlement and per-user quota.
-    const used = await this.usage.monthlyCount(req.userId, req.feature, month);
+    const used = this.ports.quota
+      ? 0
+      : await this.usage.monthlyCount(req.userId, req.feature, month);
     const access = checkAiAccess({
       entitlement: req.entitlement,
       feature: req.feature,
@@ -130,21 +168,38 @@ export class AiGateway {
         ? new AppError('quota_exceeded', 'You have used this feature’s allowance for the month.')
         : new AppError('feature_disabled', 'This feature is not available yet.');
     }
+    // With a quota port, the allowance is consumed atomically (check-and-increment) instead of read-then-write.
+    let quotaTaken = false;
+    if (this.ports.quota) {
+      const limit = access.remaining; // used is 0 here, so remaining is the full monthly allowance
+      quotaTaken = await this.ports.quota.consume(req.userId, month, req.feature, limit);
+      if (!quotaTaken)
+        throw new AppError(
+          'quota_exceeded',
+          'You have used this feature’s allowance for the month.',
+        );
+    }
+    const refundQuota = async () => {
+      if (quotaTaken) await this.ports.quota!.refund(req.userId, month, req.feature);
+    };
     // 4. Budget: reserve the worst case before the call.
     const model = this.cfg.models[req.feature];
     const price = PLACEHOLDER_PRICES[model];
-    if (!price) throw new AppError('internal', 'Model pricing is not configured.');
+    if (!price) {
+      await refundQuota();
+      throw new AppError('internal', 'Model pricing is not configured.');
+    }
     const inputTokens = Math.ceil(req.prompt.length / 4) + (req.hasImage ? 1600 : 0);
     const worst = maxCostUsd(price, inputTokens, this.cfg.maxOutputTokens);
-    const reserved = reserve(this.budget, worst);
-    if (!reserved.ok)
+    const reserved = await this.budgetPort.reserve(month, worst, this.cfg.budgetCeilingUsd ?? 50);
+    if (!reserved) {
+      await refundQuota();
       throw new AppError(
         'budget_exhausted',
         'AI features are paused for now. Please try again later.',
       );
-    this.budget = reserved.budget;
+    }
     // 5. Call, validate, settle, record.
-    const before = this.budget.settledUsd;
     try {
       const raw = await this.provider.complete({
         feature: req.feature,
@@ -154,9 +209,14 @@ export class AiGateway {
         maxOutputTokens: this.cfg.maxOutputTokens,
       });
       const actual = costUsd(price, raw.usage);
-      this.budget = settle(this.budget, worst, actual);
-      for (const t of crossedThresholds(this.budget.ceilingUsd, before, this.budget.settledUsd))
-        this.cfg.onAlert?.(t, this.budget);
+      const after = await this.budgetPort.settle(month, worst, actual);
+      const beforeUsd = after.settledUsd - actual;
+      for (const t of crossedThresholds(after.ceilingUsd, beforeUsd, after.settledUsd))
+        this.cfg.onAlert?.(t, {
+          ceilingUsd: after.ceilingUsd,
+          settledUsd: after.settledUsd,
+          reservedUsd: 0,
+        });
       const parsed = AI_RESPONSE_SCHEMAS[req.feature].safeParse(raw.json);
       const base = {
         userId: req.userId,
@@ -188,7 +248,8 @@ export class AiGateway {
     } catch (e) {
       if (e instanceof AppError) throw e;
       // Provider failure: release the reservation (no billed cost known) and record it.
-      this.budget = settle(this.budget, worst, 0);
+      await this.budgetPort.settle(month, worst, 0);
+      await refundQuota();
       await this.usage.record({
         userId: req.userId,
         feature: req.feature,
