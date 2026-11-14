@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+import { IconChoice, SectionTitle } from '@/ui/kit';
+import { brand } from '@/theme/tokens';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   CURATED_FOODS,
@@ -19,7 +21,6 @@ import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
 import { DepthCard } from '@/ui/Depth';
 import { Notice } from '@/ui/Banner';
-import { Choice } from '@/ui/Choice';
 import { Screen } from '@/ui/Screen';
 import { TextField } from '@/ui/TextField';
 
@@ -68,14 +69,24 @@ export default function AddFood() {
         pulse: 'idle',
       }}
     >
-      <Choice
-        value={tab}
-        onChange={setTab}
-        options={[
-          { value: 'search', label: t('add.searchTab') },
-          { value: 'manual', label: t('add.manualTab') },
-        ]}
-      />
+      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+        {(
+          [
+            { v: 'search', icon: 'search', label: t('add.searchTab') },
+            { v: 'manual', icon: 'create', label: t('add.manualTab') },
+          ] as const
+        ).map((o) => (
+          <View key={o.v} style={{ flex: 1 }}>
+            <IconChoice
+              icon={o.icon}
+              label={o.label}
+              selected={tab === o.v}
+              onPress={() => setTab(o.v)}
+              tint={brand.lime}
+            />
+          </View>
+        ))}
+      </View>
       {tab === 'search' ? (
         <>
           <TextField label={t('add.search')} value={q} onChangeText={setQ} autoCapitalize="none" />
@@ -84,15 +95,44 @@ export default function AddFood() {
           </AppText>
           {q.trim() === '' && recents.length > 0 ? (
             <View style={{ gap: spacing.xs }}>
-              <AppText variant="label">{t('add.recent')}</AppText>
-              {recents.map((r) => (
-                <Button
-                  key={`${r.foodId ?? r.name}-${r.grams}`}
-                  variant="secondary"
-                  label={t('add.recentItem', { name: r.name, g: Math.round(r.grams) })}
-                  onPress={() => done({ ...r, userEdited: r.userEdited })}
-                />
-              ))}
+              <SectionTitle icon="repeat" title={t('add.recent')} />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.xs }}
+              >
+                {recents.map((r) => (
+                  <Pressable
+                    key={`${r.foodId ?? r.name}-${r.grams}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('add.recentItem', {
+                      name: r.name,
+                      g: Math.round(r.grams),
+                    })}
+                    onPress={() => done({ ...r, userEdited: r.userEdited })}
+                    style={{
+                      width: 132,
+                      minHeight: 104,
+                      borderRadius: radius.md,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      backgroundColor: colors.surface,
+                      padding: spacing.sm,
+                      gap: spacing.xs,
+                      alignItems: 'flex-start',
+                    }}
+                  >
+                    <FoodBadge foodId={r.foodId} size={36} />
+                    <AppText variant="label" numberOfLines={2}>
+                      {r.name}
+                    </AppText>
+                    <AppText
+                      variant="caption"
+                      muted
+                    >{`${Math.round(r.grams)} g · ~${Math.round(r.kcal)} kcal`}</AppText>
+                  </Pressable>
+                ))}
+              </ScrollView>
             </View>
           ) : null}
           {results.length === 0 ? <Notice>{t('add.none')}</Notice> : null}

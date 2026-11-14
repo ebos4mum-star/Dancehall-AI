@@ -118,6 +118,67 @@ require('node:fs').mkdirSync(out, { recursive: true });
     await go('/dance/schedule');
     await shot('schedule');
   }
+  if (group === 'food') {
+    await tab('Food');
+    await shot('tab-top');
+    await scrollTo(500);
+    await shot('tab-slots');
+    await btn('Breakfast', { exact: false }).click();
+    await shot('add');
+    await p.getByLabel('Search foods').fill('rice');
+    await p.waitForTimeout(500);
+    await p.locator('[role="button"][aria-label*="ice"]').first().click();
+    await btn(/^Add to meal|^Add$/).click();
+    await shot('review');
+    await scrollTo(700);
+    await shot('review-total');
+    await btn('Save to diary').click();
+    await p.waitForTimeout(500);
+    await shot('saved-moment');
+    await p.waitForTimeout(2800);
+    await scrollTo(500);
+    await shot('tab-after-log');
+    await go('/food/add');
+    await shot('add-with-recents');
+    await go('/food/camera');
+    await shot('camera');
+    await go('/food/history');
+    await shot('history');
+    await go('/food/saved');
+    await shot('saved');
+    await go('/food/household');
+    await shot('household-empty');
+    await p.getByLabel('Household name').fill('Home base');
+    await btn('Create a household').click();
+    await p.waitForTimeout(700);
+    await shot('household-created');
+    await btn('Add meal idea', { exact: false })
+      .click()
+      .catch(() => {});
+    await p
+      .getByLabel('Meal idea')
+      .fill('Rice and peas')
+      .catch(() => {});
+    await btn('Add meal idea', { exact: true })
+      .click()
+      .catch(() => {});
+    await btn('Add to list', { exact: false })
+      .click()
+      .catch(() => {});
+    await p
+      .getByLabel('Item')
+      .fill('Plantain')
+      .catch(() => {});
+    await p
+      .getByLabel('Quantity and unit (optional, e.g. 2 kg)')
+      .fill('4')
+      .catch(() => {});
+    await btn('Add to list', { exact: true })
+      .click()
+      .catch(() => {});
+    await p.waitForTimeout(600);
+    await shot('household-lists');
+  }
   console.log(group, 'page errors:', errors.length, errors.slice(0, 5));
   await browser.close();
   srv.close();

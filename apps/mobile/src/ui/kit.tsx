@@ -283,3 +283,41 @@ export function SegmentedBar({
     </View>
   );
 }
+
+/** An icon above a short label, 52pt tall, for compact action rows. */
+export function IconAction({
+  icon,
+  label,
+  onPress,
+  danger = false,
+}: {
+  icon: IconName;
+  label: string;
+  onPress: () => void;
+  danger?: boolean;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={() => {
+        haptics.tap();
+        onPress();
+      }}
+      style={{
+        minHeight: 52,
+        minWidth: 64,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 2,
+        paddingHorizontal: spacing.sm,
+      }}
+    >
+      <Ionicons name={icon} size={22} color={danger ? colors.warningText : colors.text} />
+      <AppText variant="caption" style={danger ? { color: colors.warningText } : undefined}>
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}

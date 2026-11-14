@@ -15,13 +15,17 @@ import { Notice } from '@/ui/Banner';
 import { Screen } from '@/ui/Screen';
 import { haptics } from '@/ui/haptics';
 import { useTheme } from '@/theme/useTheme';
+import { Ionicons } from '@expo/vector-icons';
+import { PulseStage } from '@/pulse/PulseStage';
+import { IconBadge } from '@/ui/kit';
+import { brand } from '@/theme/tokens';
 
 let sampleCounter = 0;
 
 export default function CameraScreen() {
   const { store, config } = useApp();
   const { dispatch } = useDraft();
-  const { radius, spacing } = useTheme();
+  const { colors, radius, spacing } = useTheme();
   const { data: consents, reload } = useLoad((s) => s.getConsents());
   const [perm, requestPerm] = useCameraPermissions();
   const cam = useRef<CameraView>(null);
@@ -106,9 +110,17 @@ export default function CameraScreen() {
     return (
       <Screen top={false}>
         <DepthCard>
-          <AppText variant="heading" accessibilityRole="header">
-            {t('cam.consentTitle')}
-          </AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <IconBadge
+              name="shield-checkmark"
+              size={44}
+              fill={colors.primary}
+              color={colors.onPrimary}
+            />
+            <AppText variant="heading" accessibilityRole="header" style={{ flex: 1 }}>
+              {t('cam.consentTitle')}
+            </AppText>
+          </View>
           <AppText muted>{t('cam.consentBody')}</AppText>
           <AppText variant="caption" muted>
             {t('cam.privacy')}
@@ -146,25 +158,84 @@ export default function CameraScreen() {
         pulse: 'idle',
       }}
     >
-      {config.authMode === 'mock' ? <Notice tone="warning">{t('cam.mockBanner')}</Notice> : null}
-      {cameraReady ? (
-        <View style={{ height: 320, borderRadius: radius.lg, overflow: 'hidden' }}>
+      <View
+        style={{
+          height: 300,
+          borderRadius: radius.lg,
+          overflow: 'hidden',
+          backgroundColor: brand.plum,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {cameraReady ? (
           <CameraView
             ref={cam}
-            style={{ flex: 1 }}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
             facing="back"
             onMountError={() => setCamFailed(true)}
             accessibilityLabel="Camera preview"
           />
-        </View>
-      ) : perm && !perm.granted && perm.canAskAgain && Platform.OS !== 'web' ? (
-        <DepthCard>
-          <AppText>{t('cam.permission')}</AppText>
-          <Button label={t('cam.grant')} onPress={() => void requestPerm()} />
-        </DepthCard>
-      ) : (
-        <Notice>{t('cam.unavailable')}</Notice>
-      )}
+        ) : (
+          <View style={{ alignItems: 'center', gap: spacing.sm, padding: spacing.lg }}>
+            <PulseStage state="idle" size={96} />
+            <AppText style={{ color: brand.ivory, textAlign: 'center' }}>
+              {perm && !perm.granted && perm.canAskAgain && Platform.OS !== 'web'
+                ? t('cam.permission')
+                : t('cam.unavailable')}
+            </AppText>
+            {perm && !perm.granted && perm.canAskAgain && Platform.OS !== 'web' ? (
+              <Button label={t('cam.grant')} onPress={() => void requestPerm()} />
+            ) : null}
+          </View>
+        )}
+        {/* viewfinder corners */}
+        {(['tl', 'tr', 'bl', 'br'] as const).map((c) => (
+          <View
+            key={c}
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              width: 34,
+              height: 34,
+              top: c[0] === 't' ? 14 : undefined,
+              bottom: c[0] === 'b' ? 14 : undefined,
+              left: c[1] === 'l' ? 14 : undefined,
+              right: c[1] === 'r' ? 14 : undefined,
+              borderColor: brand.lime,
+              borderTopWidth: c[0] === 't' ? 4 : 0,
+              borderBottomWidth: c[0] === 'b' ? 4 : 0,
+              borderLeftWidth: c[1] === 'l' ? 4 : 0,
+              borderRightWidth: c[1] === 'r' ? 4 : 0,
+              borderRadius: 8,
+            }}
+          />
+        ))}
+        {config.authMode === 'mock' ? (
+          <View
+            accessible
+            accessibilityLabel={t('cam.mockBanner')}
+            style={{
+              position: 'absolute',
+              top: 12,
+              alignSelf: 'center',
+              flexDirection: 'row',
+              gap: 6,
+              alignItems: 'center',
+              backgroundColor: brand.coral,
+              borderRadius: radius.pill,
+              paddingHorizontal: spacing.md,
+              paddingVertical: 4,
+            }}
+          >
+            <Ionicons name="flask" size={14} color={brand.plum} />
+            <AppText variant="caption" style={{ color: brand.plum, fontWeight: '700' }}>
+              {t('cam.simulatedBadge')}
+            </AppText>
+          </View>
+        ) : null}
+      </View>
+      {config.authMode === 'mock' ? <Notice tone="warning">{t('cam.mockBanner')}</Notice> : null}
       <View style={{ gap: spacing.sm }}>
         {cameraReady ? (
           <Button
