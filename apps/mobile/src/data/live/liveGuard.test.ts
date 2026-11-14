@@ -21,9 +21,9 @@ describe('live verification guard', () => {
       true,
     );
     for (const url of [
-      'https://abcdefghijklmnopqrst.supabase.co',
-      'https://vvwjhbsyxetnktimgaxg.supabase.co.evil.test',
-      'http://vvwjhbsyxetnktimgaxg.supabase.co',
+      `https://${'a'.repeat(20)}.supabase.co`,
+      `${APPROVED_URL}.evil.test`,
+      APPROVED_URL.replace('https://', 'http://'),
       '',
     ])
       expect(resolveLiveConfig({ ...good, LIVE_SUPABASE_URL: url }).enabled, url).toBe(false);
