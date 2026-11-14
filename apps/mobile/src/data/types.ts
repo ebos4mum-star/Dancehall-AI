@@ -84,6 +84,7 @@ export type StoreErrorCode =
   | 'active_challenge_exists'
   | 'habit_limit_reached'
   | 'already_in_household'
+  | 'duplicate_item'
   | 'invalid_invite'
   | 'household_full'
   | 'not_owner'

@@ -38,6 +38,8 @@ export interface DailyPlanInput {
   mealsLoggedToday: number;
   activeGoalTypes: ReadonlyArray<'lose' | 'maintain' | 'gain'>;
   daysSinceWeight: number | null;
+  /** Distinct days in the 3 days before `date` on which the person completed a session. Optional; absent means no suggestion changes. */
+  recentActiveDays?: number;
   seed?: number;
 }
 
@@ -61,7 +63,14 @@ export function generateDailyPlan(i: DailyPlanInput): {
 } {
   const seed = i.seed ?? 0;
   const items: PlanItemDraft[] = [];
-  const lowOnly = i.lowImpact || i.mode === 'comeback' || i.mode === 'travel';
+  // Recovery: after three active days in a row, offer lighter movement and say plainly that resting is fine. General wellness only;
+  // nothing is inferred about injury, illness or readiness, and nothing here is a requirement.
+  const recovery =
+    i.mode === 'normal' &&
+    (i.recentActiveDays ?? 0) >= 3 &&
+    i.doneToday.length === 0 &&
+    i.plannedToday.length === 0;
+  const lowOnly = i.lowImpact || i.mode === 'comeback' || i.mode === 'travel' || recovery;
 
   // Move
   if (i.doneToday.length > 0) {
@@ -90,7 +99,9 @@ export function generateDailyPlan(i: DailyPlanInput): {
     const w = suggestQuickFit({ minutes: MINUTES[i.mode], lowImpactOnly: lowOnly, seed });
     if (w) {
       const why = {
-        normal: 'A short session keeps momentum without taking over your day.',
+        normal: recovery
+          ? 'You have moved three days in a row. A lighter session is offered today; resting is just as good a choice.'
+          : 'A short session keeps momentum without taking over your day.',
         busy: 'Short on time: five minutes still counts.',
         travel: 'Travelling: no equipment, small space and gentle on the joints.',
         comeback: 'Easing back in gently. There is nothing to make up for.',
@@ -107,6 +118,14 @@ export function generateDailyPlan(i: DailyPlanInput): {
       });
     }
   }
+
+  if (recovery)
+    items.push({
+      kind: 'habit',
+      title: 'Rest is part of the plan',
+      detail: 'Taking today off is a good choice too. Tick this if you rest.',
+      why: 'Easy days and rest days help movement stay enjoyable. Nothing is lost by resting.',
+    });
 
   // Food
   if (i.mode === 'busy')
@@ -224,4 +243,20 @@ export interface WeekFacts {
   lowImpactSessions: number;
   weightTrend: 'down' | 'up' | 'steady' | null;
   activeGoals: number;
+}
+
+/** How many of the three days before `date` (in the person's time zone) include a completed session. */
+export function recentActiveDayCount(
+  sessions: ReadonlyArray<{ status: string; completedAt: string | null }>,
+  date: string,
+  timeZone: string | null,
+): number {
+  const wanted = new Set([1, 2, 3].map((n) => addDaysIso(date, -n)));
+  const hit = new Set<string>();
+  for (const s of sessions) {
+    if (s.status !== 'completed' || !s.completedAt) continue;
+    const k = localDateKey(s.completedAt, timeZone);
+    if (wanted.has(k)) hit.add(k);
+  }
+  return hit.size;
 }

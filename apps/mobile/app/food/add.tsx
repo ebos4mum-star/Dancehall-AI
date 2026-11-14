@@ -9,6 +9,8 @@ import {
   type FoodRef,
 } from '@dancehall/shared';
 import { useDraft } from '@/food/draft';
+import { useFoodData } from '@/food/hooks';
+import { recentFoods } from '@/food/recent';
 import { FoodBadge, PortionStepper, kcalText, macroText } from '@/food/ui';
 import { t } from '@/i18n';
 import { parseDecimal } from '@/lib/format';
@@ -29,6 +31,8 @@ export default function AddFood() {
   const [q, setQ] = useState('');
   const [picked, setPicked] = useState<FoodRef | null>(null);
   const [grams, setGrams] = useState(100);
+  const { logs } = useFoodData();
+  const recents = useMemo(() => recentFoods(logs), [logs]);
   const results = useMemo(() => searchFoods(q, CURATED_FOODS, 8), [q]);
 
   const [name, setName] = useState('');
@@ -70,6 +74,19 @@ export default function AddFood() {
           <AppText variant="caption" muted>
             {t('food.sourceNote')}
           </AppText>
+          {q.trim() === '' && recents.length > 0 ? (
+            <View style={{ gap: spacing.xs }}>
+              <AppText variant="label">{t('add.recent')}</AppText>
+              {recents.map((r) => (
+                <Button
+                  key={`${r.foodId ?? r.name}-${r.grams}`}
+                  variant="secondary"
+                  label={t('add.recentItem', { name: r.name, g: Math.round(r.grams) })}
+                  onPress={() => done({ ...r, userEdited: r.userEdited })}
+                />
+              ))}
+            </View>
+          ) : null}
           {results.length === 0 ? <Notice>{t('add.none')}</Notice> : null}
           {results.map((r) => (
             <Pressable

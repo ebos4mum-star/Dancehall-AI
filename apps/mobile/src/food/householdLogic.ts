@@ -32,3 +32,17 @@ export function householdError(message: string | undefined): StoreError {
     if (m.includes(c)) return new StoreError(c, m);
   return new StoreError('unknown', m);
 }
+
+/** The same item typed twice (ignoring case, spacing and punctuation) should not appear twice on the shared list. */
+export const groceryKey = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+export function isDuplicateGrocery(
+  existing: ReadonlyArray<{ name: string; checked: boolean }>,
+  name: string,
+): boolean {
+  const k = groceryKey(name);
+  return k !== '' && existing.some((e) => !e.checked && groceryKey(e.name) === k);
+}

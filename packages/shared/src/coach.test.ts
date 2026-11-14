@@ -10,6 +10,7 @@ import {
   contextSummaryLines,
   detectComeback,
   generateDailyPlan,
+  recentActiveDayCount,
   screenCoachInput,
   unsafeOutputProblems,
   type DailyPlanInput,
@@ -182,6 +183,47 @@ describe('Daily Fit Plan', () => {
       expect(WORKOUT_BY_ID.get(w.ref!.workoutId!)!.impact).toBe('low');
       expect(w.ref!.lowImpact).toBe(true);
     }
+  });
+  it('recovery: after three active days it offers a lighter session and explicit rest, with no guilt or medical claims', () => {
+    const r = generateDailyPlan({ ...base, recentActiveDays: 3 });
+    const w = r.items.find((i) => i.kind === 'workout')!;
+    expect(WORKOUT_BY_ID.get(w.ref!.workoutId!)!.impact).toBe('low');
+    const rest = r.items.find((i) => i.title.startsWith('Rest'))!;
+    expect(rest.detail).toMatch(/good choice/i);
+    const text = JSON.stringify(r.items);
+    expect(text).not.toMatch(/injur|ill|pregnan|diagnos|overtrain|must|should|failed|miss/i);
+    // Not triggered by fewer active days, a planned session, or a session already done today.
+    expect(
+      generateDailyPlan({ ...base, recentActiveDays: 2 }).items.some((i) =>
+        i.title.startsWith('Rest'),
+      ),
+    ).toBe(false);
+    expect(
+      generateDailyPlan({ ...base, recentActiveDays: 3, doneToday: [{ title: 'x' }] }).items.some(
+        (i) => i.title.startsWith('Rest'),
+      ),
+    ).toBe(false);
+    expect(
+      generateDailyPlan({ ...base, mode: 'busy', recentActiveDays: 5 }).items.some((i) =>
+        i.title.startsWith('Rest'),
+      ),
+    ).toBe(false);
+  });
+  it('counts recent active days in the person’s time zone, ignoring today and older days', () => {
+    const done = (iso: string) => ({ status: 'completed', completedAt: iso });
+    const sessions = [
+      done('2026-06-16T10:00:00Z'),
+      done('2026-06-16T20:00:00Z'),
+      done('2026-06-15T10:00:00Z'),
+      done('2026-06-17T08:00:00Z'),
+      done('2026-06-10T10:00:00Z'),
+      { status: 'planned', completedAt: null },
+    ];
+    expect(recentActiveDayCount(sessions, '2026-06-17', 'UTC')).toBe(2);
+    // 23:30 UTC on the 16th is already the 17th in Auckland, so it no longer counts as "yesterday".
+    expect(
+      recentActiveDayCount([done('2026-06-16T23:30:00Z')], '2026-06-17', 'Pacific/Auckland'),
+    ).toBe(0);
   });
   it('busy mode is short and light; travel is low-impact; comeback is gentle with no goals or catch-up', () => {
     const busy = generateDailyPlan({ ...base, mode: 'busy' });

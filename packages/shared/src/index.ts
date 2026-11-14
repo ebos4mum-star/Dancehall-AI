@@ -21,3 +21,4 @@ export * from './coach-safety';
 export * from './coach-context';
 export * from './daily-plan';
 export * from './weekly';
+export * from './recommend';

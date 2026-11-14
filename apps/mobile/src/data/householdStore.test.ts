@@ -69,6 +69,16 @@ describe('mock household', () => {
     await s.deleteHouseholdGroceryItem(g.id);
     expect(await s.listHouseholdGrocery()).toEqual([]);
   });
+  it('refuses a duplicate unchecked grocery item but allows it again once ticked', async () => {
+    const s = await setup();
+    await s.createHousehold('Home');
+    const a = await s.addHouseholdGroceryItem({ name: 'Plantain', quantity: '4' });
+    expect(await code(s.addHouseholdGroceryItem({ name: '  plantain! ' }))).toBe('duplicate_item');
+    expect(await s.listHouseholdGrocery()).toHaveLength(1);
+    await s.setHouseholdGroceryChecked(a.id, true);
+    await s.addHouseholdGroceryItem({ name: 'Plantain' });
+    expect(await s.listHouseholdGrocery()).toHaveLength(2);
+  });
   it('creates an invite, cannot join alone, and leaving clears the shared lists', async () => {
     const s = await setup();
     await s.createHousehold('Home');
