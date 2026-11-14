@@ -405,6 +405,15 @@ async function step(name, fn) {
     await p.waitForTimeout(400);
     await tab('Food');
     await seen('No calorie target');
+    await seen('logged today');
+    // The person chose no numbers: no calorie figure is visible anywhere on the Food tab.
+    assert.deepEqual(
+      await p
+        .getByText(/\bkcal\b/)
+        .locator('visible=true')
+        .allTextContents(),
+      [],
+    );
     await p.goBack().catch(() => {});
   });
   await step('L: walking, recovery, hunger and coach reflect what was logged', async () => {
@@ -430,6 +439,21 @@ async function step(name, fn) {
     await btn('Send').click();
     await seen('Every suggestion is rule-based', 6000);
     await shot('wellness-coach');
+  });
+  await step('M: Pulse celebrates reaching the daily water goal, once', async () => {
+    await tab('Food');
+    for (let i = 0; i < 10 && (await p.getByText('Daily water goal reached').count()) === 0; i++) {
+      await btn('Add a bottle (500 ml)').click();
+      await p.waitForTimeout(350);
+    }
+    await seen('Daily water goal reached', 6000);
+    await shot('wellness-celebration');
+    // Adding more water, or reloading data, does not celebrate the same goal again.
+    await p.waitForTimeout(3500);
+    assert.equal(await p.getByText('Daily water goal reached').count(), 0);
+    await btn('Add a glass (250 ml)').click();
+    await p.waitForTimeout(1200);
+    assert.equal(await p.getByText('Daily water goal reached').count(), 0);
   });
   await step('Privacy: data survives a reload (device storage), no page errors', async () => {
     await p.goto(base);

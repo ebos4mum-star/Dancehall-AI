@@ -13,6 +13,7 @@ import { goalFraction } from '@/progress/goalDisplay';
 import { todayGlance } from '@/today/glance';
 import { TodayHero, type HeroChip } from '@/today/TodayHero';
 import { heroLine } from '@/today/heroLine';
+import { useNumbersHidden } from '@/wellness/hooks';
 import { useTodaySummary } from '@/today/hooks';
 import { takeWelcome } from '@/today/welcome';
 import { usePulse } from '@/pulse/PulseStage';
@@ -108,11 +109,13 @@ export default function Today() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [summary2.comeback]);
 
+  const hideNumbers = useNumbersHidden();
   const glance = todayGlance({
     doneToday: dance.doneToday.map((x) => ({ minutes: sessionMinutes(x) })),
     plannedToday: dance.todayPlanned.length,
     mealsLogged: food.todayLogs.length,
     loggedKcal: food.todayTotals.kcal,
+    hideNumbers,
   });
   const heroChips: HeroChip[] = [
     ...glance,
@@ -346,6 +349,10 @@ export default function Today() {
           <SectionTitle icon="restaurant" title={t('today.foodTitle')} />
           {food.todayLogs.length === 0 ? (
             <AppText muted>{t('today.foodEmpty')}</AppText>
+          ) : hideNumbers ? (
+            <AppText accessibilityLiveRegion="polite">
+              {t('food.hiddenToday', { n: food.todayLogs.length })}
+            </AppText>
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.lg }}>
               <Ring

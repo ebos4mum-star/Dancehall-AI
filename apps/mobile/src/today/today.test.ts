@@ -93,3 +93,18 @@ describe('takeWelcome', () => {
     expect(await takeWelcome(bad, 'u', 'd')).toBe(false);
   });
 });
+
+describe('accomplishments with hidden numbers', () => {
+  it('lists meals without calories', () => {
+    const list = accomplishments({
+      sessionsDone: [],
+      mealsLogged: 1,
+      loggedKcal: 420,
+      habitsDone: [],
+      planItemsDone: 0,
+      planItemsTotal: 0,
+      hideNumbers: true,
+    });
+    expect(list.map((x) => x.text)).toEqual(['1 meal logged']);
+  });
+});

@@ -317,6 +317,9 @@ export const en = {
   'food.todayTitle': 'Today',
   'food.todayEmpty':
     'Nothing logged yet today. Log what you eat when it suits you; there is no pressure.',
+  'food.hiddenToday':
+    '{n} meal(s) logged today. Calorie and nutrient numbers are hidden by your settings.',
+  'food.slotLogged': 'Logged',
   'food.kcalAbout': 'about {kcal} kcal',
   'food.range': '({low}–{high})',
   'food.ofGuide': 'of a rough {guide} kcal guide',
@@ -561,6 +564,14 @@ export const en = {
   'onb.ban4.line': 'A few quick questions so we start at a comfortable level.',
   'onb.ban5.title': 'What would you like?',
   'onb.ban5.line': 'A goal is optional and you can skip it.',
+  'cel.daily.water': 'Daily water goal reached. Nicely done.',
+  'cel.daily.habits': 'Every habit ticked today. That is a good day.',
+  'cel.daily.movement': 'You moved today, and it counts.',
+  'cel.weekly.movement_minutes': 'Weekly movement goal reached. Well done.',
+  'cel.monthly.movement_weeks':
+    'Monthly milestone: you met your weekly movement goal in several weeks this month.',
+  'cel.yearly.movement_weeks':
+    'Yearly milestone: you met your weekly movement goal in about half the weeks of the year.',
   'moment.welcomeAboard': 'You are all set. Welcome aboard.',
   'dance.filters': 'Filters',
   'wk.shape': 'The shape of this workout',

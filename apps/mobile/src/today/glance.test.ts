@@ -23,3 +23,17 @@ describe('todayGlance', () => {
     ).toBe('2 planned for today');
   });
 });
+
+describe('hidden numbers', () => {
+  it('omits calories from the food line but still says meals were logged', () => {
+    const g = todayGlance({
+      doneToday: [],
+      plannedToday: 0,
+      mealsLogged: 2,
+      loggedKcal: 640,
+      hideNumbers: true,
+    });
+    expect(g[1]!.text).toBe('2 meals logged');
+    expect(JSON.stringify(g)).not.toMatch(/kcal/);
+  });
+});

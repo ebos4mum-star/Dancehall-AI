@@ -11,6 +11,7 @@ import { DiaryItem } from '@/food/DiaryItem';
 import { useFoodData } from '@/food/hooks';
 import { MacroBars } from '@/food/ui';
 import { HungerCard } from '@/wellness/trackers';
+import { useNumbersHidden } from '@/wellness/hooks';
 import { HydrationCard, TargetsCard } from '@/wellness/ui';
 import { t, type StringKey } from '@/i18n';
 import { useTheme } from '@/theme/useTheme';
@@ -35,6 +36,7 @@ export default function FoodDashboard() {
   const { config } = useApp();
   const { dispatch } = useDraft();
   const { todayLogs, todayTotals, guide, error } = useFoodData();
+  const hideNumbers = useNumbersHidden();
   const kcal = useCountUp(todayTotals.kcal);
   const byMeal = (m: MealType) => todayLogs.filter((l) => l.mealType === m);
   const hasLogs = todayLogs.length > 0;
@@ -141,49 +143,57 @@ export default function FoodDashboard() {
       <Reveal delay={80}>
         <DepthCard>
           <SectionTitle icon="pie-chart" title={t('food.todayTitle')} />
-          {!hasLogs ? (
-            <AppText muted>{t('food.todayEmpty')}</AppText>
+          {hideNumbers && hasLogs ? (
+            <AppText accessibilityLiveRegion="polite">
+              {t('food.hiddenToday', { n: todayLogs.length })}
+            </AppText>
           ) : (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.lg }}>
-              <Ring
-                size={124}
-                stroke={13}
-                fraction={guide ? todayTotals.kcal / guide.guideKcal : 0}
-                color={colors.primary}
-                track={colors.border}
-              >
-                <View
-                  style={{ alignItems: 'center' }}
-                  accessible
-                  accessibilityLabel={`about ${todayTotals.kcal} kilocalories today`}
-                >
-                  <AppText variant="heading">{`~${kcal}`}</AppText>
-                  <AppText variant="caption" muted>
-                    kcal
-                  </AppText>
+            <>
+              {!hasLogs ? (
+                <AppText muted>{t('food.todayEmpty')}</AppText>
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.lg }}>
+                  <Ring
+                    size={124}
+                    stroke={13}
+                    fraction={guide ? todayTotals.kcal / guide.guideKcal : 0}
+                    color={colors.primary}
+                    track={colors.border}
+                  >
+                    <View
+                      style={{ alignItems: 'center' }}
+                      accessible
+                      accessibilityLabel={`about ${todayTotals.kcal} kilocalories today`}
+                    >
+                      <AppText variant="heading">{`~${kcal}`}</AppText>
+                      <AppText variant="caption" muted>
+                        kcal
+                      </AppText>
+                    </View>
+                  </Ring>
+                  <View style={{ flex: 1 }}>
+                    <MacroBars totals={todayTotals} />
+                  </View>
                 </View>
-              </Ring>
-              <View style={{ flex: 1 }}>
-                <MacroBars totals={todayTotals} />
-              </View>
-            </View>
+              )}
+              {hasLogs ? (
+                <AppText
+                  variant="caption"
+                  muted
+                >{`${t('food.kcalAbout', { kcal: todayTotals.kcal })} ${t('food.range', { low: todayTotals.kcalLow, high: todayTotals.kcalHigh })}${guide ? ` ${t('food.ofGuide', { guide: guide.guideKcal })}` : ''}`}</AppText>
+              ) : null}
+              {todayTotals.unreviewedEstimates > 0 ? (
+                <AppText variant="caption" muted>
+                  {t('food.includesEstimates', { n: todayTotals.unreviewedEstimates })}
+                </AppText>
+              ) : null}
+              {guide ? (
+                <AppText variant="caption" muted>
+                  {t('food.guideNote')}
+                </AppText>
+              ) : null}
+            </>
           )}
-          {hasLogs ? (
-            <AppText
-              variant="caption"
-              muted
-            >{`${t('food.kcalAbout', { kcal: todayTotals.kcal })} ${t('food.range', { low: todayTotals.kcalLow, high: todayTotals.kcalHigh })}${guide ? ` ${t('food.ofGuide', { guide: guide.guideKcal })}` : ''}`}</AppText>
-          ) : null}
-          {todayTotals.unreviewedEstimates > 0 ? (
-            <AppText variant="caption" muted>
-              {t('food.includesEstimates', { n: todayTotals.unreviewedEstimates })}
-            </AppText>
-          ) : null}
-          {guide ? (
-            <AppText variant="caption" muted>
-              {t('food.guideNote')}
-            </AppText>
-          ) : null}
         </DepthCard>
       </Reveal>
 
@@ -200,7 +210,11 @@ export default function FoodDashboard() {
               key={m}
               accessibilityRole="button"
               accessibilityLabel={`${t(`food.meal.${m}` as StringKey)}: ${
-                logs.length > 0 ? `about ${sum.kcal} kilocalories` : t('food.slotEmpty')
+                logs.length > 0
+                  ? hideNumbers
+                    ? t('food.slotLogged')
+                    : `about ${sum.kcal} kilocalories`
+                  : t('food.slotEmpty')
               }. ${t('food.slotAdd')}`}
               onPress={() => logMeal(m)}
               style={{
@@ -232,7 +246,11 @@ export default function FoodDashboard() {
               </View>
               <AppText variant="label">{t(`food.meal.${m}` as StringKey)}</AppText>
               <AppText variant="caption" muted>
-                {logs.length > 0 ? `~${sum.kcal} kcal` : t('food.slotEmpty')}
+                {logs.length > 0
+                  ? hideNumbers
+                    ? t('food.slotLogged')
+                    : `~${sum.kcal} kcal`
+                  : t('food.slotEmpty')}
               </AppText>
             </Pressable>
           );
