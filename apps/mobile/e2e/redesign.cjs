@@ -179,6 +179,31 @@ require('node:fs').mkdirSync(out, { recursive: true });
     await p.waitForTimeout(600);
     await shot('household-lists');
   }
+  if (group === 'coach') {
+    await tab('Coach');
+    await shot('tab-top');
+    await scrollTo(700);
+    await shot('tab-prompts');
+    await p.getByRole('button', { name: 'I missed a few days' }).last().click();
+    await p.waitForTimeout(500);
+    await shot('thinking-or-reply');
+    await p.waitForTimeout(2000);
+    await shot('reply');
+    await scrollTo(600);
+    await btn('Why this?', { exact: false })
+      .click()
+      .catch(() => {});
+    await shot('reply-why');
+    await go('/coach/review');
+    await shot('review-empty');
+    await btn('Write my weekly review', { exact: false })
+      .click()
+      .catch(() => {});
+    await p.waitForTimeout(800);
+    await shot('review');
+    await go('/coach/settings');
+    await shot('settings');
+  }
   console.log(group, 'page errors:', errors.length, errors.slice(0, 5));
   await browser.close();
   srv.close();
