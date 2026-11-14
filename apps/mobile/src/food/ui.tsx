@@ -13,6 +13,7 @@ import {
   type SwapMode,
   type Totals,
 } from '@dancehall/shared';
+import { useNumbersHidden } from '@/wellness/hooks';
 import { t, type StringKey } from '@/i18n';
 import { MIN_TOUCH_TARGET } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -155,6 +156,7 @@ export function ItemCard({
   onChangeFood: () => void;
 }) {
   const { spacing } = useTheme();
+  const hideNumbers = useNumbersHidden();
   const [swapOpen, setSwapOpen] = useState(false);
   return (
     <DepthCard>
@@ -175,12 +177,16 @@ export function ItemCard({
         <Button label={t('food.chooseFood')} onPress={onChangeFood} />
       ) : (
         <>
-          <AppText accessibilityLabel={`${kcalText(item)}. ${macroText(item)}`}>
-            {kcalText(item)}
-          </AppText>
-          <AppText variant="caption" muted>
-            {macroText(item)}
-          </AppText>
+          {hideNumbers ? null : (
+            <>
+              <AppText accessibilityLabel={`${kcalText(item)}. ${macroText(item)}`}>
+                {kcalText(item)}
+              </AppText>
+              <AppText variant="caption" muted>
+                {macroText(item)}
+              </AppText>
+            </>
+          )}
           <PortionStepper
             grams={item.grams}
             foodId={item.foodId}
@@ -231,14 +237,20 @@ export function SwapPanel({
   onPick?: (next: FoodItemValues) => void;
 }) {
   const { colors, spacing } = useTheme();
-  const [mode, setMode] = useState<SwapMode>('lighter');
+  const hideNumbers = useNumbersHidden();
+  const [chosen, setMode] = useState<SwapMode>('lighter');
+  // With numbers hidden, the calorie-based "lighter" mode is not offered and no figure is shown.
+  const modes: readonly SwapMode[] = hideNumbers
+    ? SWAP_MODES.filter((m) => m !== 'lighter')
+    : SWAP_MODES;
+  const mode: SwapMode = modes.includes(chosen) ? chosen : modes[0]!;
   const swaps = suggestSwaps(item, mode, CURATED_FOODS, 3);
   return (
     <View style={{ gap: spacing.sm }}>
       <Choice
         value={mode}
         onChange={setMode}
-        options={SWAP_MODES.map((m) => ({ value: m, label: t(`swap.${m}` as StringKey) }))}
+        options={modes.map((m) => ({ value: m, label: t(`swap.${m}` as StringKey) }))}
       />
       {swaps.length === 0 ? (
         <AppText variant="caption" muted>
@@ -261,10 +273,13 @@ export function SwapPanel({
           <FoodBadge foodId={s.food.id} size={36} />
           <View style={{ flex: 1 }}>
             <AppText variant="label">{s.food.name}</AppText>
-            <AppText
-              variant="caption"
-              muted
-            >{`${s.reason} · ${s.kcalDelta >= 0 ? '+' : '−'}${Math.abs(s.kcalDelta)} kcal`}</AppText>
+            <AppText variant="caption" muted>
+              {hideNumbers
+                ? mode === 'lighter'
+                  ? ''
+                  : t(`swap.neutral.${mode}` as StringKey)
+                : `${s.reason} · ${s.kcalDelta >= 0 ? '+' : '−'}${Math.abs(s.kcalDelta)} kcal`}
+            </AppText>
           </View>
           {onPick ? (
             <Button
@@ -289,12 +304,14 @@ export function SwapPanel({
 
 export function MacroBars({ totals }: { totals: Pick<Totals, 'proteinG' | 'carbsG' | 'fatG'> }) {
   const { colors, radius, spacing } = useTheme();
+  const hideNumbers = useNumbersHidden();
   const rows = [
     { label: t('food.protein'), g: totals.proteinG, color: colors.primary },
     { label: t('food.carbs'), g: totals.carbsG, color: colors.accent },
     { label: t('food.fat'), g: totals.fatG, color: colors.success },
   ];
   const max = Math.max(1, ...rows.map((r) => r.g));
+  if (hideNumbers) return null;
   return (
     <View style={{ gap: spacing.xs }}>
       {rows.map((r) => (
@@ -329,8 +346,10 @@ export function MacroBars({ totals }: { totals: Pick<Totals, 'proteinG' | 'carbs
 
 /** Seven small bars of what was logged each day. Neutral on purpose: no colour for "too much" or "too little". */
 export function NutritionWeekBars({ week }: { week: NutritionWeek }) {
+  const hideNumbers = useNumbersHidden();
   const { colors, spacing } = useTheme();
   const max = Math.max(1, ...week.days.map((d) => d.kcal));
+  if (hideNumbers) return null;
   return (
     <View style={{ gap: spacing.sm }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, height: 96 }}>

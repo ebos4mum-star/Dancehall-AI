@@ -7,6 +7,7 @@ import { useApp } from '@/data/AppProvider';
 import { errorMessage } from '@/data/hooks';
 import { toValues, unresolved, useDraft } from '@/food/draft';
 import { useFoodData } from '@/food/hooks';
+import { useNumbersHidden } from '@/wellness/hooks';
 import { ItemCard, MacroBars, kcalText } from '@/food/ui';
 import { t, type StringKey } from '@/i18n';
 import { useTheme } from '@/theme/useTheme';
@@ -40,6 +41,7 @@ export default function Review() {
   const saving = useRef(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
+  const hideNumbers = useNumbersHidden();
   const sum = totals(draft.items.filter((i) => !i.needsMatch));
   const { todayTotals, guide } = useFoodData();
   // Real data only: today's logged estimate plus this meal, against the rough daily guide. Without a guide the ring stays empty.
@@ -137,28 +139,38 @@ export default function Review() {
 
       <DepthCard>
         <SectionTitle icon="pie-chart" title={t('rev.total')} />
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.lg }}>
-          <Ring
-            size={104}
-            stroke={11}
-            fraction={guideFraction}
-            color={colors.primary}
-            track={colors.border}
-          >
-            <View accessible accessibilityLabel={kcalText(sum)} style={{ alignItems: 'center' }}>
-              <AppText variant="heading">{`~${shown}`}</AppText>
-              <AppText variant="caption" muted>
-                kcal
-              </AppText>
+        {hideNumbers ? (
+          <AppText>{t('food.hiddenReview')}</AppText>
+        ) : (
+          <>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.lg }}>
+              <Ring
+                size={104}
+                stroke={11}
+                fraction={guideFraction}
+                color={colors.primary}
+                track={colors.border}
+              >
+                <View
+                  accessible
+                  accessibilityLabel={kcalText(sum)}
+                  style={{ alignItems: 'center' }}
+                >
+                  <AppText variant="heading">{`~${shown}`}</AppText>
+                  <AppText variant="caption" muted>
+                    kcal
+                  </AppText>
+                </View>
+              </Ring>
+              <View style={{ flex: 1 }}>
+                <MacroBars totals={sum} />
+              </View>
             </View>
-          </Ring>
-          <View style={{ flex: 1 }}>
-            <MacroBars totals={sum} />
-          </View>
-        </View>
-        <AppText variant="caption" muted>
-          {kcalText(sum)}
-        </AppText>
+            <AppText variant="caption" muted>
+              {kcalText(sum)}
+            </AppText>
+          </>
+        )}
         {sum.unreviewedEstimates > 0 ? (
           <AppText variant="caption" muted>
             {t('food.includesEstimates', { n: sum.unreviewedEstimates })}

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   DEFAULT_PREFS,
+  numbersHidden,
   parsePrefs,
   ageYearsOn,
   localDateKey,
@@ -153,5 +154,5 @@ export function useNumbersHidden(): boolean {
   const { data, loading, error } = useLoad(async (s) => (await s.getWellnessPrefs?.()) ?? null);
   if (loading || error) return true;
   const p = parsePrefs(data);
-  return p.eatingConcern || p.pregnantOrPostpartum || p.tracking === 'none';
+  return numbersHidden(p);
 }

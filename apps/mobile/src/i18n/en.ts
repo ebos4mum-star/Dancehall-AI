@@ -320,6 +320,13 @@ export const en = {
   'food.hiddenToday':
     '{n} meal(s) logged today. Calorie and nutrient numbers are hidden by your settings.',
   'food.slotLogged': 'Logged',
+  'add.manualHidden':
+    'Calories and nutrients are hidden by your settings, so only the name and portion are needed.',
+  'food.hiddenReview':
+    'Nutrition numbers are hidden by your settings. You can still check the foods and portions below.',
+  'swap.neutral.more_protein': 'More protein',
+  'swap.neutral.more_fiber': 'More fiber',
+  'swap.neutral.lower_cost': 'Usually a lower-cost option',
   'food.kcalAbout': 'about {kcal} kcal',
   'food.range': '({low}–{high})',
   'food.ofGuide': 'of a rough {guide} kcal guide',

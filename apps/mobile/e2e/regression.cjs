@@ -455,6 +455,47 @@ async function step(name, fn) {
     await p.waitForTimeout(1200);
     assert.equal(await p.getByText('Daily water goal reached').count(), 0);
   });
+  await step(
+    'N: with numbers hidden, no calorie or nutrient figure appears on any screen',
+    async () => {
+      const routes = [
+        '/',
+        '/dance',
+        '/food',
+        '/coach',
+        '/me',
+        '/progress',
+        '/goals',
+        '/challenges',
+        '/food/add',
+        '/food/swap',
+        '/food/history',
+        '/food/plan',
+        '/food/saved',
+        '/food/review',
+        '/coach/review',
+      ];
+      for (const r of routes) {
+        await p.goto(base + r);
+        await p.waitForTimeout(1600);
+        const hits = await p
+          .getByText(/\bkcal\b|kilocalorie|\bprotein\b.*\d+ ?g|\d+ ?g protein/i)
+          .locator('visible=true')
+          .allTextContents();
+        assert.deepEqual(hits, [], `visible nutrition figures on ${r}`);
+      }
+      // Swap ideas offer no calorie-based mode.
+      await p.goto(base + '/food/swap');
+      await p.waitForTimeout(1500);
+      assert.equal(
+        await p
+          .getByRole('button', { name: /^Lighter$/ })
+          .locator('visible=true')
+          .count(),
+        0,
+      );
+    },
+  );
   await step('Privacy: data survives a reload (device storage), no page errors', async () => {
     await p.goto(base);
     await p.waitForTimeout(2500);
