@@ -56,3 +56,21 @@ describe('resolveConfig', () => {
     ).toThrow(ConfigError);
   });
 });
+
+describe('resolveConfig: placeholder verification', () => {
+  it('accepts the documented placeholder shape and trims whitespace', () => {
+    const c = resolveConfig({
+      EXPO_PUBLIC_APP_ENV: 'preview',
+      EXPO_PUBLIC_SUPABASE_URL: ' https://your-project-ref.supabase.co ',
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ' sb_publishable_xxxxxxxx ',
+    });
+    expect(c).toMatchObject({
+      authMode: 'supabase',
+      supabaseUrl: 'https://your-project-ref.supabase.co',
+      supabasePublishableKey: 'sb_publishable_xxxxxxxx',
+    });
+  });
+  it('refuses a production build without Supabase configured', () => {
+    expect(() => resolveConfig({ EXPO_PUBLIC_APP_ENV: 'production' })).toThrow(ConfigError);
+  });
+});
