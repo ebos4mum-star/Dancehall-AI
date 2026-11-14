@@ -14,6 +14,9 @@ export const en = {
   'common.loading': 'Loading…',
   'common.retry': 'Try again',
   'common.error': 'Something went wrong. Please try again.',
+  'load.failedTitle': 'Can’t reach your account',
+  'load.failedBody':
+    'We couldn’t load your data. Check your connection and try again. You are still signed in.',
   'common.metric': 'Metric (kg, cm)',
   'common.imperial': 'Imperial (lb, ft)',
 

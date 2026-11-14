@@ -155,6 +155,12 @@ function createBaseStore(
   });
   const listeners = new Set<() => void>();
   const emit = () => listeners.forEach((l) => l());
+  // Token refresh, sign-out from elsewhere and expiry arrive here. Deferred: supabase-js forbids calling back into
+  // the client from inside this callback.
+  db.auth.onAuthStateChange((event) => {
+    if (event === 'INITIAL_SESSION') return;
+    setTimeout(emit, 0);
+  });
   const ok = <T>(r: { data: T | null; error: { message?: string; code?: string } | null }): T => {
     if (r.error) throw mapSupabaseError(r.error);
     return r.data as T;
@@ -205,8 +211,12 @@ function createBaseStore(
       return () => void listeners.delete(l);
     },
     async getSession() {
-      const { data } = await db.auth.getSession();
-      return data.session ? toSession(data.session.user) : null;
+      const { data, error } = await db.auth.getSession();
+      if (data.session) return toSession(data.session.user);
+      // A network failure while refreshing an expired token keeps the stored session: report it, do not sign the user out.
+      if (error && error.name === 'AuthRetryableFetchError')
+        throw new StoreError('unknown', error.message);
+      return null;
     },
     async signOut() {
       await db.auth.signOut();

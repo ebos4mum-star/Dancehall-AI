@@ -14,6 +14,8 @@ interface Call {
 }
 const calls: Call[] = [];
 let respond: (c: Call) => { data: unknown; error: unknown } = () => ({ data: null, error: null });
+let authListener: ((e: string) => void) | null = null;
+let sessionResult: () => unknown = () => ({ data: { session: { user: USER } } });
 const USER = { id: 'u-synthetic-1', email: 'dancer@example.test' };
 
 function builder(c: Call) {
@@ -35,7 +37,11 @@ vi.mock('@supabase/supabase-js', () => ({
   createClient: () => ({
     auth: {
       getUser: async () => ({ data: { user: USER } }),
-      getSession: async () => ({ data: { session: { user: USER } } }),
+      getSession: async () => sessionResult(),
+      onAuthStateChange: (cb: (e: string) => void) => {
+        authListener = cb;
+        return { data: { subscription: { unsubscribe() {} } } };
+      },
     },
     from: (table: string) => {
       const c: Call = { table, filters: [] };
@@ -67,6 +73,7 @@ const codeOf = (p: Promise<unknown>) =>
 const last = () => calls[calls.length - 1]!;
 
 beforeEach(() => {
+  sessionResult = () => ({ data: { session: { user: USER } } });
   calls.length = 0;
   respond = () => ({ data: null, error: null });
 });
@@ -280,5 +287,31 @@ describe('workout history persistence', () => {
     await store().updateSession('s1', { status: 'completed', lowImpact: true });
     expect(last().payload).toEqual({ status: 'completed', low_impact: true });
     expect(last().filters).toContainEqual(['id', 's1']);
+  });
+});
+
+describe('session recovery', () => {
+  it('re-emits when supabase refreshes the token or signs the user out elsewhere', async () => {
+    vi.useFakeTimers();
+    const s = store();
+    const seen = vi.fn();
+    s.subscribe(seen);
+    authListener!('TOKEN_REFRESHED');
+    authListener!('SIGNED_OUT');
+    authListener!('INITIAL_SESSION');
+    await vi.runAllTimersAsync();
+    expect(seen).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+  it('a network failure while refreshing is an error, not a sign-out', async () => {
+    sessionResult = () => ({
+      data: { session: null },
+      error: Object.assign(new Error('offline'), { name: 'AuthRetryableFetchError' }),
+    });
+    expect(await codeOf(store().getSession())).toBe('unknown');
+  });
+  it('no stored session is a plain signed-out state', async () => {
+    sessionResult = () => ({ data: { session: null }, error: null });
+    expect(await store().getSession()).toBeNull();
   });
 });
