@@ -415,6 +415,7 @@ async function step(name, fn) {
     await p.getByLabel('Walk length').last().fill('20');
     await btn('Log walk').click();
     await seen('20 min walking');
+    await shot('wellness-dance');
     // A double tap on the same pending form logs nothing new: the field was cleared.
     assert.equal(await btn('Log walk').isDisabled(), true);
     await btn('Sore').click();
@@ -423,10 +424,12 @@ async function step(name, fn) {
     await seen('Hunger check-in');
     await btn('Hungry').click();
     await seen('Check-ins today: 1');
+    await shot('wellness-food');
     await tab('Coach');
     await p.getByRole('textbox').last().fill('Why is this in my plan?');
     await btn('Send').click();
     await seen('Every suggestion is rule-based', 6000);
+    await shot('wellness-coach');
   });
   await step('Privacy: data survives a reload (device storage), no page errors', async () => {
     await p.goto(base);
