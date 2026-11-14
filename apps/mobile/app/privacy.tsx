@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { consentPurposeSchema, type ConsentPurpose } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage, useLoad } from '@/data/hooks';
+import { cleanDisplayName } from '@/lib/displayName';
 import { t, type StringKey } from '@/i18n';
 import { useTheme } from '@/theme/useTheme';
 import { useState } from 'react';
@@ -12,6 +13,7 @@ import { Card } from '@/ui/Card';
 import { Notice } from '@/ui/Banner';
 import { Choice } from '@/ui/Choice';
 import { Screen } from '@/ui/Screen';
+import { TextField } from '@/ui/TextField';
 
 const LABELS: Record<ConsentPurpose, [StringKey, StringKey]> = {
   health_data_processing: ['privacy.healthData', 'privacy.healthDataBody'],
@@ -26,6 +28,7 @@ export default function Privacy() {
   const { colors, spacing } = useTheme();
   const { data } = useLoad((s) => s.getConsents());
   const [msg, setMsg] = useState<string | null>(null);
+  const [name, setName] = useState<string | null>(null);
 
   const guard = async (fn: () => Promise<unknown>) => {
     try {
@@ -38,6 +41,31 @@ export default function Privacy() {
 
   return (
     <Screen top={false}>
+      <Card>
+        <TextField
+          label={t('privacy.displayName')}
+          value={name ?? profile?.displayName ?? ''}
+          onChangeText={setName}
+          maxLength={40}
+          autoComplete="name"
+          textContentType="name"
+        />
+        <Button
+          variant="secondary"
+          label={t('common.save')}
+          disabled={
+            name === null ||
+            cleanDisplayName(name) === null ||
+            cleanDisplayName(name) === profile?.displayName
+          }
+          onPress={() =>
+            guard(async () => {
+              await store.updateProfile({ displayName: cleanDisplayName(name ?? '')! });
+              setName(null);
+            })
+          }
+        />
+      </Card>
       <Card>
         <AppText variant="heading" accessibilityRole="header">
           {t('privacy.units')}

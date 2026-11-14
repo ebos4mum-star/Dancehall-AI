@@ -104,6 +104,7 @@ export const en = {
   'chal.history': 'Past challenges',
   'chal.status.completed': 'Completed',
   'chal.status.abandoned': 'Ended without reaching the goal',
+  'chal.todayCta': 'View challenge',
   'chal.communityNote': 'Challenges with friends and teams are not available yet.',
 
   'onb.step': 'Step {n} of {total}',
@@ -209,6 +210,7 @@ export const en = {
 
   'privacy.title': 'Privacy and settings',
   'privacy.consents': 'Your choices',
+  'privacy.displayName': 'Display name',
   'privacy.units': 'Units',
   'privacy.healthData': 'Store my health information',
   'privacy.healthDataBody':
