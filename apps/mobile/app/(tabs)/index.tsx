@@ -1,9 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
-import { lbToKg, sessionMinutes, summarizeWeights, type UnitSystem } from '@dancehall/shared';
+import {
+  lbToKg,
+  localDateKey,
+  sessionMinutes,
+  summarizeWeights,
+  type UnitSystem,
+} from '@dancehall/shared';
 import { goalFraction } from '@/progress/goalDisplay';
 import { todayGlance } from '@/today/glance';
+import { TodayHero, type HeroChip } from '@/today/TodayHero';
+import { heroLine } from '@/today/heroLine';
+import { useTodaySummary } from '@/today/hooks';
+import { takeWelcome } from '@/today/welcome';
+import { usePulse } from '@/pulse/PulseStage';
+import { haptics } from '@/ui/haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useApp } from '@/data/AppProvider';
 import { PlanCard } from '@/coach/PlanCard';
 import { useDanceData } from '@/dance/hooks';
@@ -45,6 +58,62 @@ export default function Today() {
   const challengeNow = activeChallenge
     ? challengeProgress(activeChallenge, dance.sessions, profile?.timeZone ?? null, new Date())
     : null;
+  const summary2 = useTodaySummary();
+  const pulse = usePulse();
+  const { session } = useApp();
+  const todayKey = localDateKey(new Date(), profile?.timeZone ?? null);
+
+  // Welcome once per local day; celebrate only a genuine new accomplishment (never on first load); gentle encouragement on a comeback.
+  useEffect(() => {
+    if (!session) return;
+    let live = true;
+    void takeWelcome(
+      { get: (k) => AsyncStorage.getItem(k), set: (k, v) => AsyncStorage.setItem(k, v) },
+      session.userId,
+      todayKey,
+    ).then((first) => live && first && pulse.send('appOpened'));
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.userId, todayKey]);
+  const prevScore = useRef<number | null>(null);
+  useEffect(() => {
+    if (!summary2.ready) return;
+    if (prevScore.current !== null && summary2.score > prevScore.current) {
+      pulse.send('milestone');
+      haptics.success();
+    }
+    prevScore.current = summary2.score;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary2.ready, summary2.score]);
+  const comebackSent = useRef(false);
+  useEffect(() => {
+    if (summary2.comeback && !comebackSent.current) {
+      comebackSent.current = true;
+      pulse.send('comeback');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary2.comeback]);
+
+  const glance = todayGlance({
+    doneToday: dance.doneToday.map((x) => ({ minutes: sessionMinutes(x) })),
+    plannedToday: dance.todayPlanned.length,
+    mealsLogged: food.todayLogs.length,
+    loggedKcal: food.todayTotals.kcal,
+  });
+  const heroChips: HeroChip[] = [
+    ...glance,
+    ...(summary2.habitCount > 0
+      ? [
+          {
+            key: 'habits',
+            done: summary2.habitsDoneCount > 0,
+            text: `Habits: ${summary2.habitsDoneCount} of ${summary2.habitCount} ticked`,
+          },
+        ]
+      : []),
+  ];
   const [entry, setEntry] = useState('');
   const [msg, setMsg] = useState<{ text: string; warn: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -77,12 +146,17 @@ export default function Today() {
 
   return (
     <Screen>
-      <View style={{ gap: spacing.xs }}>
-        <AppText variant="title" accessibilityRole="header">
-          {t('today.hello', { name: profile?.displayName ?? '' })}
-        </AppText>
-        <AppText muted>{t('today.subtitle')}</AppText>
-      </View>
+      <TodayHero
+        greeting={t('today.hello', { name: profile?.displayName ?? '' })}
+        line={heroLine({
+          pulse: pulse.state,
+          next: summary2.next,
+          hour: new Date().getHours(),
+          doneAnything: summary2.score > 0,
+        })}
+        chips={heroChips}
+        pulse={pulse.state}
+      />
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {loading && !data ? <SkeletonList label={t('common.loading')} /> : null}
 
@@ -95,28 +169,24 @@ export default function Today() {
         </FadeIn>
       ) : null}
 
+      <PlanCard onAccomplished={() => pulse.send('milestone')} />
+
       <FadeIn>
         <Card>
           <AppText variant="heading" accessibilityRole="header">
-            {t('today.glanceTitle')}
+            {t('today.doneTitle')}
           </AppText>
-          {todayGlance({
-            doneToday: dance.doneToday.map((x) => ({ minutes: sessionMinutes(x) })),
-            plannedToday: dance.todayPlanned.length,
-            mealsLogged: food.todayLogs.length,
-            loggedKcal: food.todayTotals.kcal,
-          }).map((l) => (
-            <AppText
-              key={l.key}
-              accessibilityLabel={l.done ? `${t('today.doneToday')}: ${l.text}` : l.text}
-            >
-              {`${l.done ? '✓' : '○'} ${l.text}`}
-            </AppText>
-          ))}
+          {summary2.list.length === 0 ? (
+            <AppText muted>{t('today.doneEmpty')}</AppText>
+          ) : (
+            summary2.list.map((a) => (
+              <AppText key={a.key} accessibilityLabel={`${t('today.doneToday')}: ${a.text}`}>
+                {`✓ ${a.text}`}
+              </AppText>
+            ))
+          )}
         </Card>
       </FadeIn>
-
-      <PlanCard />
 
       <FadeIn>
         <Card>
