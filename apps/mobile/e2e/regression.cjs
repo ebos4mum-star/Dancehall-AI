@@ -99,6 +99,19 @@ async function step(name, fn) {
     await btn(/^Why\?/).click();
     assert.ok(await p.getByText(/./).count());
   });
+  await step(
+    'Phase 1: Today hero shows Pulse, real status chips, a Next up action, and an honest empty "Done today"',
+    async () => {
+      await p
+        .getByLabel(/Pulse, your guide/)
+        .first()
+        .waitFor({ state: 'attached' });
+      await seen('No food logged yet');
+      await seen('Next up');
+      await seen('Nothing recorded yet');
+      assert.equal((await p.getByText('Done today', { exact: true }).count()) > 0, true);
+    },
+  );
   await step('A: weight logging updates the latest weight', async () => {
     await p.getByLabel('Log weight (kg)').fill('74.5');
     await btn('Log weight').click();

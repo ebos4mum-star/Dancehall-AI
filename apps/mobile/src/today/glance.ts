@@ -18,7 +18,7 @@ export function todayGlance(i: GlanceInput): GlanceLine[] {
       ? { key: 'move', done: true, text: `Moved for ${mins} min today` }
       : i.plannedToday > 0
         ? { key: 'move', done: false, text: `${i.plannedToday} planned for today` }
-        : { key: 'move', done: false, text: 'No dance session yet today' };
+        : { key: 'move', done: false, text: 'No dance yet today' };
   const food: GlanceLine =
     i.mealsLogged > 0
       ? {
@@ -26,6 +26,6 @@ export function todayGlance(i: GlanceInput): GlanceLine[] {
           done: true,
           text: `${i.mealsLogged} ${i.mealsLogged === 1 ? 'meal' : 'meals'} logged (about ${i.loggedKcal} kcal)`,
         }
-      : { key: 'food', done: false, text: 'No food logged yet today' };
+      : { key: 'food', done: false, text: 'No food logged yet' };
   return [move, food];
 }

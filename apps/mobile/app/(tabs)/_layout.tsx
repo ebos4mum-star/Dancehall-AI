@@ -1,7 +1,9 @@
+import { View } from 'react-native';
 import { Redirect, Tabs } from 'expo-router';
 import { useApp } from '@/data/AppProvider';
 import { Ionicons } from '@expo/vector-icons';
 import { t, type StringKey } from '@/i18n';
+import { brand, radius } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -33,12 +35,25 @@ export default function TabLayout() {
           options={{
             title: t(tab.label),
             tabBarAccessibilityLabel: t(tab.label),
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons
-                name={tab.icon}
-                size={size}
-                color={typeof color === 'string' ? color : colors.primary}
-              />
+            // The active tab sits in an Electric Lime pill with a plum icon (12.7:1), filled instead of outlined. Shape and fill
+            // carry the state as well as colour.
+            tabBarIcon: ({ focused, color, size }) => (
+              <View
+                style={{
+                  width: 52,
+                  height: 30,
+                  borderRadius: radius.pill,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: focused ? brand.lime : 'transparent',
+                }}
+              >
+                <Ionicons
+                  name={focused ? (tab.icon.replace('-outline', '') as IconName) : tab.icon}
+                  size={size}
+                  color={focused ? brand.plum : typeof color === 'string' ? color : colors.primary}
+                />
+              </View>
             ),
           }}
         />
