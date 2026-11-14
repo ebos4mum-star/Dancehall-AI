@@ -44,6 +44,9 @@ const PROMPT_ICON = {
   busy: 'timer',
   travel: 'airplane',
   comeback: 'refresh-circle',
+  why: 'help-circle',
+  plateau: 'trending-up',
+  recover: 'bed',
   week: 'stats-chart',
   swap: 'swap-horizontal',
 } as const;
