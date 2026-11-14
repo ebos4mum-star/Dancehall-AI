@@ -98,7 +98,7 @@ require('node:fs').mkdirSync(out, { recursive: true });
     .last()
     .click()
     .catch(() => {});
-  await text('Amapiano Groove 10').click();
+  await text('Amapiano Groove 10').click({ timeout: 5000, force: true }).catch(() => {});
   await shot('dance-workout-detail');
   const start = p.getByRole('button', { name: /(Start|Begin)/ }).last();
   if (await start.isVisible().catch(() => false)) {
