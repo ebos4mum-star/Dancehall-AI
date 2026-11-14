@@ -87,24 +87,7 @@ require('node:fs').mkdirSync(out, { recursive: true });
     ['/coach/settings', 'coach-settings'],
   ])
     await go(path, name);
-  // Real flow: Dance tab -> workout detail -> guided session
-  await p.evaluate(() => {
-    window.history.pushState({}, '', '/dance');
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  });
-  await p.waitForTimeout(900);
-  await p
-    .getByText('10', { exact: true })
-    .last()
-    .click()
-    .catch(() => {});
-  await text('Amapiano Groove 10').click();
-  await shot('dance-workout-detail');
-  const start = p.getByRole('button', { name: /(Start|Begin)/ }).last();
-  if (await start.isVisible().catch(() => false)) {
-    await start.click();
-    await shot('dance-guided-session');
-  }
+  // Dance flows (detail, guided session, history) are captured by e2e/redesign.cjs (GROUP=dance).
   console.log('page errors:', errors.length, errors.slice(0, 5));
   await browser.close();
   srv.close();
