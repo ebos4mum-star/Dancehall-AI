@@ -1,4 +1,5 @@
 import { View } from 'react-native';
+import { router } from 'expo-router';
 import { useDanceData } from '@/dance/hooks';
 import { effortKey } from '@/dance/meta';
 import { ActivityBars } from '@/dance/ui';
@@ -8,6 +9,7 @@ import { sessionMinutes } from '@dancehall/shared';
 import { spacing } from '@/theme/tokens';
 import { AppText } from '@/ui/AppText';
 import { DepthCard } from '@/ui/Depth';
+import { EmptyState } from '@/ui/EmptyState';
 import { Notice } from '@/ui/Banner';
 import { Screen } from '@/ui/Screen';
 import { SkeletonList } from '@/ui/Skeleton';
@@ -23,7 +25,15 @@ export default function History() {
       {loading && sessions.length === 0 ? (
         <SkeletonList label={t('common.loading')} cards={2} />
       ) : null}
-      {!loading && done.length === 0 ? <Notice>{t('hst.empty')}</Notice> : null}
+      {!loading && done.length === 0 ? (
+        <EmptyState
+          icon="musical-notes-outline"
+          title={t('hst.emptyTitle')}
+          body={t('hst.empty')}
+          actionLabel={t('hst.emptyCta')}
+          onAction={() => router.replace('/(tabs)/dance')}
+        />
+      ) : null}
       <DepthCard>
         <AppText variant="heading" accessibilityRole="header">
           {t('hst.thisWeek')}

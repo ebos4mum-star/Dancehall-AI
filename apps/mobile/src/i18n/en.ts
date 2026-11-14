@@ -359,6 +359,14 @@ export const en = {
   'add.serving': '{label} · about {kcal} kcal',
   'hist.title': 'Food history',
   'hist.empty': 'No meals logged yet.',
+  'hist.emptyTitle': 'Your meal diary starts here',
+  'hist.emptyCta': 'Log a meal',
+  'nutweek.title': 'Last 7 days',
+  'nutweek.day': '{date}: {kcal} kcal logged',
+  'nutweek.dayNone': '{date}: nothing logged',
+  'nutweek.summary':
+    '{days} of 7 days logged, averaging {kcal} kcal on those days. Estimates only.',
+  'nutweek.empty': 'Nothing logged in the last 7 days. That is fine; log when it suits you.',
   'saved.title': 'Saved meals',
   'saved.empty':
     'No saved meals yet. Save a meal from the review screen to log it again in one tap.',
@@ -512,6 +520,8 @@ export const en = {
   'sch.remove': 'Remove',
   'hst.title': 'Activity',
   'hst.empty': 'No workouts logged yet. Your first one will show up here.',
+  'hst.emptyTitle': 'No sessions yet',
+  'hst.emptyCta': 'Find a workout',
   'hst.thisWeek': 'This week',
   'hst.sessions': '{n} session(s)',
   'hst.days': '{n} active day(s)',
