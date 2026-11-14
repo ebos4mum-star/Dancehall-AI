@@ -1,3 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
+import { IconBadge, SectionTitle } from '@/ui/kit';
+import { EmptyState } from '@/ui/EmptyState';
+import { brand } from '@/theme/tokens';
+import { View } from 'react-native';
 import { useState } from 'react';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage, useLoad } from '@/data/hooks';
@@ -57,32 +62,40 @@ export default function WeeklyReview() {
         </AppText>
       ) : null}
       {err ? <Notice tone="warning">{err}</Notice> : null}
-      {(reviews ?? []).length === 0 ? <AppText muted>{t('wr.empty')}</AppText> : null}
+      {(reviews ?? []).length === 0 ? (
+        <EmptyState icon="calendar" title={t('wr.emptyTitle')} body={t('wr.empty')} />
+      ) : null}
       {(reviews ?? []).map((r, i) => (
         <Reveal key={r.id} delay={i * 40}>
           <DepthCard>
-            <AppText variant="heading" accessibilityRole="header">
-              {t('wr.week', { date: formatDate(r.weekStart) })}
-            </AppText>
-            <AppText variant="label">{t('wr.highlights')}</AppText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <IconBadge name="calendar" size={40} fill={brand.lime} />
+              <AppText variant="heading" accessibilityRole="header" style={{ flex: 1 }}>
+                {t('wr.week', { date: formatDate(r.weekStart) })}
+              </AppText>
+            </View>
+            <SectionTitle icon="sparkles" title={t('wr.highlights')} />
             {r.content.highlights.map((h) => (
               <AppText key={h}>{`• ${h}`}</AppText>
             ))}
             {r.content.nonScaleWins.length > 0 ? (
-              <AppText variant="label">{t('wr.wins')}</AppText>
+              <SectionTitle icon="trophy" title={t('wr.wins')} />
             ) : null}
             {r.content.nonScaleWins.map((h) => (
               <AppText key={h}>{`• ${h}`}</AppText>
             ))}
             {r.content.suggestions.length > 0 ? (
-              <AppText variant="label">{t('wr.suggestions')}</AppText>
+              <SectionTitle icon="bulb" title={t('wr.suggestions')} />
             ) : null}
             {r.content.suggestions.map((h) => (
               <AppText key={h} muted>{`• ${h}`}</AppText>
             ))}
-            <AppText variant="caption" muted>
-              {t('coach.simulated')}
-            </AppText>
+            <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+              <Ionicons name="flask" size={14} color={brand.coral} />
+              <AppText variant="caption" muted style={{ flex: 1 }}>
+                {t('coach.simulated')}
+              </AppText>
+            </View>
           </DepthCard>
         </Reveal>
       ))}

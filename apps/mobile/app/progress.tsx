@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { lbToKg, summarizeWeights } from '@dancehall/shared';
+import { EmptyState } from '@/ui/EmptyState';
+import { InfoTile, SectionTitle } from '@/ui/kit';
 import { RecapCard } from '@/progress/RecapCard';
 import { useApp } from '@/data/AppProvider';
 import { useDanceData } from '@/dance/hooks';
@@ -75,10 +77,29 @@ export default function Progress() {
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {loading && !data ? <SkeletonList label={t('common.loading')} cards={2} /> : null}
       {!data ? null : weights.length === 0 ? (
-        <Notice>{t('progress.empty')}</Notice>
+        <EmptyState icon="scale" title={t('progress.emptyTitle')} body={t('progress.empty')} />
       ) : (
         <Card>
-          <WeightChart points={points} units={units} targetKg={target} />
+          <SectionTitle icon="scale" title={t('progress.weightTitle')} />
+          <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
+            <InfoTile
+              icon="scale"
+              label={t('today.latest')}
+              value={formatWeight(s.latest!.weightKg, units)}
+            />
+            {s.change7dKg !== null ? (
+              <InfoTile
+                icon="swap-vertical"
+                label={t('today.change7')}
+                value={formatChange(s.change7dKg, units) ?? ''}
+              />
+            ) : null}
+          </View>
+          {points.length >= 2 ? (
+            <WeightChart points={points} units={units} targetKg={target} />
+          ) : (
+            <AppText muted>{t('progress.moreData')}</AppText>
+          )}
           {target !== null ? (
             <AppText
               variant="caption"
@@ -86,12 +107,6 @@ export default function Progress() {
             >{`- - ${t('progress.target')}: ${formatWeight(target, units)}`}</AppText>
           ) : null}
           <View style={{ gap: spacing.xs }}>
-            <AppText variant="heading">{formatWeight(s.latest!.weightKg, units)}</AppText>
-            {s.change7dKg !== null ? (
-              <AppText
-                muted
-              >{`${t('today.change7')}: ${formatChange(s.change7dKg, units)}`}</AppText>
-            ) : null}
             {s.weeklyRateKg !== null ? (
               <AppText muted>
                 {t('progress.rate', { rate: formatChange(s.weeklyRateKg, units) ?? '' })}
@@ -105,16 +120,12 @@ export default function Progress() {
       )}
       <Celebration ids={insights.fresh} />
       <Card>
-        <AppText variant="heading" accessibilityRole="header">
-          {t('habit.title')}
-        </AppText>
+        <SectionTitle icon="leaf" title={t('habit.title')} />
         <HabitWeek habits={insights.habits} />
       </Card>
       <AchievementList items={insights.achievements} />
       <Card>
-        <AppText variant="heading" accessibilityRole="header">
-          {t('dance.activity')}
-        </AppText>
+        <SectionTitle icon="musical-notes" title={t('dance.activity')} />
         <AppText>{`${t('hst.sessions', { n: dance.summary.thisWeek.sessions })} · ${t('hst.minutes', { n: dance.summary.thisWeek.minutes })} · ${t('hst.days', { n: dance.summary.thisWeek.activeDays })}`}</AppText>
         <ActivityBars summary={dance.summary} />
         <AppText variant="caption" muted>

@@ -1,4 +1,5 @@
 import { Share, Switch, View } from 'react-native';
+import { IconBadge, SectionTitle, type IconName } from '@/ui/kit';
 import { router } from 'expo-router';
 import { consentPurposeSchema, type ConsentPurpose } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
@@ -22,6 +23,13 @@ const LABELS: Record<ConsentPurpose, [StringKey, StringKey]> = {
   ai_coach_personalization: ['privacy.aiCoach', 'privacy.aiCoachBody'],
   health_platform_sync: ['privacy.healthSync', 'privacy.healthSyncBody'],
   social_sharing: ['privacy.sharing', 'privacy.sharingBody'],
+};
+
+const CONSENT_ICON: Record<string, IconName> = {
+  health_data_processing: 'heart',
+  ai_processing_of_food_photos: 'camera',
+  ai_coach_personalization: 'sparkles',
+  health_app_sync: 'watch',
 };
 
 export default function Privacy() {
@@ -68,6 +76,7 @@ export default function Privacy() {
       }}
     >
       <Card>
+        <SectionTitle icon="person" title={t('privacy.profileTitle')} />
         <TextField
           label={t('privacy.displayName')}
           value={name ?? profile?.displayName ?? ''}
@@ -93,9 +102,7 @@ export default function Privacy() {
         />
       </Card>
       <Card>
-        <AppText variant="heading" accessibilityRole="header">
-          {t('privacy.units')}
-        </AppText>
+        <SectionTitle icon="resize" title={t('privacy.units')} />
         <Choice
           value={profile?.unitSystem ?? 'metric'}
           onChange={(u) => guard(() => store.updateProfile({ unitSystem: u }))}
@@ -105,9 +112,7 @@ export default function Privacy() {
           ]}
         />
       </Card>
-      <AppText variant="heading" accessibilityRole="header">
-        {t('privacy.consents')}
-      </AppText>
+      <SectionTitle icon="shield-checkmark" title={t('privacy.consents')} />
       {consentPurposeSchema.options.map((p) => {
         const [labelKey, bodyKey] = LABELS[p];
         return (
@@ -120,6 +125,12 @@ export default function Privacy() {
                 gap: spacing.md,
               }}
             >
+              <IconBadge
+                name={CONSENT_ICON[p] ?? 'lock-closed'}
+                size={36}
+                fill={colors.primary}
+                color={colors.onPrimary}
+              />
               <AppText variant="label" style={{ flex: 1 }}>
                 {t(labelKey)}
               </AppText>
@@ -140,9 +151,7 @@ export default function Privacy() {
       {error ? <Notice tone="warning">{`${error} ${t('privacy.loadFailed')}`}</Notice> : null}
       {msg ? <Notice tone="warning">{msg}</Notice> : null}
       <Card>
-        <AppText variant="heading" accessibilityRole="header">
-          {t('privacy.exportTitle')}
-        </AppText>
+        <SectionTitle icon="download" title={t('privacy.exportTitle')} />
         <AppText muted>{t('privacy.exportBody')}</AppText>
         <Button
           variant="secondary"
@@ -169,9 +178,7 @@ export default function Privacy() {
         </AppText>
       </Card>
       <Card>
-        <AppText variant="heading" accessibilityRole="header">
-          {t('privacy.account')}
-        </AppText>
+        <SectionTitle icon="log-out" title={t('privacy.account')} />
         <Button
           variant="secondary"
           label={t('privacy.signOut')}

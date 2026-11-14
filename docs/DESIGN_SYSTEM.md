@@ -50,3 +50,39 @@ One shared layer, applied everywhere, so each screen is part of the same world w
 | Transitions       | `app/_layout.tsx`                        | Slide in; none with reduced motion.                                                                                                                                                                |
 
 Screen coverage (every Expo Router screen): sign-in and onboarding steps 1-5 (banner, progress bar, step-specific Pulse); Today (hero, Next up, done today); Dance tab, workout detail, guided session (Pulse dances while running), completion (celebrate), history, programs, schedule; Food tab, add, camera, review, history, plans, saved, swap, household; Coach tab (Pulse reacts to replies), weekly review, privacy; Me tab, goals, progress, challenges, privacy and settings. Not implemented in the product and therefore not designed: friends, HealthKit, barcode scanning, account sign-up.
+
+## Phase 3: screen-by-screen completion matrix
+
+Status key: **Rebuilt** = the screen's own layout was redesigned (new structure, components and states, not just a banner). **Refined** = banner/world plus restyled sections and controls, but form layout largely unchanged. Reduced-motion, light and dark were captured for the Dance, Food, Coach and Me flows; the browser regression and an automated accessibility sweep (names and 44pt targets on every route) pass.
+
+| Route                 | Status                     | What changed in the interior                                                                                                             |
+| --------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `/` (entry gate)      | Unchanged                  | Loading and error handling only.                                                                                                         |
+| `/sign-in`            | Refined                    | World banner with welcoming Pulse; dev-sign-in card.                                                                                     |
+| `/onboarding`         | Refined                    | Per-step banner and Pulse, progress bar, icon cards for activity and goal; steps 1-3 keep standard text forms.                           |
+| `/(tabs)/index` Today | Rebuilt (PR #20) + refined | Hero, Next up, done today, section titles with icons.                                                                                    |
+| `/(tabs)/dance`       | Rebuilt                    | Quick-fit discs, resume banner, action tiles, icon mood picker, icon style tiles, collapsible filters, new workout cards, program cards. |
+| `/dance/[id]`         | Rebuilt                    | Facts hero, timeline of warm-up/main/cool-down, collapsible blocks and safety.                                                           |
+| `/dance/session`      | Rebuilt                    | Stage timer ring in block colour, segmented progress, large controls, Pulse dances; completion with stat tiles and icon effort picker.   |
+| `/dance/history`      | Rebuilt                    | Stat tiles, bars, per-session icons.                                                                                                     |
+| `/dance/schedule`     | Rebuilt                    | Date-badge cards with icon actions, sectioned.                                                                                           |
+| `/dance/program`      | Rebuilt                    | Per-session status timeline, progress, gentle rescheduling.                                                                              |
+| `/(tabs)/food`        | Rebuilt                    | Camera-first hero with simulated notice, shortcut rail, daily ring, per-meal logging slots.                                              |
+| `/food/add`           | Rebuilt                    | Search / by-hand choice, recent-foods rail.                                                                                              |
+| `/food/camera`        | Rebuilt                    | Viewfinder with persistent "SIMULATED, NOT REAL AI" badge, consent card.                                                                 |
+| `/food/review`        | Rebuilt                    | Meal-type icons, icon actions per item, totals ring.                                                                                     |
+| `/food/history`       | Refined                    | Date badges, sectioned week bars.                                                                                                        |
+| `/food/saved`         | Refined                    | Icon cards.                                                                                                                              |
+| `/food/plan`          | Refined                    | Sectioned, day cards with icons; the planner form is unchanged.                                                                          |
+| `/food/swap`          | Refined                    | Icon intro; result rows and swap panel unchanged.                                                                                        |
+| `/food/household`     | Rebuilt                    | Household header, day-grouped meal board, tick-off grocery checklist, empty state.                                                       |
+| `/(tabs)/coach`       | Rebuilt                    | Avatar bubbles with simulated tag, typing indicator, prompt grid, icon action cards, round send.                                         |
+| `/coach/review`       | Rebuilt                    | Sectioned review cards, empty state.                                                                                                     |
+| `/coach/settings`     | Refined                    | Icon section titles; controls unchanged.                                                                                                 |
+| `/(tabs)/me`          | Rebuilt                    | Profile hero with avatar slot, medal rail, icon menu.                                                                                    |
+| `/progress`           | Rebuilt                    | Recap tiles with Pulse insight, weight tiles, honest single-point state.                                                                 |
+| `/goals`              | Rebuilt                    | Goal cards with progress rings, icon actions, empty state.                                                                               |
+| `/challenges`         | Rebuilt                    | Progress ring and bar; start form unchanged.                                                                                             |
+| `/privacy`            | Refined                    | Icon sections and consent icons; controls unchanged.                                                                                     |
+
+Limits: Pulse is a 2.5D vector character, not a rendered 3D asset. No licensed photography is used (image hosts blocked). Native iOS rendering and haptics are unverified.

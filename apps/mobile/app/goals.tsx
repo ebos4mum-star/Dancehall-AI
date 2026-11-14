@@ -10,6 +10,10 @@ import {
   type GoalPeriod,
   type GoalType,
 } from '@dancehall/shared';
+import { IconAction, IconBadge, SectionTitle } from '@/ui/kit';
+import { EmptyState } from '@/ui/EmptyState';
+import { Ring } from '@/ui/motion';
+import { brand } from '@/theme/tokens';
 import { goalFraction } from '@/progress/goalDisplay';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage, useLoad } from '@/data/hooks';
@@ -28,7 +32,7 @@ import { TextField } from '@/ui/TextField';
 
 export default function Goals() {
   const { store, profile } = useApp();
-  const { spacing } = useTheme();
+  const { spacing, colors } = useTheme();
   const units = profile?.unitSystem ?? 'metric';
   const unitWord = units === 'metric' ? 'kg' : 'lb';
   const { data, error } = useLoad(async (s) => ({
@@ -100,34 +104,67 @@ export default function Goals() {
       }}
     >
       {error ? <Notice tone="warning">{error}</Notice> : null}
-      {goals.length === 0 ? <AppText muted>{t('goals.empty')}</AppText> : null}
+      {goals.length === 0 ? (
+        <EmptyState icon="flag" title={t('goals.emptyTitle')} body={t('goals.empty')} />
+      ) : null}
       {goals.map((g) => {
         const fraction = goalFraction(g, summary.latest?.weightKg);
+        const label = `${t(`goals.${g.type}` as StringKey)} · ${t(`goals.${g.period}` as StringKey)}`;
         return (
           <Card key={g.id}>
-            <AppText variant="heading">{`${t(`goals.${g.type}` as StringKey)} · ${t(`goals.${g.period}` as StringKey)}`}</AppText>
-            <AppText
-              muted
-            >{`${t('goals.from', { start: formatWeight(g.startKg, units), target: formatWeight(g.targetKg, units) })} ${t('goals.until', { date: formatDate(g.endDate) })}`}</AppText>
-            <AppText variant="caption" muted>
-              {t(`goals.${g.status}` as StringKey)}
-            </AppText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              {g.status === 'active' && fraction !== null ? (
+                <Ring
+                  size={84}
+                  stroke={9}
+                  fraction={fraction}
+                  color={colors.primary}
+                  track={colors.border}
+                >
+                  <AppText variant="label">{`${Math.round(fraction * 100)}%`}</AppText>
+                </Ring>
+              ) : (
+                <IconBadge
+                  name={
+                    g.status === 'completed'
+                      ? 'checkmark-circle'
+                      : g.status === 'abandoned'
+                        ? 'pause-circle'
+                        : 'flag'
+                  }
+                  size={56}
+                  fill={g.status === 'completed' ? colors.successBg : brand.violet}
+                  color={g.status === 'completed' ? colors.success : brand.plum}
+                />
+              )}
+              <View style={{ flex: 1, gap: 2 }}>
+                <AppText variant="heading">{label}</AppText>
+                <AppText
+                  variant="caption"
+                  muted
+                >{`${t('goals.from', { start: formatWeight(g.startKg, units), target: formatWeight(g.targetKg, units) })} ${t('goals.until', { date: formatDate(g.endDate) })}`}</AppText>
+                <AppText variant="caption" muted>
+                  {t(`goals.${g.status}` as StringKey)}
+                </AppText>
+              </View>
+            </View>
             {g.status === 'active' ? (
               <>
-                {fraction !== null ? (
-                  <ProgressBar
-                    fraction={fraction}
-                    label={`${t(`goals.${g.type}` as StringKey)} ${t(`goals.${g.period}` as StringKey)}`}
-                  />
-                ) : (
+                {fraction === null ? (
                   <AppText variant="caption" muted>
                     {t('today.goalNeedsWeight')}
                   </AppText>
+                ) : (
+                  <ProgressBar fraction={fraction} label={label} />
                 )}
-                <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
-                  <Button label={t('goals.complete')} onPress={() => setStatus(g, 'completed')} />
-                  <Button
-                    variant="secondary"
+                <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+                  <IconAction
+                    icon="checkmark-circle"
+                    label={t('goals.complete')}
+                    onPress={() => setStatus(g, 'completed')}
+                  />
+                  <IconAction
+                    icon="pause-circle"
                     label={t('goals.end')}
                     onPress={() => setStatus(g, 'abandoned')}
                   />
@@ -139,9 +176,7 @@ export default function Goals() {
       })}
 
       <Card>
-        <AppText variant="heading" accessibilityRole="header">
-          {t('goals.new')}
-        </AppText>
+        <SectionTitle icon="add-circle" title={t('goals.new')} />
         {startKg === null || !data?.priv ? (
           <Notice>{t('goals.needWeight')}</Notice>
         ) : (

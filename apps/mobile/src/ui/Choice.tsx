@@ -40,6 +40,8 @@ export function Choice<T extends string>({
               onPress={() => onChange(o.value)}
               style={{
                 minHeight: MIN_TOUCH_TARGET,
+                minWidth: MIN_TOUCH_TARGET,
+                alignItems: 'center',
                 justifyContent: 'center',
                 paddingHorizontal: spacing.md,
                 borderRadius: radius.pill,

@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PulseStage, usePulse } from '@/pulse/PulseStage';
+import { Ionicons } from '@expo/vector-icons';
+import { IconBadge } from '@/ui/kit';
+import { brand } from '@/theme/tokens';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -14,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage, useLoad } from '@/data/hooks';
 import type { CoachAction, Conversation } from '@/data/types';
-import { Bubble } from '@/coach/ui';
+import { Bubble, TypingBubble } from '@/coach/ui';
 import { t, type StringKey } from '@/i18n';
 import { MIN_TOUCH_TARGET, radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -26,6 +29,14 @@ import { Notice } from '@/ui/Banner';
 import { haptics } from '@/ui/haptics';
 
 const PROMPTS = ['plan', 'busy', 'travel', 'comeback', 'week', 'swap'] as const;
+const PROMPT_ICON = {
+  plan: 'sunny',
+  busy: 'timer',
+  travel: 'airplane',
+  comeback: 'refresh-circle',
+  week: 'stats-chart',
+  swap: 'swap-horizontal',
+} as const;
 
 export default function Coach() {
   const { store, config } = useApp();
@@ -219,52 +230,63 @@ export default function Coach() {
           {chat.map((m) => (
             <Bubble key={m.id} m={m} summaryLines={summary ?? []} busy={busy} onDecide={decide} />
           ))}
-          {busy ? (
-            <AppText muted accessibilityLiveRegion="polite">
-              {t('coach.thinking')}
-            </AppText>
-          ) : null}
+          {busy ? <TypingBubble label={t('coach.thinking')} /> : null}
           {err ? <Notice tone="warning">{err}</Notice> : null}
           {usage?.paused ? <Notice>{t('coach.paused')}</Notice> : null}
           {chat.length === 0 ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-              {PROMPTS.map((p) => (
-                <Pressable
-                  key={p}
-                  accessibilityRole="button"
-                  accessibilityLabel={t(`coach.prompt.${p}` as StringKey)}
-                  disabled={busy}
-                  onPress={() => send(t(`coach.prompt.${p}` as StringKey))}
-                  style={{
-                    minHeight: MIN_TOUCH_TARGET,
-                    justifyContent: 'center',
-                    paddingHorizontal: spacing.md,
-                    borderRadius: radius.pill,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                    backgroundColor: colors.surface,
-                  }}
-                >
-                  <AppText variant="label">{t(`coach.prompt.${p}` as StringKey)}</AppText>
-                </Pressable>
-              ))}
+            <View style={{ gap: spacing.sm }}>
+              <AppText variant="label" accessibilityRole="header">
+                {t('coach.tryAsking')}
+              </AppText>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+                {PROMPTS.map((p) => (
+                  <Pressable
+                    key={p}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(`coach.prompt.${p}` as StringKey)}
+                    disabled={busy}
+                    onPress={() => send(t(`coach.prompt.${p}` as StringKey))}
+                    style={{
+                      flexBasis: '48%',
+                      flexGrow: 1,
+                      minHeight: 76,
+                      borderRadius: radius.md,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      backgroundColor: colors.surface,
+                      padding: spacing.sm,
+                      gap: spacing.xs,
+                    }}
+                  >
+                    <IconBadge name={PROMPT_ICON[p]} size={30} fill={brand.violet} />
+                    <AppText variant="label">{t(`coach.prompt.${p}` as StringKey)}</AppText>
+                  </Pressable>
+                ))}
+              </View>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={t('coach.review')}
                 onPress={() => router.push('/coach/review')}
                 style={{
-                  minHeight: MIN_TOUCH_TARGET,
-                  justifyContent: 'center',
-                  paddingHorizontal: spacing.md,
-                  borderRadius: radius.pill,
-                  borderWidth: 1,
-                  borderColor: colors.primary,
-                  backgroundColor: colors.surface,
+                  minHeight: 64,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.md,
+                  borderRadius: radius.md,
+                  backgroundColor: colors.primary,
+                  padding: spacing.md,
                 }}
               >
-                <AppText variant="label" style={{ color: colors.primary }}>
+                <IconBadge
+                  name="calendar"
+                  size={36}
+                  fill={colors.onPrimary}
+                  color={colors.primary}
+                />
+                <AppText variant="label" style={{ color: colors.onPrimary, flex: 1 }}>
                   {t('coach.review')}
                 </AppText>
+                <Ionicons name="chevron-forward" size={20} color={colors.onPrimary} />
               </Pressable>
             </View>
           ) : null}
@@ -287,7 +309,13 @@ export default function Coach() {
                     backgroundColor: colors.surface,
                   }}
                 >
-                  <AppText variant="label">{c.title}</AppText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                    <Ionicons name="chatbubbles" size={20} color={colors.textMuted} />
+                    <AppText variant="label" style={{ flex: 1 }}>
+                      {c.title}
+                    </AppText>
+                    <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                  </View>
                 </Pressable>
               ))}
             </View>
@@ -333,11 +361,24 @@ export default function Coach() {
               },
             ]}
           />
-          <Button
-            label={t('coach.send')}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('coach.send')}
+            accessibilityState={{ disabled: busy || text.trim() === '' }}
             disabled={busy || text.trim() === ''}
             onPress={() => send(text)}
-          />
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: brand.lime,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: busy || text.trim() === '' ? 0.45 : 1,
+            }}
+          >
+            <Ionicons name="send" size={22} color={brand.plum} />
+          </Pressable>
         </View>
       </KeyboardAvoidingView>
     </View>

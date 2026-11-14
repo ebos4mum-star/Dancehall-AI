@@ -1,3 +1,4 @@
+import { SectionTitle } from '@/ui/kit';
 import { useState } from 'react';
 import { Switch, View } from 'react-native';
 import { useApp } from '@/data/AppProvider';
@@ -54,9 +55,7 @@ export default function CoachSettings() {
         <Notice tone="warning">{`${consentError} ${t('privacy.loadFailed')}`}</Notice>
       ) : null}
       <DepthCard>
-        <AppText variant="heading" accessibilityRole="header">
-          {t('coachset.personalization')}
-        </AppText>
+        <SectionTitle icon="sparkles" title={t('coachset.personalization')} />
         <View
           style={{
             flexDirection: 'row',
@@ -86,9 +85,7 @@ export default function CoachSettings() {
       </DepthCard>
 
       <DepthCard>
-        <AppText variant="heading" accessibilityRole="header">
-          {t('coachset.history')}
-        </AppText>
+        <SectionTitle icon="chatbubbles" title={t('coachset.history')} />
         {(convs ?? []).length === 0 ? <AppText muted>{t('coachset.noHistory')}</AppText> : null}
         {(convs ?? []).map((c) => (
           <View key={c.id} style={{ gap: spacing.xs }}>
@@ -129,9 +126,7 @@ export default function CoachSettings() {
       </DepthCard>
 
       <DepthCard>
-        <AppText variant="heading" accessibilityRole="header">
-          {t('coachset.usage')}
-        </AppText>
+        <SectionTitle icon="speedometer" title={t('coachset.usage')} />
         {(usage?.features ?? []).map((f) => (
           <View key={f.feature} style={{ gap: 4 }}>
             <AppText
@@ -176,9 +171,7 @@ export default function CoachSettings() {
 
       {store.requestAccountDeletion ? (
         <DepthCard>
-          <AppText variant="heading" accessibilityRole="header">
-            {t('coachset.deleteAccount')}
-          </AppText>
+          <SectionTitle icon="trash" title={t('coachset.deleteAccount')} />
           <AppText variant="caption" muted>
             {t('coachset.deleteAccountNote')}
           </AppText>
@@ -203,9 +196,7 @@ export default function CoachSettings() {
 
       {config.authMode === 'mock' ? (
         <DepthCard>
-          <AppText variant="heading" accessibilityRole="header">
-            {t('coachset.dev')}
-          </AppText>
+          <SectionTitle icon="flask" title={t('coachset.dev')} />
           <View
             style={{
               flexDirection: 'row',

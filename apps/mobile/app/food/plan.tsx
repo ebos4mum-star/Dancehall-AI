@@ -1,3 +1,4 @@
+import { IconBadge, SectionTitle } from '@/ui/kit';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import {
@@ -172,7 +173,10 @@ export default function Plan() {
         <View style={{ gap: spacing.md }}>
           {preview.days.map((d) => (
             <DepthCard key={d.dayIndex}>
-              <AppText variant="heading">{t('plan.day', { n: d.dayIndex + 1 })}</AppText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <IconBadge name="calendar" size={32} />
+                <AppText variant="heading">{t('plan.day', { n: d.dayIndex + 1 })}</AppText>
+              </View>
               {mealsText(d).map((line) => (
                 <AppText key={line} variant="caption" muted>
                   {line}
@@ -194,9 +198,7 @@ export default function Plan() {
           </View>
         </View>
       ) : null}
-      <AppText variant="heading" accessibilityRole="header">
-        {t('plan.mine')}
-      </AppText>
+      <SectionTitle icon="bookmark" title={t('plan.mine')} />
       {plans && plans.length === 0 ? <AppText muted>{t('plan.none')}</AppText> : null}
       {(plans ?? []).map((p) => (
         <DepthCard key={p.id}>

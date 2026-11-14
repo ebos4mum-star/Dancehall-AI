@@ -8,6 +8,7 @@ import {
   summarizeWeights,
   type UnitSystem,
 } from '@dancehall/shared';
+import { SectionTitle } from '@/ui/kit';
 import { goalFraction } from '@/progress/goalDisplay';
 import { todayGlance } from '@/today/glance';
 import { TodayHero, type HeroChip } from '@/today/TodayHero';
@@ -178,9 +179,7 @@ export default function Today() {
 
       <FadeIn>
         <Card>
-          <AppText variant="heading" accessibilityRole="header">
-            {t('today.doneTitle')}
-          </AppText>
+          <SectionTitle icon="checkmark-done" title={t('today.doneTitle')} />
           {summary2.list.length === 0 ? (
             <AppText muted>{t('today.doneEmpty')}</AppText>
           ) : (
@@ -195,7 +194,7 @@ export default function Today() {
 
       <FadeIn>
         <Card>
-          <AppText variant="heading">{t('today.latest')}</AppText>
+          <SectionTitle icon="scale" title={t('today.latest')} />
           {summary.latest ? (
             <>
               <AppText
@@ -251,9 +250,10 @@ export default function Today() {
       {activeChallenge && challengeNow ? (
         <FadeIn>
           <Card>
-            <AppText variant="heading">
-              {t('chal.activeTitle', { n: activeChallenge.lengthDays })}
-            </AppText>
+            <SectionTitle
+              icon="trophy"
+              title={t('chal.activeTitle', { n: activeChallenge.lengthDays })}
+            />
             <ProgressBar
               fraction={challengeNow.fraction}
               label={t('chal.progress', {
@@ -277,14 +277,14 @@ export default function Today() {
       ) : null}
       <FadeIn>
         <Card>
-          <AppText variant="heading">{t('habit.title')}</AppText>
+          <SectionTitle icon="leaf" title={t('habit.title')} />
           <HabitWeek habits={insights.habits} />
         </Card>
       </FadeIn>
 
       <FadeIn>
         <Card>
-          <AppText variant="heading">{t('today.moveTitle')}</AppText>
+          <SectionTitle icon="musical-notes" title={t('today.moveTitle')} />
           {dance.todayPlanned.length === 0 && dance.doneToday.length === 0 ? (
             <AppText muted>{t('today.moveNone')}</AppText>
           ) : null}
@@ -336,7 +336,7 @@ export default function Today() {
 
       <FadeIn>
         <Card>
-          <AppText variant="heading">{t('today.foodTitle')}</AppText>
+          <SectionTitle icon="restaurant" title={t('today.foodTitle')} />
           {food.todayLogs.length === 0 ? (
             <AppText muted>{t('today.foodEmpty')}</AppText>
           ) : (
@@ -370,7 +370,7 @@ export default function Today() {
 
       <FadeIn>
         <Card>
-          <AppText variant="heading">{t('today.goalsTitle')}</AppText>
+          <SectionTitle icon="flag" title={t('today.goalsTitle')} />
           {active.length === 0 ? <AppText muted>{t('today.noGoals')}</AppText> : null}
           {active.map((g) => {
             const fraction = goalFraction(g, summary.latest?.weightKg);

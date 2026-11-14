@@ -1,3 +1,4 @@
+import { Ring } from '@/ui/motion';
 import { showMoment } from '@/pulse/moment';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
@@ -24,7 +25,7 @@ import { haptics } from '@/ui/haptics';
 
 export default function Challenges() {
   const { store, profile } = useApp();
-  const { spacing } = useTheme();
+  const { spacing, colors } = useTheme();
   const { data, error, loading } = useLoad(async (s) => ({
     challenges: await s.listChallenges(),
     sessions: await s.listSessions(),
@@ -89,13 +90,39 @@ export default function Challenges() {
           <AppText variant="heading" accessibilityRole="header">
             {t('chal.activeTitle', { n: active.lengthDays })}
           </AppText>
-          <ProgressBar
-            fraction={progress.fraction}
-            label={t('chal.progress', { done: progress.activeDays, target: progress.targetDays })}
-          />
-          <AppText>
-            {t('chal.progress', { done: progress.activeDays, target: progress.targetDays })}
-          </AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
+            <Ring
+              size={112}
+              stroke={12}
+              fraction={progress.fraction}
+              color={colors.primary}
+              track={colors.border}
+            >
+              <View
+                accessible
+                accessibilityLabel={t('chal.progress', {
+                  done: progress.activeDays,
+                  target: progress.targetDays,
+                })}
+                style={{ alignItems: 'center' }}
+              >
+                <AppText variant="title">{`${progress.activeDays}`}</AppText>
+                <AppText variant="caption" muted>{`/ ${progress.targetDays}`}</AppText>
+              </View>
+            </Ring>
+            <View style={{ flex: 1, gap: 4 }}>
+              <AppText variant="label">
+                {t('chal.progress', { done: progress.activeDays, target: progress.targetDays })}
+              </AppText>
+              <ProgressBar
+                fraction={progress.fraction}
+                label={t('chal.progress', {
+                  done: progress.activeDays,
+                  target: progress.targetDays,
+                })}
+              />
+            </View>
+          </View>
           {progress.met ? (
             <Notice>{t('chal.met')}</Notice>
           ) : progress.ended ? (

@@ -58,3 +58,23 @@ describe('brand palette', () => {
     }
   });
 });
+
+describe('contrast of the pairs used by the redesign', () => {
+  it('ivory text on the scene plum and on the legibility scrim', () => {
+    expect(contrastRatio(brand.ivory, brand.plum)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(brand.ivory, '#1A0E2E')).toBeGreaterThanOrEqual(4.5);
+  });
+  it('plum on lime (play button, send button, active tab) and plum on coral (simulated tags)', () => {
+    expect(contrastRatio(brand.plum, brand.lime)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(brand.plum, brand.coral)).toBeGreaterThanOrEqual(4.5);
+  });
+  it('lime on plum (Next up block, dark-mode primary) in both directions of the pair', () => {
+    expect(contrastRatio(brand.lime, brand.plum)).toBeGreaterThanOrEqual(4.5);
+  });
+  it('status tiles: success on its background and warning text on its background, both themes', () => {
+    for (const c of [lightColors, darkColors]) {
+      expect(contrastRatio(c.success, c.successBg)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(c.warningText, c.warningBg)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+});
