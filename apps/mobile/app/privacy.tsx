@@ -26,7 +26,7 @@ const LABELS: Record<ConsentPurpose, [StringKey, StringKey]> = {
 export default function Privacy() {
   const { store, profile, config, refresh } = useApp();
   const { colors, spacing } = useTheme();
-  const { data } = useLoad((s) => s.getConsents());
+  const { data, error } = useLoad((s) => s.getConsents());
   const [msg, setMsg] = useState<string | null>(null);
   const [name, setName] = useState<string | null>(null);
 
@@ -100,6 +100,7 @@ export default function Privacy() {
               <Switch
                 accessibilityLabel={t(labelKey)}
                 value={data?.[p] ?? false}
+                disabled={!data}
                 onValueChange={(v) => guard(() => store.setConsent(p, v))}
                 trackColor={{ true: colors.primary, false: colors.border }}
               />
@@ -110,6 +111,7 @@ export default function Privacy() {
           </Card>
         );
       })}
+      {error ? <Notice tone="warning">{`${error} ${t('privacy.loadFailed')}`}</Notice> : null}
       {msg ? <Notice tone="warning">{msg}</Notice> : null}
       <Notice>{t('privacy.exportNote')}</Notice>
       <Card>

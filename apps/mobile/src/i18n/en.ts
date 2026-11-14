@@ -210,6 +210,8 @@ export const en = {
 
   'privacy.title': 'Privacy and settings',
   'privacy.consents': 'Your choices',
+  'privacy.loadFailed':
+    'Your saved choices could not be loaded, so the switches are locked. Nothing has changed.',
   'privacy.displayName': 'Display name',
   'privacy.units': 'Units',
   'privacy.healthData': 'Store my health information',

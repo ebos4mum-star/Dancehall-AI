@@ -17,7 +17,7 @@ import { haptics } from '@/ui/haptics';
 export default function CoachSettings() {
   const { store, config } = useApp();
   const { colors } = useTheme();
-  const { data: consents } = useLoad((s) => s.getConsents());
+  const { data: consents, error: consentError } = useLoad((s) => s.getConsents());
   const { data: summary } = useLoad(async (s) =>
     s.getCoachContextSummary ? s.getCoachContextSummary() : [],
   );
@@ -42,6 +42,9 @@ export default function CoachSettings() {
   return (
     <Screen top={false}>
       {err ? <Notice tone="warning">{err}</Notice> : null}
+      {consentError ? (
+        <Notice tone="warning">{`${consentError} ${t('privacy.loadFailed')}`}</Notice>
+      ) : null}
       <DepthCard>
         <AppText variant="heading" accessibilityRole="header">
           {t('coachset.personalization')}
@@ -60,6 +63,7 @@ export default function CoachSettings() {
           <Switch
             accessibilityLabel={t('privacy.aiCoach')}
             value={on}
+            disabled={!consents}
             onValueChange={(v) => guard(() => store.setConsent('ai_coach_personalization', v))}
             trackColor={{ true: colors.primary, false: colors.border }}
           />
