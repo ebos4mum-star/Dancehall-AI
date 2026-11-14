@@ -10,6 +10,7 @@ import { MacroBars } from '@/food/ui';
 import { Ring } from '@/ui/motion';
 import { errorMessage, useLoad } from '@/data/hooks';
 import { t, type StringKey } from '@/i18n';
+import { challengeProgress } from '@/challenges/logic';
 import { useProgressInsights } from '@/progress/hooks';
 import { Celebration, HabitWeek } from '@/progress/ui';
 import { formatChange, formatDate, formatWeight, parseDecimal } from '@/lib/format';
@@ -31,10 +32,15 @@ export default function Today() {
     weights: await s.listWeights(),
     goals: await s.listGoals(),
     readiness: await s.latestReadiness(),
+    challenges: await s.listChallenges(),
   }));
   const food = useFoodData();
   const dance = useDanceData();
   const insights = useProgressInsights();
+  const activeChallenge = (data?.challenges ?? []).find((c) => c.status === 'active') ?? null;
+  const challengeNow = activeChallenge
+    ? challengeProgress(activeChallenge, dance.sessions, profile?.timeZone ?? null, new Date())
+    : null;
   const [entry, setEntry] = useState('');
   const [msg, setMsg] = useState<{ text: string; warn: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -138,6 +144,33 @@ export default function Today() {
       <PlanCard />
 
       <Celebration ids={insights.fresh} />
+      {activeChallenge && challengeNow ? (
+        <FadeIn>
+          <Card>
+            <AppText variant="heading">
+              {t('chal.activeTitle', { n: activeChallenge.lengthDays })}
+            </AppText>
+            <ProgressBar
+              fraction={challengeNow.fraction}
+              label={t('chal.progress', {
+                done: challengeNow.activeDays,
+                target: challengeNow.targetDays,
+              })}
+            />
+            <AppText muted>
+              {t('chal.progress', {
+                done: challengeNow.activeDays,
+                target: challengeNow.targetDays,
+              })}
+            </AppText>
+            <Button
+              variant="secondary"
+              label={t('chal.todayCta')}
+              onPress={() => router.push('/challenges')}
+            />
+          </Card>
+        </FadeIn>
+      ) : null}
       <FadeIn>
         <Card>
           <AppText variant="heading">{t('habit.title')}</AppText>

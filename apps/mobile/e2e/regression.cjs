@@ -169,10 +169,45 @@ async function step(name, fn) {
       false,
     );
   });
+  await step('E: Fit Challenge starts with a gentle goal and shows on Today', async () => {
+    await p.goBack();
+    await p.waitForTimeout(500);
+    await tab('Me');
+    await btn('Fit Challenge').click();
+    await seen('rest days are built in');
+    await seen('3 active days');
+    await btn('Start challenge').click();
+    await seen('0 of 3 active days');
+    await p.goBack();
+    await tab('Today');
+    await seen('7-day challenge');
+  });
+  await step(
+    'E: Progress shows the habit week and milestones with no streak language',
+    async () => {
+      await tab('Me');
+      await btn('Weight progress').click();
+      await seen('Your milestones');
+      await seen('This week');
+      for (const bad of ['You missed', 'You lost', 'failed']) {
+        assert.equal(await p.getByText(bad, { exact: false }).count(), 0, bad);
+      }
+      await p.goBack();
+    },
+  );
+  await step('E: account settings let the person rename themselves', async () => {
+    await tab('Me');
+    await btn('Privacy and settings').click();
+    await p.getByLabel('Display name').fill('Sam K');
+    await btn('Save').click();
+    await p.waitForTimeout(600);
+    await p.goBack();
+    await seen('Sam K');
+  });
   await step('Privacy: data survives a reload (device storage), no page errors', async () => {
     await p.goto(base);
     await p.waitForTimeout(2500);
-    await seen('Hello, Sam');
+    await seen('Hello, Sam K');
     assert.deepEqual(errors, []);
   });
 
