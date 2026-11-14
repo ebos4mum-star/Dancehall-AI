@@ -16,6 +16,12 @@ export interface DataExport {
   challenges: unknown[];
   habits: unknown[];
   habitCheckins: unknown[];
+  /** Coach conversations, weekly reviews and shared household lists, when the adapter provides them. */
+  conversations: unknown[];
+  weeklyReviews: unknown[];
+  household: unknown;
+  householdMeals: unknown[];
+  householdGrocery: unknown[];
 }
 
 /**
@@ -40,6 +46,11 @@ export async function buildDataExport(
     challenges,
     habits,
     habitCheckins,
+    conversations,
+    weeklyReviews,
+    household,
+    householdMeals,
+    householdGrocery,
   ] = await Promise.all([
     store.getProfile(),
     store.getPrivate(),
@@ -54,6 +65,11 @@ export async function buildDataExport(
     store.listChallenges(),
     store.listHabits(),
     store.listHabitCheckins('0000-01-01'),
+    store.listConversations?.() ?? [],
+    store.listWeeklyReviews?.() ?? [],
+    store.getHousehold?.() ?? null,
+    store.listHouseholdMeals?.() ?? [],
+    store.listHouseholdGrocery?.() ?? [],
   ]);
   return {
     format: 'dancehall-fit-export-v1',
@@ -71,6 +87,11 @@ export async function buildDataExport(
     challenges,
     habits,
     habitCheckins,
+    conversations,
+    weeklyReviews,
+    household,
+    householdMeals,
+    householdGrocery,
   };
 }
 

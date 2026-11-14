@@ -90,6 +90,7 @@ export default function FoodDashboard() {
         <QuickAction label={t('food.saved')} onPress={() => router.push('/food/saved')} />
         <QuickAction label={t('food.swapIdeas')} onPress={() => router.push('/food/swap')} />
         <QuickAction label={t('food.plan')} onPress={() => router.push('/food/plan')} />
+        <QuickAction label={t('food.household')} onPress={() => router.push('/food/household')} />
         <QuickAction label={t('food.history')} onPress={() => router.push('/food/history')} />
       </View>
 
