@@ -59,3 +59,23 @@ begin
   perform test.throws($q$select * from public.wellness_entries$q$, 'permission denied');
   perform test.throws($q$select * from public.wellness_prefs$q$, 'permission denied');
 end $$;
+
+-- Account deletion removes every wellness row for that person (and only theirs). Uses its own users so the isolation test still has seeded rows.
+do $$
+declare c uuid; d uuid;
+begin
+  perform test.as_admin();
+  c := test.make_user('well-c@example.test'); d := test.make_user('well-d@example.test');
+  perform test.as_user(c);
+  insert into public.consents (purpose, policy_version, granted) values ('health_data_processing', 'v0', true);
+  insert into public.wellness_entries (kind, day, amount) values ('hydration', current_date, 250);
+  insert into public.wellness_prefs (data) values ('{"goalIntent":"lose"}');
+  perform test.as_user(d);
+  insert into public.consents (purpose, policy_version, granted) values ('health_data_processing', 'v0', true);
+  insert into public.wellness_entries (kind, day, amount) values ('hydration', current_date, 500);
+  perform test.as_admin();
+  delete from auth.users where id = c;
+  perform test.assert((select count(*) = 0 from public.wellness_entries where user_id = c), 'deleting an account removes its wellness entries');
+  perform test.assert((select count(*) = 0 from public.wellness_prefs where user_id = c), 'deleting an account removes its wellness preferences');
+  perform test.assert((select count(*) = 1 from public.wellness_entries where user_id = d), 'another person''s wellness data is untouched');
+end $$;

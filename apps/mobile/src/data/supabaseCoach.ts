@@ -5,6 +5,7 @@ import {
   WORKOUT_BY_ID,
   ageYearsOn,
   buildCoachContext,
+  coachWellnessContext,
   contextSummaryLines,
   detectComeback,
   generateDailyPlan,
@@ -541,6 +542,15 @@ export function createCoachAdapter(d: CoachAdapterDeps): Partial<DataStore> {
         base.listSessions(),
         base.getProfile(),
       ]);
+      const todayKey = localDateKey(now(), profile.timeZone);
+      // Only for the "what the coach used" list: shown when the server would include wellness (same shared builder).
+      const wellness = consents.ai_coach_personalization
+        ? coachWellnessContext({
+            prefs: base.getWellnessPrefs ? await base.getWellnessPrefs() : null,
+            entries: base.listWellness ? await base.listWellness(addDaysIso(todayKey, -6)) : [],
+            today: todayKey,
+          })
+        : undefined;
       const personalized = consents.ai_coach_personalization;
       const tz = profile.timeZone;
       const wk = weekStartOf(localDateKey(now(), tz));
@@ -556,6 +566,7 @@ export function createCoachAdapter(d: CoachAdapterDeps): Partial<DataStore> {
           unitSystem: profile.unitSystem,
           now: now(),
           timeZone: tz,
+          wellness,
           activity: personalized
             ? {
                 sessionsThisWeek: done.length,
