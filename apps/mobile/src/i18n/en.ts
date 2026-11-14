@@ -112,6 +112,9 @@ export const en = {
   'chal.activeTitle': '{n}-day challenge',
   'chal.progress': '{done} of {target} active days',
   'chal.daysLeft': '{n} days left.',
+  'chal.counts':
+    'Dance sessions, walks and strength sessions all count. Hydration, sleep and food logging are for you and never affect your challenge.',
+  'chal.breakdown': 'Dance {dance} · Walking {walking} · Strength {strength} days',
   'chal.rest': 'Rest days are part of the plan.',
   'chal.met': 'You reached your goal. Well done.',
   'chal.ended':
@@ -958,6 +961,9 @@ export const en = {
   'coach.prompt.comeback': 'I missed a few days',
   'coach.prompt.week': 'How was my week?',
   'coach.prompt.swap': 'Any food swap ideas?',
+  'coach.prompt.why': 'Why is this in my plan?',
+  'coach.prompt.plateau': 'My weight has plateaued',
+  'coach.prompt.recover': 'I feel sore and tired',
   'coachset.title': 'Coach privacy',
   'coachset.personalization': 'Personalization',
   'coachset.history': 'Conversation history',

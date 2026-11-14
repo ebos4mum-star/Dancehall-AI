@@ -1,4 +1,4 @@
-import { localDateKey } from '@dancehall/shared';
+import { localDateKey, type WellnessEntry } from '@dancehall/shared';
 import type { FitChallenge, WorkoutSession } from '../data/types';
 
 export const CHALLENGE_LENGTHS = [7, 14, 30] as const;
@@ -32,6 +32,8 @@ export interface ChallengeProgress {
   met: boolean;
   /** 0..1 for display. */
   fraction: number;
+  /** Which of those days came from where. A day with several kinds counts once in `activeDays` and once in each kind. */
+  byKind: { dance: number; walking: number; strength: number };
 }
 
 export function challengeProgress(
@@ -39,6 +41,8 @@ export function challengeProgress(
   sessions: WorkoutSession[],
   timeZone: string | null,
   now: Date,
+  /** Optional logged walks and strength sessions. They count as active days alongside dance, so a challenge suits whichever movement the person chose. */
+  wellness: readonly Pick<WellnessEntry, 'kind' | 'day'>[] = [],
 ): ChallengeProgress {
   const start = dayNum(c.startDate);
   const end = start + c.lengthDays - 1;
@@ -47,6 +51,16 @@ export function challengeProgress(
     if (s.status !== 'completed' || !s.completedAt) continue;
     const d = dayNum(localDateKey(s.completedAt, timeZone));
     if (d >= start && d <= end) days.add(d);
+  }
+  const dance = new Set(days);
+  const walking = new Set<number>();
+  const strength = new Set<number>();
+  for (const e of wellness) {
+    if (e.kind !== 'walk' && e.kind !== 'strength') continue;
+    const d = dayNum(e.day);
+    if (d < start || d > end) continue;
+    days.add(d);
+    (e.kind === 'walk' ? walking : strength).add(d);
   }
   const today = dayNum(localDateKey(now, timeZone));
   const activeDays = days.size;
@@ -57,5 +71,6 @@ export function challengeProgress(
     ended: today > end,
     met: activeDays >= c.targetDays,
     fraction: Math.min(1, activeDays / c.targetDays),
+    byKind: { dance: dance.size, walking: walking.size, strength: strength.size },
   };
 }

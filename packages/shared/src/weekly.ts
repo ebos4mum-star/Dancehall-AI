@@ -1,6 +1,7 @@
 import { sessionMinutes, weekStartOf } from './activity';
 import type { WeekFacts } from './daily-plan';
 import { localDateKey } from './food';
+import { entriesOf, type WellnessEntry } from './wellness';
 import { sortByTime, type WeightPoint } from './progress';
 
 /** Facts for the weekly review, computed in the person's time zone. Weight is reduced to a direction. */
@@ -18,12 +19,20 @@ export function buildWeekFacts(args: {
   foodLogTimes: readonly string[];
   weights: readonly WeightPoint[];
   activeGoals: number;
+  /** Optional recorded wellness logs; any dates are accepted and filtered to the week. */
+  wellness?: readonly WellnessEntry[];
 }): WeekFacts {
   const inWeek = (iso: string) => weekStartOf(localDateKey(iso, args.timeZone)) === args.weekStart;
   const done = args.sessions.filter(
     (s) => s.status === 'completed' && s.completedAt && inWeek(s.completedAt),
   );
   const days = new Set(done.map((s) => localDateKey(s.completedAt!, args.timeZone)));
+  const wk = (args.wellness ?? []).filter((e) => weekStartOf(e.day) === args.weekStart);
+  const walks = entriesOf(wk, 'walk');
+  const strength = entriesOf(wk, 'strength');
+  const sleep = new Map(entriesOf(wk, 'sleep').map((e) => [e.day, e.amount]));
+  // Walks and strength sessions are movement too, so they join dance in the active-day count (once per day).
+  for (const e of [...walks, ...strength]) days.add(e.day);
   const foodDays = new Set(
     args.foodLogTimes.filter(inWeek).map((t) => localDateKey(t, args.timeZone)),
   );
@@ -48,5 +57,22 @@ export function buildWeekFacts(args: {
     lowImpactSessions: done.filter((s) => s.lowImpact).length,
     weightTrend,
     activeGoals: args.activeGoals,
+    ...(wk.length > 0
+      ? {
+          wellness: {
+            walkDays: new Set(walks.map((e) => e.day)).size,
+            walkMinutes: walks.reduce((a, e) => a + e.amount, 0),
+            strengthSessions: strength.length,
+            sleepNights: sleep.size,
+            sleepAvgHours:
+              sleep.size >= 3
+                ? Math.round(([...sleep.values()].reduce((a, b) => a + b, 0) / sleep.size) * 10) /
+                  10
+                : null,
+            hungerCheckins: entriesOf(wk, 'hunger').length,
+            waterLoggedDays: new Set(entriesOf(wk, 'hydration').map((e) => e.day)).size,
+          },
+        }
+      : {}),
   };
 }

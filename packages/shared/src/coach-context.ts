@@ -30,7 +30,22 @@ export interface CoachContext {
     kcalToday?: number;
     lastMealItems?: Array<{ name: string; foodId: string | null; grams: number; kcal: number }>;
   };
-  plan?: { mode: PlanMode; items: Array<{ kind: string; title: string; done: boolean }> } | null;
+  plan?: {
+    mode: PlanMode;
+    items: Array<{ kind: string; title: string; done: boolean; why?: string }>;
+  } | null;
+  /** Recorded wellness for the week, from the person's own logs. Never estimated. */
+  wellness?: {
+    walkMinutesWeek: number;
+    strengthSessionsWeek: number;
+    sleepNightsWeek: number;
+    sleepAvgHours: number | null;
+    recoveryToday: 'fresh' | 'ok' | 'sore' | 'worn' | null;
+    hungerCheckinsWeek: number;
+    intent: 'lose' | 'maintain' | 'fitness' | null;
+    /** True when the person said food or weight numbers are hard or switched numbers off: the coach then shares none. */
+    numbersHidden: boolean;
+  };
   comeback?: { daysAway: number; missedPlanned: number } | null;
   guideKcal?: number;
 }
@@ -49,6 +64,7 @@ export function buildCoachContext(args: {
   activity?: CoachContext['activity'];
   food?: CoachContext['food'];
   plan?: CoachContext['plan'];
+  wellness?: CoachContext['wellness'];
   comeback?: CoachContext['comeback'];
   guideKcal?: number;
 }): CoachContext {
@@ -91,6 +107,7 @@ export function buildCoachContext(args: {
         }
       : undefined,
     plan: args.plan ?? null,
+    wellness: args.wellness,
     comeback: args.comeback ?? null,
     guideKcal: args.guideKcal === undefined ? undefined : round50(args.guideKcal),
   };
@@ -107,6 +124,10 @@ export function contextSummaryLines(c: CoachContext): string[] {
   if (c.lowImpact)
     lines.push('Your preference for low-impact options (from your readiness answers)');
   if (c.plan) lines.push("Today's Daily Fit Plan");
+  if (c.wellness)
+    lines.push(
+      'Your logged walks, strength, sleep and check-ins this week (only what you recorded)',
+    );
   if (c.comeback) lines.push('That you have been away from workouts for a while');
   lines.push('Your time of day and units');
   return lines;
@@ -118,6 +139,10 @@ export type CoachIntent =
   | 'travel'
   | 'comeback'
   | 'weekly_review'
+  | 'plan_explain'
+  | 'plateau'
+  | 'recovery'
+  | 'habits'
   | 'workout_request'
   | 'food_swap'
   | 'goal_too_hard'
@@ -147,6 +172,22 @@ export function classifyIntent(text: string): { intent: CoachIntent; minutes?: 5
     !/\bfood|meal|eat\b/.test(t)
   )
     return { intent: 'busy', minutes: mins };
+  if (
+    /\b(plateau\w*|stuck|stalled|not losing|stopped losing|scale (?:won'?t|isn'?t|hasn'?t)|not moving)\b/.test(
+      t,
+    )
+  )
+    return { intent: 'plateau' };
+  if (/\b(why)\b.*\b(plan|suggest|asked|recommend)|\bexplain\b.*\b(plan|today)\b/.test(t))
+    return { intent: 'plan_explain' };
+  if (
+    /\b(sore|tired|exhausted|worn out|achy|sleep|slept|insomnia|recover|recovery|rest day)\b/.test(
+      t,
+    )
+  )
+    return { intent: 'recovery' };
+  if (/\b(habit|habits|routine|motivat\w*|consisten\w*|stay on track|keep going)\b/.test(t))
+    return { intent: 'habits' };
   if (/\b(my week|this week|weekly|week in review|how (?:was|did) (?:i|my))\b/.test(t))
     return { intent: 'weekly_review' };
   if (

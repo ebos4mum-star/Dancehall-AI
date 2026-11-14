@@ -172,6 +172,72 @@ export function composeCoachReply(userText: string, c: CoachContext): Reply {
         proposedChanges: [],
       };
     }
+    case 'plan_explain': {
+      const items = (c.plan?.items ?? []).slice(0, 5);
+      return {
+        message: items.length
+          ? `Here is why each suggestion is in today's plan: ${items.map((i) => `${i.title}: ${i.why ?? 'a small, optional step'}${i.done ? ' (done)' : ''}`).join('; ')}. You can skip any of it.`
+          : 'Open the Daily Fit Plan on the Coach tab and tap "Why" on any item to see the reason. Every suggestion is rule-based, optional and based only on what you have logged.',
+        because: reasons(c, ['Suggestions come from simple rules, not from a model.']),
+        proposedChanges: [],
+      };
+    }
+    case 'plateau': {
+      const wl = c.wellness;
+      if (wl?.numbersHidden)
+        return {
+          message:
+            'Progress is more than any number. If food or weight feel hard right now, it is completely okay to focus on how you feel, sleep and the movement you enjoy. A doctor or registered dietitian can give support that fits you.',
+          because: reasons(c, ['You asked us not to focus on numbers.']),
+          proposedChanges: [],
+          supportReferral: true,
+        };
+      const notes: string[] = [];
+      if (wl && wl.sleepAvgHours !== null && wl.sleepAvgHours < 7)
+        notes.push(`you logged about ${wl.sleepAvgHours} hours of sleep on average`);
+      if (
+        wl &&
+        wl.walkMinutesWeek === 0 &&
+        wl.strengthSessionsWeek === 0 &&
+        !c.activity?.sessionsThisWeek
+      )
+        notes.push('no movement is logged this week');
+      return {
+        message: `Plateaus are common and usually temporary. Weight moves day to day with water, hormones, sleep and stress, so one flat stretch rarely means anything is wrong. Look at the 2 to 3 week direction, and at other signs like energy, strength and how clothes fit.${notes.length ? ` From what you logged: ${notes.join(' and ')}, which can matter.` : ''} Avoid cutting food sharply; that tends to backfire. If you are worried, a doctor or registered dietitian can look at your whole picture.`,
+        because: reasons(c, ['This is general education, not a diagnosis.']),
+        proposedChanges: [],
+      };
+    }
+    case 'recovery': {
+      const wl = c.wellness;
+      const lowSleep = wl?.sleepAvgHours != null && wl.sleepAvgHours < 6.5;
+      const w = quick(5, true);
+      return {
+        message: `Rest is part of progress. ${wl?.recoveryToday === 'sore' || wl?.recoveryToday === 'worn' ? `You said your body feels ${wl.recoveryToday === 'worn' ? 'worn out' : 'sore'} today, so ` : 'On days like this '}a gentle walk, light stretching or a short low-impact session can feel better than pushing, and taking the day off is fine.${lowSleep ? ` You logged about ${wl!.sleepAvgHours} hours of sleep on average this week; a regular wind-down time may help.` : ''} If pain is sharp or lasts, please see a health professional.`,
+        because: reasons(c, ['Recovery supports energy and keeps movement enjoyable.']),
+        proposedChanges: [
+          {
+            kind: 'update_daily_plan',
+            summary: 'Switch today to a gentle Comeback plan',
+            payload: { mode: 'comeback', date: today },
+          },
+          ...(w ? [addWorkout(w, today, true)] : []),
+        ],
+      };
+    }
+    case 'habits': {
+      const wl = c.wellness;
+      const ideas = [
+        'a glass of water with each meal',
+        'a 10-minute walk after one meal',
+        'a fixed wind-down time at night',
+      ];
+      return {
+        message: `Habits stick when they are small and tied to something you already do. Pick one: ${ideas.join(', ')}. Missing a day does not reset anything.${wl && wl.walkMinutesWeek > 0 ? ` You have logged ${wl.walkMinutesWeek} minutes of walking this week, which is a good base.` : ''}`,
+        because: reasons(c, ['Small habits are easier to repeat than big changes.']),
+        proposedChanges: [],
+      };
+    }
     case 'weekly_review':
       return {
         message:
@@ -216,10 +282,27 @@ export function composeWeeklyReview(f: WeekFacts): WeeklyReviewResponse {
   if (f.lowImpactSessions > 0) wins.push('You chose the low-impact version when it suited you.');
   if (f.sessions > 0) wins.push('You showed up at your own level.');
   if (f.weightTrend === 'steady') wins.push('Your weight stayed steady, which is a fine result.');
+  const wl = f.wellness;
+  if (wl) {
+    if (wl.walkMinutes > 0)
+      highlights.push(`You walked on ${wl.walkDays} day(s), ${wl.walkMinutes} minutes in total.`);
+    if (wl.strengthSessions > 0)
+      wins.push(`You logged ${wl.strengthSessions} strength session(s).`);
+    if (wl.sleepAvgHours !== null)
+      highlights.push(
+        `You logged ${wl.sleepNights} nights of sleep, about ${wl.sleepAvgHours} hours on average.`,
+      );
+    if (wl.waterLoggedDays > 0) wins.push(`You tracked water on ${wl.waterLoggedDays} day(s).`);
+    if (wl.hungerCheckins > 0) wins.push('You checked in with your hunger and fullness.');
+  }
   const tips: string[] = [];
   if (f.sessions === 0) tips.push('Try one 5-minute Quick Fit on your busiest day.');
   else if (f.sessions < 3) tips.push('Pick a regular slot for a 10-minute session.');
   else tips.push('Keep what is working, and add a gentle stretch after sessions.');
+  if (wl && wl.sleepAvgHours !== null && wl.sleepAvgHours < 6.5)
+    tips.push('Try a regular wind-down time; sleep supports energy and appetite.');
+  if (f.activeDays === 0 || (wl && wl.walkMinutes === 0 && f.sessions === 0))
+    tips.push('A 10-minute walk is an easy way to start the week.');
   if (f.foodLoggedDays === 0) tips.push('Log one meal a day to see patterns, if you like.');
   if (f.weightTrend)
     tips.push('Remember that weight moves day to day; the overall direction matters more.');
