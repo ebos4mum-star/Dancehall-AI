@@ -525,7 +525,7 @@ export const en = {
     'This is a beginner outline. Go at your own pace, keep your movements small, and use the low-impact version or skip a block whenever you like. Stopping early is always fine.',
   'wk.fasterTitle': 'A step up',
   'wk.fasterBody':
-    'This one moves faster. If the pace feels like too much, switch on the low-impact version, slow the moves down, or try a beginner outline first.',
+    'This one moves faster. If the pace is hard to keep up with, switch on the low-impact version, slow the moves down, or try a beginner outline first.',
   'wk.pace.low': 'Gentle: an easy pace where you can talk in full sentences.',
   'wk.pace.moderate': 'Moderate: a steady pace where you can talk in short sentences.',
   'wk.pace.high': 'High energy: a brisk pace where talking takes effort. Rest whenever you need.',
