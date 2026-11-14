@@ -83,6 +83,11 @@ export const en = {
   'grocery.share': 'Share list',
 
   'me.challenges': 'Fit Challenge',
+  'me.statSessions': 'Sessions this week',
+  'me.statDays': 'Active days (7 days)',
+  'me.statMilestones': 'Milestones',
+  'me.recent': 'Recent milestones',
+  'me.allMilestones': 'See progress and milestones',
   'chal.title': 'Fit Challenge',
   'chal.intro':
     'A free, personal challenge at your own pace. No stakes, no ranking, and rest days are built in.',
