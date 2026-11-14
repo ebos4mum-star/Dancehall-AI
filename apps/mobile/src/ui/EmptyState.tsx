@@ -1,5 +1,6 @@
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { PulseStage } from '@/pulse/PulseStage';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from './AppText';
 import { Button } from './Button';
@@ -28,13 +29,22 @@ export function EmptyState({
         accessible
         accessibilityLabel={`${title}. ${body}`}
       >
-        <Ionicons
-          name={icon}
-          size={32}
-          color={colors.primary}
-          accessibilityElementsHidden
-          importantForAccessibility="no"
-        />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <View
+            style={{ width: 72, height: 66, overflow: 'hidden' }}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
+            <PulseStage state="idle" size={72} />
+          </View>
+          <Ionicons
+            name={icon}
+            size={28}
+            color={colors.primary}
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+          />
+        </View>
         <AppText variant="heading">{title}</AppText>
         <AppText muted>{body}</AppText>
       </View>

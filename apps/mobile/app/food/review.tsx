@@ -1,3 +1,4 @@
+import { showMoment } from '@/pulse/moment';
 import { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
@@ -47,6 +48,7 @@ export default function Review() {
         items: draft.items.map(toValues),
       });
       haptics.success();
+      showMoment(t('moment.foodLogged'), 'celebrate');
       dispatch({ type: 'clear' });
       router.replace('/(tabs)/food');
     } catch (e) {
@@ -72,7 +74,15 @@ export default function Review() {
   };
 
   return (
-    <Screen top={false}>
+    <Screen
+      top={false}
+      banner={{
+        world: 'food',
+        title: t('ban.foodReview.title'),
+        line: t('ban.foodReview.line'),
+        pulse: 'idle',
+      }}
+    >
       {draft.provider === 'mock' ? <Notice tone="warning">{t('cam.mockBanner')}</Notice> : null}
       {draft.notes ? (
         <AppText variant="caption" muted>

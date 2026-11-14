@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import Svg, {
   Circle,
   Defs,
@@ -49,6 +50,8 @@ export function PulseFigure({
   /** 0 or 1: which dance pose to show. Ignored for other states. */
   beat?: 0 | 1;
 }) {
+  // SVG ids are document-global: every instance needs its own, or hidden tabs' gradients shadow the visible figure.
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const pose = state === 'dance' && beat === 1 ? DANCE_ALT : POSES[state];
   const celebrate = state === 'celebrate';
   const encourage = state === 'encourage';
@@ -56,20 +59,20 @@ export function PulseFigure({
   return (
     <Svg width={size} height={size * (262 / 280)} viewBox="-40 -12 280 262">
       <Defs>
-        <LinearGradient id="pf-body" x1="0.2" y1="0" x2="0.8" y2="1">
+        <LinearGradient id={`${uid}-body`} x1="0.2" y1="0" x2="0.8" y2="1">
           <Stop offset="0" stopColor="#BBA5F6" />
           <Stop offset="0.42" stopColor={brand.violet} />
           <Stop offset="1" stopColor="#3B2270" />
         </LinearGradient>
-        <RadialGradient id="pf-shade" cx="0.5" cy="0.5" rx="0.55" ry="0.6">
+        <RadialGradient id={`${uid}-shade`} cx="0.5" cy="0.5" rx="0.55" ry="0.6">
           <Stop offset="0.55" stopColor={brand.plum} stopOpacity="0" />
           <Stop offset="1" stopColor={brand.plum} stopOpacity="0.55" />
         </RadialGradient>
-        <LinearGradient id="pf-arm" x1="0" y1="0" x2="0" y2="1">
+        <LinearGradient id={`${uid}-arm`} x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor={brand.violet} />
           <Stop offset="1" stopColor="#6B4BB8" />
         </LinearGradient>
-        <LinearGradient id="pf-ribbon" x1="0" y1="0" x2="1" y2="1">
+        <LinearGradient id={`${uid}-ribbon`} x1="0" y1="0" x2="1" y2="1">
           <Stop offset="0" stopColor={brand.coral} />
           <Stop offset="1" stopColor={brand.violet} />
         </LinearGradient>
@@ -86,7 +89,7 @@ export function PulseFigure({
             ? 'M64 188 C 8 196 0 130 34 96 C 52 78 40 52 58 40'
             : 'M66 190 C 26 202 12 160 30 134 C 38 122 34 108 42 98'
         }
-        stroke="url(#pf-ribbon)"
+        stroke={`url(#${uid}-ribbon)`}
         strokeWidth={9}
         strokeLinecap="round"
         fill="none"
@@ -95,10 +98,10 @@ export function PulseFigure({
 
       {/* arms sit behind the body so the shoulders blend in */}
       <G transform={`translate(48 116) rotate(${pose.l})`}>
-        <Path d={ARM} fill="url(#pf-arm)" />
+        <Path d={ARM} fill={`url(#${uid}-arm)`} />
       </G>
       <G transform={`translate(152 116) rotate(${pose.r})`}>
-        <Path d={ARM} fill="url(#pf-arm)" />
+        <Path d={ARM} fill={`url(#${uid}-arm)`} />
       </G>
 
       {/* body: satin resin, volume shading, specular highlight, rim light */}
@@ -108,8 +111,8 @@ export function PulseFigure({
           <Ellipse cx="100" cy="120" rx="76" ry="96" fill={brand.coral} opacity={0.14} />
         </>
       ) : null}
-      <Path d={BODY} fill="url(#pf-body)" />
-      <Path d={BODY} fill="url(#pf-shade)" />
+      <Path d={BODY} fill={`url(#${uid}-body)`} />
+      <Path d={BODY} fill={`url(#${uid}-shade)`} />
       <Ellipse
         cx="80"
         cy="66"

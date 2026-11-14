@@ -1,3 +1,4 @@
+import { showMoment } from '@/pulse/moment';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import {
@@ -71,6 +72,7 @@ export default function Goals() {
     setMsg(null);
     try {
       await store.createGoal(proposal.goal);
+      showMoment(t('moment.goalSet'), 'welcome');
       setTarget('');
     } catch (e) {
       setMsg(errorMessage(e));
@@ -88,7 +90,15 @@ export default function Goals() {
 
   const goals = data?.goals ?? [];
   return (
-    <Screen top={false}>
+    <Screen
+      top={false}
+      banner={{
+        world: 'me',
+        title: t('ban.goals.title'),
+        line: t('ban.goals.line'),
+        pulse: 'idle',
+      }}
+    >
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {goals.length === 0 ? <AppText muted>{t('goals.empty')}</AppText> : null}
       {goals.map((g) => {

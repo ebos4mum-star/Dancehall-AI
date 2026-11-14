@@ -86,7 +86,15 @@ export default function Program() {
   };
 
   return (
-    <Screen top={false}>
+    <Screen
+      top={false}
+      banner={{
+        world: 'dance',
+        title: t('ban.program.title'),
+        line: t('ban.program.line'),
+        pulse: 'dance',
+      }}
+    >
       <AppText variant="title" accessibilityRole="header">
         {p.title}
       </AppText>

@@ -101,7 +101,15 @@ export default function Plan() {
   );
 
   return (
-    <Screen top={false}>
+    <Screen
+      top={false}
+      banner={{
+        world: 'food',
+        title: t('ban.foodPlan.title'),
+        line: t('ban.foodPlan.line'),
+        pulse: 'idle',
+      }}
+    >
       <AppText muted>{t('plan.intro')}</AppText>
       {!guide ? (
         <Notice>{t('plan.needProfile')}</Notice>

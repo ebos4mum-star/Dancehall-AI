@@ -12,6 +12,7 @@ require('node:fs').mkdirSync(out, { recursive: true });
     viewport: { width: 390, height: 844 },
     deviceScaleFactor: 2,
     colorScheme: process.env.E2E_SCHEME || 'light',
+    reducedMotion: process.env.E2E_REDUCED ? 'reduce' : 'no-preference',
   });
   const p = await ctx.newPage();
   const errors = [];

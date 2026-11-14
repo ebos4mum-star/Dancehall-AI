@@ -1,3 +1,4 @@
+import { showMoment } from '@/pulse/moment';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useApp } from '@/data/AppProvider';
@@ -69,7 +70,15 @@ export default function Challenges() {
   };
 
   return (
-    <Screen top={false}>
+    <Screen
+      top={false}
+      banner={{
+        world: 'me',
+        title: t('ban.challenges.title'),
+        line: t('ban.challenges.line'),
+        pulse: 'encourage',
+      }}
+    >
       <AppText muted>{t('chal.intro')}</AppText>
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {msg ? <Notice tone="warning">{msg}</Notice> : null}
@@ -140,6 +149,7 @@ export default function Challenges() {
                   startDate: todayIso(),
                 });
                 haptics.capture();
+                showMoment(t('moment.challengeStarted'), 'welcome');
               })
             }
           />

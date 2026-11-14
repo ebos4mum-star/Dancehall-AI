@@ -94,7 +94,15 @@ export default function Schedule() {
   const [err, setErr] = useState<string | null>(null);
   const empty = dance.overdue.length + dance.todayPlanned.length + dance.upcoming.length === 0;
   return (
-    <Screen top={false}>
+    <Screen
+      top={false}
+      banner={{
+        world: 'dance',
+        title: t('ban.schedule.title'),
+        line: t('ban.schedule.line'),
+        pulse: 'idle',
+      }}
+    >
       {dance.error || err ? <Notice tone="warning">{String(dance.error ?? err)}</Notice> : null}
       {empty ? <Notice>{t('sch.empty')}</Notice> : null}
       {dance.overdue.length > 0 ? (

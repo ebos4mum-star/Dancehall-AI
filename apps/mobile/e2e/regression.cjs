@@ -112,6 +112,21 @@ async function step(name, fn) {
       assert.equal((await p.getByText('Done today', { exact: true }).count()) > 0, true);
     },
   );
+  await step(
+    'UI: every SVG id in the document is unique (hidden tabs cannot shadow Pulse gradients)',
+    async () => {
+      const dup = await p.evaluate(() => {
+        const seen = new Set();
+        const dups = [];
+        for (const el of document.querySelectorAll('svg [id]')) {
+          if (seen.has(el.id)) dups.push(el.id);
+          seen.add(el.id);
+        }
+        return dups;
+      });
+      assert.deepEqual(dup, []);
+    },
+  );
   await step('A: weight logging updates the latest weight', async () => {
     await p.getByLabel('Log weight (kg)').fill('74.5');
     await btn('Log weight').click();

@@ -16,7 +16,15 @@ export default function SwapScreen() {
   const results = searchFoods(q, CURATED_FOODS, 6);
   const item = food ? itemFromFood(food, food.servingG) : null;
   return (
-    <Screen top={false}>
+    <Screen
+      top={false}
+      banner={{
+        world: 'food',
+        title: t('ban.foodSwap.title'),
+        line: t('ban.foodSwap.line'),
+        pulse: 'idle',
+      }}
+    >
       <AppText muted>{t('swap.intro')}</AppText>
       <TextField
         label={t('add.search')}

@@ -103,7 +103,7 @@ export default function WorkoutDetail() {
                 {w.title}
               </AppText>
             </View>
-            <CharacterStage size={84} />
+            <CharacterStage size={96} />
           </View>
           <AppText style={{ color: '#FFFFFF' }}>{w.summary}</AppText>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>

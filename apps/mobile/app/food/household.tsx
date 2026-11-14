@@ -42,7 +42,15 @@ export default function HouseholdScreen() {
     );
   const household = hh.data?.h ?? null;
   return (
-    <Screen top={false}>
+    <Screen
+      top={false}
+      banner={{
+        world: 'food',
+        title: t('ban.household.title'),
+        line: t('ban.household.line'),
+        pulse: 'idle',
+      }}
+    >
       <AppText muted>{t('household.intro')}</AppText>
       {err || hh.error ? <Notice tone="warning">{String(err ?? hh.error)}</Notice> : null}
       {hh.data && !household ? (

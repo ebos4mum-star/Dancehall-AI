@@ -3,13 +3,16 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider } from '@/data/AppProvider';
 import { DraftProvider } from '@/food/draft';
+import { MomentHost } from '@/pulse/MomentHost';
 import { t } from '@/i18n';
 import { AppText } from '@/ui/AppText';
 import { useTheme } from '@/theme/useTheme';
+import { useReducedMotion } from '@/a11y/useReducedMotion';
 import { Screen } from '@/ui/Screen';
 
 export default function RootLayout() {
   const { colors } = useTheme();
+  const reduced = useReducedMotion();
   return (
     <SafeAreaProvider>
       <StatusBar style="auto" />
@@ -24,6 +27,8 @@ export default function RootLayout() {
           <Stack
             screenOptions={{
               headerShown: false,
+              // Screens slide in for orientation; with reduced motion they simply appear.
+              animation: reduced ? 'none' : 'slide_from_right',
               // Headers follow the theme so dark mode never shows a white bar.
               headerStyle: { backgroundColor: colors.background },
               headerTintColor: colors.text,
@@ -103,6 +108,7 @@ export default function RootLayout() {
               options={{ headerShown: true, title: t('wr.title') }}
             />
           </Stack>
+          <MomentHost />
         </DraftProvider>
       </AppProvider>
     </SafeAreaProvider>

@@ -26,7 +26,15 @@ export default function History() {
   const week = weeklyNutrition(logs, timeZone, new Date());
   const keys = [...days.keys()].sort().reverse().slice(0, 30);
   return (
-    <Screen top={false}>
+    <Screen
+      top={false}
+      banner={{
+        world: 'food',
+        title: t('ban.foodHistory.title'),
+        line: t('ban.foodHistory.line'),
+        pulse: 'idle',
+      }}
+    >
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {loading && logs.length === 0 ? <SkeletonList label={t('common.loading')} /> : null}
       {!loading && keys.length === 0 ? (

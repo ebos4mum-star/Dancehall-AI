@@ -40,7 +40,15 @@ export default function CoachSettings() {
   const on = consents?.ai_coach_personalization ?? false;
 
   return (
-    <Screen top={false}>
+    <Screen
+      top={false}
+      banner={{
+        world: 'coach',
+        title: t('ban.coachSettings.title'),
+        line: t('ban.coachSettings.line'),
+        pulse: 'idle',
+      }}
+    >
       {err ? <Notice tone="warning">{err}</Notice> : null}
       {consentError ? (
         <Notice tone="warning">{`${consentError} ${t('privacy.loadFailed')}`}</Notice>
