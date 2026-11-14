@@ -10,6 +10,21 @@ export const STYLE_META: Record<DanceStyle, { emoji: string; from: string; to: s
   low_impact: { emoji: '🌿', from: '#0B6B4F', to: '#0E7490' },
 };
 
+/** Icon per dance style, used instead of emoji so the art stays in one visual language. */
+export const STYLE_ICON: Record<
+  DanceStyle,
+  'flame' | 'musical-notes' | 'headset' | 'heart' | 'sparkles' | 'leaf'
+> = {
+  afrobeats: 'flame',
+  amapiano: 'musical-notes',
+  hip_hop: 'headset',
+  latin: 'heart',
+  bollywood: 'sparkles',
+  low_impact: 'leaf',
+};
+export const LEVEL_NUM = { beginner: 1, intermediate: 2, advanced: 3 } as const;
+export const INTENSITY_NUM = { low: 1, moderate: 2, high: 3 } as const;
+
 export const mmss = (seconds: number): string => {
   const s = Math.max(0, Math.round(seconds));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;

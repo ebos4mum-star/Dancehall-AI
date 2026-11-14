@@ -1,4 +1,8 @@
 import { View } from 'react-native';
+import { IconBadge, InfoTile, SectionTitle } from '@/ui/kit';
+import { STYLE_ICON } from '@/dance/meta';
+import { STYLE_META } from '@/dance/meta';
+import { WORKOUT_BY_ID } from '@dancehall/shared';
 import { router } from 'expo-router';
 import { useDanceData } from '@/dance/hooks';
 import { effortKey } from '@/dance/meta';
@@ -42,11 +46,25 @@ export default function History() {
           onAction={() => router.replace('/(tabs)/dance')}
         />
       ) : null}
+      <SectionTitle icon="calendar" title={t('hst.thisWeek')} />
+      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+        <InfoTile
+          icon="musical-notes"
+          label={t('hst.sessionsLabel')}
+          value={String(summary.thisWeek.sessions)}
+        />
+        <InfoTile
+          icon="time"
+          label={t('hst.minutesLabel')}
+          value={String(summary.thisWeek.minutes)}
+        />
+        <InfoTile
+          icon="sunny"
+          label={t('hst.daysLabel')}
+          value={String(summary.thisWeek.activeDays)}
+        />
+      </View>
       <DepthCard>
-        <AppText variant="heading" accessibilityRole="header">
-          {t('hst.thisWeek')}
-        </AppText>
-        <AppText>{`${t('hst.sessions', { n: summary.thisWeek.sessions })} · ${t('hst.minutes', { n: summary.thisWeek.minutes })} · ${t('hst.days', { n: summary.thisWeek.activeDays })}`}</AppText>
         <AppText variant="caption" muted>
           {t('hst.weeks')}
         </AppText>
@@ -55,21 +73,29 @@ export default function History() {
           {t('hst.gentle')}
         </AppText>
       </DepthCard>
-      {done.length > 0 ? (
-        <AppText variant="heading" accessibilityRole="header">
-          {t('hst.recent')}
-        </AppText>
-      ) : null}
+      {done.length > 0 ? <SectionTitle icon="list" title={t('hst.recent')} /> : null}
       <View style={{ gap: spacing.sm }}>
         {done.slice(0, 30).map((s) => {
           const k = effortKey(s.perceivedExertion);
+          const style = WORKOUT_BY_ID.get(s.workoutId ?? '')?.style ?? null;
+          const tint = style ? STYLE_META[style].from : undefined;
           return (
             <DepthCard key={s.id}>
-              <AppText variant="label">{s.title}</AppText>
-              <AppText
-                variant="caption"
-                muted
-              >{`${s.completedAt ? formatDate(s.completedAt) : ''} · ${t('hst.minutes', { n: sessionMinutes(s) })}${s.lowImpact ? ` · ${t('impact.low')}` : ''}${k ? ` · ${t('hst.felt', { label: t(`ses.effort.${k}` as StringKey).toLowerCase() })}` : ''}`}</AppText>
+              <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
+                <IconBadge
+                  name={style ? STYLE_ICON[style] : 'musical-notes'}
+                  size={44}
+                  fill={tint ?? '#9D80EB'}
+                  color="#FFFFFF"
+                />
+                <View style={{ flex: 1, gap: 2 }}>
+                  <AppText variant="label">{s.title}</AppText>
+                  <AppText
+                    variant="caption"
+                    muted
+                  >{`${s.completedAt ? formatDate(s.completedAt) : ''} · ${t('hst.minutes', { n: sessionMinutes(s) })}${s.lowImpact ? ` · ${t('impact.low')}` : ''}${k ? ` · ${t('hst.felt', { label: t(`ses.effort.${k}` as StringKey).toLowerCase() })}` : ''}`}</AppText>
+                </View>
+              </View>
             </DepthCard>
           );
         })}
