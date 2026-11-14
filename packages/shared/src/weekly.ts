@@ -21,6 +21,8 @@ export function buildWeekFacts(args: {
   activeGoals: number;
   /** Optional recorded wellness logs; any dates are accepted and filtered to the week. */
   wellness?: readonly WellnessEntry[];
+  /** When true (eating concern, pregnancy/postpartum, or numbers off) no wellness numbers are included. Walks and strength still count as active days. */
+  hideWellnessNumbers?: boolean;
 }): WeekFacts {
   const inWeek = (iso: string) => weekStartOf(localDateKey(iso, args.timeZone)) === args.weekStart;
   const done = args.sessions.filter(
@@ -57,7 +59,7 @@ export function buildWeekFacts(args: {
     lowImpactSessions: done.filter((s) => s.lowImpact).length,
     weightTrend,
     activeGoals: args.activeGoals,
-    ...(wk.length > 0
+    ...(wk.length > 0 && !args.hideWellnessNumbers
       ? {
           wellness: {
             walkDays: new Set(walks.map((e) => e.day)).size,

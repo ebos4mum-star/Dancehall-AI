@@ -125,9 +125,7 @@ export function contextSummaryLines(c: CoachContext): string[] {
     lines.push('Your preference for low-impact options (from your readiness answers)');
   if (c.plan) lines.push("Today's Daily Fit Plan");
   if (c.wellness)
-    lines.push(
-      'Your logged walks, strength, sleep and check-ins this week (only what you recorded)',
-    );
+    lines.push('Your goal focus and any walks, strength, sleep and check-ins you logged this week');
   if (c.comeback) lines.push('That you have been away from workouts for a while');
   lines.push('Your time of day and units');
   return lines;

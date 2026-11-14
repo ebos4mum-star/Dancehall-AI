@@ -1,6 +1,7 @@
 import { waterGuideMl } from './nutrition-plan';
 import { localDateKey } from './food';
 import type { DailyPlanInput } from './daily-plan';
+import type { CoachContext } from './coach-context';
 
 /**
  * Wellness domain: preferences, optional logs (hydration, sleep, walking, strength, measurements, hunger, recovery), and the pure
@@ -308,3 +309,70 @@ export function wellnessPlanContext(args: {
     eatingConcern: args.prefs.eatingConcern,
   };
 }
+
+/**
+ * Validates a stored wellness row (from any backend) into an entry, or null when it is malformed or out of range. Used on the server, where
+ * rows are not trusted to be well formed, so one bad row never breaks a context or leaks into it.
+ */
+export function wellnessEntryFromRow(row: unknown, today: string): WellnessEntry | null {
+  if (!row || typeof row !== 'object') return null;
+  const r = row as Record<string, unknown>;
+  const amount = Number(r.amount);
+  const amount2 = r.amount2 == null ? null : Number(r.amount2);
+  const entry: WellnessEntry = {
+    id: String(r.id ?? ''),
+    kind: r.kind as WellnessKind,
+    day: String(r.day ?? ''),
+    amount,
+    amount2,
+    label: typeof r.label === 'string' ? r.label : null,
+    createdAt: String(r.created_at ?? r.createdAt ?? ''),
+  };
+  return entryProblem(entry, today) === null ? entry : null;
+}
+
+/**
+ * The wellness section of the coach context, from the person's own preferences and the last 7 days of logs. The SAME function builds it for the
+ * on-device coach and the server coach, so privacy behaviour cannot drift. It carries only aggregates and levels: no free text, no ids, no
+ * measurements, no exact weights. `numbersHidden` is true whenever the person said numbers are hard, is pregnant or postpartum, or turned tracking off.
+ * Returns undefined when there is nothing to say (no logs and no saved preferences).
+ */
+export function coachWellnessContext(args: {
+  prefs: WellnessPrefs | null;
+  entries: readonly WellnessEntry[];
+  today: string;
+}): CoachContext['wellness'] | undefined {
+  const from = addDay(args.today, -6);
+  const entries = args.entries.filter((e) => e.day >= from && e.day <= args.today);
+  if (entries.length === 0 && !args.prefs) return undefined;
+  const prefs = args.prefs ?? DEFAULT_PREFS;
+  const hidden = prefs.eatingConcern || prefs.pregnantOrPostpartum || prefs.tracking === 'none';
+  const sleep = entriesOf(entries, 'sleep');
+  const level = entriesOf(entries, 'recovery').find((e) => e.day === args.today)?.label;
+  return {
+    walkMinutesWeek: entriesOf(entries, 'walk').reduce((a, e) => a + e.amount, 0),
+    strengthSessionsWeek: entriesOf(entries, 'strength').length,
+    sleepNightsWeek: sleep.length,
+    sleepAvgHours:
+      sleep.length >= 3
+        ? Math.round((sleep.reduce((a, e) => a + e.amount, 0) / sleep.length) * 10) / 10
+        : null,
+    recoveryToday:
+      level === 'fresh' || level === 'ok' || level === 'sore' || level === 'worn' ? level : null,
+    hungerCheckinsWeek: hidden ? 0 : entriesOf(entries, 'hunger').length,
+    intent: prefs.goalIntent,
+    numbersHidden: hidden,
+  };
+}
+
+/** The context to use when a person's wellness data could not be read: share nothing numeric rather than risk showing numbers they asked not to see. */
+export const WELLNESS_FAIL_CLOSED: NonNullable<CoachContext['wellness']> = {
+  walkMinutesWeek: 0,
+  strengthSessionsWeek: 0,
+  sleepNightsWeek: 0,
+  sleepAvgHours: null,
+  recoveryToday: null,
+  hungerCheckinsWeek: 0,
+  intent: null,
+  numbersHidden: true,
+};

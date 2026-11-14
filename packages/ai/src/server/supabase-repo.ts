@@ -2,6 +2,13 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   buildCoachContext,
   buildWeekFacts,
+  addDaysIso,
+  coachWellnessContext,
+  parsePrefs,
+  wellnessEntryFromRow,
+  WELLNESS_FAIL_CLOSED,
+  type WellnessEntry,
+  type WellnessPrefs,
   FREE_ENTITLEMENT,
   localDateKey,
   weekStartOf,
@@ -43,6 +50,42 @@ export class SupabaseServerRepo implements ServerRepo {
       'consents',
     ) as Row[];
     return r[0]?.granted === true;
+  }
+
+  /**
+   * The person's wellness logs (last 8 days) and preferences, validated. Scoped by userId like every other query here. If either read fails, the
+   * result is `failed`, and callers share NO wellness numbers rather than risk showing numbers a person asked not to see.
+   */
+  private async wellness(
+    userId: string,
+    today: string,
+    sinceDay = addDaysIso(today, -8),
+  ): Promise<
+    { failed: false; entries: WellnessEntry[]; prefs: WellnessPrefs | null } | { failed: true }
+  > {
+    try {
+      const [entries, prefs] = await Promise.all([
+        this.db
+          .from('wellness_entries')
+          .select('id,kind,day,amount,amount2,label,created_at')
+          .eq('user_id', userId)
+          .gte('day', sinceDay)
+          .order('day', { ascending: false })
+          .limit(500),
+        this.db.from('wellness_prefs').select('data').eq('user_id', userId).maybeSingle(),
+      ]);
+      const rows = (ok(entries, 'wellness_entries') ?? []) as Row[];
+      const p = ok(prefs, 'wellness_prefs') as Row | null;
+      return {
+        failed: false,
+        entries: rows
+          .map((r) => wellnessEntryFromRow(r, today))
+          .filter((e): e is WellnessEntry => e !== null),
+        prefs: p ? parsePrefs(p.data) : null,
+      };
+    } catch {
+      return { failed: true };
+    }
   }
 
   private async records(userId: string) {
@@ -95,6 +138,7 @@ export class SupabaseServerRepo implements ServerRepo {
       .map((x) => ({ kg: Number(x.weight_kg), at: x.measured_at as string }))
       .sort((a, b) => a.at.localeCompare(b.at));
     const change = w.length >= 2 ? w[w.length - 1]!.kg - w[0]!.kg : null;
+    const wl = await this.wellness(userId, today);
     return buildCoachContext({
       personalized: true,
       unitSystem: r.profile.unit_system === 'imperial' ? 'imperial' : unitSystem,
@@ -128,6 +172,9 @@ export class SupabaseServerRepo implements ServerRepo {
             (s.planned_for as string) < today,
         ).length,
       },
+      wellness: wl.failed
+        ? WELLNESS_FAIL_CLOSED
+        : coachWellnessContext({ prefs: wl.prefs, entries: wl.entries, today }),
       food: {
         mealsToday: todays.length,
         kcalToday: todays
@@ -139,9 +186,11 @@ export class SupabaseServerRepo implements ServerRepo {
 
   async weekFacts(userId: string, weekStart: string) {
     const r = await this.records(userId);
+    const tz = (r.profile.time_zone as string | null) ?? null;
+    const wl = await this.wellness(userId, localDateKey(new Date(), tz), weekStart);
     return buildWeekFacts({
       weekStart,
-      timeZone: (r.profile.time_zone as string | null) ?? null,
+      timeZone: tz,
       sessions: r.sessions.map((s) => ({
         status: String(s.status),
         completedAt: (s.completed_at as string | null) ?? null,
@@ -156,6 +205,11 @@ export class SupabaseServerRepo implements ServerRepo {
         measuredAt: x.measured_at as string,
       })),
       activeGoals: r.goals.length,
+      wellness: wl.failed ? [] : wl.entries,
+      hideWellnessNumbers:
+        wl.failed ||
+        coachWellnessContext({ prefs: wl.prefs, entries: [], today: weekStart })?.numbersHidden ===
+          true,
     });
   }
 
