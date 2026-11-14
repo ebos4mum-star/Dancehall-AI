@@ -57,3 +57,50 @@ describe('no paid provider or live cloud service is wired in', () => {
     expect(sql).toMatch(/role = 'user'/);
   });
 });
+
+describe('service-role credentials and configuration', () => {
+  it('no mobile config or env template contains a service-role or secret key', () => {
+    for (const f of [
+      'apps/mobile/app.json',
+      'apps/mobile/app.config.ts',
+      'apps/mobile/eas.json',
+      'apps/mobile/.env.example',
+    ]) {
+      try {
+        expect(read(join(repo, f)), f).not.toMatch(
+          /service_role|SERVICE_ROLE|sb_secret_|eyJ[A-Za-z0-9_-]{20,}\./,
+        );
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+      }
+    }
+  });
+  it('the root env template lists server secrets only as EMPTY server-side variables, never as EXPO_PUBLIC_*', () => {
+    const lines = read(join(repo, '.env.example'))
+      .split('\n')
+      .filter((l) => l && !l.startsWith('#'));
+    for (const l of lines) {
+      const [k, ...v] = l.split('=');
+      if (/SERVICE_ROLE|SECRET|PRIVATE/i.test(k!)) {
+        expect(k, l).not.toMatch(/^EXPO_PUBLIC_/);
+        expect(v.join('='), l).toBe('');
+      }
+    }
+  });
+  it('the exported web bundle (if built) contains no secret key material', () => {
+    const dist = join(repo, 'apps', 'mobile', 'dist');
+    let files: string[] = [];
+    try {
+      files = walk(dist).filter((f) => f.endsWith('.js'));
+    } catch {
+      return; // not built: the e2e script covers the bundle
+    }
+    for (const f of files) expect(read(f), f).not.toMatch(/sb_secret_[A-Za-z0-9_]{10,}/);
+  });
+  it('only server-side modules may import the service-role-oriented adapters', () => {
+    const importers = src(join(repo, 'apps', 'mobile')).filter((f) =>
+      /supabase-repo|supabase-ports|server\/handlers/.test(read(f)),
+    );
+    expect(importers).toEqual([]);
+  });
+});

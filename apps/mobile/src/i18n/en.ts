@@ -89,9 +89,9 @@ export const en = {
   'today.lowImpactTitle': 'Starting gently',
   'today.lowImpactBody':
     'Based on your answers, we will begin with low-impact options and suggest checking with a health professional first.',
-  'today.comingTitle': 'Coming to your day',
+  'today.comingTitle': 'More on the way',
   'today.comingBody':
-    'Dance workouts, meals and your coach are not available yet. Nothing here is scheduled.',
+    'Workouts, food logging, your Daily Fit Plan and the coach all work now. Meal-photo recognition and the coach are simulated in this build: live AI is not switched on yet.',
   'today.logged': 'Logged. Thank you!',
   'today.weightError': 'Enter a weight in {unit}.',
 
@@ -143,7 +143,8 @@ export const en = {
   'privacy.aiPhotosBody':
     'Optional and separate from logging food by hand. Photos are deleted from your device right away; any stored copy is deleted 24 hours after analysis unless you save it. This build only simulates recognition.',
   'privacy.aiCoach': 'Personalize my AI coach',
-  'privacy.aiCoachBody': 'Not available yet. Saved for when the coach arrives.',
+  'privacy.aiCoachBody':
+    'Lets the coach use your activity, food and weight trends to personalize its suggestions. Off by default and yours to change any time. The coach is simulated in this build.',
   'privacy.healthSync': 'Sync with a health app',
   'privacy.healthSyncBody': 'Not available yet.',
   'privacy.sharing': 'Share achievements',
@@ -328,8 +329,9 @@ export const en = {
   'coachset.staffPaused': 'AI is temporarily switched off by the DanceHall team.',
   'coachset.deleteAccount': 'Delete my account',
   'coachset.deleteAccountNote':
-    'This starts a 30-day waiting period. You can cancel any time before it ends; afterwards your account and data are permanently deleted.',
-  'coachset.deleteRequested': 'Deletion requested. Scheduled for',
+    'Asking to delete starts a waiting period (its length is not final yet). Until it ends nothing is deleted and you can cancel. Only after it ends are your account and data permanently deleted.',
+  'coachset.deleteRequested':
+    'Deletion requested, not completed: your account still exists. It is scheduled for',
   'coachset.deleteCancel': 'Cancel deletion',
   'err.feature_disabled': 'This feature is not available right now.',
   'err.ai_unavailable': 'Photo analysis is not available right now. You can log food by hand.',

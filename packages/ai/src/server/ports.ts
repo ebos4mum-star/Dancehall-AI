@@ -44,7 +44,13 @@ export interface ServerRepo {
   ): Promise<Array<{ id: string; userId: string; storagePath: string | null }>>;
   markPhotoDeleted(id: string): Promise<void>;
   /** Records the person's request to delete their account. Idempotent while one is open. */
-  requestAccountDeletion(userId: string, now: Date): Promise<{ id: string; scheduledFor: string }>;
+  /** Waiting period before an account is actually deleted. CONFIGURATION (public.app_config), not a finalized policy. */
+  deletionGraceDays(): Promise<number>;
+  requestAccountDeletion(
+    userId: string,
+    now: Date,
+    graceDays: number,
+  ): Promise<{ id: string; scheduledFor: string }>;
   cancelAccountDeletion(userId: string): Promise<boolean>;
 }
 

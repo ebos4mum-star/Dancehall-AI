@@ -125,7 +125,7 @@ Built and tested locally; **nothing is deployed and no cloud project, key or pro
 - **Gateway ports** (`packages/ai/src/ports.ts`): async, atomic budget and quota ports; the person's AI pause (`UserAiPausePort`) is separate from the staff kill switch (`StaffControlsPort`, read live from `feature_flags`). Errors differ: `ai_paused` (409) versus `feature_disabled` (503).
 - **Server handlers** (`packages/ai/src/server/handlers.ts`): `POST /v1/coach/messages`, `/v1/coach/weekly-review`, `/v1/food/photo-analysis`, `/v1/account/deletion[/cancel]`, plus `runPhotoRetention`. Transport-independent (`handleHttp`); host them in a Supabase Edge Function or any Node runtime once approved.
 - **Supabase adapters**: `supabase-ports.ts` and `server/supabase-repo.ts` (service-role, server only) and `apps/mobile/src/data/supabaseCoach.ts` (RLS, person's own session). The app reaches the server only through `EXPO_PUBLIC_AI_API_URL` (https; optional). Without it the AI features report "unavailable" and the rule-based parts keep working.
-- **Database**: `ai_preferences` (own pause) and `account_deletion_requests` (30-day cancellable grace) with SQL tests.
+- **Database**: `ai_preferences` (own pause) and `account_deletion_requests` (cancellable grace period; length is `app_config.account_deletion_grace_days`, provisional default 30, final policy pending owner and counsel) with SQL tests.
 - **Still simulated**: the provider (`MockAiProvider`), photo recognition, and the entitlement (everyone is `free` until a store webhook exists).
 
 ### Remaining blockers before real-device testing

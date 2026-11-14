@@ -180,13 +180,18 @@ export async function runPhotoRetention(deps: Pick<ServerDeps, 'repo' | 'photos'
   return { deleted, failed };
 }
 
-/** Account deletion: records the request (30-day grace, cancellable). The irreversible purge is a separate trusted job. */
+/** Account deletion REQUEST: records it with a configurable, cancellable grace period. Nothing is deleted here; the irreversible purge is a separate trusted job. */
 export async function handleAccountDeletionRequest(
   deps: ServerDeps,
   token: string | null | undefined,
 ) {
   const userId = await authenticate(deps, token);
-  return deps.repo.requestAccountDeletion(userId, deps.now());
+  const r = await deps.repo.requestAccountDeletion(
+    userId,
+    deps.now(),
+    await deps.repo.deletionGraceDays(),
+  );
+  return { ...r, status: 'requested' as const, completed: false };
 }
 export async function handleAccountDeletionCancel(
   deps: ServerDeps,

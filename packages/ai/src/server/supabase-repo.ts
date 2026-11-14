@@ -315,7 +315,18 @@ export class SupabaseServerRepo implements ServerRepo {
     ok(await this.db.rpc('food_photo_mark_deleted', { p_id: id }), 'food_photo_mark_deleted');
   }
 
-  async requestAccountDeletion(userId: string, now: Date) {
+  async deletionGraceDays() {
+    const r = ok(
+      await this.db
+        .from('app_config')
+        .select('int_value')
+        .eq('key', 'account_deletion_grace_days')
+        .maybeSingle(),
+      'app_config',
+    ) as Row | null;
+    return Number(r?.int_value ?? 30);
+  }
+  async requestAccountDeletion(userId: string, now: Date, graceDays: number) {
     const existing = ok(
       await this.db
         .from('account_deletion_requests')
@@ -327,7 +338,7 @@ export class SupabaseServerRepo implements ServerRepo {
     ) as Row | null;
     if (existing)
       return { id: existing.id as string, scheduledFor: existing.scheduled_for as string };
-    const scheduled = new Date(now.getTime() + 30 * 86_400_000).toISOString();
+    const scheduled = new Date(now.getTime() + graceDays * 86_400_000).toISOString();
     const r = ok(
       await this.db
         .from('account_deletion_requests')

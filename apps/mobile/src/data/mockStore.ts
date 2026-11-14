@@ -99,7 +99,7 @@ interface State {
   dailyPlans: DailyPlan[];
   weeklyReviews: WeeklyReviewRecord[];
   aiControls: { killAll: boolean; userPaused?: boolean };
-  deletionRequest?: { id: string; scheduledFor: string } | null;
+  deletionRequest?: { id: string; scheduledFor: string; status: 'requested' } | null;
 }
 
 const KEY = 'dh.mock.v1';
@@ -133,6 +133,8 @@ const emptyState = (): State => ({
 });
 
 const DAY_MS = 86_400_000;
+/** Development stand-in for public.app_config 'account_deletion_grace_days' (provisional, not a final policy). */
+const DEV_DELETION_GRACE_DAYS = 30;
 const AI_PHOTO: ConsentPurpose = 'ai_processing_of_food_photos';
 
 function checkItem(i: FoodItemValues): void {
@@ -1255,7 +1257,8 @@ export class MockStore implements DataStore {
     const s = await this.authed();
     s.deletionRequest ??= {
       id: newId(),
-      scheduledFor: new Date(this.now().getTime() + 30 * DAY_MS).toISOString(),
+      scheduledFor: new Date(this.now().getTime() + DEV_DELETION_GRACE_DAYS * DAY_MS).toISOString(),
+      status: 'requested',
     };
     await this.commit();
     return { ...s.deletionRequest };

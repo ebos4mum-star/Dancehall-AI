@@ -214,6 +214,7 @@ describe('account deletion request', () => {
     const a = await call('/v1/account/deletion', 'tok-cara');
     const b = await call('/v1/account/deletion', 'tok-cara');
     expect(a.status).toBe(202);
+    expect(a.json).toMatchObject({ status: 'requested', completed: false });
     expect(b.json).toEqual(a.json);
     expect((await call('/v1/account/deletion/cancel', 'tok-cara')).json).toEqual({
       cancelled: true,
@@ -225,3 +226,57 @@ describe('account deletion request', () => {
   });
 });
 void FREE_ENTITLEMENT;
+
+describe('security: identity, maintenance and cross-user isolation', () => {
+  it('identity comes only from the verified token, never from client-supplied ids', async () => {
+    const { call, repo } = setup();
+    const r = await call('/v1/coach/messages', 'tok-alice', {
+      text: 'hello coach',
+      userId: 'bob',
+      user_id: 'bob',
+    });
+    const conv = repo.conversations.get((r.json as { conversationId: string }).conversationId)!;
+    expect(conv.userId).toBe('alice');
+    const w = await call('/v1/coach/weekly-review', 'tok-alice', { userId: 'bob' });
+    expect(repo.reviews.every((x) => x.userId === 'alice')).toBe(true);
+    expect(w.status).toBe(200);
+  });
+  it('maintenance jobs are not reachable over HTTP, for ordinary users or anyone else', async () => {
+    const { call } = setup();
+    for (const path of [
+      '/v1/maintenance/photo-retention',
+      '/v1/photos/retention',
+      '/v1/account/purge',
+      '/v1/admin/budget',
+      '/v1/admin/kill-switch',
+    ]) {
+      expect((await call(path, 'tok-alice', {})).status).toBe(404);
+      expect((await call(path, null, {})).status).toBe(404);
+    }
+  });
+  it('one person’s deletion request or cancellation never touches another’s', async () => {
+    const { call, repo } = setup();
+    await call('/v1/account/deletion', 'tok-alice');
+    expect((await call('/v1/account/deletion/cancel', 'tok-bob')).json).toEqual({
+      cancelled: false,
+    });
+    expect(repo.deletions.has('alice')).toBe(true);
+    await call('/v1/account/deletion', 'tok-bob', { userId: 'alice' });
+    expect(repo.deletions.has('bob')).toBe(true);
+    expect(repo.deletions.get('bob')).not.toBe(repo.deletions.get('alice'));
+  });
+  it('a photo can be analyzed only from the caller’s own folder', async () => {
+    const { call } = setup();
+    for (const storagePath of [
+      'bob/a.jpg',
+      'alice/../bob/a.jpg',
+      '/alice/a.jpg',
+      'alice',
+      42,
+      null,
+    ])
+      expect((await call('/v1/food/photo-analysis', 'tok-alice', { storagePath })).status).toBe(
+        403,
+      );
+  });
+});

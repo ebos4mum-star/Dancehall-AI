@@ -45,9 +45,10 @@ describe('user AI pause is separate from the staff kill switch (mock)', () => {
     await s.setAiPaused!(false);
     expect(await code(s.sendCoachMessage!({ text: 'hello coach' }))).toBe('feature_disabled');
   });
-  it('account deletion: request is idempotent, 30 days out, and cancellable', async () => {
+  it('account deletion: request is idempotent, follows the (provisional) grace period, is a request not a deletion, and is cancellable', async () => {
     const s = await setup();
     const a = await s.requestAccountDeletion!();
+    expect(a.status).toBe('requested');
     expect((await s.requestAccountDeletion!()).id).toBe(a.id);
     expect(Date.parse(a.scheduledFor) - Date.parse('2026-06-15T12:00:00Z')).toBe(30 * 86_400_000);
     expect(await s.getAccountDeletionRequest!()).toEqual(a);

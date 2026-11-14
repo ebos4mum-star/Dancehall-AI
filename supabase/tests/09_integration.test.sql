@@ -55,4 +55,17 @@ begin
   perform test.as_admin();
   perform public.account_deletion_complete(r.id);
   perform test.assert((select status from public.account_deletion_requests where id = r.id) = 'completed', 'job records completion');
+
+  -- ---------- the grace period is configuration, writable only by trusted code ----------
+  perform test.as_user(a);
+  perform test.throws($q$update public.app_config set int_value = 0$q$, 'permission denied');
+  perform test.throws($q$insert into public.app_config (key, int_value) values ('x.y', 1)$q$, 'permission denied');
+  perform test.assert((select int_value from public.app_config where key = 'account_deletion_grace_days') = 30, 'provisional default is readable');
+  perform public.request_account_deletion();
+  perform test.assert(public.cancel_account_deletion(), 'cancel the open request');
+  perform test.as_admin();
+  update public.app_config set int_value = 7 where key = 'account_deletion_grace_days';
+  perform test.as_user(a);
+  r := public.request_account_deletion();
+  perform test.assert(r.scheduled_for between now() + interval '6 days 23 hours' and now() + interval '7 days 1 hour', 'request follows the configured grace period');
 end $$;

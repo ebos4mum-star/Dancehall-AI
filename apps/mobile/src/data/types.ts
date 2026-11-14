@@ -189,10 +189,10 @@ export interface DataStore {
   purgeOldCoachData?(): Promise<number>;
   /** The person's own AI pause. Never changes the staff kill switch. */
   setAiPaused?(on: boolean): Promise<void>;
-  /** Account deletion: a request with a 30-day cancellable grace period. */
-  requestAccountDeletion?(): Promise<{ id: string; scheduledFor: string }>;
+  /** Account deletion REQUEST with a configurable, cancellable waiting period. Not deletion: the account exists until the server job completes it. */
+  requestAccountDeletion?(): Promise<DeletionRequest>;
   cancelAccountDeletion?(): Promise<boolean>;
-  getAccountDeletionRequest?(): Promise<{ id: string; scheduledFor: string } | null>;
+  getAccountDeletionRequest?(): Promise<DeletionRequest | null>;
   /** Development only. */
   devSetKillSwitch?(on: boolean): Promise<void>;
   devSetBudgetCeiling?(usd: number): Promise<void>;
@@ -410,3 +410,10 @@ export interface AiUsageSummary {
 
 export const CURRENT_POLICY_VERSION = 'dev-0';
 export const REQUIRED_CONSENT: ConsentPurpose = 'health_data_processing';
+
+/** A pending request. `status` is always 'requested': a completed deletion removes the account, so the app never sees one. */
+export interface DeletionRequest {
+  id: string;
+  scheduledFor: string;
+  status: 'requested';
+}

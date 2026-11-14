@@ -121,3 +121,32 @@ describe('SupabaseServerRepo scopes every query to the verified user', () => {
     expect(f.calls).toHaveLength(0);
   });
 });
+
+describe('Supabase repo: deletion and photo queries are scoped to the verified user', () => {
+  it('cancel and request filter by user_id; they never delete data themselves', async () => {
+    const f = fake(() => ({ data: [], error: null }));
+    await new SupabaseServerRepo(f.db).cancelAccountDeletion('alice');
+    expect(f.calls.filter((c) => c.op === 'eq').map((c) => c.args)).toContainEqual([
+      'user_id',
+      'alice',
+    ]);
+    expect(f.calls.some((c) => c.op === 'delete')).toBe(false);
+    expect(f.calls.filter((c) => c.op === 'from').map((c) => c.args[0])).toEqual([
+      'account_deletion_requests',
+    ]);
+  });
+  it('maintenance RPCs are only reachable by the service-role client the server constructs, not via any user-facing handler', async () => {
+    const src = (await import('node:fs')).readFileSync(
+      new URL('./server/handlers.ts', import.meta.url),
+      'utf8',
+    );
+    const routes = [...src.matchAll(/case '(\/v1\/[^']+)'/g)].map((m) => m[1]);
+    expect(routes.sort()).toEqual([
+      '/v1/account/deletion',
+      '/v1/account/deletion/cancel',
+      '/v1/coach/messages',
+      '/v1/coach/weekly-review',
+      '/v1/food/photo-analysis',
+    ]);
+  });
+});

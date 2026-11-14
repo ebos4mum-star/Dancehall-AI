@@ -137,12 +137,16 @@ export class MemoryRepo implements ServerRepo {
     p.status = 'deleted';
     p.path = null;
   }
-  async requestAccountDeletion(userId: string, now: Date) {
+  graceDays = 30;
+  async deletionGraceDays() {
+    return this.graceDays;
+  }
+  async requestAccountDeletion(userId: string, now: Date, graceDays: number) {
     const open = this.deletions.get(userId);
     if (open) return open;
     const d = {
       id: this.id(),
-      scheduledFor: new Date(now.getTime() + 30 * 86_400_000).toISOString(),
+      scheduledFor: new Date(now.getTime() + graceDays * 86_400_000).toISOString(),
     };
     this.deletions.set(userId, d);
     return d;

@@ -583,11 +583,15 @@ export function createCoachAdapter(d: CoachAdapterDeps): Partial<DataStore> {
       return 0; // deletion of stored photos is a server job (see runPhotoRetention); the device never deletes storage objects
     },
 
-    /** Records the request; the irreversible purge is a separate trusted server job after a 30-day grace period. */
+    /** Records the request; the irreversible purge is a separate trusted server job after a configurable grace period (app_config). */
     async requestAccountDeletion() {
       const r = ok(await db.rpc('request_account_deletion')) as Row;
       emit();
-      return { id: r.id as string, scheduledFor: r.scheduled_for as string };
+      return {
+        id: r.id as string,
+        scheduledFor: r.scheduled_for as string,
+        status: 'requested' as const,
+      };
     },
     async cancelAccountDeletion() {
       const r = ok(await db.rpc('cancel_account_deletion')) as boolean;
@@ -602,7 +606,13 @@ export function createCoachAdapter(d: CoachAdapterDeps): Partial<DataStore> {
           .eq('status', 'pending')
           .maybeSingle(),
       ) as Row | null;
-      return r ? { id: r.id as string, scheduledFor: r.scheduled_for as string } : null;
+      return r
+        ? {
+            id: r.id as string,
+            scheduledFor: r.scheduled_for as string,
+            status: 'requested' as const,
+          }
+        : null;
     },
   };
   return api;
