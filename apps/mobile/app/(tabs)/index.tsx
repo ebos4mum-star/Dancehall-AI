@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
-import { goalProgress, lbToKg, summarizeWeights, type UnitSystem } from '@dancehall/shared';
+import {
+  goalProgress,
+  lbToKg,
+  sessionMinutes,
+  summarizeWeights,
+  type UnitSystem,
+} from '@dancehall/shared';
+import { todayGlance } from '@/today/glance';
 import { useApp } from '@/data/AppProvider';
 import { PlanCard } from '@/coach/PlanCard';
 import { useDanceData } from '@/dance/hooks';
@@ -46,6 +53,7 @@ export default function Today() {
   const [entry, setEntry] = useState('');
   const [msg, setMsg] = useState<{ text: string; warn: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [moveErr, setMoveErr] = useState<string | null>(null);
 
   const summary = summarizeWeights(
     (data?.weights ?? []).map((w) => ({ weightKg: w.weightKg, measuredAt: w.measuredAt })),
@@ -91,6 +99,29 @@ export default function Today() {
           </Card>
         </FadeIn>
       ) : null}
+
+      <FadeIn>
+        <Card>
+          <AppText variant="heading" accessibilityRole="header">
+            {t('today.glanceTitle')}
+          </AppText>
+          {todayGlance({
+            doneToday: dance.doneToday.map((x) => ({ minutes: sessionMinutes(x) })),
+            plannedToday: dance.todayPlanned.length,
+            mealsLogged: food.todayLogs.length,
+            loggedKcal: food.todayTotals.kcal,
+          }).map((l) => (
+            <AppText
+              key={l.key}
+              accessibilityLabel={l.done ? `${t('today.doneToday')}: ${l.text}` : l.text}
+            >
+              {`${l.done ? '✓' : '○'} ${l.text}`}
+            </AppText>
+          ))}
+        </Card>
+      </FadeIn>
+
+      <PlanCard />
 
       <FadeIn>
         <Card>
@@ -142,8 +173,6 @@ export default function Today() {
           ) : null}
         </Card>
       </FadeIn>
-
-      <PlanCard />
 
       <Celebration ids={insights.fresh} />
       <FadeIn>
@@ -214,12 +243,15 @@ export default function Today() {
                   variant="secondary"
                   label={t('sch.done')}
                   onPress={() =>
-                    void store.updateSession(s.id, { status: 'completed' }).catch(() => undefined)
+                    void store
+                      .updateSession(s.id, { status: 'completed' })
+                      .catch((e: unknown) => setMoveErr(errorMessage(e)))
                   }
                 />
               </View>
             </View>
           ))}
+          {moveErr ? <Notice tone="warning">{moveErr}</Notice> : null}
           <AppText variant="caption" muted>
             {t('today.weekLine', {
               n: dance.summary.thisWeek.sessions,
@@ -281,10 +313,16 @@ export default function Today() {
                   variant="caption"
                   muted
                 >{`${t('goals.from', { start: formatWeight(g.startKg, units), target: formatWeight(g.targetKg, units) })} ${t('goals.until', { date: formatDate(g.endDate) })}`}</AppText>
-                <ProgressBar
-                  fraction={p.fraction}
-                  label={`${t(`goals.${g.type}` as StringKey)} ${t(`goals.${g.period}` as StringKey)}`}
-                />
+                {summary.latest ? (
+                  <ProgressBar
+                    fraction={p.fraction}
+                    label={`${t(`goals.${g.type}` as StringKey)} ${t(`goals.${g.period}` as StringKey)}`}
+                  />
+                ) : (
+                  <AppText variant="caption" muted>
+                    {t('today.goalNeedsWeight')}
+                  </AppText>
+                )}
               </View>
             );
           })}
