@@ -278,9 +278,41 @@ describe('daily plan with wellness context', () => {
       ...base,
       wellness: { ...wellness, hydrationMl: 2000, walkedToday: true },
     });
-    expect(met.items.some((x) => x.ref?.action)).toBe(false);
+    expect(
+      met.items.some((x) => x.ref?.action === 'log_water' || x.ref?.action === 'log_walk'),
+    ).toBe(false);
     const noWalk = generateDailyPlan({ ...base, wellness: { ...wellness, activities: ['dance'] } });
     expect(noWalk.items.some((x) => x.ref?.action === 'log_walk')).toBe(false);
+  });
+  it('uses recorded movement: done items from logs, strength offered only when preferred and not sore', () => {
+    const w = { ...wellness, activities: ['dance', 'walking', 'strength'] as const };
+    const offered = generateDailyPlan({ ...base, wellness: { ...w, strengthSessionsWeek: 0 } });
+    expect(offered.items.find((x) => x.ref?.action === 'log_strength')?.detail).toMatch(
+      /not available yet/i,
+    );
+    const logged = generateDailyPlan({
+      ...base,
+      wellness: { ...w, strengthToday: true, walkedToday: true, walkMinutesToday: 20 },
+    });
+    expect(logged.items.some((x) => x.ref?.action === 'log_strength')).toBe(false);
+    expect(logged.items.filter((x) => x.done).map((x) => x.title)).toEqual(
+      expect.arrayContaining(['You walked today: 20 min', 'You did strength work today']),
+    );
+    const sore = generateDailyPlan({ ...base, wellness: { ...w, recovery: 'sore' } });
+    expect(sore.items.some((x) => x.ref?.action === 'log_strength')).toBe(false);
+    expect(sore.items.some((x) => x.title === 'Go easy on your body today')).toBe(true);
+    const none = generateDailyPlan({ ...base, wellness: { ...w, activities: ['dance'] } });
+    expect(none.items.some((x) => x.ref?.action === 'log_strength')).toBe(false);
+  });
+  it('offers no hunger prompt to people with an eating concern or tracking off', () => {
+    const has = (c: object) =>
+      generateDailyPlan({ ...base, wellness: { ...wellness, ...c } }).items.some(
+        (x) => x.ref?.action === 'log_hunger',
+      );
+    expect(has({})).toBe(true);
+    expect(has({ eatingConcern: true })).toBe(false);
+    expect(has({ tracking: 'none' })).toBe(false);
+    expect(has({ hungerCheckinsToday: 1 })).toBe(false);
   });
   it('offers no weigh-in to people who chose fitness or no numbers', () => {
     expect(generateDailyPlan({ ...base, wellness }).items.some((x) => x.kind === 'goal')).toBe(
