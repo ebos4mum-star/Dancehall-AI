@@ -30,7 +30,7 @@ Steps 1-4 give a real, on-device test of everything except photo analysis and th
 
 ### 2. Apply the database
 
-Apply, in file-name order: `supabase/migrations/20261201000100_identity_consent.sql`, `20261201000200_weight_goals_readiness.sql`, `20261202000100_food_nutrition.sql`, `20261203000100_dance_catalog.sql`, `20261204000100_coach.sql`; then `supabase/seed.sql` (synthetic foods and sample workouts).
+Apply, in file-name order: `supabase/migrations/20261201000100_identity_consent.sql`, `20261201000200_weight_goals_readiness.sql`, `20261202000100_food_nutrition.sql`, `20261203000100_dance_catalog.sql`, `20261204000100_coach.sql`, `20261205000100_integration.sql`; then `supabase/seed.sql` (synthetic foods and sample workouts).
 
 - **With a computer:** install the Supabase CLI, `supabase link --project-ref <ref>`, `supabase db push`, then run `seed.sql` from the SQL editor.
 - **Phone only:** paste each file into the SQL editor in order. (Alternative the assistant can add on request: a manual-only GitHub workflow that applies migrations using a database URL kept as a protected secret.)
@@ -117,3 +117,22 @@ Still to do (needs the live project):
 ## Open decisions
 
 Coach conversation retention (90 days is the development default), deletion grace period and export format, whether failed photo analyses are deleted within 24 hours (implemented that way), beta countries, subscription service and pricing beyond the $9.99 test, music and video production plan, and the final visual identity (character artwork is a replaceable slot).
+
+## Integration batch (built, not deployed)
+
+Built and tested locally; **nothing is deployed and no cloud project, key or provider exists.**
+
+- **Gateway ports** (`packages/ai/src/ports.ts`): async, atomic budget and quota ports; the person's AI pause (`UserAiPausePort`) is separate from the staff kill switch (`StaffControlsPort`, read live from `feature_flags`). Errors differ: `ai_paused` (409) versus `feature_disabled` (503).
+- **Server handlers** (`packages/ai/src/server/handlers.ts`): `POST /v1/coach/messages`, `/v1/coach/weekly-review`, `/v1/food/photo-analysis`, `/v1/account/deletion[/cancel]`, plus `runPhotoRetention`. Transport-independent (`handleHttp`); host them in a Supabase Edge Function or any Node runtime once approved.
+- **Supabase adapters**: `supabase-ports.ts` and `server/supabase-repo.ts` (service-role, server only) and `apps/mobile/src/data/supabaseCoach.ts` (RLS, person's own session). The app reaches the server only through `EXPO_PUBLIC_AI_API_URL` (https; optional). Without it the AI features report "unavailable" and the rule-based parts keep working.
+- **Database**: `ai_preferences` (own pause) and `account_deletion_requests` (30-day cancellable grace) with SQL tests.
+- **Still simulated**: the provider (`MockAiProvider`), photo recognition, and the entitlement (everyone is `free` until a store webhook exists).
+
+### Remaining blockers before real-device testing
+
+1. A dedicated Supabase project (step 1 above); apply migrations and seed.
+2. Deploy the handlers (Edge Function) with the service-role key as a server secret; set `EXPO_PUBLIC_AI_API_URL`.
+3. Schedule `runPhotoRetention` (hourly) and a trusted account-purge job for `account_deletion_due`.
+4. Photo upload to the private `food-photos` bucket from the app (camera + `POST /v1/food/photo-analysis`).
+5. Apple Developer account and an EAS build.
+   Live AI additionally needs a provider workspace with a spending limit; keep the application ceiling at $50 and the provider limit at or below it.

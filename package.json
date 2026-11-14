@@ -19,7 +19,8 @@
     "test:scripts": "node --test scripts/*.test.mjs",
     "verify": "pnpm check:secrets && pnpm check:workspace && pnpm check:ci && pnpm check:seed && pnpm test:scripts && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm db:test",
     "db:test": "bash supabase/tests/run.sh",
-    "check:seed": "node scripts/gen-seed.mjs --check"
+    "check:seed": "node scripts/gen-seed.mjs --check",
+    "e2e:web": "pnpm --filter @dancehall/mobile export:web && node apps/mobile/e2e/regression.cjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

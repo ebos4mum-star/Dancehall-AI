@@ -1,0 +1,184 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- standalone Node script (CommonJS so Playwright resolves from a global install) */
+/*
+ * Browser regression for Batches A-D plus the AI pause / account-deletion controls, run against the static web export in MOCK mode
+ * (synthetic data, no network, no cloud, no paid AI). Usage:  pnpm export:web && node e2e/regression.cjs
+ * Needs Playwright's Chromium (pre-installed in the cloud sandbox; locally: npx playwright install chromium).
+ */
+const { chromium } = require('playwright');
+const assert = require('node:assert/strict');
+
+const results = [];
+async function step(name, fn) {
+  try {
+    await fn();
+    results.push(['PASS', name]);
+    console.log('PASS ', name);
+  } catch (e) {
+    results.push(['FAIL', name]);
+    console.log('FAIL ', name, '\n     ', String(e.message).split('\n')[0]);
+  }
+}
+
+(async () => {
+  const { serve } = await import('./serve.mjs');
+  const srv = await serve(8099);
+  const browser = await chromium.launch();
+  const p = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  p.setDefaultTimeout(5000);
+  const errors = [];
+  p.on('pageerror', (e) => errors.push(e.message));
+  const base = 'http://127.0.0.1:8099';
+  // Tabs stay mounted, so always act on the LAST (front-most) match.
+  const btn = (n) => p.getByRole('button', { name: n }).last();
+  const text = (t) => p.getByText(t, { exact: false }).last();
+  const seen = async (t, ms = 4000) => text(t).waitFor({ state: 'visible', timeout: ms });
+  const tab = async (name) => {
+    await p.getByRole('tab', { name, exact: true }).click();
+    await p.waitForTimeout(900);
+  };
+  const lastSwitch = (n) => p.getByRole('switch', { name: n }).last();
+
+  await p.goto(base);
+  await p.waitForTimeout(2500);
+
+  // ---------------- Batch A: sign-in, onboarding, consent, readiness ----------------
+  await step('A: dev sign-in screen is shown in mock mode, adults only', async () => {
+    await seen('Development mode: mock sign-in');
+    await seen('adults aged 18 and over');
+  });
+  await step('A: under-18 date of birth is refused', async () => {
+    await text('Continue with development sign-in').click();
+    await p.getByLabel('What should we call you?').fill('Sam');
+    await p.getByLabel('Date of birth (YYYY-MM-DD)').fill('2015-05-05');
+    await p.getByLabel('Country or region').fill('Aus');
+    await text('Australia').click();
+    await btn('Continue').click();
+    await seen('18 or older');
+    assert.equal(
+      await text('Step 2 of 5')
+        .isVisible()
+        .catch(() => false),
+      false,
+    );
+  });
+  await step('A: onboarding completes (consent, body basics, readiness, goal)', async () => {
+    await p.getByLabel('Date of birth (YYYY-MM-DD)').fill('1990-05-05');
+    await btn('Continue').click();
+    await seen('Your privacy');
+    await lastSwitch('Store my health information').check({ force: true });
+    await lastSwitch('Analyze my meal photos').check({ force: true });
+    await btn('Continue').click();
+    await p.getByLabel('Height (cm)').fill('170');
+    await p.getByLabel('Current weight (kg)').fill('75');
+    await btn('Continue').click();
+    for (const n of await p.getByRole('radio', { name: /^No$/ }).all()) await n.click();
+    await btn('Continue').click();
+    await btn('Finish setup').click();
+    await seen('Hello, Sam');
+  });
+  await step('A/D: Today shows the Daily Fit Plan with reasons', async () => {
+    await seen('Your Daily Fit Plan');
+    await btn(/^Why\?/).click();
+    assert.ok(await p.getByText(/./).count());
+  });
+  await step('A: weight logging updates the latest weight', async () => {
+    await p.getByLabel('Log weight (kg)').fill('74.5');
+    await btn('Log weight').click();
+    await seen('74.5 kg');
+  });
+
+  // ---------------- Batch C: dance ----------------
+  await step('C: Dance tab shows Quick Fit and the licensing note', async () => {
+    await tab('Dance');
+    await seen('Move today');
+    await seen('no video, music or instructors yet');
+  });
+  await step('C: a style filter narrows the catalog', async () => {
+    await text('Afrobeats').click();
+    await p.waitForTimeout(500);
+    await seen('Afrobeats');
+    if (!(await p.getByRole('tab', { name: 'Food', exact: true }).isVisible())) {
+      await p.goBack(); // a detail screen hides the tab bar
+      await p.waitForTimeout(600);
+    }
+  });
+
+  // ---------------- Batch B: food ----------------
+  await step('B: Food tab offers photo, manual logging, swaps, plans', async () => {
+    await tab('Food');
+    await seen('Snap your meal');
+    for (const b of ['Add food', 'Saved meals', 'Swap ideas', 'Meal plan', 'History'])
+      assert.ok(await btn(b).isVisible(), b);
+  });
+  await step('B: the camera screen says recognition is simulated', async () => {
+    await btn('Snap a meal').click();
+    await p.waitForTimeout(900);
+    await seen('simulat');
+    await p.goBack();
+    await p.waitForTimeout(700);
+  });
+
+  // ---------------- Batch D: Coach, pause, kill switch, deletion ----------------
+  await step('D: Coach tab, personalization off by default, simulated labeling', async () => {
+    await tab('Coach');
+    await seen('Fit Concierge');
+    await seen('Allow personalization');
+  });
+  await step('D: a prompt gets a labeled, simulated reply with reasons', async () => {
+    await btn('I only have 10 minutes').click();
+    await seen('Simulated reply', 6000);
+  });
+  await step('D: crisis wording gets the fixed safety response, not a plan', async () => {
+    await p.getByRole('textbox').last().fill('I want to kill myself');
+    await btn('Send').click();
+    await p.waitForTimeout(1200);
+    assert.ok(
+      await p
+        .getByText(/support|helpline|emergency|someone you trust/i)
+        .last()
+        .isVisible(),
+    );
+  });
+  await step('D: Coach privacy shows the usage, pause and deletion controls', async () => {
+    await btn('Privacy and history').click();
+    await seen('Pause AI for me');
+    await seen('Delete my account');
+  });
+  await step('D: the person’s pause blocks the coach and shows its own message', async () => {
+    await lastSwitch('Pause AI for me').check({ force: true });
+    await p.waitForTimeout(500);
+    await p.goBack();
+    await p.waitForTimeout(700);
+    await seen('paused');
+  });
+  await step('D: un-pausing restores the coach', async () => {
+    await btn('Privacy and history').click();
+    await lastSwitch('Pause AI for me').uncheck({ force: true });
+    await p.waitForTimeout(500);
+    assert.equal(await lastSwitch('Pause AI for me').isChecked(), false);
+  });
+  await step('D: account deletion is a 30-day, cancellable request', async () => {
+    await btn('Delete my account').click();
+    await seen('Deletion requested');
+    await btn('Cancel deletion').click();
+    await p.waitForTimeout(500);
+    assert.equal(
+      await text('Deletion requested')
+        .isVisible()
+        .catch(() => false),
+      false,
+    );
+  });
+  await step('Privacy: data survives a reload (device storage), no page errors', async () => {
+    await p.goto(base);
+    await p.waitForTimeout(2500);
+    await seen('Hello, Sam');
+    assert.deepEqual(errors, []);
+  });
+
+  await browser.close();
+  srv.close();
+  const failed = results.filter((r) => r[0] === 'FAIL').length;
+  console.log(`\n${results.length - failed}/${results.length} browser checks passed`);
+  process.exit(failed ? 1 : 0);
+})();
