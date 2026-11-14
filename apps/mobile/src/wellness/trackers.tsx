@@ -6,6 +6,8 @@ import {
   RECOVERY_LEVELS,
   SLEEP_QUALITY,
   STRENGTH_KINDS,
+  STRENGTH_REVIEW_REQUIREMENTS,
+  activeStrengthWorkouts,
   addDaysIso,
   entriesOf,
   measurementChange,
@@ -318,6 +320,24 @@ export function MeasurementsCard() {
       <AppText variant="caption" muted>
         {t('wl.measureNote')}
       </AppText>
+    </DepthCard>
+  );
+}
+
+/** Guided strength workouts are not available until qualified review. Says so plainly and lists what review requires. */
+export function StrengthContentCard() {
+  const active = activeStrengthWorkouts();
+  if (active.length > 0) return null;
+  return (
+    <DepthCard>
+      <SectionTitle icon="barbell" title={t('wl.strengthContentTitle')} />
+      <AppText>{t('wl.strengthContentBody')}</AppText>
+      <AppText variant="label">{t('wl.strengthReviewNeeds')}</AppText>
+      {STRENGTH_REVIEW_REQUIREMENTS.map((r) => (
+        <AppText key={r} variant="caption" muted>
+          {`• ${r}`}
+        </AppText>
+      ))}
     </DepthCard>
   );
 }

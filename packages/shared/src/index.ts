@@ -26,3 +26,4 @@ export * from './instruction-media';
 export * from './session-clock';
 export * from './wellness';
 export * from './nutrition-plan';
+export * from './strength';

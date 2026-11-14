@@ -641,6 +641,10 @@ export const en = {
   'wl.undoLast': 'Undo last',
   'wl.moveNote':
     'Every bit counts. These are optional and add to your active days alongside dance.',
+  'wl.strengthContentTitle': 'Guided strength workouts',
+  'wl.strengthContentBody':
+    'Not available yet. Strength routines need to be written or reviewed by a qualified fitness professional before we offer them, and we will not publish unreviewed ones. You can still log your own strength sessions above.',
+  'wl.strengthReviewNeeds': 'What review requires',
   'wl.sleepTitle': 'Sleep',
   'wl.sleepLast': 'Last night: {h} hours',
   'wl.sleepAvg': 'Average {h} hours over {n} nights',
