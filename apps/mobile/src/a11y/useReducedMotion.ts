@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo } from 'react-native';
+import { useReview } from '@/preview/review';
 
 /** Follows the system "reduce motion" setting. Animations must collapse to instant when this is true. */
 export function useReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
+  const review = useReview();
   useEffect(() => {
     let mounted = true;
     AccessibilityInfo.isReduceMotionEnabled()
@@ -15,5 +17,5 @@ export function useReducedMotion(): boolean {
       sub.remove();
     };
   }, []);
-  return reduced;
+  return review.reduced ?? reduced;
 }
