@@ -150,3 +150,161 @@ describe('Supabase repo: deletion and photo queries are scoped to the verified u
     ]);
   });
 });
+
+describe('server coach wellness context (privacy, validity, isolation)', () => {
+  const NOW = new Date('2026-06-03T10:00:00Z');
+  type Tables = Record<string, { data: unknown; error?: { message: string } | null }>;
+  /** A per-table fake that records the filters applied to each query, so isolation can be asserted. */
+  function tables(t: Tables) {
+    const queries: Array<{ table: string; eq: Array<[string, unknown]> }> = [];
+    const db = {
+      from: (table: string) => {
+        const q = { table, eq: [] as Array<[string, unknown]> };
+        queries.push(q);
+        const chain: unknown = new Proxy(() => undefined, {
+          get(_t, prop: string) {
+            if (prop === 'then') {
+              const r = t[table] ?? { data: [] };
+              return (res: (v: unknown) => unknown) =>
+                Promise.resolve({ data: r.data, error: r.error ?? null }).then(res);
+            }
+            return (...args: unknown[]) => {
+              if (prop === 'eq') q.eq.push([String(args[0]), args[1]]);
+              return chain;
+            };
+          },
+        });
+        return chain;
+      },
+    } as unknown as SupabaseClient;
+    return { db, queries };
+  }
+  const entry = (kind: string, day: string, amount: number, label: string | null = null) => ({
+    id: `${kind}-${day}-${amount}`,
+    kind,
+    day,
+    amount,
+    amount2: null,
+    label,
+    created_at: '2026-06-03T08:00:00Z',
+  });
+  const base: Tables = {
+    profiles: { data: { time_zone: 'UTC', unit_system: 'metric' } },
+    workout_sessions: { data: [] },
+    food_logs: { data: [] },
+    weight_entries: { data: [] },
+    goals: { data: [] },
+  };
+
+  it('includes only aggregates for the signed-in person, and scopes every wellness query by user', async () => {
+    const f = tables({
+      ...base,
+      wellness_entries: {
+        data: [
+          entry('walk', '2026-06-02', 20),
+          entry('walk', '2026-06-03', 15),
+          entry('strength', '2026-06-03', 10, 'bands'),
+          entry('sleep', '2026-06-01', 7),
+          entry('sleep', '2026-06-02', 6),
+          entry('sleep', '2026-06-03', 5),
+          entry('recovery', '2026-06-03', 0, 'sore'),
+          entry('measurement', '2026-06-03', 80, 'waist'),
+        ],
+      },
+      wellness_prefs: { data: { data: { goalIntent: 'lose', tracking: 'light' } } },
+    });
+    const ctx = await new SupabaseServerRepo(f.db).coachContext('user-A', true, NOW);
+    expect(ctx.wellness).toMatchObject({
+      walkMinutesWeek: 35,
+      strengthSessionsWeek: 1,
+      sleepNightsWeek: 3,
+      sleepAvgHours: 6,
+      recoveryToday: 'sore',
+      intent: 'lose',
+      numbersHidden: false,
+    });
+    // Measurements, labels and ids never reach the context.
+    expect(JSON.stringify(ctx)).not.toMatch(/waist|80|bands|walk-2026/);
+    for (const q of f.queries.filter((x) => x.table.startsWith('wellness_')))
+      expect(q.eq).toContainEqual(['user_id', 'user-A']);
+  });
+  it('hides numbers when the person has an eating concern, is postpartum, or turned tracking off', async () => {
+    for (const prefs of [
+      { eatingConcern: true },
+      { pregnantOrPostpartum: true },
+      { tracking: 'none' },
+    ]) {
+      const f = tables({
+        ...base,
+        wellness_entries: {
+          data: [entry('hunger', '2026-06-03', 0, 'hungry'), entry('walk', '2026-06-03', 15)],
+        },
+        wellness_prefs: { data: { data: prefs } },
+      });
+      const ctx = await new SupabaseServerRepo(f.db).coachContext('u', true, NOW);
+      expect(ctx.wellness?.numbersHidden).toBe(true);
+      expect(ctx.wellness?.hungerCheckinsWeek).toBe(0);
+    }
+  });
+  it('ignores malformed, out-of-range and future rows instead of failing', async () => {
+    const f = tables({
+      ...base,
+      wellness_entries: {
+        data: [
+          entry('walk', '2026-06-03', 99999),
+          entry('walk', '2026-06-03', -5),
+          entry('sleep', '2026-06-03', 7, 'not-a-quality'),
+          entry('walk', '2030-01-01', 20),
+          { id: 'x', kind: 'nope', day: 'bad', amount: 'NaN' },
+          null,
+          entry('walk', '2026-06-03', 25),
+        ],
+      },
+      wellness_prefs: { data: { data: { goalIntent: 'banana', tracking: 12 } } },
+    });
+    const ctx = await new SupabaseServerRepo(f.db).coachContext('u', true, NOW);
+    expect(ctx.wellness?.walkMinutesWeek).toBe(25);
+    expect(ctx.wellness?.sleepNightsWeek).toBe(0);
+    expect(ctx.wellness?.intent).toBe('fitness');
+  });
+  it('has no wellness section when there is nothing logged and no preferences', async () => {
+    const f = tables({ ...base, wellness_entries: { data: [] }, wellness_prefs: { data: null } });
+    expect(
+      (await new SupabaseServerRepo(f.db).coachContext('u', true, NOW)).wellness,
+    ).toBeUndefined();
+  });
+  it('fails closed (no numbers) when wellness cannot be read', async () => {
+    const f = tables({ ...base, wellness_entries: { data: null, error: { message: 'down' } } });
+    const ctx = await new SupabaseServerRepo(f.db).coachContext('u', true, NOW);
+    expect(ctx.wellness?.numbersHidden).toBe(true);
+    expect(ctx.wellness?.walkMinutesWeek).toBe(0);
+  });
+  it('reads no wellness data at all when personalization is off', async () => {
+    const f = tables({ ...base });
+    const ctx = await new SupabaseServerRepo(f.db).coachContext('u', false, NOW);
+    expect(ctx.wellness).toBeUndefined();
+    expect(f.queries).toHaveLength(0);
+  });
+  it('weekly facts include recorded wellness, and omit its numbers when hidden', async () => {
+    const rows = [entry('walk', '2026-06-02', 20), entry('strength', '2026-06-03', 10)];
+    const shown = tables({
+      ...base,
+      wellness_entries: { data: rows },
+      wellness_prefs: { data: { data: {} } },
+    });
+    const a = await new SupabaseServerRepo(shown.db).weekFacts('u', '2026-06-01');
+    expect(a.wellness).toMatchObject({ walkMinutes: 20, strengthSessions: 1 });
+    expect(a.activeDays).toBe(2);
+    const hidden = tables({
+      ...base,
+      wellness_entries: { data: rows },
+      wellness_prefs: { data: { data: { eatingConcern: true } } },
+    });
+    const b = await new SupabaseServerRepo(hidden.db).weekFacts('u', '2026-06-01');
+    expect(b.wellness).toBeUndefined();
+    const down = tables({ ...base, wellness_entries: { data: null, error: { message: 'x' } } });
+    expect(
+      (await new SupabaseServerRepo(down.db).weekFacts('u', '2026-06-01')).wellness,
+    ).toBeUndefined();
+  });
+});

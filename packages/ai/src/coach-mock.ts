@@ -210,7 +210,7 @@ export function composeCoachReply(userText: string, c: CoachContext): Reply {
     }
     case 'recovery': {
       const wl = c.wellness;
-      const lowSleep = wl?.sleepAvgHours != null && wl.sleepAvgHours < 6.5;
+      const lowSleep = !wl?.numbersHidden && wl?.sleepAvgHours != null && wl.sleepAvgHours < 6.5;
       const w = quick(5, true);
       return {
         message: `Rest is part of progress. ${wl?.recoveryToday === 'sore' || wl?.recoveryToday === 'worn' ? `You said your body feels ${wl.recoveryToday === 'worn' ? 'worn out' : 'sore'} today, so ` : 'On days like this '}a gentle walk, light stretching or a short low-impact session can feel better than pushing, and taking the day off is fine.${lowSleep ? ` You logged about ${wl!.sleepAvgHours} hours of sleep on average this week; a regular wind-down time may help.` : ''} If pain is sharp or lasts, please see a health professional.`,
@@ -233,7 +233,7 @@ export function composeCoachReply(userText: string, c: CoachContext): Reply {
         'a fixed wind-down time at night',
       ];
       return {
-        message: `Habits stick when they are small and tied to something you already do. Pick one: ${ideas.join(', ')}. Missing a day does not reset anything.${wl && wl.walkMinutesWeek > 0 ? ` You have logged ${wl.walkMinutesWeek} minutes of walking this week, which is a good base.` : ''}`,
+        message: `Habits stick when they are small and tied to something you already do. Pick one: ${ideas.join(', ')}. Missing a day does not reset anything.${wl && !wl.numbersHidden && wl.walkMinutesWeek > 0 ? ` You have logged ${wl.walkMinutesWeek} minutes of walking this week, which is a good base.` : ''}`,
         because: reasons(c, ['Small habits are easier to repeat than big changes.']),
         proposedChanges: [],
       };
