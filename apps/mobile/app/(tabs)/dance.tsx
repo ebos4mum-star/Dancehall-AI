@@ -28,6 +28,7 @@ import { brand, radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
+import { MovementCard, RecoveryCard } from '@/wellness/trackers';
 import { CharacterStage, DepthCard, HeroCard } from '@/ui/Depth';
 import { Notice } from '@/ui/Banner';
 import { Choice } from '@/ui/Choice';
@@ -367,6 +368,9 @@ export default function Dance() {
           </>
         )}
       </DepthCard>
+
+      <MovementCard />
+      <RecoveryCard />
 
       <Reveal delay={60}>
         <SectionTitle icon="color-palette" title={t('dance.styles')} />

@@ -21,6 +21,7 @@ import { Screen } from '@/ui/Screen';
 import { SkeletonList } from '@/ui/Skeleton';
 import { TextField } from '@/ui/TextField';
 import { WeightChart } from '@/ui/WeightChart';
+import { MeasurementsCard, SleepCard } from '@/wellness/trackers';
 
 export default function Progress() {
   const { store, profile } = useApp();
@@ -123,6 +124,8 @@ export default function Progress() {
         <SectionTitle icon="leaf" title={t('habit.title')} />
         <HabitWeek habits={insights.habits} />
       </Card>
+      <MeasurementsCard />
+      <SleepCard />
       <AchievementList items={insights.achievements} />
       <Card>
         <SectionTitle icon="musical-notes" title={t('dance.activity')} />
