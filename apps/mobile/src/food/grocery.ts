@@ -29,6 +29,23 @@ export function buildGroceryList(items: GroceryInput[]): GroceryLine[] {
 }
 
 /** Plain text for sharing or pasting into any notes app. Only what the person chose to share. */
-export function groceryText(title: string, lines: GroceryLine[]): string {
-  return [title, ...lines.map((l) => `- ${l.name}: ${l.grams} g`)].join('\n');
+export function groceryText(title: string, lines: GroceryLine[], people = 1): string {
+  const head = people > 1 ? `${title} (${people} people)` : title;
+  return [head, ...lines.map((l) => `- ${l.name}: ${l.grams} g`)].join('\n');
+}
+
+export const HOUSEHOLD_MIN = 1;
+export const HOUSEHOLD_MAX = 6;
+
+/** Clamps a stored or typed value to a whole number of people between 1 and 6. */
+export function clampHouseholdSize(n: unknown): number {
+  const v = typeof n === 'number' ? n : Number(n);
+  if (!Number.isFinite(v)) return HOUSEHOLD_MIN;
+  return Math.min(HOUSEHOLD_MAX, Math.max(HOUSEHOLD_MIN, Math.round(v)));
+}
+
+/** The same planned portions for more than one person: quantities are multiplied, then rounded up to 10 g. Nutrition is never scaled. */
+export function scaleGroceryList(lines: GroceryLine[], people: number): GroceryLine[] {
+  const n = clampHouseholdSize(people);
+  return lines.map((l) => ({ ...l, grams: Math.ceil((l.grams * n) / 10) * 10 }));
 }

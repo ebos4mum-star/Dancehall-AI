@@ -119,15 +119,15 @@ Weight goals must not encourage extreme restriction, guaranteed results or unsaf
 
 ### F. Family and Household
 
-| ID  | Feature                                               | Ver.  | Phase | Gates                 | Status      |
-| --- | ----------------------------------------------------- | ----- | ----- | --------------------- | ----------- |
-| F1x | Family and couple fitness                             | Later | 10    | P3, H1                | Not started |
-| F2x | Household meal planning                               | Later | 10    | P3, H1                | Not started |
-| F3x | Shared grocery lists                                  | Later | 9-10  | H1                    | Not started |
-| F4x | Household challenges                                  | Later | 10    | M1, H1                | Not started |
-| F5x | Individual private health profiles inside a household | Later | 10    | P3, H1                | Not started |
-| F6x | Explicit permissions for shared information           | Later | 10    | P3, H1                | Not started |
-| F7x | Household Pro subscription concept                    | Later | 10    | B1s, pricing decision | Not started |
+| ID  | Feature                                               | Ver.  | Phase | Gates                 | Status                                                                                                                                                                   |
+| --- | ----------------------------------------------------- | ----- | ----- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| F1x | Family and couple fitness                             | Later | 10    | P3, H1                | Not started                                                                                                                                                              |
+| F2x | Household meal planning                               | Later | 10    | P3, H1                | Not started                                                                                                                                                              |
+| F3x | Shared grocery lists                                  | Later | 9-10  | H1                    | Partially implemented locally (grocery list scales to how many people you cook for, stored on the device; no shared accounts, so real shared lists are blocked on H1/P3) |
+| F4x | Household challenges                                  | Later | 10    | M1, H1                | Not started                                                                                                                                                              |
+| F5x | Individual private health profiles inside a household | Later | 10    | P3, H1                | Not started                                                                                                                                                              |
+| F6x | Explicit permissions for shared information           | Later | 10    | P3, H1                | Not started                                                                                                                                                              |
+| F7x | Household Pro subscription concept                    | Later | 10    | B1s, pricing decision | Not started                                                                                                                                                              |
 
 Individual weight, food and health records stay private unless explicitly shared, per category and per person, and sharing can be withdrawn.
 

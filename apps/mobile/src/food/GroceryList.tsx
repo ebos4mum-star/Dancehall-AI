@@ -1,18 +1,33 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, Share, View } from 'react-native';
 import type { PlanItemRecord } from '@/data/types';
+import { useApp } from '@/data/AppProvider';
 import { t } from '@/i18n';
 import { MIN_TOUCH_TARGET } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
+import { Choice } from '@/ui/Choice';
 import { haptics } from '@/ui/haptics';
-import { buildGroceryList, groceryText } from './grocery';
+import {
+  HOUSEHOLD_MAX,
+  HOUSEHOLD_MIN,
+  buildGroceryList,
+  groceryText,
+  scaleGroceryList,
+} from './grocery';
+import { deviceSizeStore, readHouseholdSize, writeHouseholdSize } from './household';
 
 /** Shopping list for one saved meal plan. Ticks are kept on this screen only; sharing is a deliberate tap. */
 export function GroceryList({ planName, items }: { planName: string; items: PlanItemRecord[] }) {
   const { colors, spacing, radius } = useTheme();
-  const lines = useMemo(() => buildGroceryList(items), [items]);
+  const { session } = useApp();
+  const userId = session?.userId;
+  const [people, setPeople] = useState(HOUSEHOLD_MIN);
+  useEffect(() => {
+    if (userId) void readHouseholdSize(deviceSizeStore, userId).then(setPeople);
+  }, [userId]);
+  const lines = useMemo(() => scaleGroceryList(buildGroceryList(items), people), [items, people]);
   const [got, setGot] = useState<Set<string>>(new Set());
   const toggle = (k: string) => {
     haptics.tap();
@@ -27,6 +42,19 @@ export function GroceryList({ planName, items }: { planName: string; items: Plan
       <AppText variant="label" accessibilityRole="header">
         {t('grocery.title')}
       </AppText>
+      <Choice
+        label={t('grocery.people')}
+        value={String(people)}
+        onChange={(v) => {
+          const n = Number(v);
+          setPeople(n);
+          if (userId) void writeHouseholdSize(deviceSizeStore, userId, n);
+        }}
+        options={Array.from({ length: HOUSEHOLD_MAX - HOUSEHOLD_MIN + 1 }, (_, i) => ({
+          value: String(HOUSEHOLD_MIN + i),
+          label: String(HOUSEHOLD_MIN + i),
+        }))}
+      />
       {lines.map((l) => {
         const done = got.has(l.key);
         return (
@@ -66,7 +94,7 @@ export function GroceryList({ planName, items }: { planName: string; items: Plan
         variant="secondary"
         label={t('grocery.share')}
         onPress={() =>
-          void Share.share({ message: groceryText(planName, lines) }).catch(() => undefined)
+          void Share.share({ message: groceryText(planName, lines, people) }).catch(() => undefined)
         }
       />
     </View>

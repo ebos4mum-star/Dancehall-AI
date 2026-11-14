@@ -16,7 +16,8 @@ import { spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
-import { DepthCard } from '@/ui/Depth';
+import { useDanceData } from '@/dance/hooks';
+import { CharacterStage, DepthCard, HeroCard } from '@/ui/Depth';
 import { Notice } from '@/ui/Banner';
 import { Choice } from '@/ui/Choice';
 import { Ring } from '@/ui/motion';
@@ -38,6 +39,7 @@ export default function Session() {
   const workout = WORKOUT_BY_ID.get(String(id));
   const { store } = useApp();
   const { colors } = useTheme();
+  const dance = useDanceData();
   const [state, dispatch] = useReducer(reducer, undefined, () => ({
     s: initSession(workout ?? { id: '', blocks: [] }, low === '1'),
     changes: 0,
@@ -98,7 +100,7 @@ export default function Session() {
           lowImpact: s.lowImpact,
           source: 'manual',
         });
-      haptics.success();
+      haptics.celebrate();
       setSaved(true);
     } catch (e) {
       haptics.warning();
@@ -110,11 +112,29 @@ export default function Session() {
     const m = Math.floor(s.elapsedS / 60);
     return (
       <Screen top={false}>
-        <DepthCard>
-          <AppText variant="title" accessibilityRole="header">
+        <HeroCard style={{ alignItems: 'center' }}>
+          <CharacterStage size={96} />
+          <AppText
+            variant="title"
+            accessibilityRole="header"
+            style={{ color: colors.onHero, textAlign: 'center' }}
+          >
             {t('ses.done')}
           </AppText>
-          <AppText>{t('ses.doneBody', { m, s: s.elapsedS % 60 })}</AppText>
+          <AppText style={{ color: colors.onHero, textAlign: 'center' }}>
+            {t('ses.doneBody', { m, s: s.elapsedS % 60 })}
+          </AppText>
+          {saved ? (
+            <AppText
+              variant="label"
+              style={{ color: colors.onHero }}
+              accessibilityLiveRegion="polite"
+            >
+              {t('ses.weekCount', { n: dance.summary.thisWeek.sessions })}
+            </AppText>
+          ) : null}
+        </HeroCard>
+        <DepthCard>
           {s.elapsedS < 1 ? (
             <Notice>{t('ses.nothing')}</Notice>
           ) : saved ? (
