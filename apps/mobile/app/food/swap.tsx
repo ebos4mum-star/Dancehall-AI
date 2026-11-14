@@ -6,6 +6,7 @@ import { t } from '@/i18n';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
 import { DepthCard } from '@/ui/Depth';
+import { IconBadge } from '@/ui/kit';
 import { Screen } from '@/ui/Screen';
 import { TextField } from '@/ui/TextField';
 
@@ -25,7 +26,17 @@ export default function SwapScreen() {
         pulse: 'idle',
       }}
     >
-      <AppText muted>{t('swap.intro')}</AppText>
+      <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
+        <IconBadge
+          name="swap-horizontal"
+          size={36}
+          fill={colors.primary}
+          color={colors.onPrimary}
+        />
+        <AppText muted style={{ flex: 1 }}>
+          {t('swap.intro')}
+        </AppText>
+      </View>
       <TextField
         label={t('add.search')}
         value={q}

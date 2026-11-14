@@ -8,6 +8,7 @@ import { MIN_TOUCH_TARGET, radius } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
+import { SectionTitle } from '@/ui/kit';
 import { Card } from '@/ui/Card';
 import { Notice } from '@/ui/Banner';
 import { TextField } from '@/ui/TextField';
@@ -39,9 +40,7 @@ export function HabitsCard() {
 
   return (
     <Card>
-      <AppText variant="heading" accessibilityRole="header">
-        {t('habits.title')}
-      </AppText>
+      <SectionTitle icon="leaf" title={t('habits.title')} />
       <AppText variant="caption" muted>
         {t('habits.intro')}
       </AppText>
