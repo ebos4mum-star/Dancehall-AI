@@ -33,3 +33,12 @@ Obtain legal advice on music and likeness agreements before signing anything.
 ## 5. Open decisions
 
 Production plan (own shoots, commission, or licensing), music sourcing, instructor roster, and budget. See DECISIONS.md.
+
+## 6. Implemented in Batch C (database and admin foundations)
+
+- **No licensed content exists.** The workout catalog is original text outlines; no music, video or instructor likeness is used anywhere.
+- **Licence register** (`licences`, staff-only, `licensing.manage` plus MFA): asset kind, licensor, rights summary, territories (ISO country codes or `*`), start and end dates, and a reference to the signed agreement. A licence cannot be cleared without an agreement reference; clearing records who and when. Licences cannot be created already cleared, only drafted then cleared, and every change is written to the audit log.
+- **Territorial access is enforced by the server.** Raw media rows are staff-only. People receive media only through `workout_playable_media`, which returns nothing unless the workout is published and **every** asset on it (video, music, likeness) is cleared for their country today, so licensed video is never shown with unlicensed music. Tests cover wrong country, no country, expiry, revocation and unpublished workouts.
+- **Publishing gates** (also enforced in the database): an approved fitness review by someone other than the author, cleared in-date licences for all media, valid structure, and safety notes. Real instructors cannot be shown without a cleared likeness licence. Sample content is exempt only because it is permanently flagged as a sample and never public.
+- **Expiry:** `workouts_unpublish_expired` (service role) withdraws any real workout whose licence has expired or been revoked. It still needs to be scheduled with the cloud project.
+- **Admin portal:** the Content and Licensing pages show the publication checklist and a worked territory example from sample data. They are not connected to a database or sign-in yet.

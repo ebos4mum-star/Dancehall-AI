@@ -54,6 +54,26 @@ export default function RootLayout() {
               name="food/plan"
               options={{ headerShown: true, title: t('plan.title') }}
             />
+            <Stack.Screen
+              name="dance/[id]"
+              options={{ headerShown: true, title: t('tabs.dance') }}
+            />
+            <Stack.Screen
+              name="dance/session"
+              options={{ headerShown: true, title: t('ses.title') }}
+            />
+            <Stack.Screen
+              name="dance/schedule"
+              options={{ headerShown: true, title: t('sch.title') }}
+            />
+            <Stack.Screen
+              name="dance/history"
+              options={{ headerShown: true, title: t('hst.title') }}
+            />
+            <Stack.Screen
+              name="dance/program"
+              options={{ headerShown: true, title: t('dance.programs') }}
+            />
           </Stack>
         </DraftProvider>
       </AppProvider>

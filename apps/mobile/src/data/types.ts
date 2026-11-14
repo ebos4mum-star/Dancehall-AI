@@ -155,6 +155,13 @@ export interface DataStore {
   createMealPlan(input: NewMealPlan): Promise<MealPlan>;
   deleteMealPlan(id: string): Promise<void>;
 
+  listSessions(): Promise<WorkoutSession[]>;
+  createSession(input: NewSession): Promise<WorkoutSession>;
+  /** Creates several planned sessions at once (used to schedule a program). */
+  createSessions(inputs: NewSession[]): Promise<WorkoutSession[]>;
+  updateSession(id: string, patch: SessionPatch): Promise<WorkoutSession>;
+  deleteSession(id: string): Promise<void>;
+
   latestReadiness(): Promise<ReadinessResultRecord | null>;
   saveReadiness(
     answers: Partial<Record<ReadinessQuestion, boolean>>,
@@ -238,6 +245,48 @@ export interface NewMealPlan {
   budgetCents?: number | null;
   currency?: string | null;
   plan: MealPlanDraft;
+}
+
+// ---------- Dance sessions ----------
+export type SessionStatus = 'planned' | 'completed' | 'skipped';
+export type SessionSource = 'manual' | 'quick_fit' | 'program' | 'plan';
+export interface WorkoutSession {
+  id: string;
+  workoutId: string | null;
+  programId: string | null;
+  /** Snapshot of the workout name so history stays readable if the catalog changes. */
+  title: string;
+  style: string | null;
+  minutes: number;
+  plannedFor: string | null;
+  status: SessionStatus;
+  completedAt: string | null;
+  durationS: number | null;
+  perceivedExertion: number | null;
+  lowImpact: boolean;
+  source: SessionSource;
+  createdAt: string;
+}
+export interface NewSession {
+  workoutId?: string | null;
+  programId?: string | null;
+  title: string;
+  style?: string | null;
+  minutes: number;
+  plannedFor?: string | null;
+  status?: 'planned' | 'completed';
+  completedAt?: string | null;
+  durationS?: number | null;
+  perceivedExertion?: number | null;
+  lowImpact?: boolean;
+  source?: SessionSource;
+}
+export interface SessionPatch {
+  plannedFor?: string | null;
+  status?: SessionStatus;
+  durationS?: number | null;
+  perceivedExertion?: number | null;
+  lowImpact?: boolean;
 }
 
 export const CURRENT_POLICY_VERSION = 'dev-0';

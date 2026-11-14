@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { router } from 'expo-router';
 import { goalProgress, lbToKg, summarizeWeights, type UnitSystem } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
+import { useDanceData } from '@/dance/hooks';
 import { useFoodData } from '@/food/hooks';
 import { MacroBars } from '@/food/ui';
 import { Ring } from '@/ui/motion';
@@ -29,6 +30,7 @@ export default function Today() {
     readiness: await s.latestReadiness(),
   }));
   const food = useFoodData();
+  const dance = useDanceData();
   const [entry, setEntry] = useState('');
   const [msg, setMsg] = useState<{ text: string; warn: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -126,6 +128,55 @@ export default function Today() {
               onPress={() => router.push('/progress')}
             />
           ) : null}
+        </Card>
+      </FadeIn>
+
+      <FadeIn>
+        <Card>
+          <AppText variant="heading">{t('today.moveTitle')}</AppText>
+          {dance.todayPlanned.length === 0 && dance.doneToday.length === 0 ? (
+            <AppText muted>{t('today.moveNone')}</AppText>
+          ) : null}
+          {dance.doneToday.map((s) => (
+            <AppText
+              key={s.id}
+              accessibilityLabel={`${t('today.doneToday')}: ${s.title}`}
+            >{`✓ ${s.title} · ${t('today.doneToday')}`}</AppText>
+          ))}
+          {dance.todayPlanned.map((s) => (
+            <View key={s.id} style={{ gap: spacing.xs }}>
+              <AppText variant="label">{`${s.title} · ${t('dance.minutes', { n: s.minutes })}`}</AppText>
+              <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
+                {s.workoutId ? (
+                  <Button
+                    label={t('sch.start')}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/dance/session',
+                        params: { id: s.workoutId!, low: s.lowImpact ? '1' : '0', sessionId: s.id },
+                      })
+                    }
+                  />
+                ) : null}
+                <Button
+                  variant="secondary"
+                  label={t('sch.done')}
+                  onPress={() =>
+                    void store.updateSession(s.id, { status: 'completed' }).catch(() => undefined)
+                  }
+                />
+              </View>
+            </View>
+          ))}
+          <AppText variant="caption" muted>
+            {t('today.weekLine', {
+              n: dance.summary.thisWeek.sessions,
+              m: dance.summary.thisWeek.minutes,
+            })}
+          </AppText>
+          <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
+            <Button label={t('tabs.dance')} onPress={() => router.push('/dance')} />
+          </View>
         </Card>
       </FadeIn>
 

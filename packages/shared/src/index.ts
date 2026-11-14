@@ -13,3 +13,7 @@ export * from './progress';
 export * from './food';
 export * from './food-data';
 export * from './energy-guide';
+export * from './workouts';
+export * from './session-engine';
+export * from './licensing';
+export * from './activity';

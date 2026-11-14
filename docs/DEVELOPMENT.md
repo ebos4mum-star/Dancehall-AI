@@ -42,7 +42,7 @@ serve the output with any static server and open it at phone width. This checks 
 
 ## Food data and the seed
 
-`packages/shared/src/food-data.json` is the single source of the synthetic reference foods (used by the app and the database). After editing it run `node scripts/gen-food-seed.mjs` to regenerate `supabase/seed.sql`; `pnpm check:seed` (part of `pnpm verify` and CI) fails if they differ.
+`packages/shared/src/food-data.json` and `workout-data.json` are the single sources of the synthetic reference foods and sample workouts (used by the app and the database). After editing it run `node scripts/gen-seed.mjs` to regenerate `supabase/seed.sql`; `pnpm check:seed` (part of `pnpm verify` and CI) fails if they differ.
 
 ## Trying the food flow without a camera
 

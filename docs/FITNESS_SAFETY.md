@@ -34,3 +34,12 @@ No medical claims, no promises of results, no "spot reduction" claims. Use "can 
 - Pregnancy and postpartum content needs specialist review before any such content exists.
 - Content for older adults, people with limited mobility and injury returners is deferred until reviewed.
 - Insurance and liability review for fitness content (owner decision).
+
+## 6. Implemented in Batch C (local; sample text outlines)
+
+- **Structure is enforced, not just recommended.** A workout cannot be published unless it has a warm-up, a main section, a cool-down, a duration for every block, **a low-impact version of every block**, and safety notes. This is checked in the database (`app.blocks_problems`, tested) and mirrored in shared code and the admin checklist.
+- **Low-impact is a full alternative.** It can be switched on before starting or mid-session without losing your place. When the readiness screening routed someone to low-impact options, Quick Fit suggestions are limited to low-impact workouts and the low-impact version is switched on by default (they can turn it off). High-impact workouts say so before you start.
+- **Guided sessions** run from text and a timer: pause, skip, previous, and end early. Only time actually spent exercising is recorded (paused and skipped time is not).
+- **Gentle tracking.** Activity totals show sessions, minutes and active days per week with no streaks to lose and no penalties for rest days; effort is a self-rated "easy / moderate / hard / very hard".
+- **The sample content is not reviewed.** The 14 outlines are original, generic and text-only, and are marked as samples in the data, the database (`is_synthetic`, immutable) and every screen. They cannot pass the public-release checklist; real routines need review by a certified fitness professional who is not the author (gate F1).
+- **Not built:** adaptive plan progression, pregnancy/postpartum or injury-return content, and any video or music guidance.

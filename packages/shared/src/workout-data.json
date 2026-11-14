@@ -1,0 +1,1195 @@
+{
+  "_notice": "SAMPLE text-only workout outlines for development. They contain no video, music or instructor likeness and are NOT professionally reviewed. Movements are generic and original. Real content needs a certified fitness professional's review (gate F1) and cleared rights (gates L1-L3) before release.",
+  "isSynthetic": true,
+  "instructors": [
+    {
+      "id": "sample-instructor",
+      "displayName": "Sample Instructor (placeholder)",
+      "bio": "A placeholder record that stands in for a real instructor. Real instructors appear only with a signed agreement covering name, image, voice and likeness."
+    }
+  ],
+  "workouts": [
+    {
+      "id": "qf5-afrobeats-wake-up",
+      "title": "Afrobeats Wake-Up",
+      "style": "afrobeats",
+      "level": "beginner",
+      "minutes": 5,
+      "intensity": "moderate",
+      "impact": "low",
+      "summary": "A five-minute bounce-and-sway session to start the day.",
+      "instructorId": null,
+      "equipment": "none",
+      "contentOrigin": "original_text",
+      "blocks": [
+        {
+          "kind": "warmup",
+          "title": "Easy march and shoulder rolls",
+          "seconds": 30,
+          "cue": "Walk in place and roll the shoulders to raise your heart rate gently.",
+          "lowImpactAlt": "Seated march with shoulder rolls."
+        },
+        {
+          "kind": "warmup",
+          "title": "Dynamic stretches",
+          "seconds": 30,
+          "cue": "Reach overhead, side-bend, and gentle hip circles.",
+          "lowImpactAlt": "Do it seated."
+        },
+        {
+          "kind": "main",
+          "title": "Bounce and sway",
+          "seconds": 97,
+          "cue": "Soft knees, bounce on the beat and let your shoulders sway side to side.",
+          "lowImpactAlt": "Same sway standing tall with small steps; no bounce."
+        },
+        {
+          "kind": "main",
+          "title": "Step-tap with arm swing",
+          "seconds": 98,
+          "cue": "Step to the side, tap the other foot in, swing the arms in a relaxed arc.",
+          "lowImpactAlt": "Step without the tap; keep the arm swing low."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Slow walk and breathing",
+          "seconds": 22,
+          "cue": "Walk in place slowly and breathe in through the nose, out through the mouth.",
+          "lowImpactAlt": "Seated, same breathing."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Gentle stretches",
+          "seconds": 23,
+          "cue": "Hold calf, quad and chest stretches for about 20 seconds each, without bouncing.",
+          "lowImpactAlt": "Seated versions of each stretch."
+        }
+      ],
+      "safety": [
+        "Stop if you feel chest pain, dizziness or unusual shortness of breath, and speak to a health professional.",
+        "Clear a safe space, wear supportive footwear and keep water nearby.",
+        "You can switch to the low-impact version at any time; it is a full workout, not a lesser one."
+      ]
+    },
+    {
+      "id": "qf5-lowimpact-reset",
+      "title": "Low-Impact Reset",
+      "style": "low_impact",
+      "level": "beginner",
+      "minutes": 5,
+      "intensity": "low",
+      "impact": "low",
+      "summary": "Gentle standing movement to loosen up. Seated option throughout.",
+      "instructorId": null,
+      "equipment": "none",
+      "contentOrigin": "original_text",
+      "blocks": [
+        {
+          "kind": "warmup",
+          "title": "Easy march and shoulder rolls",
+          "seconds": 30,
+          "cue": "Walk in place and roll the shoulders to raise your heart rate gently.",
+          "lowImpactAlt": "Seated march with shoulder rolls."
+        },
+        {
+          "kind": "warmup",
+          "title": "Dynamic stretches",
+          "seconds": 30,
+          "cue": "Reach overhead, side-bend, and gentle hip circles.",
+          "lowImpactAlt": "Do it seated."
+        },
+        {
+          "kind": "main",
+          "title": "March in place",
+          "seconds": 97,
+          "cue": "Lift the knees to a comfortable height and swing the arms.",
+          "lowImpactAlt": "Seated march; lift heels only."
+        },
+        {
+          "kind": "main",
+          "title": "Standing knee lift",
+          "seconds": 98,
+          "cue": "Lift one knee at a time while twisting gently toward it.",
+          "lowImpactAlt": "Tap the toe to the floor instead of lifting."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Slow walk and breathing",
+          "seconds": 22,
+          "cue": "Walk in place slowly and breathe in through the nose, out through the mouth.",
+          "lowImpactAlt": "Seated, same breathing."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Gentle stretches",
+          "seconds": 23,
+          "cue": "Hold calf, quad and chest stretches for about 20 seconds each, without bouncing.",
+          "lowImpactAlt": "Seated versions of each stretch."
+        }
+      ],
+      "safety": [
+        "Stop if you feel chest pain, dizziness or unusual shortness of breath, and speak to a health professional.",
+        "Clear a safe space, wear supportive footwear and keep water nearby.",
+        "You can switch to the low-impact version at any time; it is a full workout, not a lesser one."
+      ]
+    },
+    {
+      "id": "qf10-amapiano-groove",
+      "title": "Amapiano Groove 10",
+      "style": "amapiano",
+      "level": "beginner",
+      "minutes": 10,
+      "intensity": "moderate",
+      "impact": "low",
+      "summary": "Relaxed, rhythmic grooves with soft knees. Ten minutes, easy to follow.",
+      "instructorId": null,
+      "equipment": "none",
+      "contentOrigin": "original_text",
+      "blocks": [
+        {
+          "kind": "warmup",
+          "title": "Easy march and shoulder rolls",
+          "seconds": 45,
+          "cue": "Walk in place and roll the shoulders to raise your heart rate gently.",
+          "lowImpactAlt": "Seated march with shoulder rolls."
+        },
+        {
+          "kind": "warmup",
+          "title": "Dynamic stretches",
+          "seconds": 45,
+          "cue": "Reach overhead, side-bend, and gentle hip circles.",
+          "lowImpactAlt": "Do it seated."
+        },
+        {
+          "kind": "main",
+          "title": "Slow groove sway",
+          "seconds": 110,
+          "cue": "Deep, relaxed sway with soft knees; let the hips lead.",
+          "lowImpactAlt": "Smaller sway, feet stay planted."
+        },
+        {
+          "kind": "main",
+          "title": "Knee-pulse step",
+          "seconds": 110,
+          "cue": "Pulse both knees in time while stepping side to side.",
+          "lowImpactAlt": "Shift weight side to side without pulsing."
+        },
+        {
+          "kind": "main",
+          "title": "Cross-step glide",
+          "seconds": 110,
+          "cue": "Cross one foot in front, glide it back, alternate sides.",
+          "lowImpactAlt": "Tap instead of crossing; keep steps small."
+        },
+        {
+          "kind": "main",
+          "title": "Shoulder roll flow",
+          "seconds": 110,
+          "cue": "Roll the shoulders back in time while keeping a steady step.",
+          "lowImpactAlt": "Roll the shoulders standing still."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Slow walk and breathing",
+          "seconds": 35,
+          "cue": "Walk in place slowly and breathe in through the nose, out through the mouth.",
+          "lowImpactAlt": "Seated, same breathing."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Gentle stretches",
+          "seconds": 35,
+          "cue": "Hold calf, quad and chest stretches for about 20 seconds each, without bouncing.",
+          "lowImpactAlt": "Seated versions of each stretch."
+        }
+      ],
+      "safety": [
+        "Stop if you feel chest pain, dizziness or unusual shortness of breath, and speak to a health professional.",
+        "Clear a safe space, wear supportive footwear and keep water nearby.",
+        "You can switch to the low-impact version at any time; it is a full workout, not a lesser one."
+      ]
+    },
+    {
+      "id": "qf10-hiphop-bounce",
+      "title": "Hip-Hop Bounce 10",
+      "style": "hip_hop",
+      "level": "intermediate",
+      "minutes": 10,
+      "intensity": "high",
+      "impact": "moderate",
+      "summary": "Low stance, strong arms and quick steps in a short, punchy session.",
+      "instructorId": null,
+      "equipment": "none",
+      "contentOrigin": "original_text",
+      "blocks": [
+        {
+          "kind": "warmup",
+          "title": "Easy march and shoulder rolls",
+          "seconds": 45,
+          "cue": "Walk in place and roll the shoulders to raise your heart rate gently.",
+          "lowImpactAlt": "Seated march with shoulder rolls."
+        },
+        {
+          "kind": "warmup",
+          "title": "Dynamic stretches",
+          "seconds": 45,
+          "cue": "Reach overhead, side-bend, and gentle hip circles.",
+          "lowImpactAlt": "Do it seated."
+        },
+        {
+          "kind": "main",
+          "title": "Bounce and rock",
+          "seconds": 110,
+          "cue": "Bounce in a low stance and rock your weight forward and back.",
+          "lowImpactAlt": "Rock forward and back without bouncing."
+        },
+        {
+          "kind": "main",
+          "title": "Step-clap",
+          "seconds": 110,
+          "cue": "Step out wide, clap, step in, clap.",
+          "lowImpactAlt": "Step out with one foot at a time, skip the wide stance."
+        },
+        {
+          "kind": "main",
+          "title": "Arm-line groove",
+          "seconds": 110,
+          "cue": "Make sharp arm lines (up, across, down) over a steady bounce.",
+          "lowImpactAlt": "Make the arm lines slowly, standing still."
+        },
+        {
+          "kind": "main",
+          "title": "Quarter-turn step",
+          "seconds": 110,
+          "cue": "Step and turn a quarter each time with a pause on the beat.",
+          "lowImpactAlt": "Face forward and step side to side."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Slow walk and breathing",
+          "seconds": 35,
+          "cue": "Walk in place slowly and breathe in through the nose, out through the mouth.",
+          "lowImpactAlt": "Seated, same breathing."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Gentle stretches",
+          "seconds": 35,
+          "cue": "Hold calf, quad and chest stretches for about 20 seconds each, without bouncing.",
+          "lowImpactAlt": "Seated versions of each stretch."
+        }
+      ],
+      "safety": [
+        "Stop if you feel chest pain, dizziness or unusual shortness of breath, and speak to a health professional.",
+        "Clear a safe space, wear supportive footwear and keep water nearby.",
+        "You can switch to the low-impact version at any time; it is a full workout, not a lesser one."
+      ]
+    },
+    {
+      "id": "qf10-latin-rhythm",
+      "title": "Latin Rhythm 10",
+      "style": "latin",
+      "level": "beginner",
+      "minutes": 10,
+      "intensity": "moderate",
+      "impact": "low",
+      "summary": "Side steps, hip sway and a simple cross-body walk.",
+      "instructorId": null,
+      "equipment": "none",
+      "contentOrigin": "original_text",
+      "blocks": [
+        {
+          "kind": "warmup",
+          "title": "Easy march and shoulder rolls",
+          "seconds": 45,
+          "cue": "Walk in place and roll the shoulders to raise your heart rate gently.",
+          "lowImpactAlt": "Seated march with shoulder rolls."
+        },
+        {
+          "kind": "warmup",
+          "title": "Dynamic stretches",
+          "seconds": 45,
+          "cue": "Reach overhead, side-bend, and gentle hip circles.",
+          "lowImpactAlt": "Do it seated."
+        },
+        {
+          "kind": "main",
+          "title": "Basic side step",
+          "seconds": 110,
+          "cue": "Step side, together, side, tap with relaxed hips.",
+          "lowImpactAlt": "Step side and tap without hip movement."
+        },
+        {
+          "kind": "main",
+          "title": "Forward-back rhythm",
+          "seconds": 110,
+          "cue": "Step forward, rock back, replace, with a gentle hip sway.",
+          "lowImpactAlt": "Smaller steps with flat feet."
+        },
+        {
+          "kind": "main",
+          "title": "Cross-body walk",
+          "seconds": 110,
+          "cue": "Walk a loose diagonal path across the room with a hip sway.",
+          "lowImpactAlt": "March in place with a slight sway."
+        },
+        {
+          "kind": "main",
+          "title": "Hip circle step",
+          "seconds": 110,
+          "cue": "Circle the hips slowly on every second step.",
+          "lowImpactAlt": "Circle the hips standing still."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Slow walk and breathing",
+          "seconds": 35,
+          "cue": "Walk in place slowly and breathe in through the nose, out through the mouth.",
+          "lowImpactAlt": "Seated, same breathing."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Gentle stretches",
+          "seconds": 35,
+          "cue": "Hold calf, quad and chest stretches for about 20 seconds each, without bouncing.",
+          "lowImpactAlt": "Seated versions of each stretch."
+        }
+      ],
+      "safety": [
+        "Stop if you feel chest pain, dizziness or unusual shortness of breath, and speak to a health professional.",
+        "Clear a safe space, wear supportive footwear and keep water nearby.",
+        "You can switch to the low-impact version at any time; it is a full workout, not a lesser one."
+      ]
+    },
+    {
+      "id": "qf10-bollywood-energy",
+      "title": "Bollywood Energy 10",
+      "style": "bollywood",
+      "level": "intermediate",
+      "minutes": 10,
+      "intensity": "moderate",
+      "impact": "moderate",
+      "summary": "Big arm sweeps, shimmies and a slow turn.",
+      "instructorId": null,
+      "equipment": "none",
+      "contentOrigin": "original_text",
+      "blocks": [
+        {
+          "kind": "warmup",
+          "title": "Easy march and shoulder rolls",
+          "seconds": 45,
+          "cue": "Walk in place and roll the shoulders to raise your heart rate gently.",
+          "lowImpactAlt": "Seated march with shoulder rolls."
+        },
+        {
+          "kind": "warmup",
+          "title": "Dynamic stretches",
+          "seconds": 45,
+          "cue": "Reach overhead, side-bend, and gentle hip circles.",
+          "lowImpactAlt": "Do it seated."
+        },
+        {
+          "kind": "main",
+          "title": "Arm sweep side step",
+          "seconds": 110,
+          "cue": "Sweep both arms overhead as you step wide, then bring them down.",
+          "lowImpactAlt": "Sweep the arms at chest height with small steps."
+        },
+        {
+          "kind": "main",
+          "title": "Shoulder shimmy walk",
+          "seconds": 110,
+          "cue": "Walk forward four steps with a light shoulder shimmy.",
+          "lowImpactAlt": "Shimmy the shoulders while marching in place."
+        },
+        {
+          "kind": "main",
+          "title": "Spin and pose",
+          "seconds": 110,
+          "cue": "Turn once slowly and hold a tall pose for a beat.",
+          "lowImpactAlt": "Replace the turn with a step-and-pose."
+        },
+        {
+          "kind": "main",
+          "title": "Hand-flow step",
+          "seconds": 110,
+          "cue": "Float the hands in soft circles as you step side to side.",
+          "lowImpactAlt": "Same hand flow seated or with feet planted."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Slow walk and breathing",
+          "seconds": 35,
+          "cue": "Walk in place slowly and breathe in through the nose, out through the mouth.",
+          "lowImpactAlt": "Seated, same breathing."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Gentle stretches",
+          "seconds": 35,
+          "cue": "Hold calf, quad and chest stretches for about 20 seconds each, without bouncing.",
+          "lowImpactAlt": "Seated versions of each stretch."
+        }
+      ],
+      "safety": [
+        "Stop if you feel chest pain, dizziness or unusual shortness of breath, and speak to a health professional.",
+        "Clear a safe space, wear supportive footwear and keep water nearby.",
+        "You can switch to the low-impact version at any time; it is a full workout, not a lesser one.",
+        "Take the turn slowly and keep your eyes on a fixed point to stay balanced."
+      ]
+    },
+    {
+      "id": "qf15-afrobeats-burn",
+      "title": "Afrobeats Cardio 15",
+      "style": "afrobeats",
+      "level": "intermediate",
+      "minutes": 15,
+      "intensity": "high",
+      "impact": "moderate",
+      "summary": "A fifteen-minute cardio session built on bouncy, high-energy steps.",
+      "instructorId": null,
+      "equipment": "none",
+      "contentOrigin": "original_text",
+      "blocks": [
+        {
+          "kind": "warmup",
+          "title": "Easy march and shoulder rolls",
+          "seconds": 67,
+          "cue": "Walk in place and roll the shoulders to raise your heart rate gently.",
+          "lowImpactAlt": "Seated march with shoulder rolls."
+        },
+        {
+          "kind": "warmup",
+          "title": "Dynamic stretches",
+          "seconds": 68,
+          "cue": "Reach overhead, side-bend, and gentle hip circles.",
+          "lowImpactAlt": "Do it seated."
+        },
+        {
+          "kind": "main",
+          "title": "Bounce and sway",
+          "seconds": 163,
+          "cue": "Soft knees, bounce on the beat and let your shoulders sway side to side.",
+          "lowImpactAlt": "Same sway standing tall with small steps; no bounce."
+        },
+        {
+          "kind": "main",
+          "title": "Step-tap with arm swing",
+          "seconds": 163,
+          "cue": "Step to the side, tap the other foot in, swing the arms in a relaxed arc.",
+          "lowImpactAlt": "Step without the tap; keep the arm swing low."
+        },
+        {
+          "kind": "main",
+          "title": "Heel-toe pulse",
+          "seconds": 163,
+          "cue": "Alternate heel then toe taps forward while pulsing the chest.",
+          "lowImpactAlt": "Tap the heel only, feet stay close to the floor."
+        },
+        {
+          "kind": "main",
+          "title": "Grapevine groove",
+          "seconds": 166,
+          "cue": "Four steps to one side then back, adding a gentle hip roll.",
+          "lowImpactAlt": "Two steps each way with no hip roll."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Slow walk and breathing",
+          "seconds": 55,
+          "cue": "Walk in place slowly and breathe in through the nose, out through the mouth.",
+          "lowImpactAlt": "Seated, same breathing."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Gentle stretches",
+          "seconds": 55,
+          "cue": "Hold calf, quad and chest stretches for about 20 seconds each, without bouncing.",
+          "lowImpactAlt": "Seated versions of each stretch."
+        }
+      ],
+      "safety": [
+        "Stop if you feel chest pain, dizziness or unusual shortness of breath, and speak to a health professional.",
+        "Clear a safe space, wear supportive footwear and keep water nearby.",
+        "You can switch to the low-impact version at any time; it is a full workout, not a lesser one."
+      ]
+    },
+    {
+      "id": "qf15-lowimpact-flow",
+      "title": "Low-Impact Flow 15",
+      "style": "low_impact",
+      "level": "beginner",
+      "minutes": 15,
+      "intensity": "low",
+      "impact": "low",
+      "summary": "A full quarter-hour of low-impact dance fitness with seated options.",
+      "instructorId": null,
+      "equipment": "none",
+      "contentOrigin": "original_text",
+      "blocks": [
+        {
+          "kind": "warmup",
+          "title": "Easy march and shoulder rolls",
+          "seconds": 67,
+          "cue": "Walk in place and roll the shoulders to raise your heart rate gently.",
+          "lowImpactAlt": "Seated march with shoulder rolls."
+        },
+        {
+          "kind": "warmup",
+          "title": "Dynamic stretches",
+          "seconds": 68,
+          "cue": "Reach overhead, side-bend, and gentle hip circles.",
+          "lowImpactAlt": "Do it seated."
+        },
+        {
+          "kind": "main",
+          "title": "March in place",
+          "seconds": 163,
+          "cue": "Lift the knees to a comfortable height and swing the arms.",
+          "lowImpactAlt": "Seated march; lift heels only."
+        },
+        {
+          "kind": "main",
+          "title": "Standing knee lift",
+          "seconds": 163,
+          "cue": "Lift one knee at a time while twisting gently toward it.",
+          "lowImpactAlt": "Tap the toe to the floor instead of lifting."
+        },
+        {
+          "kind": "main",
+          "title": "Step-touch",
+          "seconds": 163,
+          "cue": "Step side to side and touch the feet together.",
+          "lowImpactAlt": "Same with the smallest steps."
+        },
+        {
+          "kind": "main",
+          "title": "Arm reach flow",
+          "seconds": 166,
+          "cue": "Reach up, out and across the body in a slow flow.",
+          "lowImpactAlt": "Do it seated."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Slow walk and breathing",
+          "seconds": 55,
+          "cue": "Walk in place slowly and breathe in through the nose, out through the mouth.",
+          "lowImpactAlt": "Seated, same breathing."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Gentle stretches",
+          "seconds": 55,
+          "cue": "Hold calf, quad and chest stretches for about 20 seconds each, without bouncing.",
+          "lowImpactAlt": "Seated versions of each stretch."
+        }
+      ],
+      "safety": [
+        "Stop if you feel chest pain, dizziness or unusual shortness of breath, and speak to a health professional.",
+        "Clear a safe space, wear supportive footwear and keep water nearby.",
+        "You can switch to the low-impact version at any time; it is a full workout, not a lesser one."
+      ]
+    },
+    {
+      "id": "qf15-latin-cardio",
+      "title": "Latin Cardio 15",
+      "style": "latin",
+      "level": "intermediate",
+      "minutes": 15,
+      "intensity": "moderate",
+      "impact": "moderate",
+      "summary": "Steady Latin-inspired cardio with forward-back rhythm and hip circles.",
+      "instructorId": null,
+      "equipment": "none",
+      "contentOrigin": "original_text",
+      "blocks": [
+        {
+          "kind": "warmup",
+          "title": "Easy march and shoulder rolls",
+          "seconds": 67,
+          "cue": "Walk in place and roll the shoulders to raise your heart rate gently.",
+          "lowImpactAlt": "Seated march with shoulder rolls."
+        },
+        {
+          "kind": "warmup",
+          "title": "Dynamic stretches",
+          "seconds": 68,
+          "cue": "Reach overhead, side-bend, and gentle hip circles.",
+          "lowImpactAlt": "Do it seated."
+        },
+        {
+          "kind": "main",
+          "title": "Basic side step",
+          "seconds": 163,
+          "cue": "Step side, together, side, tap with relaxed hips.",
+          "lowImpactAlt": "Step side and tap without hip movement."
+        },
+        {
+          "kind": "main",
+          "title": "Forward-back rhythm",
+          "seconds": 163,
+          "cue": "Step forward, rock back, replace, with a gentle hip sway.",
+          "lowImpactAlt": "Smaller steps with flat feet."
+        },
+        {
+          "kind": "main",
+          "title": "Cross-body walk",
+          "seconds": 163,
+          "cue": "Walk a loose diagonal path across the room with a hip sway.",
+          "lowImpactAlt": "March in place with a slight sway."
+        },
+        {
+          "kind": "main",
+          "title": "Hip circle step",
+          "seconds": 166,
+          "cue": "Circle the hips slowly on every second step.",
+          "lowImpactAlt": "Circle the hips standing still."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Slow walk and breathing",
+          "seconds": 55,
+          "cue": "Walk in place slowly and breathe in through the nose, out through the mouth.",
+          "lowImpactAlt": "Seated, same breathing."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Gentle stretches",
+          "seconds": 55,
+          "cue": "Hold calf, quad and chest stretches for about 20 seconds each, without bouncing.",
+          "lowImpactAlt": "Seated versions of each stretch."
+        }
+      ],
+      "safety": [
+        "Stop if you feel chest pain, dizziness or unusual shortness of breath, and speak to a health professional.",
+        "Clear a safe space, wear supportive footwear and keep water nearby.",
+        "You can switch to the low-impact version at any time; it is a full workout, not a lesser one."
+      ]
+    },
+    {
+      "id": "w20-amapiano-slow-burn",
+      "title": "Amapiano Slow Burn",
+      "style": "amapiano",
+      "level": "beginner",
+      "minutes": 20,
+      "intensity": "moderate",
+      "impact": "low",
+      "summary": "Twenty minutes of deep grooves that build gradually.",
+      "instructorId": null,
+      "equipment": "none",
+      "contentOrigin": "original_text",
+      "blocks": [
+        {
+          "kind": "warmup",
+          "title": "Easy march and shoulder rolls",
+          "seconds": 90,
+          "cue": "Walk in place and roll the shoulders to raise your heart rate gently.",
+          "lowImpactAlt": "Seated march with shoulder rolls."
+        },
+        {
+          "kind": "warmup",
+          "title": "Dynamic stretches",
+          "seconds": 90,
+          "cue": "Reach overhead, side-bend, and gentle hip circles.",
+          "lowImpactAlt": "Do it seated."
+        },
+        {
+          "kind": "main",
+          "title": "Slow groove sway",
+          "seconds": 145,
+          "cue": "Deep, relaxed sway with soft knees; let the hips lead.",
+          "lowImpactAlt": "Smaller sway, feet stay planted."
+        },
+        {
+          "kind": "main",
+          "title": "Knee-pulse step",
+          "seconds": 145,
+          "cue": "Pulse both knees in time while stepping side to side.",
+          "lowImpactAlt": "Shift weight side to side without pulsing."
+        },
+        {
+          "kind": "main",
+          "title": "Cross-step glide",
+          "seconds": 145,
+          "cue": "Cross one foot in front, glide it back, alternate sides.",
+          "lowImpactAlt": "Tap instead of crossing; keep steps small."
+        },
+        {
+          "kind": "main",
+          "title": "Shoulder roll flow",
+          "seconds": 145,
+          "cue": "Roll the shoulders back in time while keeping a steady step.",
+          "lowImpactAlt": "Roll the shoulders standing still."
+        },
+        {
+          "kind": "main",
+          "title": "Slow groove sway",
+          "seconds": 145,
+          "cue": "Deep, relaxed sway with soft knees; let the hips lead.",
+          "lowImpactAlt": "Smaller sway, feet stay planted."
+        },
+        {
+          "kind": "main",
+          "title": "Knee-pulse step",
+          "seconds": 150,
+          "cue": "Pulse both knees in time while stepping side to side.",
+          "lowImpactAlt": "Shift weight side to side without pulsing."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Slow walk and breathing",
+          "seconds": 72,
+          "cue": "Walk in place slowly and breathe in through the nose, out through the mouth.",
+          "lowImpactAlt": "Seated, same breathing."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Gentle stretches",
+          "seconds": 73,
+          "cue": "Hold calf, quad and chest stretches for about 20 seconds each, without bouncing.",
+          "lowImpactAlt": "Seated versions of each stretch."
+        }
+      ],
+      "safety": [
+        "Stop if you feel chest pain, dizziness or unusual shortness of breath, and speak to a health professional.",
+        "Clear a safe space, wear supportive footwear and keep water nearby.",
+        "You can switch to the low-impact version at any time; it is a full workout, not a lesser one."
+      ]
+    },
+    {
+      "id": "w20-bollywood-fusion",
+      "title": "Bollywood Fusion",
+      "style": "bollywood",
+      "level": "intermediate",
+      "minutes": 20,
+      "intensity": "moderate",
+      "impact": "moderate",
+      "summary": "Expressive arm work and footwork over twenty minutes.",
+      "instructorId": null,
+      "equipment": "none",
+      "contentOrigin": "original_text",
+      "blocks": [
+        {
+          "kind": "warmup",
+          "title": "Easy march and shoulder rolls",
+          "seconds": 90,
+          "cue": "Walk in place and roll the shoulders to raise your heart rate gently.",
+          "lowImpactAlt": "Seated march with shoulder rolls."
+        },
+        {
+          "kind": "warmup",
+          "title": "Dynamic stretches",
+          "seconds": 90,
+          "cue": "Reach overhead, side-bend, and gentle hip circles.",
+          "lowImpactAlt": "Do it seated."
+        },
+        {
+          "kind": "main",
+          "title": "Arm sweep side step",
+          "seconds": 145,
+          "cue": "Sweep both arms overhead as you step wide, then bring them down.",
+          "lowImpactAlt": "Sweep the arms at chest height with small steps."
+        },
+        {
+          "kind": "main",
+          "title": "Shoulder shimmy walk",
+          "seconds": 145,
+          "cue": "Walk forward four steps with a light shoulder shimmy.",
+          "lowImpactAlt": "Shimmy the shoulders while marching in place."
+        },
+        {
+          "kind": "main",
+          "title": "Spin and pose",
+          "seconds": 145,
+          "cue": "Turn once slowly and hold a tall pose for a beat.",
+          "lowImpactAlt": "Replace the turn with a step-and-pose."
+        },
+        {
+          "kind": "main",
+          "title": "Hand-flow step",
+          "seconds": 145,
+          "cue": "Float the hands in soft circles as you step side to side.",
+          "lowImpactAlt": "Same hand flow seated or with feet planted."
+        },
+        {
+          "kind": "main",
+          "title": "Arm sweep side step",
+          "seconds": 145,
+          "cue": "Sweep both arms overhead as you step wide, then bring them down.",
+          "lowImpactAlt": "Sweep the arms at chest height with small steps."
+        },
+        {
+          "kind": "main",
+          "title": "Shoulder shimmy walk",
+          "seconds": 150,
+          "cue": "Walk forward four steps with a light shoulder shimmy.",
+          "lowImpactAlt": "Shimmy the shoulders while marching in place."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Slow walk and breathing",
+          "seconds": 72,
+          "cue": "Walk in place slowly and breathe in through the nose, out through the mouth.",
+          "lowImpactAlt": "Seated, same breathing."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Gentle stretches",
+          "seconds": 73,
+          "cue": "Hold calf, quad and chest stretches for about 20 seconds each, without bouncing.",
+          "lowImpactAlt": "Seated versions of each stretch."
+        }
+      ],
+      "safety": [
+        "Stop if you feel chest pain, dizziness or unusual shortness of breath, and speak to a health professional.",
+        "Clear a safe space, wear supportive footwear and keep water nearby.",
+        "You can switch to the low-impact version at any time; it is a full workout, not a lesser one."
+      ]
+    },
+    {
+      "id": "w30-afrobeats-party",
+      "title": "Afrobeats Party Cardio",
+      "style": "afrobeats",
+      "level": "advanced",
+      "minutes": 30,
+      "intensity": "high",
+      "impact": "high",
+      "summary": "A longer, high-energy session with fast footwork and jumps.",
+      "instructorId": null,
+      "equipment": "none",
+      "contentOrigin": "original_text",
+      "blocks": [
+        {
+          "kind": "warmup",
+          "title": "Easy march and shoulder rolls",
+          "seconds": 135,
+          "cue": "Walk in place and roll the shoulders to raise your heart rate gently.",
+          "lowImpactAlt": "Seated march with shoulder rolls."
+        },
+        {
+          "kind": "warmup",
+          "title": "Dynamic stretches",
+          "seconds": 135,
+          "cue": "Reach overhead, side-bend, and gentle hip circles.",
+          "lowImpactAlt": "Do it seated."
+        },
+        {
+          "kind": "main",
+          "title": "Bounce and sway",
+          "seconds": 219,
+          "cue": "Soft knees, bounce on the beat and let your shoulders sway side to side.",
+          "lowImpactAlt": "Same sway standing tall with small steps; no bounce."
+        },
+        {
+          "kind": "main",
+          "title": "Step-tap with arm swing",
+          "seconds": 219,
+          "cue": "Step to the side, tap the other foot in, swing the arms in a relaxed arc.",
+          "lowImpactAlt": "Step without the tap; keep the arm swing low."
+        },
+        {
+          "kind": "main",
+          "title": "Heel-toe pulse",
+          "seconds": 219,
+          "cue": "Alternate heel then toe taps forward while pulsing the chest.",
+          "lowImpactAlt": "Tap the heel only, feet stay close to the floor."
+        },
+        {
+          "kind": "main",
+          "title": "Grapevine groove",
+          "seconds": 219,
+          "cue": "Four steps to one side then back, adding a gentle hip roll.",
+          "lowImpactAlt": "Two steps each way with no hip roll."
+        },
+        {
+          "kind": "main",
+          "title": "Bounce and sway",
+          "seconds": 219,
+          "cue": "Soft knees, bounce on the beat and let your shoulders sway side to side.",
+          "lowImpactAlt": "Same sway standing tall with small steps; no bounce."
+        },
+        {
+          "kind": "main",
+          "title": "Step-tap with arm swing",
+          "seconds": 220,
+          "cue": "Step to the side, tap the other foot in, swing the arms in a relaxed arc.",
+          "lowImpactAlt": "Step without the tap; keep the arm swing low."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Slow walk and breathing",
+          "seconds": 107,
+          "cue": "Walk in place slowly and breathe in through the nose, out through the mouth.",
+          "lowImpactAlt": "Seated, same breathing."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Gentle stretches",
+          "seconds": 108,
+          "cue": "Hold calf, quad and chest stretches for about 20 seconds each, without bouncing.",
+          "lowImpactAlt": "Seated versions of each stretch."
+        }
+      ],
+      "safety": [
+        "This workout includes jumping or fast footwork. If you are new to exercise or returning after a break, start with the low-impact version.",
+        "Stop if you feel chest pain, dizziness or unusual shortness of breath, and speak to a health professional.",
+        "Clear a safe space, wear supportive footwear and keep water nearby.",
+        "You can switch to the low-impact version at any time; it is a full workout, not a lesser one."
+      ]
+    },
+    {
+      "id": "w30-hiphop-groove",
+      "title": "Hip-Hop Groove 30",
+      "style": "hip_hop",
+      "level": "advanced",
+      "minutes": 30,
+      "intensity": "high",
+      "impact": "high",
+      "summary": "Thirty minutes of low-stance work, quick direction changes and sharp arm lines.",
+      "instructorId": null,
+      "equipment": "none",
+      "contentOrigin": "original_text",
+      "blocks": [
+        {
+          "kind": "warmup",
+          "title": "Easy march and shoulder rolls",
+          "seconds": 135,
+          "cue": "Walk in place and roll the shoulders to raise your heart rate gently.",
+          "lowImpactAlt": "Seated march with shoulder rolls."
+        },
+        {
+          "kind": "warmup",
+          "title": "Dynamic stretches",
+          "seconds": 135,
+          "cue": "Reach overhead, side-bend, and gentle hip circles.",
+          "lowImpactAlt": "Do it seated."
+        },
+        {
+          "kind": "main",
+          "title": "Bounce and rock",
+          "seconds": 219,
+          "cue": "Bounce in a low stance and rock your weight forward and back.",
+          "lowImpactAlt": "Rock forward and back without bouncing."
+        },
+        {
+          "kind": "main",
+          "title": "Step-clap",
+          "seconds": 219,
+          "cue": "Step out wide, clap, step in, clap.",
+          "lowImpactAlt": "Step out with one foot at a time, skip the wide stance."
+        },
+        {
+          "kind": "main",
+          "title": "Arm-line groove",
+          "seconds": 219,
+          "cue": "Make sharp arm lines (up, across, down) over a steady bounce.",
+          "lowImpactAlt": "Make the arm lines slowly, standing still."
+        },
+        {
+          "kind": "main",
+          "title": "Quarter-turn step",
+          "seconds": 219,
+          "cue": "Step and turn a quarter each time with a pause on the beat.",
+          "lowImpactAlt": "Face forward and step side to side."
+        },
+        {
+          "kind": "main",
+          "title": "Bounce and rock",
+          "seconds": 219,
+          "cue": "Bounce in a low stance and rock your weight forward and back.",
+          "lowImpactAlt": "Rock forward and back without bouncing."
+        },
+        {
+          "kind": "main",
+          "title": "Step-clap",
+          "seconds": 220,
+          "cue": "Step out wide, clap, step in, clap.",
+          "lowImpactAlt": "Step out with one foot at a time, skip the wide stance."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Slow walk and breathing",
+          "seconds": 107,
+          "cue": "Walk in place slowly and breathe in through the nose, out through the mouth.",
+          "lowImpactAlt": "Seated, same breathing."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Gentle stretches",
+          "seconds": 108,
+          "cue": "Hold calf, quad and chest stretches for about 20 seconds each, without bouncing.",
+          "lowImpactAlt": "Seated versions of each stretch."
+        }
+      ],
+      "safety": [
+        "This workout includes jumping or fast footwork. If you are new to exercise or returning after a break, start with the low-impact version.",
+        "Stop if you feel chest pain, dizziness or unusual shortness of breath, and speak to a health professional.",
+        "Clear a safe space, wear supportive footwear and keep water nearby.",
+        "You can switch to the low-impact version at any time; it is a full workout, not a lesser one."
+      ]
+    },
+    {
+      "id": "w30-lowimpact-full-body",
+      "title": "Low-Impact Full Body",
+      "style": "low_impact",
+      "level": "beginner",
+      "minutes": 30,
+      "intensity": "low",
+      "impact": "low",
+      "summary": "A thirty-minute, joint-friendly session working the whole body.",
+      "instructorId": null,
+      "equipment": "none",
+      "contentOrigin": "original_text",
+      "blocks": [
+        {
+          "kind": "warmup",
+          "title": "Easy march and shoulder rolls",
+          "seconds": 135,
+          "cue": "Walk in place and roll the shoulders to raise your heart rate gently.",
+          "lowImpactAlt": "Seated march with shoulder rolls."
+        },
+        {
+          "kind": "warmup",
+          "title": "Dynamic stretches",
+          "seconds": 135,
+          "cue": "Reach overhead, side-bend, and gentle hip circles.",
+          "lowImpactAlt": "Do it seated."
+        },
+        {
+          "kind": "main",
+          "title": "March in place",
+          "seconds": 219,
+          "cue": "Lift the knees to a comfortable height and swing the arms.",
+          "lowImpactAlt": "Seated march; lift heels only."
+        },
+        {
+          "kind": "main",
+          "title": "Standing knee lift",
+          "seconds": 219,
+          "cue": "Lift one knee at a time while twisting gently toward it.",
+          "lowImpactAlt": "Tap the toe to the floor instead of lifting."
+        },
+        {
+          "kind": "main",
+          "title": "Step-touch",
+          "seconds": 219,
+          "cue": "Step side to side and touch the feet together.",
+          "lowImpactAlt": "Same with the smallest steps."
+        },
+        {
+          "kind": "main",
+          "title": "Arm reach flow",
+          "seconds": 219,
+          "cue": "Reach up, out and across the body in a slow flow.",
+          "lowImpactAlt": "Do it seated."
+        },
+        {
+          "kind": "main",
+          "title": "March in place",
+          "seconds": 219,
+          "cue": "Lift the knees to a comfortable height and swing the arms.",
+          "lowImpactAlt": "Seated march; lift heels only."
+        },
+        {
+          "kind": "main",
+          "title": "Standing knee lift",
+          "seconds": 220,
+          "cue": "Lift one knee at a time while twisting gently toward it.",
+          "lowImpactAlt": "Tap the toe to the floor instead of lifting."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Slow walk and breathing",
+          "seconds": 107,
+          "cue": "Walk in place slowly and breathe in through the nose, out through the mouth.",
+          "lowImpactAlt": "Seated, same breathing."
+        },
+        {
+          "kind": "cooldown",
+          "title": "Gentle stretches",
+          "seconds": 108,
+          "cue": "Hold calf, quad and chest stretches for about 20 seconds each, without bouncing.",
+          "lowImpactAlt": "Seated versions of each stretch."
+        }
+      ],
+      "safety": [
+        "Stop if you feel chest pain, dizziness or unusual shortness of breath, and speak to a health professional.",
+        "Clear a safe space, wear supportive footwear and keep water nearby.",
+        "You can switch to the low-impact version at any time; it is a full workout, not a lesser one."
+      ]
+    }
+  ],
+  "programs": [
+    {
+      "id": "sample-4wk-starter",
+      "title": "Sample 4-week starter (text only)",
+      "description": "A gentle four-week outline: three sessions a week, building from short low-impact sessions to longer dance workouts. Sample structure only; instructor-led programs need signed instructor and content agreements.",
+      "weeks": 4,
+      "sessionsPerWeek": 3,
+      "level": "beginner",
+      "instructorId": "sample-instructor",
+      "schedule": [
+        {
+          "week": 1,
+          "day": 1,
+          "workoutId": "qf5-lowimpact-reset"
+        },
+        {
+          "week": 1,
+          "day": 3,
+          "workoutId": "qf10-amapiano-groove"
+        },
+        {
+          "week": 1,
+          "day": 5,
+          "workoutId": "qf10-latin-rhythm"
+        },
+        {
+          "week": 2,
+          "day": 1,
+          "workoutId": "qf10-latin-rhythm"
+        },
+        {
+          "week": 2,
+          "day": 3,
+          "workoutId": "qf15-lowimpact-flow"
+        },
+        {
+          "week": 2,
+          "day": 5,
+          "workoutId": "qf5-afrobeats-wake-up"
+        },
+        {
+          "week": 3,
+          "day": 1,
+          "workoutId": "w20-amapiano-slow-burn"
+        },
+        {
+          "week": 3,
+          "day": 3,
+          "workoutId": "qf10-latin-rhythm"
+        },
+        {
+          "week": 3,
+          "day": 5,
+          "workoutId": "qf15-lowimpact-flow"
+        },
+        {
+          "week": 4,
+          "day": 1,
+          "workoutId": "w20-amapiano-slow-burn"
+        },
+        {
+          "week": 4,
+          "day": 3,
+          "workoutId": "qf15-latin-cardio"
+        },
+        {
+          "week": 4,
+          "day": 5,
+          "workoutId": "w30-lowimpact-full-body"
+        }
+      ]
+    }
+  ]
+}

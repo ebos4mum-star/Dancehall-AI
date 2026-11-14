@@ -10,6 +10,7 @@ import {
   AppError,
   FREE_ENTITLEMENT,
   MEAL_TYPES,
+  WORKOUT_BY_ID,
   ageYearsOn,
   consentPurposeSchema,
   evaluateReadiness,
@@ -32,6 +33,9 @@ import {
   type NewFoodLog,
   type NewGoal,
   type NewMealPlan,
+  type NewSession,
+  type SessionPatch,
+  type WorkoutSession,
   type PhotoAnalysisRecord,
   type PhotoAnalysisResult,
   type PrivateProfile,
@@ -63,6 +67,7 @@ interface State {
   plans: MealPlan[];
   aiEvents: UsageEvent[];
   aiBudget: BudgetState;
+  sessions: WorkoutSession[];
 }
 
 const KEY = 'dh.mock.v1';
@@ -88,6 +93,7 @@ const emptyState = (): State => ({
   plans: [],
   aiEvents: [],
   aiBudget: newBudget(),
+  sessions: [],
 });
 
 const DAY_MS = 86_400_000;
@@ -104,6 +110,23 @@ function checkItem(i: FoodItemValues): void {
     !['low', 'medium', 'high'].includes(i.confidence);
   if (bad) throw new StoreError('invalid_input', 'food item');
 }
+
+function checkSession(i: NewSession, now: Date): void {
+  const status = i.status ?? 'planned';
+  const bad =
+    (status !== 'planned' && status !== 'completed') ||
+    i.title.trim().length < 1 ||
+    i.title.length > 80 ||
+    !(i.minutes >= 1 && i.minutes <= 180) ||
+    (i.workoutId != null && !WORKOUT_BY_ID.has(i.workoutId)) ||
+    (i.durationS != null && !(i.durationS >= 1 && i.durationS <= 14400)) ||
+    (i.perceivedExertion != null && !(i.perceivedExertion >= 1 && i.perceivedExertion <= 10)) ||
+    ((i.status ?? 'planned') === 'planned' && !i.plannedFor) ||
+    (i.plannedFor != null && !/^\d{4}-\d{2}-\d{2}$/.test(i.plannedFor)) ||
+    (i.completedAt != null && Date.parse(i.completedAt) > now.getTime() + DAY_MS);
+  if (bad) throw new StoreError('invalid_input', 'session');
+}
+
 function mapAiError(e: unknown): StoreError {
   if (e instanceof AppError) {
     const code: StoreErrorCode =
@@ -580,6 +603,82 @@ export class MockStore implements DataStore {
   async deleteMealPlan(id: string) {
     const s = await this.authed();
     s.plans = s.plans.filter((p) => p.id !== id);
+    await this.commit();
+  }
+
+  // ---------- Workout sessions ----------
+  async listSessions() {
+    const s = await this.authed();
+    return [...s.sessions]
+      .sort((a, b) =>
+        (b.completedAt ?? b.plannedFor ?? b.createdAt).localeCompare(
+          a.completedAt ?? a.plannedFor ?? a.createdAt,
+        ),
+      )
+      .map((x) => ({ ...x }));
+  }
+  private buildSession(i: NewSession): WorkoutSession {
+    const status = i.status ?? 'planned';
+    return {
+      id: newId(),
+      workoutId: i.workoutId ?? null,
+      programId: i.programId ?? null,
+      title: i.title.trim(),
+      style: i.style ?? null,
+      minutes: i.minutes,
+      plannedFor: i.plannedFor ?? null,
+      status,
+      completedAt: status === 'completed' ? (i.completedAt ?? this.now().toISOString()) : null,
+      durationS: i.durationS ?? null,
+      perceivedExertion: i.perceivedExertion ?? null,
+      lowImpact: i.lowImpact ?? false,
+      source: i.source ?? 'manual',
+      createdAt: this.now().toISOString(),
+    };
+  }
+  async createSession(input: NewSession): Promise<WorkoutSession> {
+    const s = await this.authed();
+    this.requireConsent(s);
+    checkSession(input, this.now());
+    const rec = this.buildSession(input);
+    s.sessions.push(rec);
+    await this.commit();
+    return { ...rec };
+  }
+  async createSessions(inputs: NewSession[]): Promise<WorkoutSession[]> {
+    const s = await this.authed();
+    this.requireConsent(s);
+    inputs.forEach((i) => checkSession(i, this.now()));
+    const recs = inputs.map((i) => this.buildSession(i));
+    s.sessions.push(...recs);
+    await this.commit();
+    return recs.map((r) => ({ ...r }));
+  }
+  async updateSession(id: string, patch: SessionPatch): Promise<WorkoutSession> {
+    const s = await this.authed();
+    this.requireConsent(s);
+    const rec = s.sessions.find((x) => x.id === id);
+    if (!rec) throw new StoreError('not_found');
+    const next = { ...rec, ...patch };
+    if (
+      next.perceivedExertion != null &&
+      !(next.perceivedExertion >= 1 && next.perceivedExertion <= 10)
+    )
+      throw new StoreError('invalid_input', 'effort');
+    if (next.durationS != null && !(next.durationS >= 1 && next.durationS <= 14400))
+      throw new StoreError('invalid_input', 'duration');
+    if (next.status === 'planned' && !next.plannedFor)
+      throw new StoreError('invalid_input', 'planned_has_date');
+    if (next.status === 'completed' && rec.status !== 'completed')
+      next.completedAt = this.now().toISOString();
+    if (next.status !== 'completed') next.completedAt = null;
+    Object.assign(rec, next);
+    await this.commit();
+    return { ...rec };
+  }
+  async deleteSession(id: string) {
+    const s = await this.authed();
+    s.sessions = s.sessions.filter((x) => x.id !== id);
     await this.commit();
   }
 

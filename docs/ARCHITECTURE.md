@@ -75,3 +75,9 @@ Pure logic is tested with unit tests (Vitest). Database policy tests will run on
 - **Photo analysis flow (target design):** the app resizes the photo, uploads it to the private bucket, calls the server AI gateway, which validates structured output and grounds items in reference data, then the original is deleted 24 hours after analysis unless saved. In the development build the same gateway runs in-process against a mock provider and nothing is uploaded.
 - **App layers:** `DataStore` (mock or Supabase) for persistence; pure logic in `packages/shared` (items, ranges, search, grounding, swaps, planner, energy guide); a `DraftProvider` holds the meal being composed so photo, manual and saved-meal entry share one review screen.
 - **UI kit:** `ui/motion.tsx` (press feedback, count-up, reveal, floating, ring) and `ui/Depth.tsx` (depth cards, hero card, `CharacterStage` slot for future 3D artwork). All animation respects reduced motion.
+
+## Batch C additions (dance fitness, local)
+
+- **Tables:** `staff_roles` (+ `app.has_permission`, MFA required), tamper-evident `audit_log`, `licences`, `instructors`, `workouts`, `media_assets`, `content_reviews`, `programs`/`program_workouts`, and the private `workout_sessions`. The sample catalog is seeded from `workout-data.json`.
+- **App:** the catalog comes from the shared package (as with foods); sessions go through the `DataStore`. A pure session engine (`session-engine.ts`) drives the guided timer; `playbackFor` decides between licensed media and the text session.
+- **Dance UI:** gradient workout cards, a style carousel, filters (style, level, intensity, duration, low impact), Quick Fit pills, workout detail with safety information, a guided session screen, schedule, activity history, a sample program, and Today and Progress integration.

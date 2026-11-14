@@ -19,7 +19,7 @@
     "test:scripts": "node --test scripts/*.test.mjs",
     "verify": "pnpm check:secrets && pnpm check:workspace && pnpm check:ci && pnpm check:seed && pnpm test:scripts && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm db:test",
     "db:test": "bash supabase/tests/run.sh",
-    "check:seed": "node scripts/gen-food-seed.mjs --check"
+    "check:seed": "node scripts/gen-seed.mjs --check"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

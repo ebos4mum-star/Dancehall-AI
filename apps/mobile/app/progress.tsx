@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { lbToKg, summarizeWeights } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
+import { useDanceData } from '@/dance/hooks';
+import { ActivityBars } from '@/dance/ui';
 import { errorMessage, useLoad } from '@/data/hooks';
 import { t } from '@/i18n';
 import { formatChange, formatDate, formatWeight, parseDecimal } from '@/lib/format';
@@ -16,6 +18,7 @@ import { WeightChart } from '@/ui/WeightChart';
 
 export default function Progress() {
   const { store, profile } = useApp();
+  const dance = useDanceData();
   const { spacing } = useTheme();
   const units = profile?.unitSystem ?? 'metric';
   const { data, error } = useLoad(async (s) => ({
@@ -80,6 +83,16 @@ export default function Progress() {
           </AppText>
         </Card>
       )}
+      <Card>
+        <AppText variant="heading" accessibilityRole="header">
+          {t('dance.activity')}
+        </AppText>
+        <AppText>{`${t('hst.sessions', { n: dance.summary.thisWeek.sessions })} · ${t('hst.minutes', { n: dance.summary.thisWeek.minutes })} · ${t('hst.days', { n: dance.summary.thisWeek.activeDays })}`}</AppText>
+        <ActivityBars summary={dance.summary} />
+        <AppText variant="caption" muted>
+          {t('hst.gentle')}
+        </AppText>
+      </Card>
       <Card>
         <AppText variant="heading">{t('progress.add')}</AppText>
         <TextField

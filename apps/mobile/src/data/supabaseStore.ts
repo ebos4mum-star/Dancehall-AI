@@ -26,6 +26,9 @@ import {
   type MealPlan,
   type NewFoodLog,
   type NewMealPlan,
+  type NewSession,
+  type SessionPatch,
+  type WorkoutSession,
   type SavedMeal,
 } from './types';
 
@@ -99,6 +102,37 @@ const fromLogRow = (r: Row): FoodLog => ({
   source: r.source as FoodLog['source'],
   photoAnalysisId: (r.photo_analysis_id as string | null) ?? null,
   items: ((r.food_log_items as Row[] | undefined) ?? []).map(fromItemRow),
+});
+
+const fromSessionRow = (r: Row): WorkoutSession => ({
+  id: r.id as string,
+  workoutId: (r.workout_id as string | null) ?? null,
+  programId: (r.program_id as string | null) ?? null,
+  title: r.title as string,
+  style: (r.style as string | null) ?? null,
+  minutes: Number(r.minutes),
+  plannedFor: (r.planned_for as string | null) ?? null,
+  status: r.status as WorkoutSession['status'],
+  completedAt: (r.completed_at as string | null) ?? null,
+  durationS: r.duration_s == null ? null : Number(r.duration_s),
+  perceivedExertion: r.perceived_exertion == null ? null : Number(r.perceived_exertion),
+  lowImpact: r.low_impact as boolean,
+  source: r.source as WorkoutSession['source'],
+  createdAt: r.created_at as string,
+});
+const toSessionRow = (i: NewSession): Row => ({
+  workout_id: i.workoutId ?? null,
+  program_id: i.programId ?? null,
+  title: i.title.trim(),
+  style: i.style ?? null,
+  minutes: i.minutes,
+  planned_for: i.plannedFor ?? null,
+  status: i.status ?? 'planned',
+  completed_at: i.completedAt ?? null,
+  duration_s: i.durationS ?? null,
+  perceived_exertion: i.perceivedExertion ?? null,
+  low_impact: i.lowImpact ?? false,
+  source: i.source ?? 'manual',
 });
 
 export function createSupabaseStore(cfg: SupabaseStoreConfig): DataStore {
@@ -480,6 +514,51 @@ export function createSupabaseStore(cfg: SupabaseStoreConfig): DataStore {
     },
     async deleteMealPlan(id) {
       ok(await db.from('meal_plans').delete().eq('id', id));
+      emit();
+    },
+
+    async listSessions() {
+      return (
+        ok(
+          await db
+            .from('workout_sessions')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(1000),
+        ) as Row[]
+      ).map(fromSessionRow);
+    },
+    async createSession(input: NewSession) {
+      const r = fromSessionRow(
+        ok(
+          await db.from('workout_sessions').insert(toSessionRow(input)).select('*').single(),
+        ) as Row,
+      );
+      emit();
+      return r;
+    },
+    async createSessions(inputs: NewSession[]) {
+      const rows = (
+        ok(await db.from('workout_sessions').insert(inputs.map(toSessionRow)).select('*')) as Row[]
+      ).map(fromSessionRow);
+      emit();
+      return rows;
+    },
+    async updateSession(id, patch: SessionPatch) {
+      const row: Row = {};
+      if (patch.plannedFor !== undefined) row.planned_for = patch.plannedFor;
+      if (patch.status !== undefined) row.status = patch.status;
+      if (patch.durationS !== undefined) row.duration_s = patch.durationS;
+      if (patch.perceivedExertion !== undefined) row.perceived_exertion = patch.perceivedExertion;
+      if (patch.lowImpact !== undefined) row.low_impact = patch.lowImpact;
+      const r = fromSessionRow(
+        ok(await db.from('workout_sessions').update(row).eq('id', id).select('*').single()) as Row,
+      );
+      emit();
+      return r;
+    },
+    async deleteSession(id) {
+      ok(await db.from('workout_sessions').delete().eq('id', id));
       emit();
     },
 

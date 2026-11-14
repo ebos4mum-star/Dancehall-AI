@@ -10,10 +10,10 @@ begin
   return v;
 end $$;
 
-create or replace function test.as_user(p_user uuid) returns void language plpgsql as $$
+create or replace function test.as_user(p_user uuid, p_aal text default 'aal1') returns void language plpgsql as $$
 begin
   perform set_config('request.jwt.claim.sub', p_user::text, false);
-  perform set_config('request.jwt.claims', json_build_object('sub', p_user, 'role', 'authenticated', 'aal', 'aal1')::text, false);
+  perform set_config('request.jwt.claims', json_build_object('sub', p_user, 'role', 'authenticated', 'aal', p_aal)::text, false);
   perform set_config('role', 'authenticated', false);
 end $$;
 
