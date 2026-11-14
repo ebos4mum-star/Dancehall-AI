@@ -1,4 +1,6 @@
 import { View } from 'react-native';
+import { IconBadge, SectionTitle } from '@/ui/kit';
+import { brand } from '@/theme/tokens';
 import { router } from 'expo-router';
 import { localDateKey, totals } from '@dancehall/shared';
 import { DiaryItem } from '@/food/DiaryItem';
@@ -48,9 +50,7 @@ export default function History() {
       ) : null}
       {keys.length > 0 ? (
         <DepthCard>
-          <AppText variant="heading" accessibilityRole="header">
-            {t('nutweek.title')}
-          </AppText>
+          <SectionTitle icon="bar-chart" title={t('nutweek.title')} />
           <NutritionWeekBars week={week} />
         </DepthCard>
       ) : null}
@@ -59,12 +59,17 @@ export default function History() {
         const sum = totals(ls.flatMap((l) => l.items));
         return (
           <DepthCard key={k}>
-            <AppText variant="heading" accessibilityRole="header">
-              {formatDate(k)}
-            </AppText>
-            <AppText variant="caption" muted>
-              {kcalText(sum)}
-            </AppText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <IconBadge name="calendar" size={40} fill={brand.violet} />
+              <View style={{ flex: 1 }}>
+                <AppText variant="heading" accessibilityRole="header">
+                  {formatDate(k)}
+                </AppText>
+                <AppText variant="caption" muted>
+                  {kcalText(sum)}
+                </AppText>
+              </View>
+            </View>
             <View style={{ gap: spacing.md }}>
               {ls.map((l) => (
                 <View key={l.id} style={{ gap: spacing.sm }}>

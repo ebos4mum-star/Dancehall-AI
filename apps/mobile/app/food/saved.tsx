@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { View } from 'react-native';
+import { IconBadge } from '@/ui/kit';
 import { router } from 'expo-router';
 import { totals } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
@@ -31,12 +33,17 @@ export default function Saved() {
       {data && data.length === 0 ? <Notice>{t('saved.empty')}</Notice> : null}
       {(data ?? []).map((m) => (
         <DepthCard key={m.id}>
-          <AppText variant="heading">{m.name}</AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <IconBadge name="bookmark" size={40} fill="#B8F244" />
+            <View style={{ flex: 1 }}>
+              <AppText variant="heading">{m.name}</AppText>
+              <AppText variant="caption" muted>
+                {kcalText(totals(m.items))}
+              </AppText>
+            </View>
+          </View>
           <AppText variant="caption" muted>
             {m.items.map((i) => i.name).join(', ')}
-          </AppText>
-          <AppText variant="caption" muted>
-            {kcalText(totals(m.items))}
           </AppText>
           <Button
             label={t('saved.logAgain')}

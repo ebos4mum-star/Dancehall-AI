@@ -22,6 +22,7 @@ import { Choice } from '@/ui/Choice';
 import { DepthCard } from '@/ui/Depth';
 import { formatDate } from '@/lib/format';
 import { foodEmoji } from './emoji';
+import { IconAction } from '@/ui/kit';
 import { portionText } from './portion';
 import type { NutritionWeek } from './summary';
 
@@ -185,22 +186,23 @@ export function ItemCard({
             foodId={item.foodId}
             onChange={(g) => onChange(rescaleItem(item, g))}
           />
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
             {estimateStatus(item) === 'estimate' ? (
-              <Button
-                variant="secondary"
+              <IconAction
+                icon="checkmark-circle"
                 label={t('food.looksRight')}
                 onPress={() => onChange({ ...item, userEdited: true })}
               />
             ) : null}
-            <Button variant="secondary" label={t('food.changeFood')} onPress={onChangeFood} />
+            <IconAction icon="search" label={t('food.changeFood')} onPress={onChangeFood} />
             {item.foodId ? (
-              <Button
-                variant="secondary"
+              <IconAction
+                icon="swap-horizontal"
                 label={t('food.swap')}
                 onPress={() => setSwapOpen(!swapOpen)}
               />
             ) : null}
+            <IconAction icon="trash" label={t('food.itemDelete')} onPress={onRemove} danger />
           </View>
           {swapOpen ? (
             <SwapPanel
@@ -213,7 +215,9 @@ export function ItemCard({
           ) : null}
         </>
       )}
-      <Button variant="secondary" label={t('food.itemDelete')} onPress={onRemove} />
+      {needsMatch ? (
+        <IconAction icon="trash" label={t('food.itemDelete')} onPress={onRemove} danger />
+      ) : null}
     </DepthCard>
   );
 }

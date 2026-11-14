@@ -6,6 +6,7 @@ import { MEAL_TYPES, totals, type MealType } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage } from '@/data/hooks';
 import { toValues, unresolved, useDraft } from '@/food/draft';
+import { useFoodData } from '@/food/hooks';
 import { ItemCard, MacroBars, kcalText } from '@/food/ui';
 import { t, type StringKey } from '@/i18n';
 import { useTheme } from '@/theme/useTheme';
@@ -13,16 +14,24 @@ import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
 import { DepthCard } from '@/ui/Depth';
 import { Notice } from '@/ui/Banner';
-import { Choice } from '@/ui/Choice';
-import { Reveal, useCountUp } from '@/ui/motion';
+import { IconChoice, SectionTitle, type IconName } from '@/ui/kit';
+import { brand } from '@/theme/tokens';
+import { Reveal, Ring, useCountUp } from '@/ui/motion';
 import { Screen } from '@/ui/Screen';
 import { TextField } from '@/ui/TextField';
 import { haptics } from '@/ui/haptics';
 
+const MEAL_ICON: Record<MealType, IconName> = {
+  breakfast: 'cafe',
+  lunch: 'fast-food',
+  dinner: 'restaurant',
+  snack: 'nutrition',
+};
+
 export default function Review() {
   const { store } = useApp();
   const { draft, dispatch } = useDraft();
-  const { spacing } = useTheme();
+  const { spacing, colors } = useTheme();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -32,6 +41,9 @@ export default function Review() {
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   const sum = totals(draft.items.filter((i) => !i.needsMatch));
+  const { todayTotals, guide } = useFoodData();
+  // Real data only: today's logged estimate plus this meal, against the rough daily guide. Without a guide the ring stays empty.
+  const guideFraction = guide ? (todayTotals.kcal + sum.kcal) / guide.guideKcal : 0;
   const shown = useCountUp(sum.kcal);
   const blocked = unresolved(draft).length > 0;
 
@@ -90,11 +102,19 @@ export default function Review() {
         </AppText>
       ) : null}
       <Notice>{t('rev.estimateNote')}</Notice>
-      <Choice
-        value={draft.mealType}
-        onChange={(m: MealType) => dispatch({ type: 'mealType', mealType: m })}
-        options={MEAL_TYPES.map((m) => ({ value: m, label: t(`food.meal.${m}` as StringKey) }))}
-      />
+      <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+        {MEAL_TYPES.map((m) => (
+          <View key={m} style={{ flex: 1 }}>
+            <IconChoice
+              icon={MEAL_ICON[m]}
+              label={t(`food.meal.${m}` as StringKey)}
+              selected={draft.mealType === m}
+              onPress={() => dispatch({ type: 'mealType', mealType: m })}
+              tint={brand.lime}
+            />
+          </View>
+        ))}
+      </View>
       {draft.items.length === 0 ? <AppText muted>{t('rev.empty')}</AppText> : null}
       {draft.items.map((i, idx) => (
         <Reveal key={i.key} delay={idx * 50}>
@@ -116,12 +136,29 @@ export default function Review() {
       />
 
       <DepthCard>
-        <AppText variant="heading">{t('rev.total')}</AppText>
-        <AppText variant="title" accessibilityLabel={kcalText(sum)}>{`~${shown} kcal`}</AppText>
+        <SectionTitle icon="pie-chart" title={t('rev.total')} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.lg }}>
+          <Ring
+            size={104}
+            stroke={11}
+            fraction={guideFraction}
+            color={colors.primary}
+            track={colors.border}
+          >
+            <View accessible accessibilityLabel={kcalText(sum)} style={{ alignItems: 'center' }}>
+              <AppText variant="heading">{`~${shown}`}</AppText>
+              <AppText variant="caption" muted>
+                kcal
+              </AppText>
+            </View>
+          </Ring>
+          <View style={{ flex: 1 }}>
+            <MacroBars totals={sum} />
+          </View>
+        </View>
         <AppText variant="caption" muted>
           {kcalText(sum)}
         </AppText>
-        <MacroBars totals={sum} />
         {sum.unreviewedEstimates > 0 ? (
           <AppText variant="caption" muted>
             {t('food.includesEstimates', { n: sum.unreviewedEstimates })}
