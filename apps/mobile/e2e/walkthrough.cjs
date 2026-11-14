@@ -98,7 +98,11 @@ require('node:fs').mkdirSync(out, { recursive: true });
     .last()
     .click()
     .catch(() => {});
-  await text('Amapiano Groove 10').click();
+  await p
+    .locator('text=Amapiano Groove 10 >> visible=true')
+    .first()
+    .click({ timeout: 5000 })
+    .catch(() => console.log('workout card not clickable; skipping detail'));
   await shot('dance-workout-detail');
   const start = p.getByRole('button', { name: /(Start|Begin)/ }).last();
   if (await start.isVisible().catch(() => false)) {

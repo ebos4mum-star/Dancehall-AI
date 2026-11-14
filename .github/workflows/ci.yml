@@ -69,3 +69,4 @@ jobs:
       - run: command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client)
       - run: bash supabase/tests/run.sh
       - run: bash supabase/tests/replica.sh
+      - run: bash supabase/live/run-local.sh

@@ -15,7 +15,8 @@ export interface KV {
 /** The synced ledger (the `celebrations` table, or the mock). Optional: without it the device-local ledger still prevents repeats on this device. */
 export interface RemoteLedger {
   list(): Promise<string[]>;
-  record(items: Array<{ id: string; mode: CelebrationLevel }>): Promise<void>;
+  /** Records achievements and returns the ids this call newly recorded (first write wins). */
+  record(items: Array<{ id: string; mode: CelebrationLevel }>): Promise<string[]>;
 }
 /** One ledger per person on a device, so a second account never inherits or hides the first one's celebrations. */
 export const ledgerKey = (userId: string) => `dh.celebrations.seen.v1.${userId}`;
@@ -93,9 +94,12 @@ export async function runCelebrations(args: {
     ];
     if (items.length > 0) {
       try {
-        await args.remote.record(items);
+        const claimed = new Set(await args.remote.record(items));
+        // Claim before display: only what THIS device actually recorded is shown. If another device recorded the same achievement first, even a
+        // moment ago, it is already (or will be) shown there, so showing it here too would be a duplicate.
+        show = show.filter((c) => claimed.has(c.id));
       } catch {
-        /* kept on this device; uploaded on the next run */
+        /* the synced ledger is unreachable: show from the device ledger (it is retried and reconciled next time) */
       }
     }
   }

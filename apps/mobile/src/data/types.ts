@@ -199,8 +199,14 @@ export interface DataStore {
   setWellnessPrefs?(patch: Partial<WellnessPrefs>): Promise<WellnessPrefs>;
   /** Ids of goal achievements already handled by Pulse (celebrated, or recorded without showing). Used so nothing is celebrated twice, on any device. */
   listCelebrations?(): Promise<string[]>;
-  /** Records achievements as handled. First write wins: re-recording an id changes nothing and is not an error. */
-  recordCelebrations?(items: Array<{ id: string; mode: 'full' | 'gentle' | 'off' }>): Promise<void>;
+  /**
+   * Records achievements as handled and returns the ids THIS call newly recorded. First write wins: an id another device (or an earlier call)
+   * already recorded is not returned and is not an error. Pulse shows a celebration only for ids it claimed, so two devices racing on the same
+   * achievement cannot both show it.
+   */
+  recordCelebrations?(
+    items: Array<{ id: string; mode: 'full' | 'gentle' | 'off' }>,
+  ): Promise<string[]>;
 
   // Household meals and grocery coordination. Optional: not every adapter provides them.
   getHousehold?(): Promise<Household | null>;

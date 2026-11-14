@@ -23,7 +23,14 @@ const remoteLedger = (initial: string[] = []) => {
     async record(items) {
       calls.record++;
       if (api.fail) throw new Error('offline');
-      for (const i of items) if (!rows.has(i.id)) rows.set(i.id, i.mode);
+      await Promise.resolve(); // a real call takes time: lets two devices interleave
+      const claimed: string[] = [];
+      for (const i of items)
+        if (!rows.has(i.id)) {
+          rows.set(i.id, i.mode);
+          claimed.push(i.id);
+        }
+      return claimed;
     },
   };
   return api;
@@ -182,5 +189,69 @@ describe('celebration text', () => {
       expect((en as Record<string, string>)[k]).not.toMatch(
         /weight|kcal|calorie|lose|fat|streak|failed|miss/i,
       );
+  });
+});
+
+describe('claim before display (two devices, one achievement)', () => {
+  it('when two devices race on the same new achievement, exactly one shows it', async () => {
+    const remote = remoteLedger();
+    const a = memory();
+    const b = memory();
+    await run(a, input(500), 'full', remote);
+    await run(b, input(500), 'full', remote);
+    const [x, y] = await Promise.all([
+      run(a, input(2500), 'full', remote),
+      run(b, input(2500), 'full', remote),
+    ]);
+    expect(x.length + y.length).toBe(1);
+    expect(remote.rows.get('daily:water:2026-06-17')).toBe('full');
+  });
+  it('many devices racing still show it exactly once', async () => {
+    const remote = remoteLedger();
+    const kvs = [memory(), memory(), memory(), memory(), memory()];
+    for (const kv of kvs) await run(kv, input(500), 'full', remote);
+    const shown = await Promise.all(kvs.map((kv) => run(kv, input(2500), 'full', remote)));
+    expect(shown.flat().length).toBe(1);
+  });
+  it('the loser records nothing new and is quiet afterwards', async () => {
+    const remote = remoteLedger();
+    const a = memory();
+    const b = memory();
+    await run(a, input(500), 'full', remote);
+    await run(b, input(500), 'full', remote);
+    await Promise.all([run(a, input(2500), 'full', remote), run(b, input(2500), 'full', remote)]);
+    expect(await run(a, input(2500), 'full', remote)).toEqual([]);
+    expect(await run(b, input(2500), 'full', remote)).toEqual([]);
+  });
+  it('distinct achievements are not suppressed by each other', async () => {
+    const remote = remoteLedger();
+    const a = memory();
+    await run(a, input(500), 'full', remote);
+    await run(a, input(500, '2026-06-18'), 'full', remote);
+    const shown = await run(
+      a,
+      {
+        ...input(2500, '2026-06-18'),
+        entries: [...input(2500, '2026-06-17').entries, ...input(2500, '2026-06-18').entries],
+      },
+      'full',
+      remote,
+    );
+    expect(shown.map((c) => c.id)).toEqual(['daily:water:2026-06-18']);
+  });
+  it('offline, the device ledger decides, and it never repeats afterwards', async () => {
+    const remote = remoteLedger();
+    const kv = memory();
+    await run(kv, input(500), 'full', remote);
+    remote.fail = true;
+    expect((await run(kv, input(2500), 'full', remote)).length).toBe(1);
+    expect(await run(kv, input(2500), 'full', remote)).toEqual([]);
+  });
+  it('the mode is recorded for gentle and off as for full, and off never shows even when claimed', async () => {
+    const remote = remoteLedger();
+    const kv = memory();
+    await run(kv, input(500), 'off', remote);
+    expect(await run(kv, input(2500), 'off', remote)).toEqual([]);
+    expect(remote.rows.get('daily:water:2026-06-17')).toBe('off');
   });
 });
