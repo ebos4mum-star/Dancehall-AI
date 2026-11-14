@@ -10,6 +10,8 @@ import { MacroBars } from '@/food/ui';
 import { Ring } from '@/ui/motion';
 import { errorMessage, useLoad } from '@/data/hooks';
 import { t, type StringKey } from '@/i18n';
+import { useProgressInsights } from '@/progress/hooks';
+import { Celebration, HabitWeek } from '@/progress/ui';
 import { formatChange, formatDate, formatWeight, parseDecimal } from '@/lib/format';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
@@ -32,6 +34,7 @@ export default function Today() {
   }));
   const food = useFoodData();
   const dance = useDanceData();
+  const insights = useProgressInsights();
   const [entry, setEntry] = useState('');
   const [msg, setMsg] = useState<{ text: string; warn: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -133,6 +136,14 @@ export default function Today() {
       </FadeIn>
 
       <PlanCard />
+
+      <Celebration ids={insights.fresh} />
+      <FadeIn>
+        <Card>
+          <AppText variant="heading">{t('habit.title')}</AppText>
+          <HabitWeek habits={insights.habits} />
+        </Card>
+      </FadeIn>
 
       <FadeIn>
         <Card>
