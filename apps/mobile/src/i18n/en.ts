@@ -30,6 +30,10 @@ export const en = {
   'signIn.codeLabel': '6-digit code',
   'signIn.verify': 'Verify and continue',
   'signIn.codeSent': 'We sent a code to your email.',
+  'signIn.invalidEmail': 'Enter a valid email address.',
+  'signIn.resend': 'Resend code',
+  'signIn.resendIn': 'Resend code in {n}s',
+  'signIn.changeEmail': 'Use a different email',
   'signIn.adultsOnly': 'DanceHall Fit is for adults aged 18 and over.',
 
   'onb.step': 'Step {n} of {total}',
