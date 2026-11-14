@@ -204,6 +204,36 @@ require('node:fs').mkdirSync(out, { recursive: true });
     await go('/coach/settings');
     await shot('settings');
   }
+  if (group === 'me') {
+    await tab('Me');
+    await shot('tab-top');
+    await scrollTo(500);
+    await shot('tab-menu');
+    await go('/progress');
+    await shot('progress-top');
+    await scrollTo(800);
+    await shot('progress-mid');
+    await go('/goals');
+    await shot('goals-empty');
+    await btn('Create goal', { exact: false })
+      .click()
+      .catch(() => {});
+    await p.waitForTimeout(700);
+    await shot('goals-after');
+    await go('/challenges');
+    await shot('challenge-start');
+    await btn('Start challenge', { exact: false })
+      .click()
+      .catch(() => {});
+    await p.waitForTimeout(700);
+    await shot('challenge-active');
+    await go('/privacy');
+    await shot('privacy-top');
+    await scrollTo(800);
+    await shot('privacy-consents');
+    await scrollTo(900);
+    await shot('privacy-export');
+  }
   console.log(group, 'page errors:', errors.length, errors.slice(0, 5));
   await browser.close();
   srv.close();

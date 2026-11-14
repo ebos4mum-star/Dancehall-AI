@@ -31,6 +31,8 @@ import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { Notice } from '@/ui/Banner';
 import { Choice } from '@/ui/Choice';
+import { IconChoice, SectionTitle } from '@/ui/kit';
+import { brand } from '@/theme/tokens';
 import { Screen } from '@/ui/Screen';
 import { TextField } from '@/ui/TextField';
 
@@ -378,15 +380,27 @@ export default function Onboarding() {
               label: t(`sex.${v}` as StringKey),
             }))}
           />
-          <Choice
-            label={t('onb.activity')}
-            value={activity}
-            onChange={setActivity}
-            options={(['low', 'light', 'moderate', 'high'] as const).map((v) => ({
-              value: v,
-              label: t(`activity.${v}` as StringKey),
-            }))}
-          />
+          <SectionTitle icon="walk" title={t('onb.activity')} />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {(
+              [
+                ['low', 'bed'],
+                ['light', 'walk'],
+                ['moderate', 'bicycle'],
+                ['high', 'flame'],
+              ] as const
+            ).map(([v, icon]) => (
+              <View key={v} style={{ flexBasis: '47%', flexGrow: 1 }}>
+                <IconChoice
+                  icon={icon}
+                  label={t(`activity.${v}` as StringKey)}
+                  selected={activity === v}
+                  onPress={() => setActivity(v)}
+                  tint={brand.lime}
+                />
+              </View>
+            ))}
+          </View>
         </>
       )}
 
@@ -419,16 +433,26 @@ export default function Onboarding() {
             {t('onb.goalTitle')}
           </AppText>
           <AppText muted>{t('onb.goalBody')}</AppText>
-          <Choice
-            value={goalType}
-            onChange={setGoalType}
-            options={[
-              { value: 'none', label: t('onb.goalSkip') },
-              { value: 'lose', label: t('goals.lose') },
-              { value: 'maintain', label: t('goals.maintain') },
-              { value: 'gain', label: t('goals.gain') },
-            ]}
-          />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {(
+              [
+                ['none', 'remove-circle', t('onb.goalSkip')],
+                ['lose', 'trending-down', t('goals.lose')],
+                ['maintain', 'swap-horizontal', t('goals.maintain')],
+                ['gain', 'trending-up', t('goals.gain')],
+              ] as const
+            ).map(([v, icon, label]) => (
+              <View key={v} style={{ flexBasis: '47%', flexGrow: 1 }}>
+                <IconChoice
+                  icon={icon}
+                  label={label}
+                  selected={goalType === v}
+                  onPress={() => setGoalType(v)}
+                  tint={brand.lime}
+                />
+              </View>
+            ))}
+          </View>
           {goalType !== 'none' && (
             <>
               <Choice

@@ -1,5 +1,6 @@
 import { View } from 'react-native';
 import { formatDate } from '@/lib/format';
+import { IconBadge, SectionTitle } from '@/ui/kit';
 import { t, type StringKey } from '@/i18n';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
@@ -67,20 +68,25 @@ export function Celebration({ ids }: { ids: AchievementId[] }) {
 }
 
 export function AchievementList({ items }: { items: Achievement[] }) {
-  const { spacing } = useTheme();
+  const { spacing, colors } = useTheme();
   return (
     <Card>
-      <AppText variant="heading" accessibilityRole="header">
-        {t('ach.title')}
-      </AppText>
+      <SectionTitle icon="ribbon" title={t('ach.title')} />
       {items.length === 0 ? <AppText muted>{t('ach.empty')}</AppText> : null}
       {items.map((a) => (
-        <View key={a.id} style={{ gap: spacing.xs }} accessible>
-          <AppText>{title(a.id)}</AppText>
-          <AppText
-            variant="caption"
-            muted
-          >{`${body(a.id)} ${t('ach.earnedOn', { date: formatDate(a.earnedOn) })}`}</AppText>
+        <View
+          key={a.id}
+          accessible
+          style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center', minHeight: 56 }}
+        >
+          <IconBadge name="ribbon" size={44} fill={colors.successBg} color={colors.success} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <AppText variant="label">{title(a.id)}</AppText>
+            <AppText
+              variant="caption"
+              muted
+            >{`${body(a.id)} ${t('ach.earnedOn', { date: formatDate(a.earnedOn) })}`}</AppText>
+          </View>
         </View>
       ))}
       <AppText variant="caption" muted>
