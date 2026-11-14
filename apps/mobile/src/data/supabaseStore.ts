@@ -1,3 +1,12 @@
+import {
+  cleanGroceryName,
+  cleanHouseholdName,
+  cleanMealTitle,
+  cleanQuantity,
+  householdError,
+  isDay,
+  normalizeInviteCode,
+} from '../food/householdLogic';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import {
   consentPurposeSchema,
@@ -34,6 +43,10 @@ import {
   type FitChallenge,
   type Habit,
   type HabitCheckin,
+  type Household,
+  type HouseholdGroceryItem,
+  type HouseholdMeal,
+  type HouseholdMealType,
   type NewFitChallenge,
   type SavedMeal,
 } from './types';
@@ -668,6 +681,158 @@ function createBaseStore(
     async setHabitDone(habitId: string, day: string, done: boolean) {
       if (done) ok(await db.from('habit_checkins').insert({ habit_id: habitId, day }));
       else ok(await db.from('habit_checkins').delete().eq('habit_id', habitId).eq('day', day));
+      emit();
+    },
+
+    // ---------- Household (shared meals and grocery only; RLS limits every row to members) ----------
+    async getHousehold(): Promise<Household | null> {
+      const me = await uid();
+      const mem = ok(
+        await db.from('household_members').select('household_id,member_id,role').limit(10),
+      ) as Row[];
+      const mine = mem.find((m) => m.member_id === me);
+      if (!mine) return null;
+      const hid = mine.household_id as string;
+      const h = ok(await db.from('households').select('id,name').eq('id', hid).single()) as Row;
+      return {
+        id: hid,
+        name: h.name as string,
+        role: mine.role as 'owner' | 'member',
+        memberCount: mem.filter((m) => m.household_id === hid).length,
+      };
+    },
+    async createHousehold(name: string) {
+      const clean = cleanHouseholdName(name);
+      if (!clean) throw new StoreError('invalid_input', 'name');
+      const r = await db.rpc('household_create', { p_name: clean });
+      if (r.error) throw householdError(r.error.message);
+      emit();
+      return { id: r.data as string, name: clean, role: 'owner' as const, memberCount: 1 };
+    },
+    async createHouseholdInvite() {
+      const h = await this.getHousehold!();
+      if (!h) throw new StoreError('not_found', 'household');
+      const r = await db.rpc('household_create_invite', { p_household: h.id });
+      if (r.error) throw householdError(r.error.message);
+      return r.data as string;
+    },
+    async joinHousehold(code: string) {
+      const r = await db.rpc('household_join', { p_code: normalizeInviteCode(code) });
+      if (r.error) throw householdError(r.error.message);
+      emit();
+      const h = await this.getHousehold!();
+      if (!h) throw new StoreError('not_found', 'household');
+      return h;
+    },
+    async leaveHousehold() {
+      const r = await db.rpc('household_leave');
+      if (r.error) throw householdError(r.error.message);
+      emit();
+    },
+    async removeHouseholdMember(memberId: string) {
+      const r = await db.rpc('household_remove_member', { p_member: memberId });
+      if (r.error) throw householdError(r.error.message);
+      emit();
+    },
+    async listHouseholdMeals() {
+      const me = await uid();
+      return (
+        ok(
+          await db
+            .from('household_meals')
+            .select('id,day,meal_type,title,added_by')
+            .order('day', { ascending: true })
+            .limit(500),
+        ) as Row[]
+      ).map((r): HouseholdMeal => ({
+        id: r.id as string,
+        day: r.day as string,
+        mealType: r.meal_type as HouseholdMealType,
+        title: r.title as string,
+        addedByMe: r.added_by === me,
+      }));
+    },
+    async addHouseholdMeal(input) {
+      const title = cleanMealTitle(input.title);
+      if (!title || !isDay(input.day)) throw new StoreError('invalid_input', 'meal');
+      const h = await this.getHousehold!();
+      if (!h) throw new StoreError('not_found', 'household');
+      const r = ok(
+        await db
+          .from('household_meals')
+          .insert({ household_id: h.id, day: input.day, meal_type: input.mealType, title })
+          .select('id,day,meal_type,title')
+          .single(),
+      ) as Row;
+      emit();
+      return {
+        id: r.id as string,
+        day: r.day as string,
+        mealType: r.meal_type as HouseholdMealType,
+        title: r.title as string,
+        addedByMe: true,
+      };
+    },
+    async deleteHouseholdMeal(id: string) {
+      ok(await db.from('household_meals').delete().eq('id', id));
+      emit();
+    },
+    async listHouseholdGrocery() {
+      const me = await uid();
+      return (
+        ok(
+          await db
+            .from('household_grocery_items')
+            .select('id,name,quantity,checked_at,added_by')
+            .order('created_at', { ascending: true })
+            .limit(500),
+        ) as Row[]
+      ).map((r): HouseholdGroceryItem => ({
+        id: r.id as string,
+        name: r.name as string,
+        quantity: (r.quantity as string | null) ?? null,
+        checked: r.checked_at != null,
+        addedByMe: r.added_by === me,
+      }));
+    },
+    async addHouseholdGroceryItem(input) {
+      const name = cleanGroceryName(input.name);
+      if (!name) throw new StoreError('invalid_input', 'name');
+      const quantity = cleanQuantity(input.quantity);
+      const h = await this.getHousehold!();
+      if (!h) throw new StoreError('not_found', 'household');
+      const r = ok(
+        await db
+          .from('household_grocery_items')
+          .insert({ household_id: h.id, name, quantity })
+          .select('id,name,quantity')
+          .single(),
+      ) as Row;
+      emit();
+      return {
+        id: r.id as string,
+        name: r.name as string,
+        quantity: (r.quantity as string | null) ?? null,
+        checked: false,
+        addedByMe: true,
+      };
+    },
+    async setHouseholdGroceryChecked(id: string, checked: boolean) {
+      const me = await uid();
+      ok(
+        await db
+          .from('household_grocery_items')
+          .update(
+            checked
+              ? { checked_by: me, checked_at: new Date().toISOString() }
+              : { checked_by: null, checked_at: null },
+          )
+          .eq('id', id),
+      );
+      emit();
+    },
+    async deleteHouseholdGroceryItem(id: string) {
+      ok(await db.from('household_grocery_items').delete().eq('id', id));
       emit();
     },
 

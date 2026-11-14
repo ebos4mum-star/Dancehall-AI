@@ -60,6 +60,10 @@ import {
   type FitChallenge,
   type Habit,
   type HabitCheckin,
+  type Household,
+  type HouseholdGroceryItem,
+  type HouseholdMeal,
+  type HouseholdMealType,
   type NewFitChallenge,
   type PhotoAnalysisRecord,
   type PhotoAnalysisResult,
@@ -80,6 +84,15 @@ import {
 } from './types';
 import { isValidChallenge } from '../challenges/logic';
 import { MAX_HABITS, cleanHabitName } from '../habits/logic';
+import {
+  HOUSEHOLD_MEAL_TYPES,
+  cleanGroceryName,
+  cleanHouseholdName,
+  cleanMealTitle,
+  cleanQuantity,
+  isDay,
+  normalizeInviteCode,
+} from '../food/householdLogic';
 
 export interface KeyValue {
   get(key: string): Promise<string | null>;
@@ -105,6 +118,10 @@ interface State {
   challenges: FitChallenge[];
   habits: Array<Habit & { archivedAt: string | null }>;
   habitCheckins: HabitCheckin[];
+  /** Development mock: a household of one (there is no second synthetic person to join). */
+  household?: { id: string; name: string; inviteCode: string | null } | null;
+  householdMeals?: Array<Omit<HouseholdMeal, 'addedByMe'>>;
+  householdGrocery?: Array<Omit<HouseholdGroceryItem, 'addedByMe'>>;
   conversations: Conversation[];
   dailyPlans: DailyPlan[];
   weeklyReviews: WeeklyReviewRecord[];
@@ -807,6 +824,109 @@ export class MockStore implements DataStore {
     } else if (!done && has) {
       s.habitCheckins = s.habitCheckins.filter((c) => !(c.habitId === habitId && c.day === day));
     } else return;
+    await this.commit();
+  }
+
+  // ---------- Household meals and grocery (shared lists only; nothing health-related) ----------
+  private requireHousehold(s: State) {
+    if (!s.household) throw new StoreError('not_found', 'household');
+    return s.household;
+  }
+  async getHousehold(): Promise<Household | null> {
+    const s = await this.authed();
+    return s.household
+      ? { id: s.household.id, name: s.household.name, role: 'owner', memberCount: 1 }
+      : null;
+  }
+  async createHousehold(name: string): Promise<Household> {
+    const s = await this.authed();
+    if (s.household) throw new StoreError('already_in_household');
+    const clean = cleanHouseholdName(name);
+    if (!clean) throw new StoreError('invalid_input', 'name');
+    s.household = { id: newId(), name: clean, inviteCode: null };
+    s.householdMeals = [];
+    s.householdGrocery = [];
+    await this.commit();
+    return { id: s.household.id, name: clean, role: 'owner', memberCount: 1 };
+  }
+  async createHouseholdInvite(): Promise<string> {
+    const s = await this.authed();
+    const h = this.requireHousehold(s);
+    h.inviteCode = Math.random().toString(36).slice(2, 12).toUpperCase().padEnd(10, 'X');
+    await this.commit();
+    return h.inviteCode;
+  }
+  async joinHousehold(code: string): Promise<Household> {
+    const s = await this.authed();
+    if (s.household) throw new StoreError('already_in_household');
+    void normalizeInviteCode(code);
+    throw new StoreError('invalid_invite'); // the mock has no other people to join
+  }
+  async leaveHousehold(): Promise<void> {
+    const s = await this.authed();
+    s.household = null;
+    s.householdMeals = [];
+    s.householdGrocery = [];
+    await this.commit();
+  }
+  async removeHouseholdMember(): Promise<void> {
+    throw new StoreError('not_found', 'member');
+  }
+  async listHouseholdMeals(): Promise<HouseholdMeal[]> {
+    const s = await this.authed();
+    if (!s.household) return [];
+    return (s.householdMeals ?? [])
+      .map((m) => ({ ...m, addedByMe: true }))
+      .sort((a, b) => a.day.localeCompare(b.day));
+  }
+  async addHouseholdMeal(input: {
+    day: string;
+    mealType: HouseholdMealType;
+    title: string;
+  }): Promise<HouseholdMeal> {
+    const s = await this.authed();
+    this.requireHousehold(s);
+    const title = cleanMealTitle(input.title);
+    if (!title || !isDay(input.day) || !HOUSEHOLD_MEAL_TYPES.includes(input.mealType))
+      throw new StoreError('invalid_input', 'meal');
+    const rec = { id: newId(), day: input.day, mealType: input.mealType, title };
+    (s.householdMeals ??= []).push(rec);
+    await this.commit();
+    return { ...rec, addedByMe: true };
+  }
+  async deleteHouseholdMeal(id: string): Promise<void> {
+    const s = await this.authed();
+    s.householdMeals = (s.householdMeals ?? []).filter((m) => m.id !== id);
+    await this.commit();
+  }
+  async listHouseholdGrocery(): Promise<HouseholdGroceryItem[]> {
+    const s = await this.authed();
+    if (!s.household) return [];
+    return (s.householdGrocery ?? []).map((g) => ({ ...g, addedByMe: true }));
+  }
+  async addHouseholdGroceryItem(input: {
+    name: string;
+    quantity?: string | null;
+  }): Promise<HouseholdGroceryItem> {
+    const s = await this.authed();
+    this.requireHousehold(s);
+    const name = cleanGroceryName(input.name);
+    if (!name) throw new StoreError('invalid_input', 'name');
+    const rec = { id: newId(), name, quantity: cleanQuantity(input.quantity), checked: false };
+    (s.householdGrocery ??= []).push(rec);
+    await this.commit();
+    return { ...rec, addedByMe: true };
+  }
+  async setHouseholdGroceryChecked(id: string, checked: boolean): Promise<void> {
+    const s = await this.authed();
+    const g = (s.householdGrocery ?? []).find((x) => x.id === id);
+    if (!g) throw new StoreError('not_found');
+    g.checked = checked;
+    await this.commit();
+  }
+  async deleteHouseholdGroceryItem(id: string): Promise<void> {
+    const s = await this.authed();
+    s.householdGrocery = (s.householdGrocery ?? []).filter((g) => g.id !== id);
     await this.commit();
   }
 

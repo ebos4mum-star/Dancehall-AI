@@ -83,6 +83,10 @@ export type StoreErrorCode =
   | 'not_found'
   | 'active_challenge_exists'
   | 'habit_limit_reached'
+  | 'already_in_household'
+  | 'invalid_invite'
+  | 'household_full'
+  | 'not_owner'
   | 'unknown'
   | 'ai_consent_required'
   | 'quota_exceeded'
@@ -179,6 +183,29 @@ export interface DataStore {
   archiveHabit(id: string): Promise<void>;
   listHabitCheckins(sinceDay: string): Promise<HabitCheckin[]>;
   setHabitDone(habitId: string, day: string, done: boolean): Promise<void>;
+
+  // Household meals and grocery coordination. Optional: not every adapter provides them.
+  getHousehold?(): Promise<Household | null>;
+  createHousehold?(name: string): Promise<Household>;
+  /** Returns the plain invite code ONCE (single use, expires in 48 hours). */
+  createHouseholdInvite?(): Promise<string>;
+  joinHousehold?(code: string): Promise<Household>;
+  leaveHousehold?(): Promise<void>;
+  removeHouseholdMember?(memberId: string): Promise<void>;
+  listHouseholdMeals?(): Promise<HouseholdMeal[]>;
+  addHouseholdMeal?(input: {
+    day: string;
+    mealType: HouseholdMealType;
+    title: string;
+  }): Promise<HouseholdMeal>;
+  deleteHouseholdMeal?(id: string): Promise<void>;
+  listHouseholdGrocery?(): Promise<HouseholdGroceryItem[]>;
+  addHouseholdGroceryItem?(input: {
+    name: string;
+    quantity?: string | null;
+  }): Promise<HouseholdGroceryItem>;
+  setHouseholdGroceryChecked?(id: string, checked: boolean): Promise<void>;
+  deleteHouseholdGroceryItem?(id: string): Promise<void>;
 
   // Fit Concierge. Optional: only the development mock implements these today (no coach service exists yet).
   listConversations?(): Promise<Conversation[]>;
@@ -307,6 +334,28 @@ export interface Habit {
 export interface HabitCheckin {
   habitId: string;
   day: string; // YYYY-MM-DD in the person's time zone
+}
+export type HouseholdMealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+/** A small shared group. Only meal ideas and one grocery list are shared: never weights, goals, food diary, workouts or coach data. */
+export interface Household {
+  id: string;
+  name: string;
+  role: 'owner' | 'member';
+  memberCount: number;
+}
+export interface HouseholdMeal {
+  id: string;
+  day: string; // YYYY-MM-DD
+  mealType: HouseholdMealType;
+  title: string;
+  addedByMe: boolean;
+}
+export interface HouseholdGroceryItem {
+  id: string;
+  name: string;
+  quantity: string | null;
+  checked: boolean;
+  addedByMe: boolean;
 }
 export type ChallengeStatus = 'active' | 'completed' | 'abandoned';
 /** A free, personal Fit Challenge. Solo only; there is no stake of any kind. */

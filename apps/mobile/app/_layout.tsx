@@ -59,6 +59,10 @@ export default function RootLayout() {
               options={{ headerShown: true, title: t('saved.title') }}
             />
             <Stack.Screen
+              name="food/household"
+              options={{ headerShown: true, title: t('household.title') }}
+            />
+            <Stack.Screen
               name="food/swap"
               options={{ headerShown: true, title: t('swap.title') }}
             />
