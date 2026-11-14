@@ -49,8 +49,7 @@ Apply, in file-name order: `supabase/migrations/20261201000100_identity_consent.
 7. **Sign in with Apple** is required on iOS if any other social sign-in is added, needs the Apple Developer Program, and is **not built yet**. Email codes work without it.
 8. In the app's `.env.local` (git-ignored, copy from `.env.example`): `EXPO_PUBLIC_AUTH_MODE=supabase`, `EXPO_PUBLIC_SUPABASE_URL=...`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...`, `EXPO_PUBLIC_APP_ENV=development`.
 
-**What works against a live project today:** sign-in, onboarding, consent, goals, weights, food diary, saved meals, meal plans and workout sessions (the Supabase adapter covers these but has never run live).
-**What does not yet:** photo analysis, the coach, the Daily Fit Plan and weekly reviews. Their screens show a "not available" state until step 5 adds the server pieces and adapter methods (the database tables for all of them already exist).
+**What the app can do against a live project:** every feature except photo analysis has a Supabase adapter, and the adapters are checked statically against the migrations (tables, columns, RLS, RPCs and grants; see `docs/INTEGRATION_STATUS.md`). **None of it has run against a hosted project.** The Daily Fit Plan, challenges, habits, household and wellness logs run on the device against the database. The coach and weekly review need the server AI service (not deployed); until `EXPO_PUBLIC_AI_API_URL` is set they show a plain "not available" state. Photo analysis has no server yet and is simulated only in development builds.
 
 ## 4. Testing on an iPhone
 
