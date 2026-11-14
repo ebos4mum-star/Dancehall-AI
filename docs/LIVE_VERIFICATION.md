@@ -26,23 +26,24 @@ Security advisor (hosted): 5 warnings, all "signed-in users can execute a SECURI
 
 ## 3. Non-destructive migration plan (not executed)
 
-The three pending migrations are purely additive: new tables, indexes, triggers, policies, grants and functions. They contain no `alter`, `drop`, `update` or `delete` of existing objects, and the hosted tables they reference (`profiles`, `consents`, `app.has_consent`) exist.
+The pending migrations (listed below) are additive: new tables, indexes, triggers, policies, grants and functions, plus one in-place replacement of `household_join` with the same signature, owner, search path and grants. They contain no `alter`, `drop`, `update` or `delete` of existing tables or data, and the hosted tables they reference (`profiles`, `consents`, `app.has_consent`) exist.
 
 Order and contents:
 
 1. `20261207000100_habits.sql`: `habits`, `habit_checkins`.
 2. `20261208000100_household.sql`: five household tables, membership helper functions, five RPCs.
 3. `20261209000100_wellness.sql`: `wellness_entries`, `wellness_prefs`.
+4. `20261211000100_household_join_limit.sql`: `household_join_attempts` and an in-place replacement of `household_join` (adds the invite attempt limit; see `docs/SECURITY_DEFINER_REVIEW.md`). The only migration that replaces an existing function; same signature, owner, search path and grants.
 
 Before: take a database backup or a Supabase branch if available (the project has no user data, so this is a precaution); re-run the fingerprint query (below) and confirm it still matches.
 Apply (needs explicit owner approval): one migration at a time, in the order above, as a named migration with the exact repository SQL, stopping at the first error.
 After each: re-run `supabase/tests`-equivalent checks that can run hosted (RLS enabled on the new tables, advisor output, policy count), then the live suite (section 4).
 Rollback (no data exists yet): drop only the objects that migration created. Do not touch earlier migrations.
 
-**History reconciliation (not executed).** The record of what is applied is `supabase/hosted-history.json`: eight hosted rows (versions `20261114150446` to `20261114150755`) mapped by name to eight repository files, each pinned by SHA-256 (`scripts/migration-history.test.mjs` fails if an applied migration is edited, a record stops matching a file, or a pending file sorts before an applied one). The hosted rows are real history and are never rewritten or deleted. Two ways to apply the three pending files; choose one:
+**History reconciliation (not executed).** The record of what is applied is `supabase/hosted-history.json`: eight hosted rows (versions `20261114150446` to `20261114150755`) mapped by name to eight repository files, each pinned by SHA-256 (`scripts/migration-history.test.mjs` fails if an applied migration is edited, a record stops matching a file, or a pending file sorts before an applied one). The hosted rows are real history and are never rewritten or deleted. Two ways to apply the pending files; choose one:
 
-- **A. By name through the dashboard or MCP (recommended, simplest).** Apply the three files, one at a time, as migrations named `habits`, `household`, `wellness`. Each gets a new hosted version at apply time; the history then holds eleven rows whose names match the repository one-to-one. No history repair, no renaming. Afterwards update `hosted-history.json` (applied list and fingerprint) in a PR.
-- **B. Supabase CLI `db push`.** The CLI matches by version, and the repository file versions (`20261201...`) differ from the hosted ones (`20261114...`), so a plain `db push` would try to re-run the eight applied migrations and fail. To use it safely, first `git mv` the eight applied files to their hosted versions (contents unchanged, so the pinned hashes still hold; the order stays the same because `20261114...` sorts before `20261207...`), update `hosted-history.json` `file` fields, and run `db push --dry-run` to confirm it lists only the three pending files. This keeps hosted history exactly as it is. Do **not** use `migration repair --status reverted`, which deletes real history rows.
+- **A. By name through the dashboard or MCP (recommended, simplest).** Apply the pending files, one at a time, as migrations named after the file (`habits`, `household`, `wellness`, `household_join_limit`, ...). Each gets a new hosted version at apply time; the history then holds eleven rows whose names match the repository one-to-one. No history repair, no renaming. Afterwards update `hosted-history.json` (applied list and fingerprint) in a PR.
+- **B. Supabase CLI `db push`.** The CLI matches by version, and the repository file versions (`20261201...`) differ from the hosted ones (`20261114...`), so a plain `db push` would try to re-run the eight applied migrations and fail. To use it safely, first `git mv` the eight applied files to their hosted versions (contents unchanged, so the pinned hashes still hold; the order stays the same because `20261114...` sorts before `20261207...`), update `hosted-history.json` `file` fields, and run `db push --dry-run` to confirm it lists only the pending files. This keeps hosted history exactly as it is. Do **not** use `migration repair --status reverted`, which deletes real history rows.
 
 Either way, before and after every apply: run the fingerprint query in section 6 and compare with the baseline (before) and with `bash supabase/tests/replica.sh`'s clean-build result (after).
 
@@ -67,7 +68,7 @@ Not covered live, and why:
 ## 5. Safe next steps, in order
 
 1. Owner confirms the project/organization identity (section 1) and the five advisor warnings (section 2).
-2. Owner approves applying the three additive migrations (section 3); apply one at a time.
+2. Owner approves applying the pending migrations (section 3); apply one at a time.
 3. Owner creates the two test users; run the live suite (section 4) and record the result.
 4. Only then set `EXPO_PUBLIC_AUTH_MODE=supabase` locally (git-ignored `.env.local`) for a controlled device or simulator pass. Paid AI, the AI route, payments and HealthKit stay off.
 

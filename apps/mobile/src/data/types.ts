@@ -90,6 +90,7 @@ export type StoreErrorCode =
   | 'duplicate_item'
   | 'invalid_invite'
   | 'household_full'
+  | 'too_many_attempts'
   | 'not_owner'
   | 'unknown'
   | 'ai_consent_required'

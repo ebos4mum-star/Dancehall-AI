@@ -820,6 +820,8 @@ function createBaseStore(
     async joinHousehold(code: string) {
       const r = await db.rpc('household_join', { p_code: normalizeInviteCode(code) });
       if (r.error) throw householdError(r.error.message);
+      // The database returns null (and counts the attempt) for an incorrect or used code, so the limit can record it.
+      if (r.data === null || r.data === undefined) throw new StoreError('invalid_invite');
       emit();
       const h = await this.getHousehold!();
       if (!h) throw new StoreError('not_found', 'household');

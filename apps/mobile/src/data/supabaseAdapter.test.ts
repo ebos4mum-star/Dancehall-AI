@@ -511,3 +511,15 @@ describe('wellness persistence', () => {
     expect(last().filters).toContainEqual(['id', 'w1']);
   });
 });
+
+describe('household invite attempts', () => {
+  it('treats the null the database returns for an incorrect or used code as an invalid invite', async () => {
+    respond = () => ({ data: null, error: null });
+    expect(await codeOf(store().joinHousehold!('badcode'))).toBe('invalid_invite');
+    expect(last()).toMatchObject({ rpc: 'household_join' });
+  });
+  it('maps the attempt limit to its own plain error', async () => {
+    respond = () => ({ data: null, error: { code: '23514', message: 'too_many_attempts' } });
+    expect(await codeOf(store().joinHousehold!('anything'))).toBe('too_many_attempts');
+  });
+});

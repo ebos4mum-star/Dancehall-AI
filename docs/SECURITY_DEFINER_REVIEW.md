@@ -35,14 +35,15 @@ revoke execute on function public.audit_verify() from authenticated;
 
 Consequences: removes one advisor warning; staff can no longer call it directly from a signed-in admin session; the test in `06_dance_catalog.test.sql` that checks an "authorized reader" (staff, aal2) would have to change to use the server role. Not applied and not committed as a migration.
 
-**Optional hardening, `household_join` (separate migration, not proposed for the first apply).** Invite codes have about 40 bits of entropy and the RPC has no attempt limit; Supabase's API rate limits and the 48-hour single-use expiry bound the risk. A per-user attempt counter would remove it. Low priority.
+**Household invite attempts (prepared as `20261211000100_household_join_limit.sql`, not applied).** Invite codes have about 40 bits of entropy, are hashed at rest, single use and expire after 48 hours. The migration adds a per-person limit: 5 incorrect codes in 15 minutes pause joining for that person (even a correct code) until the window passes; a correct join clears their count, and a typo or two is unaffected. Because an exception would roll back the record of a failed attempt, an incorrect or used code now **returns `null`** (the app maps it to "invalid invite") and only the limit raises (`too_many_attempts`). The function keeps its name, arguments, owner, empty `search_path` and grants, so the reviewed allowlist is unchanged; the new `household_join_attempts` table lets a person read only their own rows and nobody write directly. It is additive (one table, one in-place function replacement) and tested locally, in the replica path and in the mock store. Limit: an attacker with many accounts is bounded by sign-up limits rather than by this counter.
 
 ## Exact hosted changes to authorize first
 
-Only these three additive migrations (contents pinned by `supabase/hosted-history.json` ordering; files in `supabase/migrations/`):
+Only the migrations listed as `pending` in `supabase/hosted-history.json` (files in `supabase/migrations/`), applied one at a time in file order:
 
 1. `20261207000100_habits.sql`: tables `habits`, `habit_checkins`, one trigger, one index each.
 2. `20261208000100_household.sql`: five tables, helper functions in `app`, five RPCs in `public`, one trigger.
 3. `20261209000100_wellness.sql`: `wellness_entries`, `wellness_prefs`.
+4. `20261211000100_household_join_limit.sql`: `household_join_attempts`; replaces `household_join` in place (see above).
 
-No existing object is altered or dropped. Verified locally: clean database (all 15 SQL test files), and a replica of the hosted eight-migration state with only these three applied on top (`bash supabase/tests/replica.sh`: the replica first matches the hosted catalog fingerprint, the result equals a clean build of all 11 migrations, and all SQL tests pass on it).
+No existing table or data is altered or dropped; the only replaced object is `household_join` (same signature, owner, search path and grants). Verified locally: clean database (all 15 SQL test files), and a replica of the hosted eight-migration state with only these applied on top (`bash supabase/tests/replica.sh`: the replica first matches the hosted catalog fingerprint, the result equals a clean build of all 12 migrations, and all SQL tests pass on it).

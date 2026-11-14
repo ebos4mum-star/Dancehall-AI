@@ -131,6 +131,8 @@ interface State {
   wellnessPrefs?: unknown;
   /** Development mock: a household of one (there is no second synthetic person to join). */
   household?: { id: string; name: string; inviteCode: string | null } | null;
+  /** Times of incorrect invite codes (mirrors the database limit: 5 in 15 minutes). */
+  joinAttempts?: string[];
   householdMeals?: Array<Omit<HouseholdMeal, 'addedByMe'>>;
   householdGrocery?: Array<Omit<HouseholdGroceryItem, 'addedByMe'>>;
   conversations: Conversation[];
@@ -930,7 +932,13 @@ export class MockStore implements DataStore {
     const s = await this.authed();
     if (s.household) throw new StoreError('already_in_household');
     void normalizeInviteCode(code);
-    throw new StoreError('invalid_invite'); // the mock has no other people to join
+    const now = this.now().getTime();
+    const recent = (s.joinAttempts ?? []).filter((t) => now - Date.parse(t) < 15 * 60_000);
+    if (recent.length >= 5) throw new StoreError('too_many_attempts');
+    // The mock has no other people to join, so every code is incorrect; it is counted like the database counts it.
+    s.joinAttempts = [...recent, new Date(now).toISOString()];
+    await this.commit();
+    throw new StoreError('invalid_invite');
   }
   async leaveHousehold(): Promise<void> {
     const s = await this.authed();

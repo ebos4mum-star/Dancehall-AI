@@ -90,6 +90,17 @@ describe('mock household', () => {
     expect(await s.listHouseholdGrocery()).toEqual([]);
     expect(await code(s.joinHousehold('ABC'))).toBe('invalid_invite');
   });
+  it('pauses joining after 5 incorrect codes in 15 minutes, and resumes afterwards', async () => {
+    let now = new Date('2026-06-15T12:00:00Z');
+    const s = new MockStore(memory(), () => now);
+    await s.signInDev();
+    await s.setConsent('health_data_processing', true);
+    for (let i = 0; i < 5; i++)
+      expect(await code(s.joinHousehold('BADCODE' + i))).toBe('invalid_invite');
+    expect(await code(s.joinHousehold('BADCODE9'))).toBe('too_many_attempts');
+    now = new Date('2026-06-15T12:16:00Z');
+    expect(await code(s.joinHousehold('BADCODE9'))).toBe('invalid_invite');
+  });
   it('is included in the data export and holds no health fields', async () => {
     const s = await setup();
     await s.createHousehold('Home');
@@ -103,6 +114,7 @@ describe('mock household', () => {
     expect(normalizeInviteCode(' ab cd1 ')).toBe('ABCD1');
     expect(cleanQuantity('  ')).toBeNull();
     expect(householdError('invalid_invite').code).toBe('invalid_invite');
+    expect(householdError('too_many_attempts').code).toBe('too_many_attempts');
     expect(householdError('boom').code).toBe('unknown');
   });
 });
