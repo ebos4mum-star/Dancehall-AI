@@ -1075,6 +1075,7 @@ export const en = {
   'err.duplicate_item':
     'That item is already on the list. Tick it off or change its quantity instead.',
   'err.invalid_invite': 'That invite code is not valid, was already used, or has expired.',
+  'err.too_many_attempts': 'Too many incorrect codes. Please wait 15 minutes and try again.',
   'err.household_full': 'A household can have up to 6 people.',
   'err.not_owner': 'Only the household owner can do that.',
   'household.title': 'Household',
