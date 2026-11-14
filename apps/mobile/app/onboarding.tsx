@@ -1,7 +1,6 @@
 import { showMoment } from '@/pulse/moment';
-import { ProgressBar } from '@/ui/ProgressBar';
 import { useMemo, useRef, useState } from 'react';
-import { Pressable, Switch, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import {
   COUNTRY_OPTIONS,
@@ -28,13 +27,12 @@ import { MIN_TOUCH_TARGET } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
-import { Card } from '@/ui/Card';
 import { Notice } from '@/ui/Banner';
-import { Choice } from '@/ui/Choice';
-import { IconChoice, SectionTitle } from '@/ui/kit';
+import { IconBadge, IconChoice, type IconName } from '@/ui/kit';
+import { BigField, JourneyHeader, StepCard, TrustCard, YesNoCard } from '@/onboarding/kit';
+import { Ionicons } from '@expo/vector-icons';
 import { brand } from '@/theme/tokens';
 import { Screen } from '@/ui/Screen';
-import { TextField } from '@/ui/TextField';
 
 const TOTAL = 5;
 const OPTIONAL_CONSENTS: ConsentPurpose[] = [
@@ -206,127 +204,175 @@ export default function Onboarding() {
   ).slice(0, 6);
   const selectedCountry = COUNTRY_OPTIONS.find((c) => c.code === country);
 
+  const ageStatus =
+    /^\d{4}-\d{2}-\d{2}$/.test(birth) && age !== null
+      ? age >= 18
+        ? { ok: true, text: t('onb.ageOk') }
+        : { ok: false, text: t('err.adults_only') }
+      : null;
+  const CONSENT_ICON: Record<ConsentPurpose, IconName> = {
+    health_data_processing: 'heart',
+    ai_processing_of_food_photos: 'camera',
+    ai_coach_personalization: 'sparkles',
+    health_platform_sync: 'watch',
+    social_sharing: 'people',
+  };
+
   return (
-    <Screen
-      banner={{
-        world: 'today',
-        title: t(`onb.ban${step}.title` as StringKey),
-        line: t(`onb.ban${step}.line` as StringKey),
-        pulse: step === 4 ? 'encourage' : step === 1 || step === 5 ? 'welcome' : 'idle',
-      }}
-    >
-      <ProgressBar fraction={step / TOTAL} label={t('onb.step', { n: step, total: TOTAL })} />
-      <AppText variant="caption" muted accessibilityLiveRegion="polite">
-        {t('onb.step', { n: step, total: TOTAL })}
-      </AppText>
+    <Screen>
+      <JourneyHeader
+        step={step}
+        total={TOTAL}
+        line={t(`onb.say${step}` as StringKey)}
+        pulse={step === 4 ? 'encourage' : step === 1 || step === 5 ? 'welcome' : 'idle'}
+        stepLabel={t('onb.step', { n: step, total: TOTAL })}
+      />
 
       {step === 1 && (
         <>
-          <AppText variant="title" accessibilityRole="header">
-            {t('onb.aboutTitle')}
-          </AppText>
-          <AppText muted>{t('onb.aboutBody')}</AppText>
-          <TextField
-            label={t('onb.name')}
-            value={name}
-            onChangeText={setName}
-            autoComplete="name"
-            maxLength={40}
-          />
-          <TextField
-            label={t('onb.birthDate')}
-            hint={t('onb.birthHint')}
-            value={birth}
-            onChangeText={setBirth}
-            keyboardType="numbers-and-punctuation"
-            placeholder="1990-05-21"
-            maxLength={10}
-          />
-          <View style={{ gap: spacing.xs }}>
-            <TextField
-              label={t('onb.country')}
-              hint={t('onb.countryNote')}
-              value={selectedCountry && countryQuery === '' ? selectedCountry.name : countryQuery}
-              onChangeText={(v) => {
-                setCountryQuery(v);
-                setCountry(null);
-              }}
-              placeholder={t('onb.countrySearch')}
+          <StepCard icon="person" title={t('onb.aboutTitle')} note={t('onb.aboutBody')}>
+            <BigField
+              label={t('onb.name')}
+              icon="person-circle"
+              value={name}
+              onChangeText={setName}
+              autoComplete="name"
+              maxLength={40}
             />
-            {country === null &&
-              countryQuery.length > 0 &&
-              filtered.map((c) => (
+            <BigField
+              label={t('onb.birthDate')}
+              icon="calendar"
+              hint={t('onb.birthHint')}
+              value={birth}
+              onChangeText={setBirth}
+              keyboardType="numbers-and-punctuation"
+              placeholder="1990-05-21"
+              maxLength={10}
+              status={ageStatus}
+            />
+          </StepCard>
+          <StepCard icon="globe" title={t('onb.country')} note={t('onb.countryNote')}>
+            {selectedCountry ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <IconBadge
+                  name="checkmark"
+                  size={36}
+                  fill={colors.successBg}
+                  color={colors.success}
+                />
+                <AppText
+                  variant="heading"
+                  style={{ flex: 1 }}
+                >{`✓ ${selectedCountry.name}`}</AppText>
                 <Pressable
-                  key={c.code}
                   accessibilityRole="button"
-                  accessibilityLabel={c.name}
+                  accessibilityLabel={t('onb.changeCountry')}
                   onPress={() => {
-                    setCountry(c.code);
+                    setCountry(null);
                     setCountryQuery('');
                   }}
                   style={{
                     minHeight: MIN_TOUCH_TARGET,
                     justifyContent: 'center',
-                    paddingHorizontal: spacing.md,
-                    borderRadius: radius.md,
-                    backgroundColor: colors.surface,
-                    borderWidth: 1,
-                    borderColor: colors.border,
+                    paddingHorizontal: spacing.sm,
                   }}
                 >
-                  <AppText>{c.name}</AppText>
+                  <AppText variant="label" style={{ color: colors.primary }}>
+                    {t('onb.changeCountry')}
+                  </AppText>
                 </Pressable>
+              </View>
+            ) : (
+              <>
+                <BigField
+                  label={t('onb.country')}
+                  icon="search"
+                  value={countryQuery}
+                  onChangeText={(v) => {
+                    setCountryQuery(v);
+                    setCountry(null);
+                  }}
+                  placeholder={t('onb.countrySearch')}
+                />
+                {countryQuery.length > 0
+                  ? filtered.map((c) => (
+                      <Pressable
+                        key={c.code}
+                        accessibilityRole="button"
+                        accessibilityLabel={c.name}
+                        onPress={() => {
+                          setCountry(c.code);
+                          setCountryQuery('');
+                        }}
+                        style={{
+                          minHeight: MIN_TOUCH_TARGET,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: spacing.sm,
+                          paddingHorizontal: spacing.md,
+                          borderRadius: radius.md,
+                          backgroundColor: colors.background,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                        }}
+                      >
+                        <Ionicons name="location" size={18} color={colors.textMuted} />
+                        <AppText style={{ flex: 1 }}>{c.name}</AppText>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                      </Pressable>
+                    ))
+                  : null}
+              </>
+            )}
+          </StepCard>
+          <StepCard icon="resize" title={t('onb.units')}>
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              {(
+                [
+                  ['metric', 'speedometer', t('common.metric')],
+                  ['imperial', 'flag', t('common.imperial')],
+                ] as const
+              ).map(([v, icon, label]) => (
+                <View key={v} style={{ flex: 1 }}>
+                  <IconChoice
+                    icon={icon}
+                    label={label}
+                    selected={units === v}
+                    onPress={() => setUnits(v)}
+                    tint={brand.lime}
+                  />
+                </View>
               ))}
-            {selectedCountry ? (
-              <AppText variant="caption" muted>
-                ✓ {selectedCountry.name}
-              </AppText>
-            ) : null}
-          </View>
-          <Choice
-            label={t('onb.units')}
-            value={units}
-            onChange={setUnits}
-            options={[
-              { value: 'metric', label: t('common.metric') },
-              { value: 'imperial', label: t('common.imperial') },
-            ]}
-          />
+            </View>
+          </StepCard>
         </>
       )}
 
       {step === 2 && (
         <>
-          <AppText variant="title" accessibilityRole="header">
-            {t('onb.consentTitle')}
-          </AppText>
-          <AppText muted>{t('onb.consentBody')}</AppText>
+          <StepCard
+            icon="shield-checkmark"
+            title={t('onb.consentTitle')}
+            note={t('onb.consentBody')}
+          >
+            <AppText variant="caption" muted>
+              {t('onb.consentSummary')}
+            </AppText>
+          </StepCard>
           {(Object.keys(CONSENT_LABEL) as ConsentPurpose[]).map((p) => {
             const [labelKey, bodyKey] = CONSENT_LABEL[p];
             return (
-              <Card key={p}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: spacing.md,
-                  }}
-                >
-                  <AppText variant="label" style={{ flex: 1 }}>
-                    {t(labelKey)}
-                  </AppText>
-                  <Switch
-                    accessibilityLabel={t(labelKey)}
-                    value={consents[p]}
-                    onValueChange={(v) => setConsents({ ...consents, [p]: v })}
-                    trackColor={{ true: colors.primary, false: colors.border }}
-                  />
-                </View>
-                <AppText variant="caption" muted>
-                  {t(bodyKey)}
-                </AppText>
-              </Card>
+              <TrustCard
+                key={p}
+                icon={CONSENT_ICON[p]}
+                title={t(labelKey)}
+                body={t(bodyKey)}
+                required={!OPTIONAL_CONSENTS.includes(p)}
+                value={consents[p]}
+                onChange={(v) => setConsents({ ...consents, [p]: v })}
+                requiredLabel={t('onb.tagRequired')}
+                optionalLabel={t('onb.tagOptional')}
+              />
             );
           })}
         </>
@@ -334,94 +380,114 @@ export default function Onboarding() {
 
       {step === 3 && (
         <>
-          <AppText variant="title" accessibilityRole="header">
-            {t('onb.bodyTitle')}
-          </AppText>
-          <AppText muted>{t('onb.bodyBody')}</AppText>
-          {units === 'metric' ? (
-            <TextField
-              label={t('onb.heightCm')}
-              value={heightCm}
-              onChangeText={setHeightCm}
+          <StepCard icon="body" title={t('onb.bodyTitle')} note={t('onb.bodyBody')}>
+            {units === 'metric' ? (
+              <BigField
+                label={t('onb.heightCm')}
+                icon="resize"
+                suffix="cm"
+                value={heightCm}
+                onChangeText={setHeightCm}
+                keyboardType="decimal-pad"
+              />
+            ) : (
+              <View style={{ flexDirection: 'row', gap: spacing.md }}>
+                <View style={{ flex: 1 }}>
+                  <BigField
+                    label={t('onb.heightFt')}
+                    icon="resize"
+                    suffix="ft"
+                    value={feet}
+                    onChangeText={setFeet}
+                    keyboardType="number-pad"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <BigField
+                    label={t('onb.heightIn')}
+                    icon="resize"
+                    suffix="in"
+                    value={inches}
+                    onChangeText={setInches}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              </View>
+            )}
+            <BigField
+              label={`${t('onb.weight')} (${unitWord})`}
+              icon="scale"
+              suffix={unitWord}
+              value={weight}
+              onChangeText={setWeight}
               keyboardType="decimal-pad"
             />
-          ) : (
-            <View style={{ flexDirection: 'row', gap: spacing.md }}>
-              <View style={{ flex: 1 }}>
-                <TextField
-                  label={t('onb.heightFt')}
-                  value={feet}
-                  onChangeText={setFeet}
-                  keyboardType="number-pad"
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <TextField
-                  label={t('onb.heightIn')}
-                  value={inches}
-                  onChangeText={setInches}
-                  keyboardType="decimal-pad"
-                />
-              </View>
+          </StepCard>
+          <StepCard icon="people" title={t('onb.sex')}>
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              {(
+                [
+                  ['female', 'female'],
+                  ['male', 'male'],
+                  ['unspecified', 'help-circle'],
+                ] as const
+              ).map(([v, icon]) => (
+                <View key={v} style={{ flex: 1 }}>
+                  <IconChoice
+                    icon={icon}
+                    label={t(`sex.${v}` as StringKey)}
+                    selected={sex === v}
+                    onPress={() => setSex(v)}
+                    tint={brand.lime}
+                  />
+                </View>
+              ))}
             </View>
-          )}
-          <TextField
-            label={`${t('onb.weight')} (${unitWord})`}
-            value={weight}
-            onChangeText={setWeight}
-            keyboardType="decimal-pad"
-          />
-          <Choice
-            label={t('onb.sex')}
-            value={sex}
-            onChange={setSex}
-            options={(['female', 'male', 'unspecified'] as const).map((v) => ({
-              value: v,
-              label: t(`sex.${v}` as StringKey),
-            }))}
-          />
-          <SectionTitle icon="walk" title={t('onb.activity')} />
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {(
-              [
-                ['low', 'bed'],
-                ['light', 'walk'],
-                ['moderate', 'bicycle'],
-                ['high', 'flame'],
-              ] as const
-            ).map(([v, icon]) => (
-              <View key={v} style={{ flexBasis: '47%', flexGrow: 1 }}>
-                <IconChoice
-                  icon={icon}
-                  label={t(`activity.${v}` as StringKey)}
-                  selected={activity === v}
-                  onPress={() => setActivity(v)}
-                  tint={brand.lime}
-                />
-              </View>
-            ))}
-          </View>
+          </StepCard>
+          <StepCard icon="walk" title={t('onb.activity')}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {(
+                [
+                  ['low', 'bed'],
+                  ['light', 'walk'],
+                  ['moderate', 'bicycle'],
+                  ['high', 'flame'],
+                ] as const
+              ).map(([v, icon]) => (
+                <View key={v} style={{ flexBasis: '47%', flexGrow: 1 }}>
+                  <IconChoice
+                    icon={icon}
+                    label={t(`activity.${v}` as StringKey)}
+                    selected={activity === v}
+                    onPress={() => setActivity(v)}
+                    tint={brand.lime}
+                  />
+                </View>
+              ))}
+            </View>
+          </StepCard>
         </>
       )}
 
       {step === 4 && (
         <>
-          <AppText variant="title" accessibilityRole="header">
-            {t('onb.readyTitle')}
-          </AppText>
-          <AppText muted>{t('onb.readyBody')}</AppText>
+          <StepCard icon="heart" title={t('onb.readyTitle')} note={t('onb.readyBody')}>
+            <AppText variant="caption" muted>
+              {t('onb.readyProgress', {
+                n: READINESS_QUESTIONS.filter((q) => answers[q] !== undefined).length,
+                total: READINESS_QUESTIONS.length,
+              })}
+            </AppText>
+          </StepCard>
           {READINESS_QUESTIONS.map((q) => (
-            <Card key={q}>
-              <AppText>{t(`ready.q.${q}` as StringKey)}</AppText>
-              <Choice
-                value={answers[q] === undefined ? null : answers[q] ? 'yes' : 'no'}
-                onChange={(v) => setAnswers({ ...answers, [q]: v === 'yes' })}
-                options={[
-                  { value: 'no', label: t('ready.no') },
-                  { value: 'yes', label: t('ready.yes') },
-                ]}
-              />
-            </Card>
+            <YesNoCard
+              key={q}
+              question={t(`ready.q.${q}` as StringKey)}
+              value={answers[q]}
+              onChange={(v) => setAnswers({ ...answers, [q]: v })}
+              yes={t('ready.yes')}
+              no={t('ready.no')}
+            />
           ))}
           {readiness.flagged.length > 0 ? <Notice>{t('onb.readyNote')}</Notice> : null}
         </>
@@ -429,67 +495,86 @@ export default function Onboarding() {
 
       {step === 5 && (
         <>
-          <AppText variant="title" accessibilityRole="header">
-            {t('onb.goalTitle')}
-          </AppText>
-          <AppText muted>{t('onb.goalBody')}</AppText>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {(
-              [
-                ['none', 'remove-circle', t('onb.goalSkip')],
-                ['lose', 'trending-down', t('goals.lose')],
-                ['maintain', 'swap-horizontal', t('goals.maintain')],
-                ['gain', 'trending-up', t('goals.gain')],
-              ] as const
-            ).map(([v, icon, label]) => (
-              <View key={v} style={{ flexBasis: '47%', flexGrow: 1 }}>
-                <IconChoice
-                  icon={icon}
-                  label={label}
-                  selected={goalType === v}
-                  onPress={() => setGoalType(v)}
-                  tint={brand.lime}
-                />
-              </View>
-            ))}
-          </View>
+          <StepCard icon="flag" title={t('onb.goalTitle')} note={t('onb.goalBody')}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {(
+                [
+                  ['none', 'remove-circle', t('onb.goalSkip')],
+                  ['lose', 'trending-down', t('goals.lose')],
+                  ['maintain', 'swap-horizontal', t('goals.maintain')],
+                  ['gain', 'trending-up', t('goals.gain')],
+                ] as const
+              ).map(([v, icon, label]) => (
+                <View key={v} style={{ flexBasis: '47%', flexGrow: 1 }}>
+                  <IconChoice
+                    icon={icon}
+                    label={label}
+                    selected={goalType === v}
+                    onPress={() => setGoalType(v)}
+                    tint={brand.lime}
+                  />
+                </View>
+              ))}
+            </View>
+          </StepCard>
           {goalType !== 'none' && (
-            <>
-              <Choice
-                label={t('goals.period')}
-                value={goalPeriod}
-                onChange={setGoalPeriod}
-                options={(['weekly', 'monthly', 'yearly'] as const).map((v) => ({
-                  value: v,
-                  label: t(`goals.${v}` as StringKey),
-                }))}
-              />
+            <StepCard icon="calendar" title={t('goals.period')}>
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                {(['weekly', 'monthly', 'yearly'] as const).map((v) => (
+                  <View key={v} style={{ flex: 1 }}>
+                    <IconChoice
+                      icon="calendar"
+                      label={t(`goals.${v}` as StringKey)}
+                      selected={goalPeriod === v}
+                      onPress={() => setGoalPeriod(v)}
+                      tint={brand.lime}
+                    />
+                  </View>
+                ))}
+              </View>
               {goalType !== 'maintain' && (
-                <TextField
+                <BigField
                   label={t('goals.target', { unit: unitWord })}
+                  icon="trophy"
+                  suffix={unitWord}
                   hint={t('goals.targetHint')}
                   value={goalTarget}
                   onChangeText={setGoalTarget}
                   keyboardType="decimal-pad"
                 />
               )}
-              {proposal ? (
-                <Card>
-                  <AppText variant="label">
-                    {t(proposal.status === 'block' ? 'goals.blocked' : 'onb.goalProposed')}
-                  </AppText>
-                  {proposal.goal ? (
-                    <AppText>{`${formatWeight(proposal.goal.startKg, units)} → ${formatWeight(proposal.goal.targetKg, units)} · ${t(`goals.${proposal.goal.period}` as StringKey)} (${t('goals.until', { date: goalEndDate(todayIso(), goalPeriod) })})`}</AppText>
-                  ) : null}
-                  {proposal.reasons.map((r) => (
-                    <AppText key={r} variant="caption" muted>
-                      {r}
-                    </AppText>
-                  ))}
-                </Card>
-              ) : null}
-            </>
+            </StepCard>
           )}
+          {goalType !== 'none' && proposal ? (
+            <View
+              style={{
+                borderRadius: radius.lg,
+                borderWidth: 2,
+                borderColor: proposal.status === 'block' ? colors.warningText : colors.primary,
+                backgroundColor: proposal.status === 'block' ? colors.warningBg : colors.surface,
+                padding: spacing.lg,
+                gap: spacing.xs,
+              }}
+            >
+              <AppText variant="label">
+                {t(proposal.status === 'block' ? 'goals.blocked' : 'onb.goalProposed')}
+              </AppText>
+              {proposal.goal ? (
+                <AppText variant="title">{`${formatWeight(proposal.goal.startKg, units)} → ${formatWeight(proposal.goal.targetKg, units)}`}</AppText>
+              ) : null}
+              {proposal.goal ? (
+                <AppText
+                  variant="caption"
+                  muted
+                >{`${t(`goals.${proposal.goal.period}` as StringKey)} (${t('goals.until', { date: goalEndDate(todayIso(), goalPeriod) })})`}</AppText>
+              ) : null}
+              {proposal.reasons.map((r) => (
+                <AppText key={r} variant="caption" muted>
+                  {r}
+                </AppText>
+              ))}
+            </View>
+          ) : null}
         </>
       )}
 

@@ -568,6 +568,20 @@ export const en = {
   'recap.tileFood': 'Days with food logged',
   'recap.tileHabits': 'Habit ticks',
   'progress.moreData': 'Add another entry to see your trend line.',
+  'onb.say1': 'Hi, I am Pulse. I will help you plan your days. First, tell me a little about you.',
+  'onb.say2':
+    'Your privacy comes first. You choose what I can keep, and you can change it any time.',
+  'onb.say3': 'A few basics keep your goals safe. They stay private to you.',
+  'onb.say4':
+    'A quick check-in so we start at a comfortable level. This is not a medical assessment.',
+  'onb.say5': 'Last step. A goal is optional, and you can skip it.',
+  'onb.ageOk': 'Adults only app. You are good to go.',
+  'onb.changeCountry': 'Change',
+  'onb.consentSummary':
+    'Only the first one is needed to continue. The others are optional and off by default.',
+  'onb.tagRequired': 'NEEDED TO CONTINUE',
+  'onb.tagOptional': 'OPTIONAL',
+  'onb.readyProgress': '{n} of {total} answered',
   'dance.styles': 'Styles',
   'mood.title': 'How would you like to move today? (optional)',
   'mood.skip': 'No preference',
