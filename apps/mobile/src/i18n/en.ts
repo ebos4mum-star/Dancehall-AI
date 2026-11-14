@@ -74,6 +74,13 @@ export const en = {
   'habit.dayDone': '{day}: {what}',
   'habit.dayNone': '{day}: rest or nothing logged',
 
+  'grocery.show': 'Grocery list',
+  'grocery.hide': 'Hide grocery list',
+  'grocery.title': 'Shopping list',
+  'grocery.note':
+    'Amounts are the planned portions added together. Check packaging and what you already have at home.',
+  'grocery.share': 'Share list',
+
   'onb.step': 'Step {n} of {total}',
   'onb.aboutTitle': 'Let’s start with you',
   'onb.aboutBody': 'We use this to personalize your plan. You can change it later.',
