@@ -28,6 +28,8 @@ Nothing here has been run for you: no project, build, or paid service has been c
 7. `20261205000200_deletion_config.sql`
 8. `20261206000100_fit_challenges.sql`
 
+The development project has all eight applied (verified: the live schema fingerprint matches a database built from these files) plus the synthetic reference data from `supabase/seed.sql`, loaded outside the migration history.
+
 - [ ] Link with the Supabase CLI (`supabase link --project-ref <project-ref>`), review with `supabase db push --dry-run`, then apply.
 - [ ] Load `supabase/seed.sql` only if the catalogue is not populated by a migration.
 - [ ] Run `pnpm db:test` locally before applying.
@@ -66,3 +68,16 @@ Nothing here has been run for you: no project, build, or paid service has been c
 5. Start the app (`pnpm --filter @dancehall/mobile start`), sign in with your own email, enter the 6-digit code, complete onboarding.
    In the Table editor you should see rows in `profiles`, `profile_private`, `consents` and `goals` for your user only.
 6. If the app shows "App configuration problem", the URL or key is missing, not https, or is a secret key. It never falls back silently.
+
+## 6. Authentication settings (dashboard only, owner action)
+
+The connected tooling can run SQL and migrations but cannot change Auth settings, so these are set by hand in the Supabase dashboard, Authentication section. The app uses email one-time codes only: no passwords, no social or phone login.
+
+- [ ] **Sign In / Providers, Email:** enabled. **Confirm email:** on. **Email OTP length:** 6. **Email OTP expiry:** 3600 s (default is fine).
+- [ ] **Sign In / Providers:** every other provider (Phone, Google, Apple and so on) disabled. **Allow anonymous sign-ins:** off.
+- [ ] **Email Templates:** both **Confirm signup** (used the first time someone signs in) and **Magic Link** (used when they come back) must show the code. Use a body such as: `Your DanceHall Fit code is {{ .Token }}`. Without `{{ .Token }}` the app has no code to ask for.
+- [ ] **URL Configuration:** set the Site URL; add `dancehallfit://` to Redirect URLs (the code flow does not need it, but it keeps future links working).
+- [ ] **Emails:** Supabase's built-in email sender allows only a few messages per hour. For more than a couple of test sign-ins, set up custom SMTP under Authentication, Emails, SMTP Settings.
+- [ ] **Network access for live tests from the cloud dev session:** allow the project's `*.supabase.co` host in the environment's network policy (the session currently receives a 403 policy denial for it). Not needed for building the app or for your own phone.
+
+Check: start the app with `.env.local` set, enter your email, receive a 6-digit code, enter it, finish onboarding. In Table editor you should see your rows in `profiles`, `profile_private`, `consents` and `goals`.
