@@ -43,3 +43,8 @@ No medical claims, no promises of results, no "spot reduction" claims. Use "can 
 - **Gentle tracking.** Activity totals show sessions, minutes and active days per week with no streaks to lose and no penalties for rest days; effort is a self-rated "easy / moderate / hard / very hard".
 - **The sample content is not reviewed.** The 14 outlines are original, generic and text-only, and are marked as samples in the data, the database (`is_synthetic`, immutable) and every screen. They cannot pass the public-release checklist; real routines need review by a certified fitness professional who is not the author (gate F1).
 - **Not built:** adaptive plan progression, pregnancy/postpartum or injury-return content, and any video or music guidance.
+
+## 7. Strength training (contract only)
+
+- `packages/shared/src/strength.ts` defines the exercise and workout contract and the activation gate (`strengthWorkoutProblems`). **No exercises or workouts are shipped.** A workout can be offered as guided content only when it and every exercise in it have form cues, an easier version, safety notes, a warm-up and cool-down, valid sets, and approval by an independent qualified reviewer with a review record (gate F1). Media needs separate licensing.
+- Until such content exists the app offers self-directed strength logging (minutes and style, optional) that counts as movement in the Daily Fit Plan, challenges and the weekly review, and the Dance tab says guided strength is not available.
