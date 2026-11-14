@@ -32,6 +32,7 @@ export default function Progress() {
   const [entry, setEntry] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
 
   const weights = data?.weights ?? [];
   const points = weights.map((w) => ({ weightKg: w.weightKg, measuredAt: w.measuredAt }));
@@ -46,12 +47,16 @@ export default function Progress() {
     const kg = v === null ? null : units === 'metric' ? v : lbToKg(v);
     if (kg === null || kg < 25 || kg > 400)
       return setMsg(t('today.weightError', { unit: units === 'metric' ? 'kg' : 'lb' }));
+    if (adding) return;
+    setAdding(true);
     try {
       await store.addWeight({ weightKg: Math.round(kg * 100) / 100 });
       setEntry('');
       setMsg(null);
     } catch (e) {
       setMsg(errorMessage(e));
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -114,7 +119,11 @@ export default function Progress() {
           onChangeText={setEntry}
           keyboardType="decimal-pad"
         />
-        <Button label={t('today.logWeight')} onPress={add} disabled={entry.trim() === ''} />
+        <Button
+          label={t('today.logWeight')}
+          onPress={add}
+          disabled={adding || entry.trim() === ''}
+        />
         {msg ? <Notice tone="warning">{msg}</Notice> : null}
       </Card>
       {weights.length > 0 ? (

@@ -1,13 +1,8 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
-import {
-  goalProgress,
-  lbToKg,
-  sessionMinutes,
-  summarizeWeights,
-  type UnitSystem,
-} from '@dancehall/shared';
+import { lbToKg, sessionMinutes, summarizeWeights, type UnitSystem } from '@dancehall/shared';
+import { goalFraction } from '@/progress/goalDisplay';
 import { todayGlance } from '@/today/glance';
 import { useApp } from '@/data/AppProvider';
 import { PlanCard } from '@/coach/PlanCard';
@@ -303,9 +298,7 @@ export default function Today() {
           <AppText variant="heading">{t('today.goalsTitle')}</AppText>
           {active.length === 0 ? <AppText muted>{t('today.noGoals')}</AppText> : null}
           {active.map((g) => {
-            const p = summary.latest
-              ? goalProgress(g, summary.latest.weightKg)
-              : { fraction: 0, onTrack: false };
+            const fraction = goalFraction(g, summary.latest?.weightKg);
             return (
               <View key={g.id} style={{ gap: spacing.xs }}>
                 <AppText variant="label">{`${t(`goals.${g.type}` as StringKey)} · ${t(`goals.${g.period}` as StringKey)}`}</AppText>
@@ -313,9 +306,9 @@ export default function Today() {
                   variant="caption"
                   muted
                 >{`${t('goals.from', { start: formatWeight(g.startKg, units), target: formatWeight(g.targetKg, units) })} ${t('goals.until', { date: formatDate(g.endDate) })}`}</AppText>
-                {summary.latest ? (
+                {fraction !== null ? (
                   <ProgressBar
-                    fraction={p.fraction}
+                    fraction={fraction}
                     label={`${t(`goals.${g.type}` as StringKey)} ${t(`goals.${g.period}` as StringKey)}`}
                   />
                 ) : (
