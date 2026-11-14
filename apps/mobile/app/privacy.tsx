@@ -1,5 +1,8 @@
-import { Share, Switch, View } from 'react-native';
-import { IconBadge, SectionTitle, type IconName } from '@/ui/kit';
+import { Share, View } from 'react-native';
+import { IconChoice, type IconName } from '@/ui/kit';
+import { FoodHero } from '@/food/kit';
+import { BigField } from '@/onboarding/kit';
+import { SettingRow } from '@/ui/SettingRow';
 import { router } from 'expo-router';
 import { consentPurposeSchema, type ConsentPurpose } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
@@ -13,7 +16,6 @@ import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { Notice } from '@/ui/Banner';
-import { Choice } from '@/ui/Choice';
 import { Screen } from '@/ui/Screen';
 import { TextField } from '@/ui/TextField';
 
@@ -29,12 +31,13 @@ const CONSENT_ICON: Record<string, IconName> = {
   health_data_processing: 'heart',
   ai_processing_of_food_photos: 'camera',
   ai_coach_personalization: 'sparkles',
-  health_app_sync: 'watch',
+  health_platform_sync: 'watch',
+  social_sharing: 'people',
 };
 
 export default function Privacy() {
   const { store, profile, config, refresh } = useApp();
-  const { colors, spacing } = useTheme();
+  const { spacing } = useTheme();
   const { data, error } = useLoad((s) => s.getConsents());
   const [msg, setMsg] = useState<string | null>(null);
   const [name, setName] = useState<string | null>(null);
@@ -65,25 +68,40 @@ export default function Privacy() {
     }
   };
 
+  const onCount = data ? consentPurposeSchema.options.filter((p) => data[p]).length : 0;
+  const units = profile?.unitSystem ?? 'metric';
   return (
-    <Screen
-      top={false}
-      banner={{
-        world: 'me',
-        title: t('ban.privacy.title'),
-        line: t('ban.privacy.line'),
-        pulse: 'idle',
-      }}
-    >
+    <Screen>
+      <FoodHero
+        world="me"
+        title={t('ban.privacy.title')}
+        line={t('ban.privacy.line')}
+        pulse="idle"
+        stats={
+          data
+            ? [
+                {
+                  label: t('privacy.consents'),
+                  value: `${onCount} / ${consentPurposeSchema.options.length}`,
+                },
+              ]
+            : []
+        }
+      />
+      {error ? <Notice tone="warning">{`${error} ${t('privacy.loadFailed')}`}</Notice> : null}
+      {msg ? <Notice tone="warning">{msg}</Notice> : null}
+
+      <AppText variant="heading" accessibilityRole="header">
+        {t('privacy.profileTitle')}
+      </AppText>
       <Card>
-        <SectionTitle icon="person" title={t('privacy.profileTitle')} />
-        <TextField
+        <BigField
+          icon="person"
           label={t('privacy.displayName')}
           value={name ?? profile?.displayName ?? ''}
           onChangeText={setName}
           maxLength={40}
           autoComplete="name"
-          textContentType="name"
         />
         <Button
           variant="secondary"
@@ -100,58 +118,43 @@ export default function Privacy() {
             })
           }
         />
+        <AppText variant="label">{t('privacy.units')}</AppText>
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          {(['metric', 'imperial'] as const).map((u) => (
+            <View key={u} style={{ flex: 1 }}>
+              <IconChoice
+                icon="resize"
+                label={t(u === 'metric' ? 'common.metric' : 'common.imperial')}
+                selected={units === u}
+                onPress={() => guard(() => store.updateProfile({ unitSystem: u }))}
+              />
+            </View>
+          ))}
+        </View>
       </Card>
-      <Card>
-        <SectionTitle icon="resize" title={t('privacy.units')} />
-        <Choice
-          value={profile?.unitSystem ?? 'metric'}
-          onChange={(u) => guard(() => store.updateProfile({ unitSystem: u }))}
-          options={[
-            { value: 'metric', label: t('common.metric') },
-            { value: 'imperial', label: t('common.imperial') },
-          ]}
-        />
-      </Card>
-      <SectionTitle icon="shield-checkmark" title={t('privacy.consents')} />
+
+      <AppText variant="heading" accessibilityRole="header">
+        {t('privacy.consents')}
+      </AppText>
       {consentPurposeSchema.options.map((p) => {
         const [labelKey, bodyKey] = LABELS[p];
         return (
-          <Card key={p}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: spacing.md,
-              }}
-            >
-              <IconBadge
-                name={CONSENT_ICON[p] ?? 'lock-closed'}
-                size={36}
-                fill={colors.primary}
-                color={colors.onPrimary}
-              />
-              <AppText variant="label" style={{ flex: 1 }}>
-                {t(labelKey)}
-              </AppText>
-              <Switch
-                accessibilityLabel={t(labelKey)}
-                value={data?.[p] ?? false}
-                disabled={!data}
-                onValueChange={(v) => guard(() => store.setConsent(p, v))}
-                trackColor={{ true: colors.primary, false: colors.border }}
-              />
-            </View>
-            <AppText variant="caption" muted>
-              {t(bodyKey)}
-            </AppText>
-          </Card>
+          <SettingRow
+            key={p}
+            icon={CONSENT_ICON[p] ?? 'lock-closed'}
+            title={t(labelKey)}
+            body={t(bodyKey)}
+            value={data?.[p] ?? false}
+            disabled={!data}
+            onChange={(v) => guard(() => store.setConsent(p, v))}
+          />
         );
       })}
-      {error ? <Notice tone="warning">{`${error} ${t('privacy.loadFailed')}`}</Notice> : null}
-      {msg ? <Notice tone="warning">{msg}</Notice> : null}
+
+      <AppText variant="heading" accessibilityRole="header">
+        {t('privacy.exportTitle')}
+      </AppText>
       <Card>
-        <SectionTitle icon="download" title={t('privacy.exportTitle')} />
         <AppText muted>{t('privacy.exportBody')}</AppText>
         <Button
           variant="secondary"
@@ -177,8 +180,11 @@ export default function Privacy() {
           {t('privacy.exportNote')}
         </AppText>
       </Card>
+
+      <AppText variant="heading" accessibilityRole="header">
+        {t('privacy.account')}
+      </AppText>
       <Card>
-        <SectionTitle icon="log-out" title={t('privacy.account')} />
         <Button
           variant="secondary"
           label={t('privacy.signOut')}

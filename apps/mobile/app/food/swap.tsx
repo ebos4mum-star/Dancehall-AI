@@ -8,7 +8,10 @@ import { AppText } from '@/ui/AppText';
 import { DepthCard } from '@/ui/Depth';
 import { IconBadge } from '@/ui/kit';
 import { Screen } from '@/ui/Screen';
-import { TextField } from '@/ui/TextField';
+import { Button } from '@/ui/Button';
+import { BigField } from '@/onboarding/kit';
+import { FoodHero } from '@/food/kit';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function SwapScreen() {
   const { colors, spacing, radius } = useTheme();
@@ -17,15 +20,8 @@ export default function SwapScreen() {
   const results = searchFoods(q, CURATED_FOODS, 6);
   const item = food ? itemFromFood(food, food.servingG) : null;
   return (
-    <Screen
-      top={false}
-      banner={{
-        world: 'food',
-        title: t('ban.foodSwap.title'),
-        line: t('ban.foodSwap.line'),
-        pulse: 'idle',
-      }}
-    >
+    <Screen>
+      <FoodHero title={t('ban.foodSwap.title')} line={t('ban.foodSwap.line')} />
       <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
         <IconBadge
           name="swap-horizontal"
@@ -37,24 +33,30 @@ export default function SwapScreen() {
           {t('swap.intro')}
         </AppText>
       </View>
-      <TextField
-        label={t('add.search')}
-        value={q}
-        onChangeText={(v) => {
-          setQ(v);
-          setFood(null);
-        }}
-        autoCapitalize="none"
-      />
-      {!food
-        ? results.map((r) => (
+      {!food ? (
+        <>
+          <AppText variant="heading" accessibilityRole="header">
+            {t('food2.swapPick')}
+          </AppText>
+          <BigField
+            icon="search"
+            label={t('add.search')}
+            value={q}
+            onChangeText={(v) => {
+              setQ(v);
+              setFood(null);
+            }}
+            autoCapitalize="none"
+          />
+          {results.length === 0 ? <AppText muted>{t('food2.swapNoMatch')}</AppText> : null}
+          {results.map((r) => (
             <Pressable
               key={r.id}
               accessibilityRole="button"
               accessibilityLabel={r.name}
               onPress={() => setFood(r)}
               style={{
-                minHeight: 52,
+                minHeight: 60,
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: spacing.md,
@@ -65,25 +67,38 @@ export default function SwapScreen() {
                 backgroundColor: colors.surface,
               }}
             >
-              <FoodBadge foodId={r.id} size={36} />
-              <AppText variant="label">{r.name}</AppText>
+              <FoodBadge foodId={r.id} size={40} />
+              <View style={{ flex: 1 }}>
+                <AppText variant="label">{r.name}</AppText>
+                <AppText variant="caption" muted>
+                  {r.servingLabel}
+                </AppText>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </Pressable>
-          ))
-        : null}
+          ))}
+        </>
+      ) : null}
       {food && item ? (
-        <DepthCard>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-            <FoodBadge foodId={food.id} />
-            <View style={{ flex: 1 }}>
-              <AppText variant="heading">{food.name}</AppText>
-              <AppText
-                variant="caption"
-                muted
-              >{`${food.servingLabel} · ${kcalText(item)}`}</AppText>
+        <>
+          <AppText variant="heading" accessibilityRole="header">
+            {t('food2.swapCompare')}
+          </AppText>
+          <DepthCard>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <FoodBadge foodId={food.id} />
+              <View style={{ flex: 1 }}>
+                <AppText variant="heading">{food.name}</AppText>
+                <AppText
+                  variant="caption"
+                  muted
+                >{`${food.servingLabel} · ${kcalText(item)}`}</AppText>
+              </View>
             </View>
-          </View>
-          <SwapPanel item={item} />
-        </DepthCard>
+            <SwapPanel item={item} />
+          </DepthCard>
+          <Button variant="secondary" label={t('food2.swapChange')} onPress={() => setFood(null)} />
+        </>
       ) : null}
     </Screen>
   );

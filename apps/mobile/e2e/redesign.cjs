@@ -46,27 +46,62 @@ require('node:fs').mkdirSync(out, { recursive: true });
   // onboarding
   await p.goto('http://127.0.0.1:8093');
   await p.waitForTimeout(2500);
+  if (group === 'finish') await shot('signin');
   await text('Continue with development sign-in').click();
   await p.getByLabel('What should we call you?').fill('Sam');
   await p.getByLabel('Date of birth (YYYY-MM-DD)').fill('1990-05-05');
   await p.getByLabel('Country or region').fill('Jam');
+  if (group === 'finish') await shot('onb1');
   await text('Jamaica').click();
+  if (group === 'finish') await shot('onb1-country');
   await btn('Continue').click();
+  if (group === 'finish') await shot('onb2');
   await p
     .getByRole('switch', { name: 'Store my health information' })
     .last()
     .check({ force: true });
   await p.getByRole('switch', { name: 'Analyze my meal photos' }).last().check({ force: true });
   await btn('Continue').click();
+  if (group === 'finish') await shot('onb2-on');
   await p.getByLabel('Height (cm)').fill('170');
   await p.getByLabel('Current weight (kg)').fill('75');
   await btn('Continue').click();
+  if (group === 'finish') await shot('onb4');
   for (const n of await p.getByRole('radio', { name: /^No$/ }).all()) await n.click();
   await btn('Continue').click();
+  if (group === 'finish') await shot('onb5');
   await btn('Finish setup').click();
   await text('Hello, Sam').waitFor();
   await p.waitForTimeout(3000);
 
+  if (group === 'finish') {
+    await tab('Food');
+    await btn('Meal plan').click();
+    await shot('plan');
+    await btn('Preview plan').click();
+    await scrollTo(900);
+    await shot('plan-preview');
+    await btn('Save plan').click();
+    await scrollTo(1400);
+    await shot('plan-saved');
+    await go('/food/saved');
+    await shot('saved-empty');
+    await go('/food/history');
+    await shot('history-empty');
+    await go('/food/swap');
+    await p.getByLabel('Search foods').fill('rice');
+    await shot('swap-search');
+    await p.locator('[role="button"][aria-label*="ice"]').first().click();
+    await shot('swap-compare');
+    await go('/coach/settings');
+    await shot('coach-settings');
+    await scrollTo(900);
+    await shot('coach-settings-2');
+    await go('/privacy');
+    await shot('privacy');
+    await scrollTo(900);
+    await shot('privacy-2');
+  }
   if (group === 'dance') {
     await tab('Dance');
     await shot('tab-top');
