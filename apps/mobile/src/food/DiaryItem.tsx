@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { estimateStatus, rescaleItem } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage } from '@/data/hooks';
@@ -28,11 +28,12 @@ export function DiaryItem({ item }: { item: FoodLogItem }) {
   };
   return (
     <View style={{ gap: spacing.sm }}>
-      <View
+      <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${item.name}, ${kcalText(item)}`}
-        onTouchEnd={() => setOpen(!open)}
-        style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}
+        accessibilityState={{ expanded: open }}
+        onPress={() => setOpen(!open)}
+        style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center', minHeight: 48 }}
       >
         <FoodBadge foodId={item.foodId} size={40} />
         <View style={{ flex: 1, gap: 2 }}>
@@ -42,7 +43,7 @@ export function DiaryItem({ item }: { item: FoodLogItem }) {
           </AppText>
         </View>
         <EstimateTag status={estimateStatus(item)} />
-      </View>
+      </Pressable>
       {open ? (
         <View style={{ gap: spacing.sm }}>
           <AppText variant="caption" muted>
@@ -50,12 +51,22 @@ export function DiaryItem({ item }: { item: FoodLogItem }) {
           </AppText>
           <PortionStepper
             grams={item.grams}
+            foodId={item.foodId}
             onChange={(g) =>
               run(() =>
                 store.updateFoodItem(item.id, { ...rescaleItem(item, g), source: item.source }),
               )
             }
           />
+          {estimateStatus(item) === 'estimate' ? (
+            <Button
+              variant="secondary"
+              label={t('food.looksRight')}
+              onPress={() =>
+                run(() => store.updateFoodItem(item.id, { ...item, userEdited: true }))
+              }
+            />
+          ) : null}
           {confirm ? (
             <Button
               label={`${t('food.itemDelete')}?`}

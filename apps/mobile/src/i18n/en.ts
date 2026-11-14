@@ -510,6 +510,7 @@ export const en = {
     'Guided by text and a timer. Video and music are not available until licensed content is added.',
   'wk.notFound': 'That workout could not be found.',
   'ses.title': 'Guided session',
+  'rev.discardConfirm': 'Discard these items?',
   'ses.restored':
     'Welcome back. Your session was paused where you left it. Carry on when you are ready.',
   'ses.progress': 'Block {n} of {total} · {pct}% done',

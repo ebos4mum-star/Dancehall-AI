@@ -412,3 +412,22 @@ describe('habit persistence', () => {
     );
   });
 });
+
+describe('food item removal', () => {
+  it('removes the meal too when its last item is deleted, and keeps it otherwise', async () => {
+    let remaining = 0;
+    respond = (c) => {
+      if (c.table === 'food_log_items' && !c.op && c.filters.some(([k]) => k === 'id'))
+        return { data: { log_id: 'log-1' }, error: null };
+      if (c.table === 'food_log_items' && !c.op && c.filters.some(([k]) => k === 'log_id'))
+        return { data: remaining ? [{ id: 'other' }] : [], error: null };
+      return { data: null, error: null };
+    };
+    await store().deleteFoodItem('item-1');
+    expect(calls.some((c) => c.table === 'food_logs' && c.op === 'delete')).toBe(true);
+    calls.length = 0;
+    remaining = 1;
+    await store().deleteFoodItem('item-2');
+    expect(calls.some((c) => c.table === 'food_logs' && c.op === 'delete')).toBe(false);
+  });
+});

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import { MEAL_TYPES, totals, type MealType } from '@dancehall/shared';
@@ -27,12 +27,16 @@ export default function Review() {
   const [msg, setMsg] = useState<string | null>(null);
   const [mealName, setMealName] = useState('');
   const [naming, setNaming] = useState(false);
+  const saving = useRef(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   const sum = totals(draft.items.filter((i) => !i.needsMatch));
   const shown = useCountUp(sum.kcal);
   const blocked = unresolved(draft).length > 0;
 
   const save = async () => {
+    if (saving.current) return; // a fast double tap must not log the meal twice
+    saving.current = true;
     setBusy(true);
     setErr(null);
     try {
@@ -49,6 +53,7 @@ export default function Review() {
       haptics.warning();
       setErr(errorMessage(e));
     } finally {
+      saving.current = false;
       setBusy(false);
     }
   };
@@ -143,8 +148,10 @@ export default function Review() {
         )}
         <Button
           variant="secondary"
-          label={t('common.cancel')}
+          label={confirmDiscard ? t('rev.discardConfirm') : t('common.cancel')}
           onPress={() => {
+            // Entries are never thrown away by a single stray tap.
+            if (draft.items.length > 0 && !confirmDiscard) return setConfirmDiscard(true);
             dispatch({ type: 'clear' });
             router.replace('/(tabs)/food');
           }}

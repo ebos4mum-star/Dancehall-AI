@@ -446,7 +446,23 @@ function createBaseStore(
       emit();
     },
     async deleteFoodItem(id) {
+      // Like the mock: removing the last item of a meal removes the (now empty) meal too, so no blank meal is left in the diary.
+      const row = ok(
+        await db.from('food_log_items').select('log_id').eq('id', id).maybeSingle(),
+      ) as Row | null;
       ok(await db.from('food_log_items').delete().eq('id', id));
+      if (row?.log_id) {
+        const left = ok(
+          await db.from('food_log_items').select('id').eq('log_id', row.log_id).limit(1),
+        ) as Row[];
+        if (!left || left.length === 0)
+          ok(
+            await db
+              .from('food_logs')
+              .delete()
+              .eq('id', row.log_id as string),
+          );
+      }
       emit();
     },
     async deleteFoodLog(id) {

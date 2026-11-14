@@ -22,6 +22,7 @@ import { Choice } from '@/ui/Choice';
 import { DepthCard } from '@/ui/Depth';
 import { formatDate } from '@/lib/format';
 import { foodEmoji } from './emoji';
+import { portionText } from './portion';
 import type { NutritionWeek } from './summary';
 
 /** Says how far to trust a value. Words carry the meaning; color only reinforces it. */
@@ -88,9 +89,11 @@ const stepFor = (g: number) => (g < 50 ? 5 : g < 300 ? 10 : 25);
 export function PortionStepper({
   grams,
   onChange,
+  foodId,
 }: {
   grams: number;
   onChange: (g: number) => void;
+  foodId?: string | null;
 }) {
   const { colors, radius, spacing } = useTheme();
   const btn = (label: string, delta: number) => (
@@ -113,17 +116,25 @@ export function PortionStepper({
     </Pressable>
   );
   const step = stepFor(grams);
+  const hint = portionText(foodId, grams);
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-      {btn(t('food.lessG'), -step)}
-      <AppText
-        variant="label"
-        accessibilityLiveRegion="polite"
-        style={{ minWidth: 64, textAlign: 'center' }}
-      >
-        {t('food.grams', { g: Math.round(grams) })}
-      </AppText>
-      {btn(t('food.moreG'), step)}
+    <View style={{ gap: spacing.xs }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        {btn(t('food.lessG'), -step)}
+        <AppText
+          variant="label"
+          accessibilityLiveRegion="polite"
+          style={{ minWidth: 64, textAlign: 'center' }}
+        >
+          {t('food.grams', { g: Math.round(grams) })}
+        </AppText>
+        {btn(t('food.moreG'), step)}
+      </View>
+      {hint ? (
+        <AppText variant="caption" muted>
+          {hint}
+        </AppText>
+      ) : null}
     </View>
   );
 }
@@ -169,7 +180,11 @@ export function ItemCard({
           <AppText variant="caption" muted>
             {macroText(item)}
           </AppText>
-          <PortionStepper grams={item.grams} onChange={(g) => onChange(rescaleItem(item, g))} />
+          <PortionStepper
+            grams={item.grams}
+            foodId={item.foodId}
+            onChange={(g) => onChange(rescaleItem(item, g))}
+          />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
             {estimateStatus(item) === 'estimate' ? (
               <Button
