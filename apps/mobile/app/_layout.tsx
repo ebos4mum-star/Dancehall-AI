@@ -5,9 +5,11 @@ import { AppProvider } from '@/data/AppProvider';
 import { DraftProvider } from '@/food/draft';
 import { t } from '@/i18n';
 import { AppText } from '@/ui/AppText';
+import { useTheme } from '@/theme/useTheme';
 import { Screen } from '@/ui/Screen';
 
 export default function RootLayout() {
+  const { colors } = useTheme();
   return (
     <SafeAreaProvider>
       <StatusBar style="auto" />
@@ -19,7 +21,17 @@ export default function RootLayout() {
         )}
       >
         <DraftProvider>
-          <Stack screenOptions={{ headerShown: false }}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              // Headers follow the theme so dark mode never shows a white bar.
+              headerStyle: { backgroundColor: colors.background },
+              headerTintColor: colors.text,
+              headerTitleStyle: { color: colors.text },
+              headerShadowVisible: false,
+              contentStyle: { backgroundColor: colors.background },
+            }}
+          >
             <Stack.Screen
               name="progress"
               options={{ headerShown: true, title: t('progress.title') }}
