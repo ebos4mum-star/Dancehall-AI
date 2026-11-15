@@ -10,7 +10,16 @@ describe('resolveConfig', () => {
       appEnv: 'development',
       authMode: 'mock',
       contentFixtures: false,
+      cloudAccounts: true,
     });
+  });
+  it('offers cloud accounts in a Supabase build only when explicitly enabled', () => {
+    const base = {
+      EXPO_PUBLIC_SUPABASE_URL: 'https://x.example.test',
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_abc',
+    };
+    expect(resolveConfig(base).cloudAccounts).toBe(false);
+    expect(resolveConfig({ ...base, EXPO_PUBLIC_CLOUD_ACCOUNTS: '1' }).cloudAccounts).toBe(true);
   });
   it('refuses mock in production', () => {
     expect(() => resolveConfig({ EXPO_PUBLIC_APP_ENV: 'production' })).toThrow(ConfigError);

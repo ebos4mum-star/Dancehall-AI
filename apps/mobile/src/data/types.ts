@@ -128,6 +128,13 @@ export interface DataStore {
   /** Development-only (mock). */
   signInDev?(): Promise<Session>;
   resetDevData?(): Promise<void>;
+  /**
+   * Signs in with an account's device credential: a long random secret held in the phone's secure storage, NOT the PIN. Fails with `not_authenticated` when the
+   * server refuses the credential, and `unknown` when the server could not be reached.
+   */
+  signInWithDevice?(identifier: string, secret: string): Promise<Session>;
+  /** The current session's access token, for calling the account Edge Function. Absent in the mock. */
+  accessToken?(): Promise<string | null>;
   /** Supabase email one-time code. */
   sendEmailCode?(email: string): Promise<void>;
   verifyEmailCode?(email: string, code: string): Promise<Session>;

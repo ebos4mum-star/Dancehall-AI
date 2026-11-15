@@ -292,6 +292,10 @@ export class MockStore implements DataStore {
     await this.commit();
     return { userId: DEV_USER, email: null, mode: 'mock' };
   }
+  /** The mock has one development user: signing in with a device credential is the same as signing in for development. */
+  async signInWithDevice(): Promise<Session> {
+    return this.signInDev();
+  }
   async signOut() {
     await this.load();
     this.state.signedIn = false;
