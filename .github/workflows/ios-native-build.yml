@@ -40,6 +40,7 @@ jobs:
         run: |
           test -d "$XCODE_APP"
           sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          ls -d /Applications/Xcode*
           xcodebuild -version
           sw_vers
 
@@ -80,7 +81,7 @@ jobs:
         if: failure()
         run: |
           L="$RUNNER_TEMP/xcodebuild.log"
-          grep -n -A16 "Could not resolve package" "$L" | cut -c1-300 | head -n 50 || true
+          grep -n -B30 -A2 "Could not resolve package" "$L" | grep -v -E "export |note: " | cut -c1-300 | head -n 50 || true
 
       - name: Keep the build log (short retention)
         if: always()
