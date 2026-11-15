@@ -44,6 +44,11 @@ describe('a reached goal', () => {
     expect(g.state).toBe('goal_reached');
     expect(g.offerMaintain).toBe(true);
   });
+  it('after the person switches to Maintain Weight the offer disappears and steady support takes over (the reached goal stays on file)', () => {
+    const afterSwitch = maintenanceSupport({ ...base, intent: 'maintain', activeGoal: lose(70) });
+    expect(afterSwitch.state).toBe('maintaining');
+    expect(afterSwitch.offerMaintain).toBe(false);
+  });
   it('is not triggered before the target, or by moving the wrong way', () => {
     expect(
       maintenanceSupport({ ...base, weights: [w(72, 0)], activeGoal: lose(70) }).state,

@@ -73,7 +73,8 @@ export function maintenanceSupport(i: MaintenanceInput): Maintenance {
   const g = i.activeGoal;
 
   // 1. A goal that has been reached: offer the move to maintenance (and nothing else changes).
-  if (g && g.type !== 'maintain') {
+  // Once the person has moved to Maintain Weight the offer is gone: a reached goal row can stay on file, but it no longer prompts.
+  if (g && g.type !== 'maintain' && i.intent !== 'maintain') {
     const p = goalProgress(
       { type: g.type, startKg: g.startKg, targetKg: g.targetKg },
       latest.weightKg,

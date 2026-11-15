@@ -257,6 +257,13 @@ export function composeCoachReply(userText: string, c: CoachContext): Reply {
           because: reasons(c, ['Your settings turn calorie and weight numbers off.']),
           proposedChanges: [],
         };
+      if (!c.personalized)
+        return {
+          message:
+            'Personalization is off, so I cannot see your details and will not guess a number. Your own estimate is on the Goals and Food screens. If you want me to use it, you can turn personalization on in the coach settings.',
+          because: reasons(c),
+          proposedChanges: [],
+        };
       if (c.guideKcal === undefined)
         return {
           message:

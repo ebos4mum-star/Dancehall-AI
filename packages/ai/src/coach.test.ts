@@ -645,6 +645,15 @@ describe('nutrition and maintenance coaching (rule-based, no paid AI)', () => {
     expect(hidden.message).toMatch(/will not share calorie numbers/);
     expect(hidden.message).not.toMatch(/\d{3,}/);
   });
+  it('with personalization off it says so, instead of claiming there is no estimate', () => {
+    const r = composeCoachReply(
+      'How many calories do I need?',
+      buildCoachContext({ personalized: false, unitSystem: 'metric', now: NOW }),
+    );
+    expect(r.message).toMatch(/Personalization is off/);
+    expect(r.message).toMatch(/Goals and Food screens/);
+    expect(r.message).not.toMatch(/\d{3,}/);
+  });
   it('plate guidance is the general plate picture, provisional, with no numbers or judgement', () => {
     const r = say('What does a balanced plate look like?', personal());
     expect(r.message).toMatch(/about half vegetables and fruit/);
