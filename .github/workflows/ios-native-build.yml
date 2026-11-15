@@ -14,7 +14,8 @@ concurrency:
 
 env:
   # Pinned toolchain: the runner image and Xcode are fixed, never the moving "latest".
-  XCODE_APP: /Applications/Xcode_16.4.app
+  # Expo SDK 58 compiles expo-modules-jsi (Swift 6.2 tools, strict concurrency); Xcode 16.4 and 26.3 fail to build it. 26.6 is the pinned version on macos-26.
+  XCODE_APP: /Applications/Xcode_26.6.app
   # Placeholders only. The unsigned compile needs no real project; real values never belong in this file.
   EXPO_PUBLIC_APP_ENV: preview
   EXPO_PUBLIC_AUTH_MODE: supabase
@@ -25,7 +26,7 @@ env:
 jobs:
   ios-unsigned:
     name: Unsigned iOS compile
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -40,6 +41,7 @@ jobs:
         run: |
           test -d "$XCODE_APP"
           sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          ls -d /Applications/Xcode*
           xcodebuild -version
           sw_vers
 
@@ -47,17 +49,20 @@ jobs:
         working-directory: apps/mobile
         run: npx expo prebuild --platform ios --no-install
 
-      - name: Confirm identity and deployment target
-        working-directory: apps/mobile
-        run: |
-          set -e
-          grep -q 'PRODUCT_BUNDLE_IDENTIFIER = com.dancehallfit.app;' ios/*.xcodeproj/project.pbxproj
-          echo "bundle identifier: com.dancehallfit.app"
-          grep -h 'IPHONEOS_DEPLOYMENT_TARGET' ios/*.xcodeproj/project.pbxproj | sort -u
-
       - name: Install pods
         working-directory: apps/mobile/ios
         run: pod install
+
+      - name: Confirm identity and deployment target
+        working-directory: apps/mobile/ios
+        run: |
+          set -eo pipefail
+          WS=$(ls -d *.xcworkspace | head -n 1)
+          SCHEME="${WS%.xcworkspace}"
+          xcodebuild -workspace "$WS" -scheme "$SCHEME" -configuration Release -showBuildSettings > "$RUNNER_TEMP/settings.txt"
+          grep -E '^\s+(PRODUCT_BUNDLE_IDENTIFIER|IPHONEOS_DEPLOYMENT_TARGET|SWIFT_VERSION) =' "$RUNNER_TEMP/settings.txt" | sort -u
+          grep -qE '^\s+PRODUCT_BUNDLE_IDENTIFIER = com\.dancehallfit\.app$' "$RUNNER_TEMP/settings.txt"
+          echo "bundle identifier confirmed: com.dancehallfit.app"
 
       - name: Compile (Release, device SDK, signing disabled)
         working-directory: apps/mobile/ios
@@ -73,6 +78,17 @@ jobs:
           echo "== built product =="
           ls "$RUNNER_TEMP/dd/Build/Products/Release-iphoneos" | head
 
+      - name: Show the first errors (only when the compile failed)
+        if: failure()
+        run: |
+          L="$RUNNER_TEMP/xcodebuild.log"
+          grep -n -E "(^|[^a-zA-Z])error:|fatal error|Undefined symbols|ld: " "$L" | grep -v -E "export |note: " | cut -c1-260 | head -n 20 || true
+          echo "== failed commands =="
+          grep -A4 "The following build commands failed" "$L" | cut -c1-260 || true
+          echo "== lines just before the first error =="
+          N=$(grep -n -E "(^|[^a-zA-Z])error:" "$L" | head -n 1 | cut -d: -f1)
+          [ -n "$N" ] && sed -n "$((N-12)),$((N+6))p" "$L" | grep -v -E "export |note: " | cut -c1-260 || true
+
       - name: Keep the build log (short retention)
         if: always()
         uses: actions/upload-artifact@v4
@@ -81,3 +97,15 @@ jobs:
           path: ${{ runner.temp }}/xcodebuild.log
           retention-days: 3
           if-no-files-found: ignore
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "RESULT_XCODE: $(xcodebuild -version | tr '\n' ' ')"
+            echo "RESULT_RUNNER: $(sw_vers -productVersion)"
+            grep -hE '^\s+(PRODUCT_BUNDLE_IDENTIFIER|IPHONEOS_DEPLOYMENT_TARGET|SWIFT_VERSION) =' "$RUNNER_TEMP/settings.txt" | sort -u | sed 's/^ */RESULT_/'
+            echo "RESULT_BUILD: $(grep -c '\*\* BUILD SUCCEEDED \*\*' "$RUNNER_TEMP/xcodebuild.log" || true) succeeded marker(s)"
+            echo "RESULT_APP: $(ls "$RUNNER_TEMP/dd/Build/Products/Release-iphoneos" 2>/dev/null | tr '\n' ' ')"
+            echo "RESULT_SIGNED: $(codesign -dv "$RUNNER_TEMP"/dd/Build/Products/Release-iphoneos/*.app 2>&1 | grep -c 'Signature' || true) signature lines (0 expected: unsigned)"
+          } | tee -a "$GITHUB_STEP_SUMMARY"

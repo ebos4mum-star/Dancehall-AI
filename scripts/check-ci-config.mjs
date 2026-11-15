@@ -15,8 +15,8 @@ for (const f of files) {
   const native = f === NATIVE_IOS_WORKFLOW;
   if (native) {
     // Narrow exceptions, each pinned: a fixed macOS image, manual trigger only, signing disabled, nothing signed or uploaded.
-    if (!/^\s+runs-on:\s*macos-15\s*$/m.test(t))
-      at('native iOS workflow must run on the pinned macos-15 image');
+    if (!/^\s+runs-on:\s*macos-26\s*$/m.test(t))
+      at('native iOS workflow must run on the pinned macos-26 image');
     if (!/^\s+XCODE_APP:\s*\/Applications\/Xcode_\d+\.\d+(\.\d+)?\.app\s*$/m.test(t))
       at('native iOS workflow must pin an explicit Xcode version (XCODE_APP)');
     if (!/^on:\s*\n\s+workflow_dispatch:\s*$/m.test(t))
@@ -35,7 +35,7 @@ for (const f of files) {
   }
   for (const m of t.matchAll(/runs-on:\s*(.+)/g)) {
     const v = m[1].trim();
-    if (native && v === 'macos-15') continue;
+    if (native && v === 'macos-26') continue;
     if (v !== 'ubuntu-latest' && !/^ubuntu-2\d\.04$/.test(v) && !/^ubuntu-24\.04$/.test(v))
       at(
         `runner "${v}" is not a standard Ubuntu runner (macOS, Windows and larger runners cost more)`,
