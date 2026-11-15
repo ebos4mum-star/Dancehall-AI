@@ -1,0 +1,83 @@
+name: iOS native build (unsigned)
+
+# Manual only. Proves the Expo project compiles natively with Xcode. UNSIGNED: no certificates, no provisioning profiles,
+# no secrets, no IPA, no upload. Signing and TestFlight are a separate, separately approved step.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-native-build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pinned toolchain: the runner image and Xcode are fixed, never the moving "latest".
+  XCODE_APP: /Applications/Xcode_16.4.app
+  # Placeholders only. The unsigned compile needs no real project; real values never belong in this file.
+  EXPO_PUBLIC_APP_ENV: preview
+  EXPO_PUBLIC_AUTH_MODE: supabase
+  EXPO_PUBLIC_CLOUD_ACCOUNTS: '1'
+  EXPO_PUBLIC_SUPABASE_URL: https://placeholder.invalid
+  EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_placeholder
+
+jobs:
+  ios-unsigned:
+    name: Unsigned iOS compile
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Select the pinned Xcode
+        run: |
+          test -d "$XCODE_APP"
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          xcodebuild -version
+          sw_vers
+
+      - name: Generate the iOS project (app.json is the source; ios/ is not committed)
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform ios --no-install
+
+      - name: Confirm identity and deployment target
+        working-directory: apps/mobile
+        run: |
+          set -e
+          grep -q 'PRODUCT_BUNDLE_IDENTIFIER = com.dancehallfit.app;' ios/*.xcodeproj/project.pbxproj
+          echo "bundle identifier: com.dancehallfit.app"
+          grep -h 'IPHONEOS_DEPLOYMENT_TARGET' ios/*.xcodeproj/project.pbxproj | sort -u
+
+      - name: Install pods
+        working-directory: apps/mobile/ios
+        run: pod install
+
+      - name: Compile (Release, device SDK, signing disabled)
+        working-directory: apps/mobile/ios
+        run: |
+          set -o pipefail
+          WS=$(ls -d *.xcworkspace | head -n 1)
+          SCHEME="${WS%.xcworkspace}"
+          xcodebuild -workspace "$WS" -scheme "$SCHEME" -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build 2>&1 | tee "$RUNNER_TEMP/xcodebuild.log" | tail -n 60
+          echo "== built product =="
+          ls "$RUNNER_TEMP/dd/Build/Products/Release-iphoneos" | head
+
+      - name: Keep the build log (short retention)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: ${{ runner.temp }}/xcodebuild.log
+          retention-days: 3
+          if-no-files-found: ignore
