@@ -2,7 +2,10 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  ALL_STYLES,
   GOAL_PERIODS,
+  LIVE_STYLES,
+  WORKOUTS,
   GOAL_TYPES,
   MIN_USER_AGE_YEARS,
   PROVISIONAL_LIMITS,
@@ -65,16 +68,31 @@ describe('staff permissions match the database', () => {
       [...STAFF_ROLES].sort(),
     );
   });
+  /** The style list the database enforces: the LAST definition across all migrations (a later migration may replace the check). */
+  const dbStyles = (): string[] => {
+    const created = /style text not null check \(style in \(([^)]*)\)/.exec(
+      sql.slice(sql.indexOf('create table public.workouts')),
+    );
+    let list = created![1]!;
+    for (const m of sql.matchAll(/workouts_style_check\s+check \(style in \(([^)]*)\)\)/g))
+      list = m[1]!;
+    return [...list.matchAll(/'([a-z_]+)'/g)].map((x) => x[1]!);
+  };
   it('workout styles, levels and intensities match the catalog constraints', async () => {
-    const { DANCE_STYLES, LEVELS, INTENSITIES } = await import('./index');
+    const { LEVELS, INTENSITIES } = await import('./index');
     const grab = (col: string) =>
       [
         ...new RegExp(`${col} text not null check \\(${col} in \\(([^)]*)\\)`)
           .exec(sql.slice(sql.indexOf('create table public.workouts')))![1]!
           .matchAll(/'([a-z_]+)'/g),
       ].map((x) => x[1]!);
-    expect(grab('style')).toEqual([...DANCE_STYLES]);
+    // The styles the app offers are exactly the styles the database accepts today (the latest definition).
+    expect(dbStyles()).toEqual([...LIVE_STYLES]);
     expect(grab('level')).toEqual([...LEVELS]);
     expect(grab('intensity')).toEqual([...INTENSITIES]);
+  });
+  it('every style the database accepts is known to the code, and every bundled workout uses a style the database accepts', () => {
+    for (const s of dbStyles()) expect(ALL_STYLES as readonly string[], s).toContain(s);
+    for (const w of WORKOUTS) expect(dbStyles(), `${w.id} (${w.style})`).toContain(w.style);
   });
 });

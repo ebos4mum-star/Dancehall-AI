@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { enableInternalFixtures } from '@dancehall/shared';
 import { createStore, readConfig } from './createStore';
 import { setLocale } from '@/i18n';
 import { ConfigError, type AppConfig } from '@/lib/env';
@@ -43,6 +44,8 @@ export function AppProvider({
   const boot = useMemo(() => {
     try {
       const config = readConfig();
+      // Development and review builds only (production configuration refuses to start with this on): placeholder content for pipeline testing.
+      if (config.contentFixtures) enableInternalFixtures();
       return { config, store: createStore(config), error: null as string | null };
     } catch (e) {
       return {

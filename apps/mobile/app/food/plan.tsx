@@ -3,7 +3,7 @@ import { FoodHero } from '@/food/kit';
 import { BigField } from '@/onboarding/kit';
 import { EmptyState } from '@/ui/EmptyState';
 import { brand } from '@/theme/tokens';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import {
   BUDGET_LEVELS,
@@ -11,6 +11,8 @@ import {
   totals,
   type BudgetLevel,
   type MealPlanDraft,
+  parsePrefs,
+  regionTagsFor,
 } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage, useLoad } from '@/data/hooks';
@@ -28,10 +30,14 @@ import { Screen } from '@/ui/Screen';
 import { haptics } from '@/ui/haptics';
 import { useNumbersHidden } from '@/wellness/hooks';
 
+// The priority cuisines first (Jamaican, Caribbean, West, East and Southern African), then the others. One taxonomy: see cuisines.ts.
 const REGIONS = [
   'any',
-  'west_african',
+  'jamaican',
   'caribbean',
+  'west_african',
+  'east_african',
+  'southern_african',
   'south_asian',
   'mediterranean',
   'latin_american',
@@ -54,6 +60,16 @@ export default function Plan() {
   const [days, setDays] = useState<'3' | '7'>('3');
   const [level, setLevel] = useState<BudgetLevel>('low');
   const [region, setRegion] = useState<Region>('any');
+  const [regionTouched, setRegionTouched] = useState(false);
+  // Start from the first cuisine the person chose in My approach, until they pick something here.
+  const { data: savedPrefs } = useLoad(async (s) => (await s.getWellnessPrefs?.()) ?? null);
+  useEffect(() => {
+    if (regionTouched) return;
+    const first = parsePrefs(savedPrefs).cuisines.find((c) =>
+      (REGIONS as readonly string[]).includes(c),
+    );
+    if (first) setRegion(first as Region);
+  }, [savedPrefs, regionTouched]);
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('');
   const [seed, setSeed] = useState(0);
@@ -70,7 +86,7 @@ export default function Plan() {
         targetKcal: guide.guideKcal,
         floorKcal: guide.floorKcal,
         budgetLevel: level,
-        regions: region === 'any' ? [] : [region],
+        regions: region === 'any' ? [] : regionTagsFor([region]),
         seed: sd,
       }),
     );
@@ -163,7 +179,10 @@ export default function Plan() {
               icon="earth"
               label={t(`region.${r}` as StringKey)}
               selected={region === r}
-              onPress={() => setRegion(r)}
+              onPress={() => {
+                setRegionTouched(true);
+                setRegion(r);
+              }}
               tint={brand.coral}
             />
           ))}

@@ -53,6 +53,54 @@ describe('session recovery', () => {
   });
 });
 
+describe('session recovery with the seated and easier versions', () => {
+  const seatedWorkout = {
+    id: 'seated-test',
+    blocks: [
+      {
+        kind: 'warmup' as const,
+        title: 'a',
+        seconds: 30,
+        cue: 'c1',
+        lowImpactAlt: 'l1',
+        seatedAlt: 's1',
+      },
+      {
+        kind: 'main' as const,
+        title: 'b',
+        seconds: 30,
+        cue: 'c2',
+        lowImpactAlt: 'l2',
+        seatedAlt: 's2',
+      },
+    ],
+  };
+  it('remembers the seated version and restores it paused with the seated cue', async () => {
+    let s = initSession(seatedWorkout, false, true);
+    s = sessionReduce(s, { type: 'start' }).state;
+    s = sessionReduce(s, { type: 'tick', seconds: 10 }).state;
+    const store = mem();
+    await writeSnapshot(store, snapshotOf(s, null, now));
+    const snap = (await readSnapshot(store, now))!;
+    expect(snap.seated).toBe(true);
+    const back = restoreSession(snap, seatedWorkout)!;
+    expect(back.status).toBe('paused');
+    expect(back.seated).toBe(true);
+    expect(back.segments[0]!.cue).toBe('s1');
+    expect(back.elapsedS).toBe(10);
+  });
+  it('a snapshot written before seated existed still restores, with seated off', async () => {
+    const s = initSession(w, false);
+    const old = { ...snapshotOf(s, null, now) } as Record<string, unknown>;
+    delete old.seated;
+    const store = mem();
+    await store.set('dh.session.inprogress', JSON.stringify(old));
+    const snap = (await readSnapshot(store, now))!;
+    expect(snap).not.toBeNull();
+    expect(restoreSession(snap, w)!.seated).toBe(false);
+  });
+});
+
 describe('once (duplicate completion guard)', () => {
   it('ignores concurrent and repeated calls after success', async () => {
     let calls = 0;

@@ -63,8 +63,29 @@ describe('isolation from unrelated credentials', () => {
       UNRELATED_TEST_MODE: 'true',
     });
     expect(Object.keys(c).sort()).toEqual(
-      ['aiApiUrl', 'appEnv', 'authMode', 'supabasePublishableKey', 'supabaseUrl'].sort(),
+      [
+        'aiApiUrl',
+        'appEnv',
+        'authMode',
+        'contentFixtures',
+        'supabasePublishableKey',
+        'supabaseUrl',
+      ].sort(),
     );
     expect(JSON.stringify(c)).not.toContain('placeholder-not-real');
+  });
+});
+
+describe('internal content fixtures stay out of real builds', () => {
+  it('no EAS build profile enables them', () => {
+    expect(JSON.stringify(readJson('eas.json'))).not.toMatch(/CONTENT_FIXTURES/);
+  });
+  it('only the app startup switches them on, and only through the guarded configuration', () => {
+    const hits = walk(join(root, 'src'))
+      .concat(walk(join(root, 'app')))
+      .filter((f) => !/\.test\.tsx?$/.test(f))
+      .filter((f) => /enableInternalFixtures\(/.test(readFileSync(f, 'utf8')))
+      .map((f) => f.replace(root, ''));
+    expect(hits).toEqual(['/src/data/AppProvider.tsx']);
   });
 });

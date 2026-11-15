@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Switch, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { WORKOUT_BY_ID, addDaysIso } from '@dancehall/shared';
+import { addDaysIso } from '@dancehall/shared';
+import { STRENGTH_META, resolveContent } from '@/dance/content';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage } from '@/data/hooks';
 import { mmss, STYLE_META } from '@/dance/meta';
@@ -27,11 +28,13 @@ import { haptics } from '@/ui/haptics';
 
 export default function WorkoutDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const w = WORKOUT_BY_ID.get(String(id));
+  // A dance workout or a strength workout (strength only while it passes the review gate, or as an internal fixture in development).
+  const w = useMemo(() => resolveContent(String(id)), [id]);
   const { store } = useApp();
   const { colors } = useTheme();
   const dance = useDanceData();
   const [low, setLow] = useState(false);
+  const [seated, setSeated] = useState(false);
   const [touched, setTouched] = useState(false);
   const [when, setWhen] = useState('today');
   const [msg, setMsg] = useState<string | null>(null);
@@ -50,7 +53,8 @@ export default function WorkoutDetail() {
       </Screen>
     );
   }
-  const meta = STYLE_META[w.style];
+  const meta = w.style ? STYLE_META[w.style] : STRENGTH_META;
+  const strength = w.kind === 'strength';
   const days = Array.from({ length: 7 }, (_, i) => addDaysIso(dance.todayKey, i));
   const dayLabel = (d: string, i: number) =>
     i === 0
@@ -72,7 +76,7 @@ export default function WorkoutDetail() {
       await store.createSession({
         workoutId: w.id,
         title: w.title,
-        style: w.style,
+        style: w.style ?? undefined,
         minutes: w.minutes,
         plannedFor: date,
         lowImpact: low,
@@ -89,7 +93,12 @@ export default function WorkoutDetail() {
   };
 
   const sections = ['warmup', 'main', 'cooldown'] as const;
-  const kindTint = { warmup: brand.coral, main: brand.violet, cooldown: brand.lime } as const;
+  const kindTint = {
+    warmup: brand.coral,
+    main: brand.violet,
+    cooldown: brand.lime,
+    rest: '#B9B2C9',
+  } as const;
   const secs = (k: (typeof sections)[number]) =>
     w.blocks.filter((b) => b.kind === k).reduce((a, b) => a + b.seconds, 0);
   return (
@@ -107,7 +116,7 @@ export default function WorkoutDetail() {
           }}
         >
           <Ionicons
-            name={STYLE_ICON[w.style]}
+            name={w.style ? STYLE_ICON[w.style] : STRENGTH_META.icon}
             size={160}
             color="#FFFFFF"
             style={{ position: 'absolute', right: -24, top: -10, opacity: 0.1 }}
@@ -116,7 +125,7 @@ export default function WorkoutDetail() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
             <View style={{ flex: 1, gap: spacing.xs }}>
               <AppText variant="caption" style={{ color: '#FFFFFF', letterSpacing: 1 }}>
-                {t(`style.${w.style}` as StringKey).toUpperCase()}
+                {(w.style ? t(`style.${w.style}` as StringKey) : t('st.kind')).toUpperCase()}
               </AppText>
               <AppText variant="title" accessibilityRole="header" style={{ color: '#FFFFFF' }}>
                 {w.title}
@@ -128,22 +137,37 @@ export default function WorkoutDetail() {
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
             <Fact icon="time" label={t('dance.minutes', { n: w.minutes })} />
             <Fact meter={LEVEL_NUM[w.level]} label={t(`level.${w.level}` as StringKey)} />
-            <Fact
-              meter={INTENSITY_NUM[w.intensity]}
-              label={t(`intensity.${w.intensity}` as StringKey)}
-            />
-            <Fact
-              icon={w.impact === 'low' ? 'leaf' : 'footsteps'}
-              label={t(`impact.${w.impact}` as StringKey)}
-            />
+            {w.intensity ? (
+              <Fact
+                meter={INTENSITY_NUM[w.intensity]}
+                label={t(`intensity.${w.intensity}` as StringKey)}
+              />
+            ) : null}
+            {w.impact ? (
+              <Fact
+                icon={w.impact === 'low' ? 'leaf' : 'footsteps'}
+                label={t(`impact.${w.impact}` as StringKey)}
+              />
+            ) : null}
+            {strength ? (
+              <Fact
+                icon="layers"
+                label={t('st.setsTotal') + ': ' + w.blocks.filter((b) => b.kind === 'main').length}
+              />
+            ) : null}
+            {w.seatedSuitable ? <Fact icon="accessibility" label={t('wk.seatedSuitable')} /> : null}
           </View>
         </LinearGradient>
       </Reveal>
 
+      {w.fixture ? <Notice tone="warning">{t('wk.fixtureBanner')}</Notice> : null}
       <Button
         label={t('wk.start')}
         onPress={() =>
-          router.push({ pathname: '/dance/session', params: { id: w.id, low: low ? '1' : '0' } })
+          router.push({
+            pathname: '/dance/session',
+            params: { id: w.id, low: low ? '1' : '0', seated: seated ? '1' : '0' },
+          })
         }
       />
 
@@ -200,7 +224,9 @@ export default function WorkoutDetail() {
           ))}
         </View>
         <AppText variant="caption" muted>
-          {`${t(('wk.pace.' + w.intensity) as StringKey)} ${t('wk.stepsBody')}`}
+          {w.intensity
+            ? `${t(('wk.pace.' + w.intensity) as StringKey)} ${t('wk.stepsBody')}`
+            : t('dance.strengthIntro')}
         </AppText>
         <Notice>{t('wk.textOnly')}</Notice>
       </DepthCard>
@@ -209,13 +235,13 @@ export default function WorkoutDetail() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
           <IconBadge name="leaf" size={40} fill={brand.lime} />
           <View style={{ flex: 1 }}>
-            <AppText variant="label">{t('wk.lowImpact')}</AppText>
+            <AppText variant="label">{strength ? t('st.easier') : t('wk.lowImpact')}</AppText>
             <AppText variant="caption" muted>
-              {t('wk.lowImpactBody')}
+              {strength ? t('st.easierBody') : t('wk.lowImpactBody')}
             </AppText>
           </View>
           <Switch
-            accessibilityLabel={t('wk.lowImpact')}
+            accessibilityLabel={strength ? t('st.easier') : t('wk.lowImpact')}
             value={low}
             onValueChange={(v) => {
               setTouched(true);
@@ -237,7 +263,59 @@ export default function WorkoutDetail() {
         ) : null}
       </DepthCard>
 
-      {sections.map((kind) => (
+      {w.seatedSuitable && !w.seatedOnly ? (
+        <DepthCard>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <IconBadge name="accessibility" size={40} fill={brand.lime} />
+            <View style={{ flex: 1 }}>
+              <AppText variant="label">{t('wk.seated')}</AppText>
+              <AppText variant="caption" muted>
+                {t('wk.seatedBody')}
+              </AppText>
+            </View>
+            <Switch
+              accessibilityLabel={t('wk.seated')}
+              value={seated}
+              onValueChange={(v) => {
+                setSeated(v);
+                haptics.tap();
+              }}
+              trackColor={{ true: colors.primary, false: colors.border }}
+            />
+          </View>
+        </DepthCard>
+      ) : null}
+
+      {strength && w.strength
+        ? w.strength.blocks
+            .filter((b, i, a) => a.findIndex((x) => x.exerciseId === b.exerciseId) === i)
+            .map((b) => {
+              const e = w.exercises?.find((x) => x.id === b.exerciseId);
+              if (!e) return null;
+              const rows = w.strength!.blocks.filter((x) => x.exerciseId === b.exerciseId);
+              const plan = rows
+                .map((x) =>
+                  x.reps !== null
+                    ? `${x.sets} × ${t('st.reps', { n: x.reps })}`
+                    : `${x.sets} × ${t('st.timed', { n: x.seconds ?? 0 })}`,
+                )
+                .join(', ');
+              return (
+                <Disclosure key={e.id} title={e.name} summary={plan} initiallyOpen>
+                  <AppText variant="caption">{e.cues.join(' ')}</AppText>
+                  <AppText variant="caption" muted>{`${t('st.easier')}: ${e.regression}`}</AppText>
+                  {e.progression ? (
+                    <AppText variant="caption" muted>{`+ ${e.progression}`}</AppText>
+                  ) : null}
+                  {e.safety.map((x) => (
+                    <AppText key={x} variant="caption" muted>{`• ${x}`}</AppText>
+                  ))}
+                </Disclosure>
+              );
+            })
+        : null}
+
+      {(strength ? (['warmup', 'cooldown'] as const) : sections).map((kind) => (
         <Disclosure
           key={kind}
           title={t(`wk.${kind}` as StringKey)}
@@ -252,7 +330,7 @@ export default function WorkoutDetail() {
                 <View style={{ flex: 1, gap: 2 }}>
                   <AppText variant="label">{`${b.title} · ${mmss(b.seconds)}`}</AppText>
                   <AppText variant="caption" muted>
-                    {low ? b.lowImpactAlt : b.cue}
+                    {seated && b.seatedAlt ? b.seatedAlt : low ? b.lowImpactAlt : b.cue}
                   </AppText>
                 </View>
               </View>
@@ -266,17 +344,19 @@ export default function WorkoutDetail() {
         ))}
       </Disclosure>
 
-      <Disclosure title={t('wk.schedule')}>
-        <Choice
-          label={t('wk.when')}
-          value={when}
-          onChange={setWhen}
-          options={days.map((d, i) => ({ value: i === 0 ? 'today' : d, label: dayLabel(d, i) }))}
-        />
-        <Button variant="secondary" label={t('wk.schedule')} onPress={schedule} disabled={busy} />
-        {msg ? <Notice>{msg}</Notice> : null}
-        {err ? <Notice tone="warning">{err}</Notice> : null}
-      </Disclosure>
+      {strength ? null : (
+        <Disclosure title={t('wk.schedule')}>
+          <Choice
+            label={t('wk.when')}
+            value={when}
+            onChange={setWhen}
+            options={days.map((d, i) => ({ value: i === 0 ? 'today' : d, label: dayLabel(d, i) }))}
+          />
+          <Button variant="secondary" label={t('wk.schedule')} onPress={schedule} disabled={busy} />
+          {msg ? <Notice>{msg}</Notice> : null}
+          {err ? <Notice tone="warning">{err}</Notice> : null}
+        </Disclosure>
+      )}
     </Screen>
   );
 }

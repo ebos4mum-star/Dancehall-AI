@@ -6,7 +6,11 @@ const jwt = (role: string) => `${b64({ alg: 'HS256' })}.${b64({ role })}.sig`;
 
 describe('resolveConfig', () => {
   it('defaults to mock in development with nothing configured', () => {
-    expect(resolveConfig({})).toEqual({ appEnv: 'development', authMode: 'mock' });
+    expect(resolveConfig({})).toEqual({
+      appEnv: 'development',
+      authMode: 'mock',
+      contentFixtures: false,
+    });
   });
   it('refuses mock in production', () => {
     expect(() => resolveConfig({ EXPO_PUBLIC_APP_ENV: 'production' })).toThrow(ConfigError);
@@ -110,5 +114,37 @@ describe('mock authentication can never be enabled in production', () => {
   it('an unknown or misspelled environment is refused rather than defaulting to something permissive', () => {
     for (const e of ['prod', 'Production', 'staging', 'live'])
       expect(() => resolveConfig({ EXPO_PUBLIC_APP_ENV: e })).toThrow(ConfigError);
+  });
+});
+
+describe('internal content fixtures', () => {
+  it('are off unless explicitly enabled, and allowed in development and preview builds', () => {
+    expect(resolveConfig({}).contentFixtures).toBe(false);
+    expect(resolveConfig({ EXPO_PUBLIC_CONTENT_FIXTURES: '0' }).contentFixtures).toBe(false);
+    expect(resolveConfig({ EXPO_PUBLIC_CONTENT_FIXTURES: '1' }).contentFixtures).toBe(true);
+    expect(
+      resolveConfig({ EXPO_PUBLIC_CONTENT_FIXTURES: '1', EXPO_PUBLIC_APP_ENV: 'preview' })
+        .contentFixtures,
+    ).toBe(true);
+  });
+  it('can never be enabled in a production build, with any other setting', () => {
+    for (const mode of [undefined, 'mock', 'supabase'])
+      expect(() =>
+        resolveConfig({
+          EXPO_PUBLIC_APP_ENV: 'production',
+          EXPO_PUBLIC_CONTENT_FIXTURES: '1',
+          EXPO_PUBLIC_AUTH_MODE: mode,
+          EXPO_PUBLIC_SUPABASE_URL: 'https://x.supabase.example.test',
+          EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_x',
+        }),
+      ).toThrow(ConfigError);
+  });
+  it('the supabase path carries the flag too', () => {
+    const c = resolveConfig({
+      EXPO_PUBLIC_CONTENT_FIXTURES: '1',
+      EXPO_PUBLIC_SUPABASE_URL: 'https://x.supabase.example.test',
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_x',
+    });
+    expect(c).toMatchObject({ authMode: 'supabase', contentFixtures: true });
   });
 });

@@ -1,5 +1,6 @@
 import data from './food-data.json';
 import type { Macros } from './nutrition';
+import type { FoodProvenance } from './food-provenance';
 
 export const FOOD_CATEGORIES = [
   'grain',
@@ -27,6 +28,8 @@ export interface FoodRef {
   /** Relative cost: 1 lower, 2 medium, 3 higher. A rough planning aid, not a price. */
   costTier: 1 | 2 | 3;
   aliases: string[];
+  /** Where the numbers came from and who reviewed them. Absent on synthetic sample foods. See food-provenance.ts. */
+  provenance?: FoodProvenance;
 }
 
 /** SYNTHETIC development data (see the notice inside food-data.json). Never present these values as authoritative. */

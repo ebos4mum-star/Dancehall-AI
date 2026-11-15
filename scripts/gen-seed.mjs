@@ -4,6 +4,22 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
 const data = JSON.parse(readFileSync('packages/shared/src/food-data.json', 'utf8'));
 const wk = JSON.parse(readFileSync('packages/shared/src/workout-data.json', 'utf8'));
+// Reviewed content (with provenance) or a style the database cannot store yet must not be seeded by this generator until it is extended for that content and the
+// owner has approved the hosted data change and the style migration. Failing loudly beats generating a seed that silently drops the provenance.
+const DB_STYLES = ['afrobeats', 'amapiano', 'hip_hop', 'latin', 'bollywood', 'low_impact'];
+for (const f of data.foods)
+  if (f.provenance)
+    throw new Error(
+      `food ${f.id} has provenance: extend scripts/gen-seed.mjs (is_synthetic, attribution) and get the hosted seed approved first`,
+    );
+for (const w of wk.workouts) {
+  if (!DB_STYLES.includes(w.style))
+    throw new Error(
+      `workout ${w.id} uses style ${w.style}, which the database cannot store until the style migration is approved and applied`,
+    );
+  if (w.fixture)
+    throw new Error(`workout ${w.id} is an internal fixture and must never be bundled or seeded`);
+}
 const jsonb = (v) => `${q(JSON.stringify(v))}::jsonb`;
 const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
 const arr = (a) => `array[${a.map(q).join(', ')}]::text[]`;

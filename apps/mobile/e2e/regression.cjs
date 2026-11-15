@@ -208,6 +208,21 @@ async function step(name, fn) {
   await step('C: Dance tab shows Quick Fit and the licensing note', async () => {
     await tab('Dance');
     await seen('Move today');
+    // Without the development switch there is no Dancehall, reggae, chair dance, seated filter, strength session or fixture anywhere on the Dance tab.
+    for (const absent of [
+      'Dancehall',
+      'Reggae',
+      'Chair dance',
+      'Internal fixture',
+      'Strength sessions',
+      'Seated-friendly',
+    ])
+      assert.equal(
+        await p.getByText(absent, { exact: true }).locator('visible=true').count(),
+        0,
+        `${absent} must not be shown in a normal build`,
+      );
+
     await seen('no video, music or instructors yet');
   });
   await step('C: a style filter narrows the catalog', async () => {

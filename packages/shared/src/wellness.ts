@@ -1,4 +1,5 @@
 import { waterGuideMl } from './nutrition-plan';
+import { CUISINE_IDS, type CuisineId } from './cuisines';
 import { localDateKey } from './food';
 import type { DailyPlanInput } from './daily-plan';
 import type { CoachContext } from './coach-context';
@@ -68,16 +69,9 @@ export const STYLE_PREFS = [
   'soca',
 ] as const;
 export type StylePref = (typeof STYLE_PREFS)[number];
-/** Cuisines the person cooks and eats; names match the food reference data's region tags. */
-export const CUISINE_PREFS = [
-  'west_african',
-  'caribbean',
-  'mediterranean',
-  'south_asian',
-  'asian',
-  'latin_american',
-] as const;
-export type CuisinePref = (typeof CUISINE_PREFS)[number];
+/** Cuisines the person cooks and eats. One taxonomy (cuisines.ts) with the priority cuisines first; ids match the food region tags. */
+export const CUISINE_PREFS = CUISINE_IDS;
+export type CuisinePref = CuisineId;
 export const MOBILITY_PREFS = ['low_impact', 'seated', 'balance_support'] as const;
 export type MobilityPref = (typeof MOBILITY_PREFS)[number];
 export const EXPERIENCE_LEVELS = ['new', 'some', 'regular'] as const;

@@ -7,11 +7,12 @@ import { brand, radius, spacing } from '@/theme/tokens';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   INSTRUCTORS,
-  WORKOUT_BY_ID,
   completionSummary,
   resolvePresentation,
+  strengthEntryLabel,
   type Presentation,
 } from '@dancehall/shared';
+import { resolveContent } from '@/dance/content';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage } from '@/data/hooks';
 import { EFFORT_CHOICES, mmss } from '@/dance/meta';
@@ -35,12 +36,16 @@ import { INSTRUCTION_LICENCES, INSTRUCTION_TRACKS, stageRendererFor } from '@/pl
 import { AudioPanel, MovementPreview, PresentationPicker } from '@/player/ui';
 
 export default function Session() {
-  const { id, low, sessionId } = useLocalSearchParams<{
+  const { id, low, sessionId, seated } = useLocalSearchParams<{
     id: string;
     low?: string;
     sessionId?: string;
+    seated?: string;
   }>();
-  const workout = WORKOUT_BY_ID.get(String(id));
+  // A dance workout or a strength workout (strength is returned only while it passes the review gate, or as an internal fixture in development).
+  // Resolved once per id: the player's effects depend on this object, so a new object on every render would restart them in a loop.
+  const workout = useMemo(() => resolveContent(String(id)), [id]);
+  const strength = workout?.kind === 'strength';
   const { store, profile } = useApp();
   const { colors } = useTheme();
   const reduced = useReducedMotion();
@@ -49,6 +54,7 @@ export default function Session() {
     workout,
     low === '1',
     sessionId ? String(sessionId) : null,
+    seated === '1',
   );
   const [effort, setEffort] = useState<string>('moderate');
   const [err, setErr] = useState<string | null>(null);
@@ -90,7 +96,7 @@ export default function Session() {
   }
   const seg = s.segments[s.index]!;
   const next = s.segments[s.index + 1];
-  const fraction = seg.seconds > 0 ? 1 - s.remainingS / seg.seconds : 1;
+  const fraction = seg.manual ? 1 : seg.seconds > 0 ? 1 - s.remainingS / seg.seconds : 1;
   const totalS = s.segments.reduce((a, g) => a + g.seconds, 0);
   const doneS =
     s.segments.slice(0, s.index).reduce((a, g) => a + g.seconds, 0) + (seg.seconds - s.remainingS);
@@ -103,7 +109,16 @@ export default function Session() {
     const rpe = EFFORT_CHOICES.find((e) => e.key === effort)?.value ?? 5;
     try {
       await saver.run(async () => {
-        if (sessionId)
+        if (workout.kind === 'strength') {
+          // Strength is recorded with the existing strength entry (minutes and equipment), so the plan, challenges and Pulse already count it.
+          await store.addWellness?.({
+            kind: 'strength',
+            day: todayIso(),
+            amount: Math.max(1, Math.round(s.elapsedS / 60)),
+            label: strengthEntryLabel(workout.strength!),
+            clientKey: `st-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+          });
+        } else if (sessionId)
           await store.updateSession(String(sessionId), {
             status: 'completed',
             durationS: s.elapsedS,
@@ -114,7 +129,7 @@ export default function Session() {
           await store.createSession({
             workoutId: workout.id,
             title: workout.title,
-            style: workout.style,
+            style: workout.style ?? undefined,
             minutes: workout.minutes,
             status: 'completed',
             durationS: s.elapsedS,
@@ -132,7 +147,12 @@ export default function Session() {
     }
   };
 
-  const KIND_TINT = { warmup: brand.coral, main: brand.violet, cooldown: brand.lime } as const;
+  const KIND_TINT = {
+    warmup: brand.coral,
+    main: brand.violet,
+    cooldown: brand.lime,
+    rest: '#B9B2C9',
+  } as const;
   const EFFORT_ICON = { easy: 'leaf', moderate: 'walk', hard: 'flame', veryHard: 'flash' } as const;
 
   // ---- After the session -------------------------------------------------------------------------------------------------------
@@ -181,27 +201,31 @@ export default function Session() {
             >
               <IconBadge name="checkmark" size={36} fill={colors.success} color="#FFFFFF" />
               <AppText variant="label" style={{ flex: 1 }}>
-                {t('ses.saved')}
+                {strength ? t('st.saved') : t('ses.saved')}
               </AppText>
             </View>
           ) : (
             <>
               {!summary.finishedNaturally ? <Notice>{t('pl.endedEarly')}</Notice> : null}
-              <AppText variant="heading" accessibilityRole="header">
-                {t('ses.effort')}
-              </AppText>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-                {EFFORT_CHOICES.map((e) => (
-                  <IconChoice
-                    key={e.key}
-                    icon={EFFORT_ICON[e.key]}
-                    label={t(`ses.effort.${e.key}` as StringKey)}
-                    selected={effort === e.key}
-                    onPress={() => setEffort(e.key)}
-                    tint={brand.lime}
-                  />
-                ))}
-              </View>
+              {!strength ? (
+                <>
+                  <AppText variant="heading" accessibilityRole="header">
+                    {t('ses.effort')}
+                  </AppText>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+                    {EFFORT_CHOICES.map((e) => (
+                      <IconChoice
+                        key={e.key}
+                        icon={EFFORT_ICON[e.key]}
+                        label={t(`ses.effort.${e.key}` as StringKey)}
+                        selected={effort === e.key}
+                        onPress={() => setEffort(e.key)}
+                        tint={brand.lime}
+                      />
+                    ))}
+                  </View>
+                </>
+              ) : null}
               <Button
                 label={summary.finishedNaturally ? t('ses.save') : t('pl.saveEarly')}
                 onPress={save}
@@ -232,7 +256,10 @@ export default function Session() {
               variant="caption"
               style={{ color: brand.lime, fontWeight: '700', letterSpacing: 1.2 }}
             >
-              {t(`style.${workout.style}` as StringKey).toUpperCase()}
+              {(workout.style
+                ? t(`style.${workout.style}` as StringKey)
+                : t('st.kind')
+              ).toUpperCase()}
             </AppText>
             <AppText variant="title" accessibilityRole="header" style={{ color: brand.ivory }}>
               {workout.title}
@@ -245,12 +272,19 @@ export default function Session() {
             <PulseStage state="welcome" size={112} />
           </View>
         </HeroScene>
+        {workout.fixture ? <Notice tone="warning">{t('wk.fixtureBanner')}</Notice> : null}
         {restored ? <Notice>{t('ses.restored')}</Notice> : null}
         <DepthCard>
           {[
             ['time', t('pl.facts.time'), t('dance.minutes', { n: workout.minutes })],
             ['trending-up', t('pl.facts.level'), t(`level.${workout.level}` as StringKey)],
-            ['footsteps', t('pl.facts.impact'), t(`impact.${workout.impact}` as StringKey)],
+            workout.impact
+              ? ['footsteps', t('pl.facts.impact'), t(`impact.${workout.impact}` as StringKey)]
+              : [
+                  'layers',
+                  t('st.setsTotal'),
+                  String(workout.blocks.filter((b) => b.kind === 'main').length),
+                ],
             ['fitness', t('pl.facts.kit'), workout.equipment],
             [
               'person',
@@ -281,11 +315,14 @@ export default function Session() {
         <DepthCard>
           <PresentationPicker resolution={resolution} onPick={setRequested} />
         </DepthCard>
-        <Disclosure title={t('wk.lowImpact')} summary={s.lowImpact ? t('pl.on') : t('pl.off')}>
+        <Disclosure
+          title={strength ? t('st.easier') : t('wk.lowImpact')}
+          summary={s.lowImpact ? t('pl.on') : t('pl.off')}
+        >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
             <IconBadge name="leaf" size={32} fill={brand.lime} />
             <AppText variant="label" style={{ flex: 1 }}>
-              {t('wk.lowImpact')}
+              {strength ? t('st.easier') : t('wk.lowImpact')}
             </AppText>
             <Button
               variant="secondary"
@@ -294,9 +331,27 @@ export default function Session() {
             />
           </View>
           <AppText variant="caption" muted>
-            {t('wk.lowImpactBody')}
+            {strength ? t('st.easierBody') : t('wk.lowImpactBody')}
           </AppText>
         </Disclosure>
+        {workout.seatedSuitable && !workout.seatedOnly ? (
+          <Disclosure title={t('wk.seated')} summary={s.seated ? t('pl.on') : t('pl.off')}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <IconBadge name="accessibility" size={32} fill={brand.lime} />
+              <AppText variant="label" style={{ flex: 1 }}>
+                {t('wk.seated')}
+              </AppText>
+              <Button
+                variant="secondary"
+                label={s.seated ? t('pl.turnOff') : t('pl.turnOn')}
+                onPress={() => dispatch({ type: 'seated', value: !s.seated })}
+              />
+            </View>
+            <AppText variant="caption" muted>
+              {t('wk.seatedBody')}
+            </AppText>
+          </Disclosure>
+        ) : null}
         <AppText variant="heading" accessibilityRole="header">
           {t('pl.preview')}
         </AppText>
@@ -456,14 +511,39 @@ export default function Session() {
             <View
               style={{ alignItems: 'center' }}
               accessible
-              accessibilityLabel={`${mmss(s.remainingS)} ${t('ses.left')}`}
+              accessibilityLabel={
+                seg.manual
+                  ? `${t('st.sets', { n: seg.setNumber ?? 1, total: seg.setsTotal ?? 1 })}, ${t('st.reps', { n: seg.reps ?? 0 })}`
+                  : `${mmss(s.remainingS)} ${t('ses.left')}`
+              }
             >
-              <AppText variant="title" style={{ fontSize: 46, lineHeight: 52, color: brand.ivory }}>
-                {mmss(s.remainingS)}
-              </AppText>
-              <AppText variant="caption" style={{ color: brand.ivory, opacity: 0.85 }}>
-                {t('ses.left')}
-              </AppText>
+              {seg.manual ? (
+                <>
+                  <AppText
+                    variant="title"
+                    style={{ fontSize: 30, lineHeight: 36, color: brand.ivory }}
+                  >
+                    {t('st.sets', { n: seg.setNumber ?? 1, total: seg.setsTotal ?? 1 })}
+                  </AppText>
+                  <AppText variant="caption" style={{ color: brand.ivory, opacity: 0.85 }}>
+                    {t('st.reps', { n: seg.reps ?? 0 })}
+                  </AppText>
+                </>
+              ) : (
+                <>
+                  <AppText
+                    variant="title"
+                    style={{ fontSize: 46, lineHeight: 52, color: brand.ivory }}
+                  >
+                    {mmss(s.remainingS)}
+                  </AppText>
+                  <AppText variant="caption" style={{ color: brand.ivory, opacity: 0.85 }}>
+                    {seg.setNumber
+                      ? t('st.sets', { n: seg.setNumber, total: seg.setsTotal ?? 1 })
+                      : t('ses.left')}
+                  </AppText>
+                </>
+              )}
             </View>
           </Ring>
         </View>
@@ -489,7 +569,7 @@ export default function Session() {
         <View style={{ position: 'absolute', right: -6, bottom: 6 }}>
           <PulseStage state={s.status === 'running' ? 'dance' : 'idle'} size={92} />
         </View>
-        {s.remainingS <= 3 && s.status === 'running' ? (
+        {!seg.manual && s.remainingS <= 3 && s.status === 'running' ? (
           <View
             pointerEvents="none"
             style={{ position: 'absolute', right: spacing.lg, top: spacing.md }}
@@ -567,15 +647,29 @@ export default function Session() {
       <AppText variant="caption" muted style={{ textAlign: 'center' }}>
         {s.status === 'running' ? t('ses.pause') : t('ses.resume')}
       </AppText>
+      {seg.manual ? (
+        <Button
+          label={t('st.doneSet')}
+          disabled={s.status !== 'running'}
+          onPress={() => {
+            haptics.success();
+            dispatch({ type: 'done' });
+          }}
+        />
+      ) : null}
+      {workout.fixture ? <Notice tone="warning">{t('wk.fixtureBanner')}</Notice> : null}
 
       <Disclosure title={t('pl.audio')}>
         <AudioPanel audio={audio} onChange={updateAudio} voiceAvailable={voiceAvailable} />
       </Disclosure>
-      <Disclosure title={t('wk.lowImpact')} summary={s.lowImpact ? t('pl.on') : t('pl.off')}>
+      <Disclosure
+        title={strength ? t('st.easier') : t('wk.lowImpact')}
+        summary={s.lowImpact ? t('pl.on') : t('pl.off')}
+      >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
           <IconBadge name="leaf" size={32} fill={brand.lime} />
           <AppText variant="label" style={{ flex: 1 }}>
-            {t('wk.lowImpact')}
+            {strength ? t('st.easier') : t('wk.lowImpact')}
           </AppText>
           <Button
             variant="secondary"
@@ -584,6 +678,21 @@ export default function Session() {
           />
         </View>
       </Disclosure>
+      {workout.seatedSuitable && !workout.seatedOnly ? (
+        <Disclosure title={t('wk.seated')} summary={s.seated ? t('pl.on') : t('pl.off')}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <IconBadge name="accessibility" size={32} fill={brand.lime} />
+            <AppText variant="label" style={{ flex: 1 }}>
+              {t('wk.seated')}
+            </AppText>
+            <Button
+              variant="secondary"
+              label={s.seated ? t('pl.turnOff') : t('pl.turnOn')}
+              onPress={() => dispatch({ type: 'seated', value: !s.seated })}
+            />
+          </View>
+        </Disclosure>
+      ) : null}
       {confirmEnd ? (
         <DepthCard>
           <View accessibilityLiveRegion="polite" style={{ gap: spacing.sm }}>

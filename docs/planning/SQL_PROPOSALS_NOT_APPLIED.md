@@ -123,14 +123,14 @@ Inserting the `fasting.enabled` row is a **hosted data change** (and is why this
 
 ## M3: widen `workouts.style`
 
-Purpose: allow `dancehall` and `reggae` (plus `soca` and `chair_dance`, which the plan also needs) as workout styles.
+Purpose: allow `dancehall`, `reggae` and `chair_dance` as workout styles. **Revised for Stage C:** `soca` was removed from the earlier draft because it was not requested (it remains a valid _preference_). Verified on a scratch local database on top of all 14 migrations: it applies cleanly, all 14 existing workouts stay valid, and the catalog, session, RLS and definer tests pass with it.
 
 ```sql
 -- PROPOSAL M3: widen workouts.style. Replaces ONE check constraint on a hosted table; it only ADDS values, so every existing row stays valid.
 -- Ship only together with real, reviewed, rights-cleared content and the matching client enum change.
 alter table public.workouts drop constraint workouts_style_check;
 alter table public.workouts add constraint workouts_style_check
-  check (style in ('afrobeats', 'amapiano', 'hip_hop', 'latin', 'bollywood', 'low_impact', 'dancehall', 'reggae', 'soca', 'chair_dance'));
+  check (style in ('afrobeats', 'amapiano', 'hip_hop', 'latin', 'bollywood', 'low_impact', 'dancehall', 'reggae', 'chair_dance'));
 ```
 
 Properties: it only **adds** values, so every existing row stays valid (the constraint is re-validated against all rows when added). It touches an existing hosted table, so it needs separate approval. `workout_sessions.style` is unconstrained text, so history logging needs no change.
@@ -226,7 +226,7 @@ begin
   perform test.assert(pg_get_constraintdef((select oid from pg_constraint where conrelid = 'public.workouts'::regclass and conname = 'workouts_style_check')) ~ 'dancehall'
     and pg_get_constraintdef((select oid from pg_constraint where conrelid = 'public.workouts'::regclass and conname = 'workouts_style_check')) ~ 'reggae', 'dancehall and reggae are allowed');
   perform test.assert(not pg_get_constraintdef((select oid from pg_constraint where conrelid = 'public.workouts'::regclass and conname = 'workouts_style_check')) ~ 'ballet', 'unknown styles are still refused');
-  perform test.assert(not exists (select 1 from public.workouts where style not in ('afrobeats','amapiano','hip_hop','latin','bollywood','low_impact','dancehall','reggae','soca','chair_dance')), 'every existing workout style is still valid');
+  perform test.assert(not exists (select 1 from public.workouts where style not in ('afrobeats','amapiano','hip_hop','latin','bollywood','low_impact','dancehall','reggae','chair_dance')), 'every existing workout style is still valid');
 end $$;
 ```
 

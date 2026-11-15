@@ -15,3 +15,11 @@ Everything in this folder is **planning**. Nothing here has been built, migrated
 | [`../WEIGHT_MANAGEMENT_EXPANSION.md`](../WEIGHT_MANAGEMENT_EXPANSION.md) | The audit, engine design, safety requirements and roadmap                                                         | Approved direction; details still open      |
 
 Rules for this folder: no SQL file lives here (SQL is in fenced blocks inside a proposal so tooling can never apply it); every document states what it does **not** do; a proposal becomes a real file under `supabase/migrations/` only after the owner approves that specific migration.
+
+## Stage C (Dancehall, reggae, strength, chair dance, cultural nutrition)
+
+| Document                                                                           | Purpose                                                      | Status                       |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------- |
+| [`stage-c/STAGE_C_AUDIT_AND_PLAN.md`](stage-c/STAGE_C_AUDIT_AND_PLAN.md)           | Audit, exact plan, database changes, decisions               | **For review. Not started.** |
+| [`stage-c/specs/`](stage-c/specs/)                                                 | Original content specifications (no choreography, no values) | Specifications only          |
+| [`stage-c/ASSETS_AND_REVIEWS_REQUIRED.md`](stage-c/ASSETS_AND_REVIEWS_REQUIRED.md) | What must exist before each pack can ship                    | Nothing exists yet           |

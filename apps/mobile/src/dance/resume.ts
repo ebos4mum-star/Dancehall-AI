@@ -11,6 +11,8 @@ export interface SessionSnapshot {
   elapsedS: number;
   skippedS: number;
   lowImpact: boolean;
+  /** Seated version in use. Absent in snapshots written before this existed (treated as off). */
+  seated?: boolean;
   savedAt: string;
 }
 export interface SnapshotStore {
@@ -40,6 +42,7 @@ export const snapshotOf = (
   elapsedS: s.elapsedS,
   skippedS: s.skippedS,
   lowImpact: s.lowImpact,
+  seated: s.seated,
   savedAt: now.toISOString(),
 });
 
@@ -92,7 +95,7 @@ export function restoreSession(
   workout: Pick<WorkoutDef, 'id' | 'blocks'>,
 ): SessionState | null {
   if (snap.workoutId !== workout.id) return null;
-  const base = initSession(workout, snap.lowImpact);
+  const base = initSession(workout, snap.lowImpact, snap.seated === true);
   const seg = base.segments[snap.index];
   if (!seg || snap.index < 0) return null;
   if (snap.remainingS < 0 || snap.remainingS > seg.seconds) return null;

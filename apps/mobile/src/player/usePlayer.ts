@@ -33,15 +33,16 @@ const POLL_MS = 250;
  * recovery point, and turns state changes into haptic and spoken cues. Screens only read it and send events.
  */
 export function usePlayer(
-  workout: WorkoutDef | undefined,
+  workout: Pick<WorkoutDef, 'id' | 'blocks'> | undefined,
   lowImpact: boolean,
   sessionId: string | null,
+  seated = false,
 ) {
   const empty = { id: '', blocks: [] };
   const [r, dispatch] = useReducer(
     (s: RunnerState, e: RunnerEvent) => runnerReduce(s, e),
     undefined,
-    () => initRunner(workout ?? empty, lowImpact),
+    () => initRunner(workout ?? empty, lowImpact, seated),
   );
   const [restored, setRestored] = useState(false);
   const [audio, setAudio] = useState<AudioSettings>(DEFAULT_AUDIO);
