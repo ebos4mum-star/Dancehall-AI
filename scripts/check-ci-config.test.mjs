@@ -58,10 +58,10 @@ concurrency:
   group: x
   cancel-in-progress: true
 env:
-  XCODE_APP: /Applications/Xcode_16.4.app
+  XCODE_APP: /Applications/Xcode_26.6.app
 jobs:
   b:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 60
     steps:
       - run: npx expo prebuild --platform ios --no-install
@@ -78,7 +78,7 @@ test('native: the approved workflow passes', () => assert.equal(runNamed(N, NATI
 test('native: the same content under any other name is rejected', () =>
   assert.notEqual(runNamed('other.yml', NATIVE).status, 0));
 test('native: macos-latest is rejected', () =>
-  assert.notEqual(runNamed(N, NATIVE.replace('macos-15', 'macos-latest')).status, 0));
+  assert.notEqual(runNamed(N, NATIVE.replace('macos-26', 'macos-latest')).status, 0));
 test('native: an unpinned Xcode is rejected', () =>
   assert.notEqual(runNamed(N, NATIVE.replace(/XCODE_APP:.*/, 'FOO: 1')).status, 0));
 test('native: automatic triggers are rejected', () =>

@@ -14,7 +14,8 @@ concurrency:
 
 env:
   # Pinned toolchain: the runner image and Xcode are fixed, never the moving "latest".
-  XCODE_APP: /Applications/Xcode_26.3.app
+  # Expo SDK 58 compiles expo-modules-jsi (Swift 6.2 tools, strict concurrency); Xcode 16.4 and 26.3 fail to build it. 26.6 is the pinned version on macos-26.
+  XCODE_APP: /Applications/Xcode_26.6.app
   # Placeholders only. The unsigned compile needs no real project; real values never belong in this file.
   EXPO_PUBLIC_APP_ENV: preview
   EXPO_PUBLIC_AUTH_MODE: supabase
@@ -25,7 +26,7 @@ env:
 jobs:
   ios-unsigned:
     name: Unsigned iOS compile
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
