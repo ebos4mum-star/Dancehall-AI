@@ -1,3 +1,4 @@
+import { withAccount } from '@/account/gate';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { CURATED_FOODS, itemFromFood, searchFoods, type FoodRef } from '@dancehall/shared';
@@ -14,7 +15,7 @@ import { FoodHero } from '@/food/kit';
 import { Ionicons } from '@expo/vector-icons';
 import { useNumbersHidden } from '@/wellness/hooks';
 
-export default function SwapScreen() {
+function SwapScreen() {
   const hideNumbers = useNumbersHidden();
   const { colors, spacing, radius } = useTheme();
   const [q, setQ] = useState('');
@@ -104,3 +105,6 @@ export default function SwapScreen() {
     </Screen>
   );
 }
+
+/** Needs an account: a guest is sent to create one and then brought back here. */
+export default withAccount(SwapScreen, 'log_food');

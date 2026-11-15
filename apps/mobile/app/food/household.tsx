@@ -1,3 +1,4 @@
+import { withAccount } from '@/account/gate';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,7 +21,7 @@ import { TextField } from '@/ui/TextField';
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
 /** Shared meal ideas and one grocery list for the people you live with. Only these two lists are shared. */
-export default function HouseholdScreen() {
+function HouseholdScreen() {
   const { store } = useApp();
   const { colors, spacing } = useTheme();
   const hh = useLoad(async (s) => (s.getHousehold ? { h: await s.getHousehold() } : null));
@@ -306,3 +307,6 @@ export default function HouseholdScreen() {
     </Screen>
   );
 }
+
+/** Needs an account: a guest is sent to create one and then brought back here. */
+export default withAccount(HouseholdScreen, 'log_food');

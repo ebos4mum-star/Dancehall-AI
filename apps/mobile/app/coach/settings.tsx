@@ -1,3 +1,4 @@
+import { withAccount } from '@/account/gate';
 import { IconBadge, SectionTitle } from '@/ui/kit';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -18,7 +19,7 @@ import { ProgressBar } from '@/ui/ProgressBar';
 import { Screen } from '@/ui/Screen';
 import { haptics } from '@/ui/haptics';
 
-export default function CoachSettings() {
+function CoachSettings() {
   const { store, config } = useApp();
   const { colors } = useTheme();
   const { data: consents, error: consentError } = useLoad((s) => s.getConsents());
@@ -225,3 +226,6 @@ export default function CoachSettings() {
     </Screen>
   );
 }
+
+/** Needs an account: a guest is sent to create one and then brought back here. */
+export default withAccount(CoachSettings, 'coach');

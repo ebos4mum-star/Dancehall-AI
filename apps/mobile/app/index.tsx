@@ -4,14 +4,38 @@ import { t } from '@/i18n';
 import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
 import { Screen } from '@/ui/Screen';
+import { useEffect, useState } from 'react';
+import { sanitizeNext } from '@dancehall/shared';
+import { useAccount } from '@/account/AccountProvider';
+import { useEntryTarget } from '@/account/useEntryTarget';
 import { useApp } from '@/data/AppProvider';
 import { PulseStage } from '@/pulse/PulseStage';
 import { brand, spacing } from '@/theme/tokens';
 
-/** Entry gate: sign in, then onboarding, then the app. */
+/**
+ * Entry: anyone may browse, so a guest goes straight to the app. A person with an account but no PIN is sent to set one (this also catches a setup that was
+ * interrupted after the account was made), then onboarding, then back to whatever they were doing when the account screen appeared.
+ */
 export default function Index() {
   const { ready, session, profile, loadError, refresh } = useApp();
-  if (!ready) {
+  const account = useAccount();
+  const target = useEntryTarget();
+  const [next, setNext] = useState<string | null | undefined>(undefined);
+  const finished = !!session && !!profile?.onboardedAt && account.ready && account.pinSet;
+  useEffect(() => {
+    if (!finished) return;
+    let alive = true;
+    void account
+      .takePending()
+      .then(
+        (p) => alive && setNext(p && sanitizeNext(p.next) !== '/' ? sanitizeNext(p.next) : null),
+      );
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finished]);
+  if (!ready || (!!session && !account.ready)) {
     return (
       <View
         accessible
@@ -46,7 +70,8 @@ export default function Index() {
       </Screen>
     );
   }
-  if (!session) return <Redirect href="/sign-in" />;
-  if (!profile?.onboardedAt) return <Redirect href="/onboarding" />;
-  return <Redirect href="/(tabs)" />;
+  if (!session) return <Redirect href="/(tabs)" />;
+  if (target) return <Redirect href={target} />;
+  if (next === undefined) return null;
+  return <Redirect href={(next ?? '/(tabs)') as never} />;
 }

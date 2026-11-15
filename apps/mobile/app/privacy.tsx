@@ -1,3 +1,5 @@
+import { useAccount } from '@/account/AccountProvider';
+import { withAccount } from '@/account/gate';
 import { Share, View } from 'react-native';
 import { IconChoice, type IconName } from '@/ui/kit';
 import { FoodHero } from '@/food/kit';
@@ -35,8 +37,9 @@ const CONSENT_ICON: Record<string, IconName> = {
   social_sharing: 'people',
 };
 
-export default function Privacy() {
-  const { store, profile, config, refresh } = useApp();
+function Privacy() {
+  const { store, profile, config } = useApp();
+  const account = useAccount();
   const { spacing } = useTheme();
   const { data, error } = useLoad((s) => s.getConsents());
   const [msg, setMsg] = useState<string | null>(null);
@@ -189,8 +192,7 @@ export default function Privacy() {
           variant="secondary"
           label={t('privacy.signOut')}
           onPress={async () => {
-            await store.signOut();
-            await refresh();
+            await account.signOutDevice();
             router.replace('/');
           }}
         />
@@ -200,8 +202,7 @@ export default function Privacy() {
             label={t('privacy.resetDev')}
             onPress={async () => {
               await store.resetDevData?.();
-              await store.signOut();
-              await refresh();
+              await account.signOutDevice();
               router.replace('/');
             }}
           />
@@ -210,3 +211,6 @@ export default function Privacy() {
     </Screen>
   );
 }
+
+/** Needs an account: a guest is sent to create one and then brought back here. */
+export default withAccount(Privacy, 'profile');

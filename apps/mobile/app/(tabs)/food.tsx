@@ -1,3 +1,4 @@
+import { GuestFood } from '@/account/guest';
 import { ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { IconBadge, SectionTitle, type IconName } from '@/ui/kit';
@@ -31,7 +32,7 @@ const MEAL_ICON: Record<MealType, IconName> = {
   snack: 'nutrition',
 };
 
-export default function FoodDashboard() {
+function FoodDashboardAccount() {
   const { colors, spacing, radius } = useTheme();
   const { config } = useApp();
   const { dispatch } = useDraft();
@@ -274,4 +275,10 @@ export default function FoodDashboard() {
       <TargetsCard />
     </Screen>
   );
+}
+
+/** A guest sees the public version of this tab; a person with an account sees their own. */
+export default function FoodDashboard() {
+  const { session } = useApp();
+  return session ? <FoodDashboardAccount /> : <GuestFood />;
 }

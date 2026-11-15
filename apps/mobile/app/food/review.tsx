@@ -1,3 +1,4 @@
+import { withAccount } from '@/account/gate';
 import { showMoment } from '@/pulse/moment';
 import { useRef, useState } from 'react';
 import { View } from 'react-native';
@@ -29,7 +30,7 @@ const MEAL_ICON: Record<MealType, IconName> = {
   snack: 'nutrition',
 };
 
-export default function Review() {
+function Review() {
   const { store } = useApp();
   const { draft, dispatch } = useDraft();
   const { spacing, colors } = useTheme();
@@ -219,3 +220,6 @@ export default function Review() {
     </Screen>
   );
 }
+
+/** Needs an account: a guest is sent to create one and then brought back here. */
+export default withAccount(Review, 'log_food');

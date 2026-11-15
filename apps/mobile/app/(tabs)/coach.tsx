@@ -1,3 +1,4 @@
+import { withAccount } from '@/account/gate';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PulseStage, usePulse } from '@/pulse/PulseStage';
 import { Ionicons } from '@expo/vector-icons';
@@ -51,7 +52,7 @@ const PROMPT_ICON = {
   swap: 'swap-horizontal',
 } as const;
 
-export default function Coach() {
+function Coach() {
   const { store, config } = useApp();
   const { colors, typography } = useTheme();
   const insets = useSafeAreaInsets();
@@ -397,3 +398,6 @@ export default function Coach() {
     </View>
   );
 }
+
+/** Needs an account: a guest is sent to create one and then brought back here. */
+export default withAccount(Coach, 'coach');

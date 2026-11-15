@@ -1,3 +1,4 @@
+import { withAccount } from '@/account/gate';
 import { View } from 'react-native';
 import { IconBadge, InfoTile, SectionTitle } from '@/ui/kit';
 import { STYLE_ICON } from '@/dance/meta';
@@ -18,7 +19,7 @@ import { Notice } from '@/ui/Banner';
 import { Screen } from '@/ui/Screen';
 import { SkeletonList } from '@/ui/Skeleton';
 
-export default function History() {
+function History() {
   const { sessions, summary, error, loading } = useDanceData();
   const done = sessions
     .filter((s) => s.status === 'completed')
@@ -103,3 +104,6 @@ export default function History() {
     </Screen>
   );
 }
+
+/** Needs an account: a guest is sent to create one and then brought back here. */
+export default withAccount(History, 'save_progress');

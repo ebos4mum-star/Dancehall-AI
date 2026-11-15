@@ -26,6 +26,12 @@
           "cameraPermission": false,
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "DanceHall Fit uses Face ID so you can open the app without typing your PIN. Your PIN always works instead."
+        }
       ]
     ],
     "experiments": {

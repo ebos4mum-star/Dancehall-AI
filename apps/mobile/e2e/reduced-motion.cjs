@@ -2,6 +2,7 @@
 /* Reduced-motion check: Pulse's transform changes over time only when motion is allowed. Usage: pnpm export:web && node e2e/reduced-motion.cjs */
 // verifies reduced motion: no running animations/transitions on the Today hero after load
 const { chromium } = require('playwright');
+const { createAccountViaPin } = require('./auth.cjs');
 (async () => {
   const { serve } = await import('./serve.mjs');
   const srv = await serve(8094);
@@ -15,7 +16,7 @@ const { chromium } = require('playwright');
     const btn = (n) => p.getByRole('button', { name: n }).last();
     await p.goto('http://127.0.0.1:8094');
     await p.waitForTimeout(2500);
-    await p.getByText('Continue with development sign-in').last().click();
+    await createAccountViaPin(p);
     await p.getByLabel('What should we call you?').fill('Sam');
     await p.getByLabel('Date of birth (YYYY-MM-DD)').fill('1990-05-05');
     await p.getByLabel('Country or region').fill('Jam');

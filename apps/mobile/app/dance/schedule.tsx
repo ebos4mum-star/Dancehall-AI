@@ -1,3 +1,4 @@
+import { withAccount } from '@/account/gate';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -130,7 +131,7 @@ export function SessionRow({
   );
 }
 
-export default function Schedule() {
+function Schedule() {
   const dance = useDanceData();
   const [err, setErr] = useState<string | null>(null);
   const empty = dance.overdue.length + dance.todayPlanned.length + dance.upcoming.length === 0;
@@ -163,3 +164,6 @@ export default function Schedule() {
     </Screen>
   );
 }
+
+/** Needs an account: a guest is sent to create one and then brought back here. */
+export default withAccount(Schedule, 'schedule_workout');

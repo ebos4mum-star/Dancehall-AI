@@ -2,6 +2,7 @@
 /* Visual walkthrough: captures real screenshots of the web export in MOCK mode (synthetic data).
  * Usage: pnpm export:web && SHOTS_DIR=../../docs/preview node e2e/walkthrough.cjs */
 const { chromium } = require('playwright');
+const { createAccountViaPin } = require('./auth.cjs');
 const out = process.env.SHOTS_DIR || 'shots';
 require('node:fs').mkdirSync(out, { recursive: true });
 (async () => {
@@ -39,7 +40,7 @@ require('node:fs').mkdirSync(out, { recursive: true });
   await p.goto('http://127.0.0.1:8098');
   await p.waitForTimeout(2500);
   await shot('sign-in-dev');
-  await text('Continue with development sign-in').click();
+  await createAccountViaPin(p);
   await p.getByLabel('What should we call you?').fill('Sam');
   await p.getByLabel('Date of birth (YYYY-MM-DD)').fill('1990-05-05');
   await p.getByLabel('Country or region').fill('Jam');

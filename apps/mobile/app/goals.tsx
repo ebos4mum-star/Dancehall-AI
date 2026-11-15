@@ -1,3 +1,4 @@
+import { withAccount } from '@/account/gate';
 import { showMoment } from '@/pulse/moment';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
@@ -33,7 +34,7 @@ import { ProgressBar } from '@/ui/ProgressBar';
 import { Screen } from '@/ui/Screen';
 import { TextField } from '@/ui/TextField';
 
-export default function Goals() {
+function Goals() {
   const { store, profile } = useApp();
   const { spacing, colors } = useTheme();
   const showW = useShowWeight();
@@ -251,3 +252,6 @@ export default function Goals() {
     </Screen>
   );
 }
+
+/** Needs an account: a guest is sent to create one and then brought back here. */
+export default withAccount(Goals, 'goals');

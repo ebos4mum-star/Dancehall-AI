@@ -2,6 +2,7 @@
 /* Accessibility sweep over every route in MOCK mode: interactive elements need a name and a 44pt target.
  * Usage: pnpm export:web && node e2e/a11y.cjs   (E2E_SCHEME=dark optional). Exits 1 when a finding remains. */
 const { chromium } = require('playwright');
+const { createAccountViaPin } = require('./auth.cjs');
 const ROUTES = [
   '/',
   '/dance',
@@ -38,35 +39,8 @@ const ROUTES = [
   });
   const p = await ctx.newPage();
   const btn = (n) => p.getByRole('button', { name: n }).last();
-  await p.goto('http://127.0.0.1:8092');
-  await p.waitForTimeout(2500);
-  await p.getByText('Continue with development sign-in').last().click();
-  await p.getByLabel('What should we call you?').fill('Sam');
-  await p.getByLabel('Date of birth (YYYY-MM-DD)').fill('1990-05-05');
-  await p.getByLabel('Country or region').fill('Jam');
-  await p.getByText('Jamaica').last().click();
-  await btn('Continue').click();
-  await p
-    .getByRole('switch', { name: 'Store my health information' })
-    .last()
-    .check({ force: true });
-  await btn('Continue').click();
-  await p.getByLabel('Height (cm)').fill('170');
-  await p.getByLabel('Current weight (kg)').fill('75');
-  await btn('Continue').click();
-  for (const n of await p.getByRole('radio', { name: /^No$/ }).all()) await n.click();
-  await btn('Continue').click();
-  await btn('Finish setup').click();
-  await p.getByText('Hello, Sam').waitFor();
-  await p.waitForTimeout(3000);
-  let total = 0;
-  for (const r of ROUTES) {
-    await p.evaluate((x) => {
-      history.pushState({}, '', x);
-      dispatchEvent(new PopStateEvent('popstate'));
-    }, r);
-    await p.waitForTimeout(900);
-    const found = await p.evaluate(() => {
+  const audit = () =>
+    p.evaluate(() => {
       const out = [];
       const visible = (el) => {
         const b = el.getBoundingClientRect();
@@ -103,12 +77,64 @@ const ROUTES = [
       }
       return out;
     });
+  await p.goto('http://127.0.0.1:8092');
+  await p.waitForTimeout(2500);
+  let total = 0;
+  const report = (label, found) => {
     if (found.length) {
-      console.log(r);
+      console.log(label);
       for (const f of [...new Set(found)]) console.log('   ', f);
       total += found.length;
     }
+  };
+  const go = async (x) => {
+    await p.evaluate((u) => {
+      history.pushState({}, '', u);
+      dispatchEvent(new PopStateEvent('popstate'));
+    }, x);
+    await p.waitForTimeout(900);
+  };
+  // The guest experience and the account screens, before any account exists.
+  for (const r of [
+    '/',
+    '/dance',
+    '/food',
+    '/me',
+    '/account/start?intent=start_workout',
+    '/account/pin?mode=create',
+  ]) {
+    await go(r);
+    report(`guest ${r}`, await audit());
   }
+  await go('/');
+  await createAccountViaPin(p);
+  await p.getByLabel('What should we call you?').fill('Sam');
+  await p.getByLabel('Date of birth (YYYY-MM-DD)').fill('1990-05-05');
+  await p.getByLabel('Country or region').fill('Jam');
+  await p.getByText('Jamaica').last().click();
+  await btn('Continue').click();
+  await p
+    .getByRole('switch', { name: 'Store my health information' })
+    .last()
+    .check({ force: true });
+  await btn('Continue').click();
+  await p.getByLabel('Height (cm)').fill('170');
+  await p.getByLabel('Current weight (kg)').fill('75');
+  await btn('Continue').click();
+  for (const n of await p.getByRole('radio', { name: /^No$/ }).all()) await n.click();
+  await btn('Continue').click();
+  await btn('Finish setup').click();
+  await p.getByText('Hello, Sam').waitFor();
+  await p.waitForTimeout(3000);
+  for (const r of ROUTES) {
+    await go(r);
+    const found = await audit();
+    report(r, found);
+  }
+  // The lock screen, as it appears when the app is opened again.
+  await p.reload();
+  await p.getByText('Enter your PIN').first().waitFor({ state: 'visible', timeout: 15000 });
+  report('lock screen', await audit());
   console.log(total === 0 ? 'a11y sweep: no findings' : `a11y sweep: ${total} findings`);
   await browser.close();
   srv.close();

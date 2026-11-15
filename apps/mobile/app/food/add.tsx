@@ -1,3 +1,4 @@
+import { withAccount } from '@/account/gate';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { IconChoice, SectionTitle } from '@/ui/kit';
@@ -25,7 +26,7 @@ import { Notice } from '@/ui/Banner';
 import { Screen } from '@/ui/Screen';
 import { TextField } from '@/ui/TextField';
 
-export default function AddFood() {
+function AddFood() {
   const hideNumbers = useNumbersHidden();
   const { replaceKey, from } = useLocalSearchParams<{ replaceKey?: string; from?: string }>();
   const { dispatch } = useDraft();
@@ -291,3 +292,6 @@ export default function AddFood() {
     </Screen>
   );
 }
+
+/** Needs an account: a guest is sent to create one and then brought back here. */
+export default withAccount(AddFood, 'log_food');

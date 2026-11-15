@@ -6,6 +6,7 @@
  */
 process.env.E2E_DIST = 'dist-fixtures';
 const { chromium } = require('playwright');
+const { createAccountViaPin, unlockIfLocked } = require('./auth.cjs');
 const assert = require('node:assert/strict');
 
 const results = [];
@@ -81,7 +82,7 @@ async function step(name, fn) {
   await p.waitForTimeout(2500);
   await step('setup: onboarding completes in the fixtures build', async () => {
     await seen('Development mode: mock sign-in');
-    await text('Continue with development sign-in').click();
+    await createAccountViaPin(p);
     await p.getByLabel('What should we call you?').fill('Sam');
     await p.getByLabel('Date of birth (YYYY-MM-DD)').fill('1990-05-05');
     await p.getByLabel('Country or region').fill('Aus');
@@ -553,6 +554,7 @@ async function step(name, fn) {
     async () => {
       await p.emulateMedia({ reducedMotion: 'reduce' });
       await p.reload();
+      await unlockIfLocked(p);
       await p.waitForTimeout(2500);
       await tab('Dance');
       await btn('See this session').click();

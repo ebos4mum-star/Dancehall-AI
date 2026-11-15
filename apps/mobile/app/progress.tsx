@@ -1,3 +1,4 @@
+import { withAccount } from '@/account/gate';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { lbToKg, summarizeWeights } from '@dancehall/shared';
@@ -24,7 +25,7 @@ import { TextField } from '@/ui/TextField';
 import { WeightChart } from '@/ui/WeightChart';
 import { MeasurementsCard, SleepCard } from '@/wellness/trackers';
 
-export default function Progress() {
+function Progress() {
   const { store, profile } = useApp();
   const dance = useDanceData();
   const insights = useProgressInsights();
@@ -211,3 +212,6 @@ export default function Progress() {
     </Screen>
   );
 }
+
+/** Needs an account: a guest is sent to create one and then brought back here. */
+export default withAccount(Progress, 'save_progress');

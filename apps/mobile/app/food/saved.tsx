@@ -1,3 +1,4 @@
+import { withAccount } from '@/account/gate';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
@@ -19,7 +20,7 @@ import { SkeletonList } from '@/ui/Skeleton';
 import { haptics } from '@/ui/haptics';
 import { useNumbersHidden } from '@/wellness/hooks';
 
-export default function Saved() {
+function Saved() {
   const hideNumbers = useNumbersHidden();
   const { store } = useApp();
   const { dispatch } = useDraft();
@@ -134,3 +135,6 @@ export default function Saved() {
     </Screen>
   );
 }
+
+/** Needs an account: a guest is sent to create one and then brought back here. */
+export default withAccount(Saved, 'log_food');
