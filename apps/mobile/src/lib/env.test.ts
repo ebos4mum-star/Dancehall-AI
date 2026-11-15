@@ -156,4 +156,26 @@ describe('internal content fixtures', () => {
     });
     expect(c).toMatchObject({ authMode: 'supabase', contentFixtures: true });
   });
+  it('a production build refuses to start with cloud accounts switched on', () => {
+    const base = {
+      EXPO_PUBLIC_APP_ENV: 'production',
+      EXPO_PUBLIC_AUTH_MODE: 'supabase',
+      EXPO_PUBLIC_SUPABASE_URL: 'https://x.example.test',
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_abc',
+    };
+    expect(resolveConfig(base).cloudAccounts).toBe(false);
+    expect(() => resolveConfig({ ...base, EXPO_PUBLIC_CLOUD_ACCOUNTS: '1' })).toThrow(/production/);
+    // preview and development builds may enable it
+    expect(
+      resolveConfig({ ...base, EXPO_PUBLIC_APP_ENV: 'preview', EXPO_PUBLIC_CLOUD_ACCOUNTS: '1' })
+        .cloudAccounts,
+    ).toBe(true);
+    expect(
+      resolveConfig({
+        ...base,
+        EXPO_PUBLIC_APP_ENV: 'development',
+        EXPO_PUBLIC_CLOUD_ACCOUNTS: '1',
+      }).cloudAccounts,
+    ).toBe(true);
+  });
 });

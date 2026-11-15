@@ -29,14 +29,56 @@ describe('app.json', () => {
 describe('eas.json', () => {
   const eas = readJson('eas.json');
   const text = readFileSync(join(root, 'eas.json'), 'utf8');
-  it('defines development, preview and production build profiles', () => {
-    expect(Object.keys(eas.build)).toEqual(['development', 'preview', 'production']);
+  it('defines development, preview, preview-cloud and production build profiles', () => {
+    expect(Object.keys(eas.build)).toEqual([
+      'development',
+      'preview',
+      'preview-cloud',
+      'production',
+    ]);
   });
   it('never allows mock auth in production, and sets APP_ENV per profile', () => {
     expect(eas.build.production.env.EXPO_PUBLIC_APP_ENV).toBe('production');
     expect(eas.build.production.env.EXPO_PUBLIC_AUTH_MODE).toBe('supabase');
     expect(eas.build.preview.env.EXPO_PUBLIC_AUTH_MODE).toBe('supabase');
     expect(eas.build.development.env.EXPO_PUBLIC_APP_ENV).toBe('development');
+  });
+  it('cloud accounts are on in the preview-cloud profile ONLY: development, preview and production stay off', () => {
+    for (const [name, profile] of Object.entries(eas.build) as [
+      string,
+      { env?: Record<string, string> },
+    ][])
+      expect(profile.env?.EXPO_PUBLIC_CLOUD_ACCOUNTS, name).toBe(
+        name === 'preview-cloud' ? '1' : undefined,
+      );
+  });
+  it('preview-cloud is an isolated internal preview build: it extends nothing, is not a store or release profile, and is never submitted', () => {
+    const p = eas.build['preview-cloud'];
+    expect(p.env.EXPO_PUBLIC_APP_ENV).toBe('preview');
+    expect(p.env.EXPO_PUBLIC_AUTH_MODE).toBe('supabase');
+    expect(p.distribution).toBe('internal');
+    expect(p.environment).toBe('preview'); // the URL and publishable key come from the EAS "preview" environment, not from git
+    expect(p).not.toHaveProperty('extends');
+    expect(p).not.toHaveProperty('autoIncrement');
+    expect(p).not.toHaveProperty('channel');
+    expect(Object.keys(eas.submit ?? {})).toEqual(['production']);
+    expect(JSON.stringify(eas.submit)).not.toMatch(/preview/);
+  });
+  it('the existing profiles are unchanged by the cloud-account work', () => {
+    expect(eas.build.development).toEqual({
+      developmentClient: true,
+      distribution: 'internal',
+      ios: { simulator: false },
+      env: { EXPO_PUBLIC_APP_ENV: 'development' },
+    });
+    expect(eas.build.preview).toEqual({
+      distribution: 'internal',
+      env: { EXPO_PUBLIC_APP_ENV: 'preview', EXPO_PUBLIC_AUTH_MODE: 'supabase' },
+    });
+    expect(eas.build.production).toEqual({
+      autoIncrement: true,
+      env: { EXPO_PUBLIC_APP_ENV: 'production', EXPO_PUBLIC_AUTH_MODE: 'supabase' },
+    });
   });
   it('contains no credentials: Supabase values come from EAS environment variables', () => {
     expect(text).not.toMatch(/SUPABASE_(URL|PUBLISHABLE_KEY|SERVICE)/i);
