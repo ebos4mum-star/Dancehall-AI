@@ -11,6 +11,7 @@ describe('resolveConfig', () => {
       authMode: 'mock',
       contentFixtures: false,
       cloudAccounts: true,
+      barcodeProvider: 'local',
     });
   });
   it('offers cloud accounts in a Supabase build only when explicitly enabled', () => {

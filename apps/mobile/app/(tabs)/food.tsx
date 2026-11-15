@@ -84,6 +84,13 @@ function FoodDashboardAccount() {
               />
             </View>
           </View>
+          {config.barcodeProvider !== 'off' ? (
+            <Button
+              variant="secondary"
+              label={t('food.scan')}
+              onPress={() => router.push('/food/barcode')}
+            />
+          ) : null}
           {config.authMode === 'mock' ? (
             <View
               accessible

@@ -1,6 +1,14 @@
 /** Resolves which data adapter the app uses and refuses unsafe combinations. Pure so it can be unit-tested. */
 export type AppEnv = 'development' | 'preview' | 'production';
+/**
+ * Which product database a barcode scan may use. `off` contacts nothing. `local` is the offline list of SYNTHETIC sample products (development and review builds only).
+ * `open_food_facts` sends the barcode number (and, unavoidably, the phone's network address) to Open Food Facts: it needs the owner's approval of the licence and privacy
+ * terms before it is switched on, and is never the default.
+ */
+export type BarcodeProviderId = 'off' | 'local' | 'open_food_facts';
+
 export interface AppConfig {
+  barcodeProvider: BarcodeProviderId;
   appEnv: AppEnv;
   authMode: 'mock' | 'supabase';
   supabaseUrl?: string;
@@ -44,6 +52,16 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
   const url = env.EXPO_PUBLIC_SUPABASE_URL?.trim() || undefined;
   const key = env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() || undefined;
   const contentFixtures = env.EXPO_PUBLIC_CONTENT_FIXTURES === '1';
+  const rawBarcode = env.EXPO_PUBLIC_BARCODE_PROVIDER?.trim();
+  if (rawBarcode && !['off', 'local', 'open_food_facts'].includes(rawBarcode))
+    throw new ConfigError(`Unknown EXPO_PUBLIC_BARCODE_PROVIDER "${rawBarcode}"`);
+  if (rawBarcode === 'local' && appEnv === 'production')
+    throw new ConfigError(
+      'The barcode sample list is synthetic and is not allowed in a production build.',
+    );
+  // Safe by default: sample products only in development and review builds, nothing at all in production.
+  const barcodeProvider = (rawBarcode ??
+    (appEnv === 'production' ? 'off' : 'local')) as BarcodeProviderId;
   if (contentFixtures && appEnv === 'production')
     throw new ConfigError(
       'Internal content fixtures are for development and review builds only and are not allowed in a production build.',
@@ -57,7 +75,7 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
       throw new ConfigError(
         'Mock authentication is development-only and is not allowed in a production build.',
       );
-    return { appEnv, authMode: 'mock', contentFixtures, cloudAccounts: true };
+    return { appEnv, authMode: 'mock', contentFixtures, cloudAccounts: true, barcodeProvider };
   }
   if (!url || !key)
     throw new ConfigError(
@@ -87,5 +105,6 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
     aiApiUrl: ai,
     contentFixtures,
     cloudAccounts: env.EXPO_PUBLIC_CLOUD_ACCOUNTS === '1',
+    barcodeProvider,
   };
 }

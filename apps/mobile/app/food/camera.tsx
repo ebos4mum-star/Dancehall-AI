@@ -248,6 +248,13 @@ function CameraScreen() {
             onPress={capture}
           />
         ) : null}
+        {config.barcodeProvider !== 'off' ? (
+          <Button
+            variant="secondary"
+            label={t('cam.scanInstead')}
+            onPress={() => router.replace('/food/barcode')}
+          />
+        ) : null}
         <Button
           variant={cameraReady ? 'secondary' : 'primary'}
           label={t('cam.pick')}

@@ -621,6 +621,34 @@ export const en = {
   'cam.consentBody':
     'Photo analysis is optional and separate from logging food by hand. You can turn it off any time in Privacy and settings.',
   'cam.allow': 'Allow photo analysis',
+  'food.scan': 'Scan a barcode',
+  'cam.scanInstead': 'Scan a barcode instead',
+  'ban.barcode.title': 'Scan a barcode',
+  'ban.barcode.line': 'Packaged food, checked against the label.',
+  'barcode.off':
+    'Barcode lookup is not switched on in this build. You can still search for the food or enter it yourself.',
+  'barcode.noCamera':
+    'The camera is not available here. Type the number under the barcode instead.',
+  'barcode.hint': 'Point the camera at the barcode on the package.',
+  'barcode.manualLabel': 'Or type the number under the barcode',
+  'barcode.lookup': 'Look up',
+  'barcode.looking': 'Looking it up...',
+  'barcode.invalid': 'That is not a valid barcode number. Check the digits and try again.',
+  'barcode.notFound':
+    'We could not find this product. You can enter it yourself from the package label.',
+  'barcode.unavailable':
+    'The product database could not be reached. Try again, or enter it yourself.',
+  'barcode.incompleteTitle': 'This product listing is not complete enough to use',
+  'barcode.enterYourself': 'Enter it from the label',
+  'barcode.retry': 'Try again',
+  'barcode.scanAgain': 'Scan another',
+  'barcode.add': 'Add to my meal',
+  'barcode.portion': 'How much did you have?',
+  'barcode.packageData':
+    'Package data from a public database. It can be wrong or out of date, so check it against the label. You can change any value after adding it.',
+  'barcode.remote':
+    "Looking up a barcode sends only that number (and your phone's network address) to Open Food Facts.",
+  'barcode.sample': 'Sample product (synthetic data, for testing only)',
   'cam.manualInstead': 'Log food by hand instead',
   'cam.permission': 'We need camera access to photograph your meal.',
   'cam.grant': 'Allow camera',

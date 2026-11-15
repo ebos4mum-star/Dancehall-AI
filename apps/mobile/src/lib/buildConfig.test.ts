@@ -109,6 +109,7 @@ describe('isolation from unrelated credentials', () => {
         'aiApiUrl',
         'appEnv',
         'authMode',
+        'barcodeProvider',
         'cloudAccounts',
         'contentFixtures',
         'supabasePublishableKey',
