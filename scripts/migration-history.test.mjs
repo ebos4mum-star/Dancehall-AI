@@ -46,7 +46,12 @@ test('pending is exactly the files that are not applied, and all sort after ever
     hist.pending,
     files.filter((f) => !applied.has(f)),
   );
-  const lastApplied = Math.max(...hist.applied.map((a) => files.indexOf(a.file)));
+  // A migration applied AHEAD of an earlier pending one must be named in `outOfOrder` (a deliberate, recorded choice); otherwise history must stay linear.
+  const ahead = new Set(hist.outOfOrder ?? []);
+  for (const f of ahead)
+    assert.ok(applied.has(f), `${f} is listed out of order but is not applied`);
+  const inOrder = hist.applied.filter((a) => !ahead.has(a.file));
+  const lastApplied = Math.max(...inOrder.map((a) => files.indexOf(a.file)));
   for (const p of hist.pending)
     assert.ok(files.indexOf(p) > lastApplied, `${p} sorts after the applied migrations`);
 });

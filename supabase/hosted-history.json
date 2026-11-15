@@ -1,5 +1,5 @@
 {
-  "_comment": "Record of the migration history on the dedicated DanceHall Fit AI development project. Re-read (read-only) on 2026-11-15: 13 migrations applied and 48 public tables, all with RLS enabled. Hosted versions are apply-time timestamps; names match the repository files. sha256 pins the repository content of every applied migration: editing one is an error (add a new migration instead). For the five migrations applied after the first eight, byte-equality with the hosted statements was not read back; instead the catalog fingerprint (columns, constraints, functions including a hash of each function body, indexes, policies, triggers, RLS) of a clean local build of all 13 migrations plus seed was compared with the hosted catalog and matched on every category. The fingerprint does not cover grants or privileges, so execute privileges are not covered by that comparison. Update this file only after a hosted migration has been authorized, applied and re-verified.",
+  "_comment": "Record of the migration history on the dedicated DanceHall Fit AI development project. Re-read (read-only) on 2026-11-15: 14 migrations applied (13 originally, then account_recovery at Gate 1) and 48 public tables, all with RLS enabled. Hosted versions are apply-time timestamps; names match the repository files. sha256 pins the repository content of every applied migration: editing one is an error (add a new migration instead). For the five migrations applied after the first eight, byte-equality with the hosted statements was not read back; instead the catalog fingerprint (columns, constraints, functions including a hash of each function body, indexes, policies, triggers, RLS) of a clean local build of the applied migrations plus seed was compared with the hosted catalog and matched on every category. The fingerprint does not cover grants or privileges, so execute privileges are not covered by that comparison. Update this file only after a hosted migration has been authorized, applied and re-verified. account_recovery (20261214000100) was applied at Gate 1 (hosted version 20261115172840) while 20261213000100 is still pending: the two are independent, and `outOfOrder` records that on purpose. The functions fingerprint now includes the 17 account functions (57 to 74 functions); the other six categories are unchanged. Verified read-only against the hosted catalog after applying: new tables have RLS on and no API-role grants, and the new functions are executable by the service role only (grants are not part of the fingerprint).",
   "projectRef": "vvwjhbsyxetnktimgaxg",
   "applied": [
     {
@@ -79,16 +79,23 @@
       "name": "celebrations",
       "file": "20261212000100_celebrations.sql",
       "sha256": "09b8409918de302d704468d2fe0cd33fded514d8c13a6c31acf9ace760fd439c"
+    },
+    {
+      "hostedVersion": "20261115172840",
+      "name": "account_recovery",
+      "file": "20261214000100_account_recovery.sql",
+      "sha256": "fc15a4fa9718f690c07be5a13e6ccb28dca7bdbe1b0056d21486c146da70ddbd"
     }
   ],
-  "pending": ["20261213000100_household_trigger_revoke.sql", "20261214000100_account_recovery.sql"],
+  "pending": ["20261213000100_household_trigger_revoke.sql"],
   "fingerprintAfterApplied": {
     "columns": "36c4d7c04f4e3f44f454995a68deb0db",
     "constraints": "2faa63a25f3201aae81f045fa8705167",
-    "functions": "ab69038bfd9618304644dd88cc97f711",
+    "functions": "78c8169e8b9ddcf764deb87d0c13aaa7",
     "indexes": "2b761162460821c1cf46805803398384",
     "policies": "8cb09362522e9c0393779e2632a5aa5e",
     "rls": "7c09e471047097e906257046e65bb7a1",
     "triggers": "4f8f9c5b67ab0615fdb300e293c9d555"
-  }
+  },
+  "outOfOrder": ["20261214000100_account_recovery.sql"]
 }
