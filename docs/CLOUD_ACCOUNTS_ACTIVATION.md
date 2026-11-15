@@ -81,7 +81,9 @@ Record results in `docs/LIVE_VERIFICATION.md`. Only now may anyone say cloud reg
 
 ## Gate 6: enable the mobile flag
 
-Set `EXPO_PUBLIC_CLOUD_ACCOUNTS=1` in a **development or preview** build only. It is off by default and no EAS profile sets it (a unit test enforces this). Native checks (Keychain item storage, share sheet, Face ID, scrypt time on an older phone) need a Mac, simulator or an authorised build and are **not** covered by Gates 0 to 5. No TestFlight upload and no production profile are part of this proposal.
+Set `EXPO_PUBLIC_CLOUD_ACCOUNTS=1` in a **development or preview** build only. It is off by default. Among the EAS profiles only `preview-cloud` sets it (a unit test enforces this); `development`, `preview` and `production` never do, and a production build refuses to start with it on. Native checks (Keychain item storage, share sheet, Face ID, scrypt time on an older phone) need a Mac, simulator or an authorised build and are **not** covered by Gates 0 to 5. No TestFlight upload and no production profile are part of this proposal.
+
+Gate 6C (the iPhone test) follows `docs/GATE_6C_IPHONE_CHECKLIST.md`.
 
 ## Replay fix (found in the live Gate 5 test; APPLIED to the development project, verified live)
 
