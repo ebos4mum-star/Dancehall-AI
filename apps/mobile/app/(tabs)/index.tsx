@@ -13,6 +13,7 @@ import { SectionTitle } from '@/ui/kit';
 import { goalFraction } from '@/progress/goalDisplay';
 import { todayGlance } from '@/today/glance';
 import { TodayHero, type HeroChip } from '@/today/TodayHero';
+import { DayCard } from '@/today/DayCard';
 import { heroLine } from '@/today/heroLine';
 import { useNumbersHidden, useShowWeight } from '@/wellness/hooks';
 import { useTodaySummary } from '@/today/hooks';
@@ -176,6 +177,7 @@ function TodayAccount() {
         pulse={shownPulse}
       />
       <ReviewBar />
+      <DayCard habitsDone={summary2.habitsDoneCount} habitsTotal={summary2.habitCount} />
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {loading && !data ? <SkeletonList label={t('common.loading')} /> : null}
 
