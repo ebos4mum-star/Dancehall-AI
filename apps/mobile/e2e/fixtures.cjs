@@ -68,6 +68,11 @@ async function step(name, fn) {
         break;
     }
   };
+  // Items are a saved preference, so earlier steps may have chosen some already: make the selection exact instead of toggling.
+  const chooseItems = async (names) => {
+    await p.getByRole('button', { name: 'No equipment', exact: true }).last().click(); // clears whatever was chosen before
+    for (const n of names) await p.getByRole('button', { name: n, exact: true }).last().click();
+  };
   const lastSwitch = (n) => p.getByRole('switch', { name: n }).last();
   const shots = process.env.SHOTS_DIR;
   const shot = async (n) => shots && (await p.screenshot({ path: `${shots}/fixtures-${n}.png` }));
@@ -367,7 +372,7 @@ async function step(name, fn) {
       await tap(btn('Skip')); // finish the warm-up
       await seen('Set 1 of 2');
       await seen('How to do it');
-      await seen('There is no video demonstration for this movement yet');
+      await seen('Draft media, not approved for release');
       await shot('home-session');
       await tap(btn('Done with this set'));
       await p.goBack();
@@ -407,16 +412,14 @@ async function step(name, fn) {
       await btn(/Chair Dance Groove/).click();
       await btn(/^Main/).click(); // the blocks of the main section, one of which has a draft placeholder clip
       await seen('Draft media, not approved for release');
-      await seen('Placeholder clip. This is not a demonstration.');
+      await seen('Placeholder animation of a generic');
       await p.goBack();
       // The Use what you have session with a placeholder clip on the wall push-up.
       await tab('Dance');
-      await exact('Sturdy chair').click();
-      await exact('Wall').click();
+      await chooseItems(['Sturdy chair', 'Wall']);
       await btn('See this session').click();
       await seen('Draft media, not approved for release');
-      await seen('Placeholder clip. This is not a demonstration.');
-      await seen('Placeholder caption, first half');
+      await seen('Placeholder animation of a generic');
       const play = () => p.getByRole('button', { name: 'Play demonstration' }).first();
       const pause = () => p.getByRole('button', { name: 'Pause demonstration' }).first();
       await play().click();
@@ -438,16 +441,84 @@ async function step(name, fn) {
       await shot('demo-player');
       // Captions can be turned off and on again.
       const captions = p.getByRole('switch', { name: 'Captions' }).first();
+      const captionsBefore = await p
+        .getByText(/Placeholder animation of a generic/)
+        .locator('visible=true')
+        .count();
       await captions.uncheck({ force: true });
       assert.equal(
         await p
-          .getByText(/Placeholder caption, /)
+          .getByText(/Placeholder animation of a generic/)
           .locator('visible=true')
           .count(),
-        0,
+        captionsBefore - 1,
+        'turning captions off hides that player’s caption only',
       );
       await captions.check({ force: true });
-      await seen('Placeholder caption');
+      await seen('Placeholder animation of a generic');
+    },
+  );
+
+  await step(
+    'trainer: the animated figure moves, pauses, changes view, steps, and shows the seated and beginner versions',
+    async () => {
+      await tab('Dance');
+      await chooseItems(['Sturdy chair', 'Wall']);
+      await btn('See this session').click();
+      await seen('Placeholder animation of a generic');
+      const svg = () =>
+        p
+          .locator('svg')
+          .filter({ has: p.locator('line') })
+          .first();
+      const snap = async () => (await svg().innerHTML()).replace(/\s+/g, ' ');
+      const play = p.getByRole('button', { name: 'Play demonstration' }).first();
+      const pause = p.getByRole('button', { name: 'Pause demonstration' }).first();
+      // It does not move until Play is pressed.
+      const still1 = await snap();
+      await p.waitForTimeout(600);
+      assert.equal(await snap(), still1, 'nothing moves before Play');
+      await play.click();
+      await p.waitForTimeout(900);
+      const moving = await snap();
+      assert.notEqual(moving, still1, 'the figure moves while playing');
+      await pause.click();
+      await p.waitForTimeout(200);
+      const paused = await snap();
+      await p.waitForTimeout(500);
+      assert.equal(await snap(), paused, 'pausing holds the pose');
+      // Viewing angles: front, three-quarter and side draw the same pose differently.
+      const view = (n) => p.getByRole('radio', { name: n, exact: true }).first();
+      const shots2 = {};
+      for (const n of ['Front', 'Three-quarter', 'Side']) {
+        await view(n).click();
+        assert.equal(await view(n).getAttribute('aria-checked'), 'true');
+        shots2[n] = await snap();
+      }
+      assert.notEqual(shots2.Front, shots2.Side);
+      assert.notEqual(shots2['Three-quarter'], shots2.Side);
+      // Stepping one second at a time is available without any animation.
+      const before = await snap();
+      await p.getByRole('button', { name: 'Forward 1 second', exact: true }).first().click();
+      assert.notEqual(await snap(), before, 'stepping forward changes the pose');
+      await p.getByRole('button', { name: 'Back 1 second', exact: true }).first().click();
+      await shot('trainer-side');
+    },
+  );
+
+  await step(
+    'trainer: a seated session and the low-impact version show the seated and beginner animations',
+    async () => {
+      await tab('Dance');
+      await exact(ALL).click();
+      await btn(/Low-Impact Dance Groove/).click();
+      await lastSwitch('Seated version').check({ force: true });
+      await btn(/^Main/).click();
+      await seen('Showing the seated version.');
+      await lastSwitch('Seated version').uncheck({ force: true });
+      await lastSwitch('Low-impact version').check({ force: true });
+      await seen('Showing the beginner modification');
+      await shot('trainer-easier');
     },
   );
 
@@ -457,7 +528,7 @@ async function step(name, fn) {
       await tab('Dance');
       await exact('No equipment').click();
       await btn('See this session').click();
-      // home-dead-bug uses a real WebM served by the test server; home-glute-bridge points at a file that cannot load.
+      // home-dead-bug uses a real WebM served by the test server; home-bird-dog points at a file that cannot load.
       await seen('The demonstration could not be loaded. Follow the written steps.', 8000);
       assert.ok((await p.locator('video').count()) >= 1, 'a real video element is present');
       await p.getByRole('button', { name: 'Play demonstration' }).first().click();

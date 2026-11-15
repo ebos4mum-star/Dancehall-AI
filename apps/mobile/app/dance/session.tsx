@@ -602,7 +602,13 @@ export default function Session() {
             {t('home.howTo')}
           </AppText>
           <AppText variant="caption">{seg.cue}</AppText>
-          <DemoPanel key={demoSubject} subjectId={demoSubject} hideWhenNone={!seg.exerciseId} />
+          <DemoPanel
+            key={demoSubject}
+            subjectId={demoSubject}
+            hideWhenNone={!seg.exerciseId}
+            seated={s.seated}
+            easier={s.lowImpact}
+          />
         </DepthCard>
       ) : null}
 

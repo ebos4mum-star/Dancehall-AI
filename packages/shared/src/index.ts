@@ -44,3 +44,6 @@ export * from './home-exercises';
 export * from './demo-media';
 export * from './demo-playback';
 export * from './review-requirements';
+export * from './trainer-rig';
+export * from './trainer-motions';
+export * from './trainer-clips';

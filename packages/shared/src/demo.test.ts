@@ -3,6 +3,7 @@ import {
   DEMO_CLIPS,
   DEMO_RATES,
   FIXTURE_DEMO_CLIPS,
+  TRAINER_CLIPS,
   HOME_EXERCISES,
   DRAFT_WORKOUTS,
   activeCaption,
@@ -143,12 +144,12 @@ describe('demonstration clips: approved, draft and none are kept apart', () => {
   it('fixture clips appear only with the preview switch, are all drafts, and leave nothing behind', () => {
     expect(DEMO_CLIPS).toEqual([]);
     enableInternalFixtures();
-    expect(DEMO_CLIPS.length).toBe(FIXTURE_DEMO_CLIPS.length);
-    for (const c of FIXTURE_DEMO_CLIPS) {
+    expect(DEMO_CLIPS.length).toBe(FIXTURE_DEMO_CLIPS.length + TRAINER_CLIPS.length);
+    for (const c of [...FIXTURE_DEMO_CLIPS, ...TRAINER_CLIPS]) {
       expect(c.fixture).toBe(true);
       expect(c.review).toBe('unreviewed');
       expect(c.licence).toBeUndefined();
-      expect(c.attribution.creditLine).toMatch(/Internal fixture/);
+      expect(c.attribution.creditLine).toMatch(/placeholder|Internal fixture/i);
       expect(c.captions.length).toBeGreaterThan(10);
     }
     expect(demoFor('home-wall-push-up', null, '2026-06-02').state).toBe('draft');

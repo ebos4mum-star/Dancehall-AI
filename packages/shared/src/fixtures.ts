@@ -1,5 +1,6 @@
 import { setFixturesEnabled } from './content-state';
 import { DEMO_CLIPS, type DemoClip } from './demo-media';
+import { TRAINER_CLIPS } from './trainer-clips';
 import { CURATED_FOODS, FOOD_BY_ID, type FoodRef } from './food-data';
 import { STAGED_FOODS } from './food-staged';
 import { HOME_EXERCISES } from './home-exercises';
@@ -182,12 +183,8 @@ const clip = (
 export const FIXTURE_DEMO_CLIPS: readonly DemoClip[] = [
   clip('fixture-ex-a', 'fixture:placeholder', 12),
   clip('fixture-dancehall-beginner:1', 'fixture:placeholder', 12),
-  clip('draft-dancehall-foundations-10:2', 'fixture:placeholder', 12),
-  clip('draft-chair-dance-10:2', 'fixture:placeholder', 12),
-  clip('home-wall-push-up', 'fixture:placeholder', 12),
-  clip('draft-sit-to-stand', 'fixture:placeholder', 12),
   clip('home-dead-bug', '/e2e-clip.webm', 4),
-  clip('home-glute-bridge', 'https://invalid.example.test/missing.mp4', 6),
+  clip('home-bird-dog', 'https://invalid.example.test/missing.mp4', 6),
 ];
 
 let enabled = false;
@@ -207,7 +204,7 @@ export function enableInternalFixtures(): void {
     (WORKOUT_BY_ID as Map<string, WorkoutDef>).set(w.id, w);
   }
   for (const s of PENDING_STYLES) if (!DANCE_STYLES.includes(s)) DANCE_STYLES.push(s);
-  DEMO_CLIPS.push(...FIXTURE_DEMO_CLIPS);
+  DEMO_CLIPS.push(...FIXTURE_DEMO_CLIPS, ...TRAINER_CLIPS);
   for (const f of STAGED_FOODS) {
     (CURATED_FOODS as FoodRef[]).push(f);
     (FOOD_BY_ID as Map<string, FoodRef>).set(f.id, f);
@@ -235,7 +232,7 @@ export function disableInternalFixtures(): void {
     const i = DANCE_STYLES.indexOf(s);
     if (i >= 0) DANCE_STYLES.splice(i, 1);
   }
-  for (const c of FIXTURE_DEMO_CLIPS) {
+  for (const c of [...FIXTURE_DEMO_CLIPS, ...TRAINER_CLIPS]) {
     const i = DEMO_CLIPS.indexOf(c);
     if (i >= 0) DEMO_CLIPS.splice(i, 1);
   }

@@ -95,4 +95,18 @@ describe('staff permissions match the database', () => {
     for (const s of dbStyles()) expect(ALL_STYLES as readonly string[], s).toContain(s);
     for (const w of WORKOUTS) expect(dbStyles(), `${w.id} (${w.style})`).toContain(w.style);
   });
+  it('the proposed M3 v2 migration allows exactly the styles the code knows, its rollback restores exactly the live ones, and it is not in the migrations folder', () => {
+    const read = (f: string) =>
+      readFileSync(join(__dirname, '..', '..', '..', 'supabase', 'proposed', f), 'utf8');
+    const styles = (sqlText: string) => {
+      const m = /workouts_style_check\s+check \(style in \(([^)]*)\)\)/.exec(
+        sqlText.replace(/\s+/g, ' '),
+      );
+      return [...m![1]!.matchAll(/'([a-z_]+)'/g)].map((x) => x[1]!);
+    };
+    expect(styles(read('m3v2_workout_styles.up.sql')).sort()).toEqual([...ALL_STYLES].sort());
+    expect(styles(read('m3v2_workout_styles.down.sql')).sort()).toEqual([...LIVE_STYLES].sort());
+    const migrations = readdirSync(join(__dirname, '..', '..', '..', 'supabase', 'migrations'));
+    expect(migrations.some((f) => /style/.test(f))).toBe(false); // not applied, not a migration, until the owner approves it
+  });
 });
