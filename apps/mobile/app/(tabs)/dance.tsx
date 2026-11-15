@@ -109,6 +109,7 @@ export default function Dance() {
         : recommendByMood(mood, { lowImpactOnly: dance.lowImpactDefault, seed: moodSeed }),
     [mood, moodSeed, dance.lowImpactDefault],
   );
+  const wellnessPrefs = useMemo(() => parsePrefs(prefs.data), [prefs.data]);
   // The next-level idea comes only from the person's own sessions (never from anyone else's), and keeps low impact when they asked for it.
   const suggestion = useMemo(() => {
     const p = parsePrefs(prefs.data);
@@ -393,7 +394,7 @@ export default function Dance() {
       <MovementCard />
       <LevelSuggestionCard suggestion={suggestion} onSee={setLevel} />
       <StrengthSessions />
-      <HomeWorkoutCard />
+      <HomeWorkoutCard prefs={wellnessPrefs} />
       <StrengthContentCard />
       <RecoveryCard />
 

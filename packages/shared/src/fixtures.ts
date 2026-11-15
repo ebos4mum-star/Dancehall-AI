@@ -1,4 +1,5 @@
 import { setFixturesEnabled } from './content-state';
+import { DEMO_CLIPS, type DemoClip } from './demo-media';
 import { CURATED_FOODS, FOOD_BY_ID, type FoodRef } from './food-data';
 import { STAGED_FOODS } from './food-staged';
 import { HOME_EXERCISES } from './home-exercises';
@@ -146,6 +147,49 @@ export const FIXTURE_STRENGTH_WORKOUTS: readonly StrengthWorkoutDef[] = [
   },
 ];
 
+const PLACEHOLDER_CAPTIONS =
+  'Placeholder captions for a player test. This clip shows nothing and is not a demonstration.';
+const clip = (
+  subjectId: string,
+  uri: string,
+  durationS: number,
+  id = `fixture-clip-${subjectId}`,
+): DemoClip => ({
+  id,
+  subjectId,
+  kind: 'video',
+  uri,
+  durationS,
+  captions: PLACEHOLDER_CAPTIONS,
+  captionCues: [
+    {
+      startS: 0,
+      endS: durationS / 2,
+      text: 'Placeholder caption, first half. Not a demonstration.',
+    },
+    {
+      startS: durationS / 2,
+      endS: durationS,
+      text: 'Placeholder caption, second half. Not a demonstration.',
+    },
+  ],
+  audioDescription: 'Placeholder audio description for a player test. Nothing is shown.',
+  review: 'unreviewed',
+  attribution: { creditLine: '[Internal fixture] placeholder, not a demonstration' },
+  fixture: true,
+});
+/** Placeholder clips for the player's states: the built-in placeholder surface, a real file served by the browser test, and media that cannot load. */
+export const FIXTURE_DEMO_CLIPS: readonly DemoClip[] = [
+  clip('fixture-ex-a', 'fixture:placeholder', 12),
+  clip('fixture-dancehall-beginner:1', 'fixture:placeholder', 12),
+  clip('draft-dancehall-foundations-10:2', 'fixture:placeholder', 12),
+  clip('draft-chair-dance-10:2', 'fixture:placeholder', 12),
+  clip('home-wall-push-up', 'fixture:placeholder', 12),
+  clip('draft-sit-to-stand', 'fixture:placeholder', 12),
+  clip('home-dead-bug', '/e2e-clip.webm', 4),
+  clip('home-glute-bridge', 'https://invalid.example.test/missing.mp4', 6),
+];
+
 let enabled = false;
 export const fixturesAreEnabled = (): boolean => enabled;
 
@@ -163,6 +207,7 @@ export function enableInternalFixtures(): void {
     (WORKOUT_BY_ID as Map<string, WorkoutDef>).set(w.id, w);
   }
   for (const s of PENDING_STYLES) if (!DANCE_STYLES.includes(s)) DANCE_STYLES.push(s);
+  DEMO_CLIPS.push(...FIXTURE_DEMO_CLIPS);
   for (const f of STAGED_FOODS) {
     (CURATED_FOODS as FoodRef[]).push(f);
     (FOOD_BY_ID as Map<string, FoodRef>).set(f.id, f);
@@ -189,6 +234,10 @@ export function disableInternalFixtures(): void {
   for (const s of PENDING_STYLES) {
     const i = DANCE_STYLES.indexOf(s);
     if (i >= 0) DANCE_STYLES.splice(i, 1);
+  }
+  for (const c of FIXTURE_DEMO_CLIPS) {
+    const i = DEMO_CLIPS.indexOf(c);
+    if (i >= 0) DEMO_CLIPS.splice(i, 1);
   }
   for (const f of STAGED_FOODS) {
     const i = (CURATED_FOODS as FoodRef[]).indexOf(f);

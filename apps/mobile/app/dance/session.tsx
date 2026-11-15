@@ -8,11 +8,12 @@ import { router, useLocalSearchParams } from 'expo-router';
 import {
   INSTRUCTORS,
   completionSummary,
+  movementId,
   resolvePresentation,
   strengthEntryLabel,
   type Presentation,
 } from '@dancehall/shared';
-import { DemoStatus } from '@/dance/home';
+import { DemoPanel, hasDemo } from '@/demo/DemoPlayer';
 import { previewBanner } from '@/dance/preview';
 import { resolveContent } from '@/dance/content';
 import { useApp } from '@/data/AppProvider';
@@ -97,6 +98,8 @@ export default function Session() {
     );
   }
   const seg = s.segments[s.index]!;
+  // A strength set shows its exercise; a dance block shows the movement at that position of the workout.
+  const demoSubject = seg.exerciseId ?? movementId(workout.id, s.index);
   const next = s.segments[s.index + 1];
   const fraction = seg.manual ? 1 : seg.seconds > 0 ? 1 - s.remainingS / seg.seconds : 1;
   const totalS = s.segments.reduce((a, g) => a + g.seconds, 0);
@@ -593,13 +596,13 @@ export default function Session() {
         ) : null}
       </HeroScene>
 
-      {seg.exerciseId ? (
+      {seg.exerciseId || hasDemo(demoSubject, profile?.country ?? null) ? (
         <DepthCard>
           <AppText variant="label" accessibilityRole="header">
             {t('home.howTo')}
           </AppText>
           <AppText variant="caption">{seg.cue}</AppText>
-          <DemoStatus exerciseId={seg.exerciseId} />
+          <DemoPanel key={demoSubject} subjectId={demoSubject} hideWhenNone={!seg.exerciseId} />
         </DepthCard>
       ) : null}
 

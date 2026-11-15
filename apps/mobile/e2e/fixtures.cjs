@@ -46,8 +46,27 @@ async function step(name, fn) {
   const gone = async (t) =>
     assert.equal(await p.getByText(t, { exact: false }).count(), 0, `${t} should not be shown`);
   const tab = async (name) => {
-    await p.getByRole('tab', { name, exact: true }).click();
-    await p.waitForTimeout(700);
+    // A detail screen hides the tab bar: go back until it is there.
+    for (let i = 0; i < 4; i++) {
+      try {
+        await p
+          .getByRole('tab', { name, exact: true })
+          .waitFor({ state: 'visible', timeout: i === 0 ? 6000 : 1500 });
+        break;
+      } catch {
+        await p.goBack();
+      }
+    }
+    // A tap right after a screen transition can be lost, so check the tab is selected and tap again if not.
+    for (let i = 0; i < 4; i++) {
+      await p.waitForTimeout(500);
+      await p.getByRole('tab', { name, exact: true }).click();
+      await p.waitForTimeout(700);
+      if (
+        (await p.getByRole('tab', { name, exact: true }).getAttribute('aria-selected')) === 'true'
+      )
+        break;
+    }
   };
   const lastSwitch = (n) => p.getByRole('switch', { name: n }).last();
   const shots = process.env.SHOTS_DIR;
@@ -78,8 +97,17 @@ async function step(name, fn) {
   await step(
     'styles: Dancehall, reggae and chair dance are offered, and every fixture is labelled',
     async () => {
-      await tab('Dance');
-      await seen('Move today');
+      // The Dance route is a separate chunk and the preview build lists many sessions, so its first render can be slow in a small sandbox: retry the tap once.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await tab('Dance');
+        try {
+          await seen('Move today', 12000);
+          break;
+        } catch (e) {
+          if (attempt === 2) throw e;
+          await tab('Today');
+        }
+      }
       for (const s of ['Dancehall', 'Reggae', 'Chair dance'])
         assert.ok((await p.getByRole('button', { name: s, exact: true }).count()) >= 1, s);
       await exact('Chair dance').click();
@@ -241,6 +269,16 @@ async function step(name, fn) {
       await exact('Dancehall').click();
       await btn(/Dancehall Foundations/).click();
       await seen('Draft, not reviewed');
+      // The review requirements: what is still outstanding, and who has to do it.
+      await btn(/^What this still needs/).click();
+      for (const r of [
+        'Exercise safety review',
+        'Choreography authenticity and rights',
+        'Cultural review',
+        'Media rights',
+        'None of these has been done',
+      ])
+        await seen(r);
       await btn('Start guided session').click();
       await seen('Draft, not reviewed');
       await exact('Start').click();
@@ -301,7 +339,7 @@ async function step(name, fn) {
       await seen('Check your equipment');
       await seen('Sturdy chair, Wall');
       await seen('Chair sit-to-stand');
-      await seen('There is no video demonstration for this exercise yet');
+      await seen('There is no video demonstration for this movement yet');
       // Starting needs the equipment check first.
       assert.equal(await btn('Start guided session').isDisabled(), true);
       await seen('Confirm your equipment check to start.');
@@ -329,7 +367,7 @@ async function step(name, fn) {
       await tap(btn('Skip')); // finish the warm-up
       await seen('Set 1 of 2');
       await seen('How to do it');
-      await seen('There is no video demonstration for this exercise yet');
+      await seen('There is no video demonstration for this movement yet');
       await shot('home-session');
       await tap(btn('Done with this set'));
       await p.goBack();
@@ -357,6 +395,100 @@ async function step(name, fn) {
       await lastSwitch('Seated session').uncheck({ force: true });
       await seen('exercises, about');
       await shot('home-none');
+    },
+  );
+
+  await step(
+    'demos: a draft clip is labelled, plays, pauses, replays, changes speed and shows captions (placeholder surface)',
+    async () => {
+      await tab('Dance');
+      await exact(ALL).click();
+      await exact('Chair dance').click();
+      await btn(/Chair Dance Groove/).click();
+      await btn(/^Main/).click(); // the blocks of the main section, one of which has a draft placeholder clip
+      await seen('Draft media, not approved for release');
+      await seen('Placeholder clip. This is not a demonstration.');
+      await p.goBack();
+      // The Use what you have session with a placeholder clip on the wall push-up.
+      await tab('Dance');
+      await exact('Sturdy chair').click();
+      await exact('Wall').click();
+      await btn('See this session').click();
+      await seen('Draft media, not approved for release');
+      await seen('Placeholder clip. This is not a demonstration.');
+      await seen('Placeholder caption, first half');
+      const play = () => p.getByRole('button', { name: 'Play demonstration' }).first();
+      const pause = () => p.getByRole('button', { name: 'Pause demonstration' }).first();
+      await play().click();
+      await p.waitForTimeout(700);
+      await pause().waitFor({ state: 'visible' });
+      await pause().click();
+      await play().waitFor({ state: 'visible' });
+      const speed = (r) => p.getByRole('radio', { name: `Speed ${r}`, exact: true }).first();
+      await speed('0.5×').click();
+      assert.equal(await speed('0.5×').getAttribute('aria-checked'), 'true');
+      await play().click();
+      await p.waitForTimeout(7500); // a 12 s clip at half speed is not over yet
+      assert.equal(await p.getByText('Finished. Press Replay to watch again.').count(), 0);
+      await speed('1×').click();
+      await p.waitForTimeout(6500);
+      await seen('Finished. Press Replay to watch again.');
+      await p.getByRole('button', { name: 'Replay', exact: true }).first().click();
+      await pause().waitFor({ state: 'visible' });
+      await shot('demo-player');
+      // Captions can be turned off and on again.
+      const captions = p.getByRole('switch', { name: 'Captions' }).first();
+      await captions.uncheck({ force: true });
+      assert.equal(
+        await p
+          .getByText(/Placeholder caption, /)
+          .locator('visible=true')
+          .count(),
+        0,
+      );
+      await captions.check({ force: true });
+      await seen('Placeholder caption');
+    },
+  );
+
+  await step(
+    'demos: a real video file plays through the same player, and media that cannot load falls back to the written steps',
+    async () => {
+      await tab('Dance');
+      await exact('No equipment').click();
+      await btn('See this session').click();
+      // home-dead-bug uses a real WebM served by the test server; home-glute-bridge points at a file that cannot load.
+      await seen('The demonstration could not be loaded. Follow the written steps.', 8000);
+      assert.ok((await p.locator('video').count()) >= 1, 'a real video element is present');
+      await p.getByRole('button', { name: 'Play demonstration' }).first().click();
+      await p.waitForTimeout(1500);
+      const t0 = await p.evaluate(() => document.querySelector('video')?.currentTime ?? -1);
+      assert.ok(t0 > 0, `the real video advanced (${t0})`);
+      await p.getByRole('button', { name: 'Pause demonstration' }).first().click();
+      await p.waitForTimeout(400);
+      const t1 = await p.evaluate(() => document.querySelector('video')?.currentTime ?? -1);
+      await p.waitForTimeout(600);
+      const t2 = await p.evaluate(() => document.querySelector('video')?.currentTime ?? -1);
+      assert.equal(t1, t2, 'pausing stops the real video');
+      await p.getByRole('radio', { name: 'Speed 0.5×', exact: true }).first().click();
+      const rate = await p.evaluate(() => document.querySelector('video')?.playbackRate ?? -1);
+      assert.equal(rate, 0.5, 'the speed reaches the real video');
+      await shot('demo-fallback');
+    },
+  );
+
+  await step(
+    'demos: with reduced motion nothing plays by itself, and the session shows the demonstration beside the written steps',
+    async () => {
+      await p.emulateMedia({ reducedMotion: 'reduce' });
+      await p.reload();
+      await p.waitForTimeout(2500);
+      await tab('Dance');
+      await btn('See this session').click();
+      await seen('Reduced motion is on');
+      assert.equal(await p.getByRole('button', { name: 'Pause demonstration' }).count(), 0);
+      await seen('Play demonstration');
+      await p.emulateMedia({ reducedMotion: 'no-preference' });
     },
   );
 

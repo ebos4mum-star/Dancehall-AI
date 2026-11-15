@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { Switch, View } from 'react-native';
 import { router } from 'expo-router';
 import {
-  EXERCISE_DEMOS,
   HOME_ITEMS,
   HOME_ITEM_IDS,
   HOME_LEVELS,
@@ -11,15 +10,15 @@ import {
   buildHomeWorkout,
   homeWorkoutsAvailable,
   requestFromPrefs,
-  resolveExerciseDemo,
   type HomeItemId,
   type HomeLevel,
   type HomeMinutes,
+  type WellnessPrefs,
 } from '@dancehall/shared';
 import { t, type StringKey } from '@/i18n';
 import { spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
-import { useWellness } from '@/wellness/hooks';
+import { useApp } from '@/data/AppProvider';
 import { AppText } from '@/ui/AppText';
 import { Notice } from '@/ui/Banner';
 import { Button } from '@/ui/Button';
@@ -44,13 +43,12 @@ const toggle = <T extends string>(list: readonly T[], v: T): T[] =>
  * them (see home-equipment.ts). The items are a saved preference: changing them changes only the NEXT session, never anything already logged. The card does not
  * exist unless there is content that may be offered (reviewed, or a development or review build), so a normal build shows nothing.
  */
-export function HomeWorkoutCard() {
-  const w = useWellness();
+export function HomeWorkoutCard({ prefs }: { prefs: WellnessPrefs }) {
+  const { store } = useApp();
   const { colors } = useTheme();
   const [level, setLevel] = useState<HomeLevel | null>(null);
   const [minutes, setMinutes] = useState<HomeMinutes>(15);
   const [seated, setSeated] = useState<boolean | null>(null);
-  const prefs = w.prefs;
   const base = useMemo(() => requestFromPrefs(prefs), [prefs]);
   const req = useMemo(
     () =>
@@ -64,7 +62,8 @@ export function HomeWorkoutCard() {
   const result = useMemo(() => buildHomeWorkout(req), [req]);
   if (!homeWorkoutsAvailable()) return null;
 
-  const setItems = (items: HomeItemId[]) => void w.setPrefs({ homeItems: items });
+  // The Dance tab already loads the preferences and reloads them when the store changes, so this card takes them from there.
+  const setItems = (items: HomeItemId[]) => void store.setWellnessPrefs?.({ homeItems: items });
   return (
     <>
       <SectionTitle icon="home" title={t('home.title')} />
@@ -200,36 +199,5 @@ export function HomeSafetyCard({
         />
       </View>
     </DepthCard>
-  );
-}
-
-/**
- * The state of an exercise's demonstration. No demonstration exists yet, so this says so plainly and points to the written steps. If one is ever licensed, approved
- * and captioned it is offered with its captions (and audio description, if any), never as the only way to learn the exercise.
- */
-export function DemoStatus({ exerciseId }: { exerciseId: string }) {
-  const r = resolveExerciseDemo({
-    exerciseId,
-    demos: EXERCISE_DEMOS,
-    licences: [],
-    country: null,
-    today: new Date().toISOString().slice(0, 10),
-  });
-  if (!r.available || !r.demo)
-    return (
-      <AppText variant="caption" muted>
-        {t('home.noDemo')}
-      </AppText>
-    );
-  return (
-    <View style={{ gap: spacing.xs }}>
-      <AppText variant="label">{t('home.demoCaptions')}</AppText>
-      <AppText variant="caption">{r.demo.captions}</AppText>
-      {r.demo.audioDescription ? (
-        <AppText variant="caption" muted>
-          {r.demo.audioDescription}
-        </AppText>
-      ) : null}
-    </View>
   );
 }

@@ -9,6 +9,7 @@ import {
   decodeHomeId,
   encodeHomeId,
   makeRequest,
+  movementId,
   safeSubstitutes,
   type StrengthExerciseDef,
 } from '@dancehall/shared';
@@ -18,7 +19,9 @@ import { useApp } from '@/data/AppProvider';
 import { errorMessage } from '@/data/hooks';
 import { mmss, STYLE_META } from '@/dance/meta';
 import { useDanceData } from '@/dance/hooks';
-import { DemoStatus, HomeSafetyCard } from '@/dance/home';
+import { DemoPanel } from '@/demo/DemoPlayer';
+import { ReviewNeeds } from '@/dance/review';
+import { HomeSafetyCard } from '@/dance/home';
 import { Fact } from '@/dance/ui';
 import { Disclosure, IconBadge, SegmentedBar } from '@/ui/kit';
 import { Ionicons } from '@expo/vector-icons';
@@ -196,6 +199,7 @@ export default function WorkoutDetail() {
       </Reveal>
 
       {previewBanner(w) ? <Notice tone="warning">{previewBanner(w)!}</Notice> : null}
+      <ReviewNeeds w={w} />
       {w.home ? (
         <HomeSafetyCard
           items={w.home.itemsUsed}
@@ -364,7 +368,7 @@ export default function WorkoutDetail() {
                   {e.safety.map((x) => (
                     <AppText key={x} variant="caption" muted>{`• ${x}`}</AppText>
                   ))}
-                  {w.home ? <DemoStatus exerciseId={e.id} /> : null}
+                  <DemoPanel subjectId={e.id} />
                   {w.home
                     ? (() => {
                         const target = swapTarget(e);
@@ -403,6 +407,9 @@ export default function WorkoutDetail() {
                   <AppText variant="caption" muted>
                     {seated && b.seatedAlt ? b.seatedAlt : low ? b.lowImpactAlt : b.cue}
                   </AppText>
+                  {strength ? null : (
+                    <DemoPanel subjectId={movementId(w.id, w.blocks.indexOf(b))} hideWhenNone />
+                  )}
                 </View>
               </View>
             ))}
