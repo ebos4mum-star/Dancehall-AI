@@ -77,6 +77,12 @@ Record results in `docs/LIVE_VERIFICATION.md`. Only now may anyone say cloud reg
 
 Set `EXPO_PUBLIC_CLOUD_ACCOUNTS=1` in a **development or preview** build only. It is off by default and no EAS profile sets it (a unit test enforces this). Native checks (Keychain item storage, share sheet, Face ID, scrypt time on an older phone) need a Mac, simulator or an authorised build and are **not** covered by Gates 0 to 5. No TestFlight upload and no production profile are part of this proposal.
 
+## Replay fix (found in the live Gate 5 test; prepared, NOT applied)
+
+An identical replay of a completed `recover/complete` request returned success but re-ran the secret update and the session revocation, which signed out a new device that had already signed in. `supabase/migrations/20261215000100_account_recovery_replay_fix.sql` records when a completion's follow-up work was fully applied (`applied_at`); a replay of a fully applied completion now does nothing and returns the identifier, while a replay of one that was not finished (the function died after marking it done) still completes the work.
+
+Order, each step needing approval: (1) apply the migration (backward compatible: the deployed function ignores the new fields); (2) redeploy the `account` function from the commit that includes the fix; (3) re-run the replay check of the Gate 5 harness (`recover2` phase, replay section) to confirm the new device's refresh token survives an identical replay. Rollback: `supabase/rollback/20261215000100_account_recovery_replay_fix.down.sql` (tested in CI before the first migration's rollback).
+
 ## Rollback summary
 
 Flag off in new builds; delete the function and schedule; run the down script; restore Auth settings. Accounts already made keep working with Supabase directly but cannot be recovered; deleting them deletes their data and is a separate decision.

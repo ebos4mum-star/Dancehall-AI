@@ -90,14 +90,27 @@ export interface AccountDb {
     maxFailures: number;
     lockMs: number;
   }): Promise<{ result: 'cooling' | 'wrong' | 'locked' | 'expired' | 'unknown'; readyAt?: number }>;
-  /** Single use, except that repeating the IDENTICAL completion (same secret, same new key, same device secret) returns the same success, so a lost reply can be retried. */
+  /**
+   * Single use, except that repeating the IDENTICAL completion (same secret, same new key, same device secret) succeeds, so a lost reply can be retried. A replay of a
+   * completion whose follow-up work was already fully applied changes nothing; one that was not yet fully applied still completes the work.
+   */
   txComplete(a: {
     txId: string;
     completionMac: string;
     newDigestMac: string;
     newSecretMac: string;
     now: number;
-  }): Promise<{ result: 'ok' | 'early' | 'invalid'; userId?: string; readyAt?: number }>;
+  }): Promise<{
+    result: 'ok' | 'early' | 'invalid';
+    userId?: string;
+    readyAt?: number;
+    /** Set on an identical replay: whether the follow-up work (new device secret, sessions revoked) was already FULLY applied, so nothing more must be done. */
+    applied?: boolean;
+    /** The account identifier, returned with a fully applied replay. */
+    identifier?: string;
+  }>;
+  /** Records that the follow-up work of a completion was fully applied (new device secret set, every session revoked). */
+  txApplied(txId: string, now: number): Promise<void>;
   /** Undoes a txComplete whose follow-up failed, so the person can try again. */
   txRevert(txId: string): Promise<void>;
   /** Cancels every open recovery for the account (used by the signed-in owner). Returns how many were cancelled. */
@@ -445,11 +458,16 @@ export function createAccountCore(deps: CoreDeps) {
     if (done.result === 'early')
       return reply(425, { ok: false, error: 'cooling_off', readyAt: done.readyAt });
     if (done.result !== 'ok' || !done.userId) return GENERIC_FAILURE;
+    // An identical replay of a completion that was FULLY applied (secret replaced, sessions revoked) must change nothing: re-running the revocation would sign out the
+    // new device that has meanwhile signed in.
+    if (done.applied && done.identifier)
+      return reply(200, { ok: true, identifier: done.identifier });
     let identifier: string;
     try {
       // Secure default: the new device secret replaces the old one, then EVERY existing session is revoked, so a thief's device is signed out.
       identifier = await auth.setSecret(done.userId, newSecret);
       await db.revokeSessions(done.userId);
+      await db.txApplied(txId, deps.now());
     } catch {
       await db.txRevert(txId);
       return reply(503, { ok: false, error: 'unavailable', retry: true });

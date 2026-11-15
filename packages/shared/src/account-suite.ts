@@ -12,6 +12,9 @@ import {
 } from './account-core';
 import { generateRecoveryKey, parseRecoveryKey, recoveryDigest } from './recovery-key';
 import { answersProof } from './security-questions';
+import { hmac } from '@noble/hashes/hmac.js';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 
 export interface SuiteEnv {
   db: AccountDb;
@@ -19,6 +22,8 @@ export interface SuiteEnv {
     users: Map<string, string>;
     failCreate?: boolean;
     failSetSecret?: boolean;
+    /** Counts device-secret updates, so a test can prove a replay did not repeat one. */
+    setSecretCalls?: number;
     failDelete?: boolean;
   };
   revoked: string[];
@@ -368,6 +373,79 @@ export function defineAccountSuite(
         // and nothing above changed the account's secret or sessions
         expect([...env.auth.users.values()]).toEqual([a.secret]);
         expect(env.revoked).toHaveLength(0);
+      });
+      const macOf = (domain: string, value: string) =>
+        bytesToHex(hmac(sha256, pepper, utf8ToBytes(`${domain}:${value}`)));
+      async function readyToComplete() {
+        const a = await ready();
+        const rec = await recoverTo(a.key);
+        clock += core().policy.coolingOffMs + 1;
+        const body = {
+          txId: rec.txId,
+          completionSecret: rec.completionSecret,
+          deviceSecret: 'n'.repeat(50),
+          newDigest: recoveryDigest(generateRecoveryKey(csprng)),
+        };
+        return { a, rec, body };
+      }
+      it('an identical replay of a FULLY applied completion changes nothing: no second secret update, no second revocation (the new device stays signed in)', async () => {
+        const { body } = await readyToComplete();
+        const first = await call('recover/complete', body);
+        expect(first.status).toBe(200);
+        const [uid] = [...env.auth.users.keys()];
+        const calls = env.auth.setSecretCalls ?? 0;
+        const revoked = env.revoked.length;
+        expect(revoked).toBe(1);
+        for (let i = 0; i < 3; i++) {
+          const again = await call('recover/complete', body);
+          expect(again.status).toBe(200);
+          // The identifier comes from the provisioning record, not from another call to the auth server.
+          expect(String(again.body.identifier)).toMatch(
+            /^u[0-9a-f]{32}@accounts\.dancehall\.invalid$/,
+          );
+        }
+        expect(env.auth.setSecretCalls ?? 0).toBe(calls);
+        expect(env.revoked.length).toBe(revoked);
+        expect(env.auth.users.get(uid!)).toBe(body.deviceSecret);
+      });
+      it('a replay when the follow-up work was NOT finished (died after the transaction was marked done) still completes it, exactly once', async () => {
+        const { rec, body } = await readyToComplete();
+        const [uid] = [...env.auth.users.keys()];
+        const before = env.auth.users.get(uid!);
+        // The transaction is marked done, then the function dies before the secret changes or sessions are revoked.
+        const marked = await env.db.txComplete({
+          txId: rec.txId,
+          completionMac: macOf('completion', rec.completionSecret),
+          newDigestMac: macOf('digest', body.newDigest),
+          newSecretMac: macOf('secret', body.deviceSecret),
+          now: clock,
+        });
+        expect(marked).toMatchObject({ result: 'ok', applied: false });
+        expect(env.auth.users.get(uid!)).toBe(before);
+        expect(env.revoked).toHaveLength(0);
+        const retry = await call('recover/complete', body);
+        expect(retry.status).toBe(200);
+        expect(env.auth.users.get(uid!)).toBe(body.deviceSecret);
+        expect(env.revoked).toHaveLength(1);
+        const replay = await call('recover/complete', body);
+        expect(replay.status).toBe(200);
+        expect(env.revoked).toHaveLength(1);
+      });
+      it('if recording "fully applied" fails the caller gets a retryable error, and the retry then completes cleanly', async () => {
+        const { body } = await readyToComplete();
+        const real = env.db.txApplied.bind(env.db);
+        let fail = true;
+        env.db.txApplied = async (id, now) => {
+          if (fail) throw new Error('db down');
+          return real(id, now);
+        };
+        expect((await call('recover/complete', body)).status).toBe(503);
+        fail = false;
+        const retry = await call('recover/complete', body);
+        expect(retry.status).toBe(200);
+        const revoked = env.revoked.length;
+        expect((await call('recover/complete', body)).status).toBe(200);
+        expect(env.revoked.length).toBe(revoked);
       });
       it('a completion secret is required and single use (replay fails)', async () => {
         const a = await ready();

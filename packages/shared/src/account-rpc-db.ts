@@ -24,6 +24,9 @@ export function createRpcAccountDb(rpc: Rpc): AccountDb {
     },
     txVerify: (a) => call('acct_tx_verify', a),
     txComplete: (a) => call('acct_tx_complete', a),
+    async txApplied(txId, now) {
+      await call('acct_tx_applied', { txId, now });
+    },
     async txRevert(txId) {
       await call('acct_tx_revert', { txId });
     },
