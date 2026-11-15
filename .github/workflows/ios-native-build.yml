@@ -79,7 +79,11 @@ jobs:
       - name: Show the first errors (only when the compile failed)
         if: failure()
         run: |
-          grep -n -E "error:|ExpoModulesJSI|Command .* failed|No such file|not found|xcframework" "$RUNNER_TEMP/xcodebuild.log" | grep -v "note:" | cut -c1-400 | head -n 60 || true
+          L="$RUNNER_TEMP/xcodebuild.log"
+          grep -n -E "(^|[^a-zA-Z])error:|fatal error|Command PhaseScriptExecution failed|\*\* BUILD FAILED" "$L" | cut -c1-300 | head -n 25 || true
+          echo "== output of the failing script phase =="
+          N=$(grep -n 'PhaseScriptExecution.*ExpoModulesJSI' "$L" | head -n 1 | cut -d: -f1)
+          [ -n "$N" ] && sed -n "$((N+1)),$((N+45))p" "$L" | cut -c1-300 || true
 
       - name: Keep the build log (short retention)
         if: always()
