@@ -30,7 +30,7 @@ const env = (k: string): string => {
   if (!v) throw new Error(`missing configuration: ${k}`);
   return v;
 };
-const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+const b64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 const hex = (b: ArrayBuffer): string =>
   [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
 
@@ -127,7 +127,18 @@ Deno.serve(async (req) => {
       return json(413, { ok: false, error: 'too_large' });
     const text = await req.text();
     if (text.length > 8192) return json(413, { ok: false, error: 'too_large' });
-    const input = text ? (JSON.parse(text) as Record<string, unknown>) : {};
+    let input: Record<string, unknown> = {};
+    if (text) {
+      // A body that is not a JSON object is the caller's mistake (400), not a server fault, and nothing from it is echoed back.
+      try {
+        const v: unknown = JSON.parse(text);
+        if (!v || typeof v !== 'object' || Array.isArray(v))
+          return json(400, { ok: false, error: 'invalid_request' });
+        input = v as Record<string, unknown>;
+      } catch {
+        return json(400, { ok: false, error: 'invalid_request' });
+      }
+    }
     const ctx: Ctx = { ipBucket: await ipBucket(req) };
     if (NEEDS_USER.has(op)) {
       const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
