@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "export:web": "expo export --platform web --output-dir dist"
+    "export:web": "expo export --platform web --output-dir dist",
+    "export:web:fixtures": "EXPO_PUBLIC_CONTENT_FIXTURES=1 expo export --platform web --output-dir dist-fixtures"
   },
   "dependencies": {
     "@dancehall/ai": "workspace:*",

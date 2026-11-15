@@ -7,6 +7,11 @@ export interface AppConfig {
   supabasePublishableKey?: string;
   /** Server AI gateway base URL. Not a secret. Absent until the owner deploys the gateway. */
   aiApiUrl?: string;
+  /**
+   * Internal test fixtures (placeholder Dancehall, reggae, chair dance, seated and strength sessions) for development and review builds only. They are not real
+   * content. A production build refuses to start with this on.
+   */
+  contentFixtures: boolean;
 }
 
 export class ConfigError extends Error {
@@ -33,6 +38,11 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
     throw new ConfigError(`Unknown EXPO_PUBLIC_APP_ENV "${appEnv}"`);
   const url = env.EXPO_PUBLIC_SUPABASE_URL?.trim() || undefined;
   const key = env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() || undefined;
+  const contentFixtures = env.EXPO_PUBLIC_CONTENT_FIXTURES === '1';
+  if (contentFixtures && appEnv === 'production')
+    throw new ConfigError(
+      'Internal content fixtures are for development and review builds only and are not allowed in a production build.',
+    );
   const requested = env.EXPO_PUBLIC_AUTH_MODE ?? (url && key ? 'supabase' : 'mock');
   if (requested !== 'mock' && requested !== 'supabase')
     throw new ConfigError(`Unknown EXPO_PUBLIC_AUTH_MODE "${requested}"`);
@@ -42,7 +52,7 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
       throw new ConfigError(
         'Mock authentication is development-only and is not allowed in a production build.',
       );
-    return { appEnv, authMode: 'mock' };
+    return { appEnv, authMode: 'mock', contentFixtures };
   }
   if (!url || !key)
     throw new ConfigError(
@@ -64,5 +74,6 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
     supabaseUrl: url,
     supabasePublishableKey: key,
     aiApiUrl: ai,
+    contentFixtures,
   };
 }

@@ -1,3 +1,4 @@
+import { bestCuisineFit } from './cuisines';
 import { CURATED_FOODS, FOOD_BY_ID, type FoodCategory, type FoodRef } from './food-data';
 import type { Confidence, Macros, NutritionSource } from './nutrition';
 
@@ -316,6 +317,8 @@ export function suggestSwaps(
   mode: SwapMode,
   foods: readonly FoodRef[] = CURATED_FOODS,
   limit = 3,
+  /** The person's chosen cuisines (cuisines.ts). Foods that fit them rank higher; nothing is ever excluded for not fitting. */
+  cuisines: readonly string[] = [],
 ): SwapSuggestion[] {
   const cur = item.foodId ? FOOD_BY_ID.get(item.foodId) : undefined;
   if (!cur) return [];
@@ -360,6 +363,7 @@ export function suggestSwaps(
       ? 1000
       : 0;
     const sameCat = s.food.category === cur.category ? 500 : 0;
+    const cuisine = bestCuisineFit(s.food.regionTags, cuisines) * 400;
     const gain =
       mode === 'lighter'
         ? -s.kcalDelta
@@ -368,7 +372,7 @@ export function suggestSwaps(
           : mode === 'more_fiber'
             ? s.fiberDeltaG * 10
             : (cur.costTier - s.food.costTier) * 100 - Math.abs(s.kcalDelta);
-    return sameRegion + sameCat + gain;
+    return sameRegion + sameCat + cuisine + gain;
   };
   return out.sort((a, b) => rank(b) - rank(a)).slice(0, limit);
 }

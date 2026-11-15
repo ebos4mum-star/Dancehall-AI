@@ -1,0 +1,5 @@
+{
+  "_notice": "Strength content. Empty on purpose: an exercise or routine may be added only when a qualified, independent reviewer has approved it (see strength.ts and docs/planning/review-packs/STRENGTH_TRAINING.md). Internal test fixtures live in fixtures.ts, never here.",
+  "exercises": [],
+  "workouts": []
+}

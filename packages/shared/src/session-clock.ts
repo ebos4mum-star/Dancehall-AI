@@ -1,4 +1,11 @@
-import { initSession, sessionReduce, type SessionEvent, type SessionState } from './session-engine';
+import {
+  initSession,
+  initSessionFromSegments,
+  sessionReduce,
+  type SessionEvent,
+  type SessionState,
+} from './session-engine';
+import type { SessionSegment } from './workouts';
 import type { WorkoutDef } from './workouts';
 
 /**
@@ -46,9 +53,30 @@ export type RunnerEvent =
   | { type: 'skipPrep' }
   | { type: 'restore'; session: SessionState };
 
-export function initRunner(w: Pick<WorkoutDef, 'id' | 'blocks'>, lowImpact: boolean): RunnerState {
+export function initRunner(
+  w: Pick<WorkoutDef, 'id' | 'blocks'>,
+  lowImpact: boolean,
+  seated = false,
+): RunnerState {
   return {
-    session: initSession(w, lowImpact),
+    session: initSession(w, lowImpact, seated),
+    phase: 'ready',
+    prepS: 0,
+    prepPaused: false,
+    endedEarly: false,
+    changes: 0,
+  };
+}
+
+/** A runner for any list of segments (strength workouts). */
+export function initRunnerFromSegments(
+  id: string,
+  segments: SessionSegment[],
+  lowImpact: boolean,
+  seated = false,
+): RunnerState {
+  return {
+    session: initSessionFromSegments(id, segments, lowImpact, seated),
     phase: 'ready',
     prepS: 0,
     prepPaused: false,
@@ -106,7 +134,7 @@ export function runnerReduce(r: RunnerState, e: RunnerEvent): RunnerState {
     default:
       break;
   }
-  if (r.phase === 'ready' && e.type !== 'lowImpact') return r;
+  if (r.phase === 'ready' && e.type !== 'lowImpact' && e.type !== 'seated') return r;
   const res = sessionReduce(r.session, e as SessionEvent);
   return { ...r, session: res.state, changes: r.changes + (res.segmentChanged ? 1 : 0) };
 }

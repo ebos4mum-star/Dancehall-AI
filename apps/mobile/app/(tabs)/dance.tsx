@@ -18,9 +18,15 @@ import {
   type Intensity,
   type Level,
   type QuickFitMinutes,
+  WORKOUTS,
+  isSeatedSuitable,
+  levelSuggestion,
+  parsePrefs,
 } from '@dancehall/shared';
 import { useDanceData } from '@/dance/hooks';
-import { StyleCarousel, WorkoutCard } from '@/dance/ui';
+import { useApp } from '@/data/AppProvider';
+import { useLoad } from '@/data/hooks';
+import { LevelSuggestionCard, StrengthSessions, StyleCarousel, WorkoutCard } from '@/dance/ui';
 import { IconChoice, Disclosure, IconBadge, SectionTitle, type IconName } from '@/ui/kit';
 import { Ionicons } from '@expo/vector-icons';
 import { t, type StringKey } from '@/i18n';
@@ -84,11 +90,14 @@ function QuickPill({ minutes, onPress }: { minutes: QuickFitMinutes; onPress: ()
 export default function Dance() {
   const { colors } = useTheme();
   const dance = useDanceData();
+  const { profile } = useApp();
+  const prefs = useLoad(async (st) => (await st.getWellnessPrefs?.()) ?? null);
   const [style, setStyle] = useState<DanceStyle | 'all'>('all');
   const [level, setLevel] = useState<Level | 'any'>('any');
   const [intensity, setIntensity] = useState<Intensity | 'any'>('any');
   const [duration, setDuration] = useState<'any' | '5' | '10' | '15' | '20'>('any');
   const [lowOnly, setLowOnly] = useState(false);
+  const [seatedOnly, setSeatedOnly] = useState(false);
   // Voluntary and temporary: never stored, never inferred.
   const [mood, setMood] = useState<Mood | 'none'>('none');
   const [moodSeed, setMoodSeed] = useState(0);
@@ -99,6 +108,16 @@ export default function Dance() {
         : recommendByMood(mood, { lowImpactOnly: dance.lowImpactDefault, seed: moodSeed }),
     [mood, moodSeed, dance.lowImpactDefault],
   );
+  // The next-level idea comes only from the person's own sessions (never from anyone else's), and keeps low impact when they asked for it.
+  const suggestion = useMemo(() => {
+    const p = parsePrefs(prefs.data);
+    return levelSuggestion({
+      sessions: dance.sessions,
+      now: new Date(),
+      timeZone: profile?.timeZone ?? null,
+      keepLowImpact: p.mobility.length > 0 || dance.lowImpactDefault,
+    });
+  }, [dance.sessions, dance.lowImpactDefault, prefs.data, profile?.timeZone]);
   const [pending, setPending] = useState<SessionSnapshot | null>(null);
   useEffect(() => {
     let alive = true;
@@ -118,8 +137,9 @@ export default function Dance() {
         minutes:
           duration === 'any' ? undefined : duration === '20' ? [20, 30, 45] : [Number(duration)],
         lowImpactOnly: lowOnly || undefined,
+        seatedOnly: seatedOnly || undefined,
       }),
-    [style, level, intensity, duration, lowOnly],
+    [style, level, intensity, duration, lowOnly, seatedOnly],
   );
 
   const quick = (minutes: QuickFitMinutes) => {
@@ -370,6 +390,8 @@ export default function Dance() {
       </DepthCard>
 
       <MovementCard />
+      <LevelSuggestionCard suggestion={suggestion} onSee={setLevel} />
+      <StrengthSessions />
       <StrengthContentCard />
       <RecoveryCard />
 
@@ -420,6 +442,17 @@ export default function Dance() {
             { value: 'yes', label: t('dance.lowImpactOnly') },
           ]}
         />
+        {WORKOUTS.some(isSeatedSuitable) ? (
+          <Choice
+            label={t('dance.seatedOnlyBody')}
+            value={seatedOnly ? 'yes' : 'no'}
+            onChange={(v) => setSeatedOnly(v === 'yes')}
+            options={[
+              { value: 'no', label: t('dance.any') },
+              { value: 'yes', label: t('dance.seatedOnly') },
+            ]}
+          />
+        ) : null}
       </Disclosure>
 
       <SectionTitle icon="musical-notes" title={`${t('dance.browse')} (${results.length})`} />

@@ -96,7 +96,13 @@ export function PresentationPicker({
 }
 
 /** One row of the session preview: what comes up, how long, and the cue it will show. */
-export function MovementPreview({ w, lowImpact }: { w: WorkoutDef; lowImpact: boolean }) {
+export function MovementPreview({
+  w,
+  lowImpact,
+}: {
+  w: Pick<WorkoutDef, 'blocks'>;
+  lowImpact: boolean;
+}) {
   const { colors } = useTheme();
   return (
     <View style={{ gap: spacing.sm }}>

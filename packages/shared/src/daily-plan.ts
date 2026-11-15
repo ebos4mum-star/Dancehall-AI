@@ -141,6 +141,7 @@ export function generateDailyPlan(i: DailyPlanInput): {
       minutes: MINUTES[i.mode],
       lowImpactOnly: lowOnly,
       style: i.bias?.styles[0],
+      seated: i.bias?.seated,
       intensities: i.bias?.intensityCeiling
         ? INTENSITIES_UP_TO[i.bias.intensityCeiling]
         : undefined,

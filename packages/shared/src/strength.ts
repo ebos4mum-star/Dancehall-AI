@@ -1,4 +1,7 @@
 import type { ReviewStatus } from './instruction-media';
+import { fixturesEnabled } from './content-state';
+import { sessionSegments, type SessionSegment, type WorkoutBlock } from './workouts';
+import data from './strength-data.json';
 
 /**
  * Strength-training CONTENT CONTRACT. This module defines what an exercise and a strength workout must contain before the app may offer it as
@@ -45,6 +48,8 @@ export interface StrengthExerciseDef {
   contentOrigin: 'original_text' | 'licensed' | 'commissioned';
   review: ReviewStatus;
   reviewer: ContentReviewer | null;
+  /** Internal test fixture: never real content, never bundled, active only when fixtures are switched on in development. */
+  fixture?: true;
 }
 
 export interface StrengthBlock {
@@ -68,11 +73,18 @@ export interface StrengthWorkoutDef {
   contentOrigin: StrengthExerciseDef['contentOrigin'];
   review: ReviewStatus;
   reviewer: ContentReviewer | null;
+  /** Internal test fixture: see StrengthExerciseDef. */
+  fixture?: true;
 }
 
-/** The catalogue. Empty on purpose: nothing may be added without qualified review. */
-export const STRENGTH_EXERCISES: readonly StrengthExerciseDef[] = [];
-export const STRENGTH_WORKOUTS: readonly StrengthWorkoutDef[] = [];
+/**
+ * The catalogue, loaded from `strength-data.json`. Empty on purpose: nothing may be added without qualified review, and `activeStrengthWorkouts` only returns
+ * content that passes the gate. (The arrays are mutable only so internal fixtures can be added in development.)
+ */
+export const STRENGTH_EXERCISES: StrengthExerciseDef[] = [
+  ...(data.exercises as StrengthExerciseDef[]),
+];
+export const STRENGTH_WORKOUTS: StrengthWorkoutDef[] = [...(data.workouts as StrengthWorkoutDef[])];
 
 const reviewProblem = (
   who: string,
@@ -134,8 +146,80 @@ export function activeStrengthWorkouts(
   workouts: readonly StrengthWorkoutDef[] = STRENGTH_WORKOUTS,
   exercises: readonly StrengthExerciseDef[] = STRENGTH_EXERCISES,
 ): StrengthWorkoutDef[] {
-  return workouts.filter((w) => strengthWorkoutProblems(w, exercises).length === 0);
+  // Real content must pass the review gate. A fixture is shown only while fixtures are switched on (development), is labelled as a fixture, and is never reviewed.
+  return workouts.filter((w) =>
+    w.fixture ? fixturesEnabled() : strengthWorkoutProblems(w, exercises).length === 0,
+  );
 }
+
+/** Estimated length of a counted set, for the progress bar only. */
+const SECONDS_PER_REP = 3;
+const REST_CUE = 'Rest and breathe. Shake out your arms and legs and sip some water.';
+
+/**
+ * Turns a strength workout into ordinary session blocks, so the existing player, clock, resume and audio cues run it unchanged: a warm-up, then every set (counted in
+ * reps, which waits for the person to tap Done, or timed), a timed rest between sets (none after the last), and a cool-down. The "easier" text of each set is the
+ * exercise's required easier version. No weight, load or repetition target is invented here: sets, reps and rest come from the reviewed workout.
+ */
+export function strengthBlocks(
+  w: StrengthWorkoutDef,
+  exercises: readonly StrengthExerciseDef[] = STRENGTH_EXERCISES,
+): WorkoutBlock[] {
+  const byId = new Map(exercises.map((e) => [e.id, e]));
+  const out: WorkoutBlock[] = [];
+  const plain = (kind: 'warmup' | 'cooldown', t: { title: string; seconds: number; cue: string }) =>
+    out.push({
+      kind,
+      title: t.title,
+      seconds: t.seconds,
+      cue: t.cue,
+      lowImpactAlt: t.cue,
+    });
+  plain('warmup', w.warmup);
+  const totalSets = w.blocks.reduce((n, b) => n + b.sets, 0);
+  let doneSets = 0;
+  for (const b of w.blocks) {
+    const e = byId.get(b.exerciseId);
+    if (!e) continue;
+    const cue = e.cues.join(' ');
+    for (let set = 1; set <= b.sets; set++) {
+      doneSets++;
+      const manual = b.reps !== null;
+      out.push({
+        kind: 'main',
+        title: e.name,
+        seconds: manual ? Math.max(15, (b.reps ?? 0) * SECONDS_PER_REP) : (b.seconds ?? 30),
+        cue,
+        lowImpactAlt: `Easier version: ${e.regression}`,
+        ...(manual ? { manual: true } : {}),
+        setNumber: set,
+        setsTotal: b.sets,
+        reps: b.reps,
+        exerciseId: e.id,
+      });
+      if (b.restSeconds > 0 && doneSets < totalSets)
+        out.push({
+          kind: 'rest',
+          title: 'Rest',
+          seconds: b.restSeconds,
+          cue: REST_CUE,
+          lowImpactAlt: REST_CUE,
+        });
+    }
+  }
+  plain('cooldown', w.cooldown);
+  return out;
+}
+
+/** The same blocks as session segments (what the player shows and the tests check). */
+export const strengthSegments = (
+  w: StrengthWorkoutDef,
+  exercises: readonly StrengthExerciseDef[] = STRENGTH_EXERCISES,
+): SessionSegment[] => sessionSegments({ blocks: strengthBlocks(w, exercises) }, false);
+
+/** The label stored with a logged strength session: the existing wellness entry uses bodyweight, dumbbells or bands. */
+export const strengthEntryLabel = (w: Pick<StrengthWorkoutDef, 'equipment'>): string =>
+  w.equipment === 'none' ? 'bodyweight' : w.equipment;
 
 /** What a reviewer must confirm, shown on screen and in the admin checklist. */
 export const STRENGTH_REVIEW_REQUIREMENTS: readonly string[] = [

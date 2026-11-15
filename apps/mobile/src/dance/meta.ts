@@ -1,4 +1,5 @@
 import type { DanceStyle } from '@dancehall/shared';
+import type { IconName } from '@/ui/kit';
 
 /** Look of each dance style. White text is used on both gradient stops (verified by a test). */
 export const STYLE_META: Record<DanceStyle, { emoji: string; from: string; to: string }> = {
@@ -8,19 +9,22 @@ export const STYLE_META: Record<DanceStyle, { emoji: string; from: string; to: s
   latin: { emoji: '💃', from: '#BE123C', to: '#7C2D12' },
   bollywood: { emoji: '✨', from: '#9D174D', to: '#6D28D9' },
   low_impact: { emoji: '🌿', from: '#0B6B4F', to: '#0E7490' },
+  dancehall: { emoji: '🔥', from: '#064E3B', to: '#92400E' },
+  reggae: { emoji: '🌴', from: '#14532D', to: '#713F12' },
+  chair_dance: { emoji: '🪑', from: '#1E3A8A', to: '#0F766E' },
 };
 
 /** Icon per dance style, used instead of emoji so the art stays in one visual language. */
-export const STYLE_ICON: Record<
-  DanceStyle,
-  'flame' | 'musical-notes' | 'headset' | 'heart' | 'sparkles' | 'leaf'
-> = {
+export const STYLE_ICON: Record<DanceStyle, IconName> = {
   afrobeats: 'flame',
   amapiano: 'musical-notes',
   hip_hop: 'headset',
   latin: 'heart',
   bollywood: 'sparkles',
   low_impact: 'leaf',
+  dancehall: 'volume-high',
+  reggae: 'sunny',
+  chair_dance: 'accessibility',
 };
 export const LEVEL_NUM = { beginner: 1, intermediate: 2, advanced: 3 } as const;
 export const INTENSITY_NUM = { low: 1, moderate: 2, high: 3 } as const;

@@ -2,7 +2,8 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-const root = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist');
+// E2E_DIST selects another export (for example dist-fixtures); the default is the normal build.
+const root = join(dirname(fileURLToPath(import.meta.url)), '..', process.env.E2E_DIST ?? 'dist');
 const types = {
   '.html': 'text/html',
   '.js': 'text/javascript',

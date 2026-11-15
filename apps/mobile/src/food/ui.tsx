@@ -12,7 +12,9 @@ import {
   type FoodItemValues,
   type SwapMode,
   type Totals,
+  parsePrefs,
 } from '@dancehall/shared';
+import { useLoad } from '@/data/hooks';
 import { useNumbersHidden } from '@/wellness/hooks';
 import { t, type StringKey } from '@/i18n';
 import { MIN_TOUCH_TARGET } from '@/theme/tokens';
@@ -244,7 +246,9 @@ export function SwapPanel({
     ? SWAP_MODES.filter((m) => m !== 'lighter')
     : SWAP_MODES;
   const mode: SwapMode = modes.includes(chosen) ? chosen : modes[0]!;
-  const swaps = suggestSwaps(item, mode, CURATED_FOODS, 3);
+  // The person's chosen cuisines (My approach) rank like-for-like options that fit them higher; nothing is excluded.
+  const { data: savedPrefs } = useLoad(async (st) => (await st.getWellnessPrefs?.()) ?? null);
+  const swaps = suggestSwaps(item, mode, CURATED_FOODS, 3, parsePrefs(savedPrefs).cuisines);
   return (
     <View style={{ gap: spacing.sm }}>
       <Choice

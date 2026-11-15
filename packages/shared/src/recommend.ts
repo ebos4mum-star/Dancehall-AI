@@ -48,9 +48,9 @@ export function recommendByMood(
   list: readonly WorkoutDef[] = WORKOUTS,
 ): MoodPick[] {
   const limit = opts.limit ?? 3;
-  const allowed = filterWorkouts({ lowImpactOnly: opts.lowImpactOnly || undefined }, list).filter(
-    (w) => !opts.excludeIds?.includes(w.id),
-  );
+  const allowed = filterWorkouts({ lowImpactOnly: opts.lowImpactOnly || undefined }, list)
+    .filter((w) => !w.fixture)
+    .filter((w) => !opts.excludeIds?.includes(w.id));
   let pool = allowed.filter(rules[mood]);
   if (pool.length === 0) pool = [...allowed].sort((a, b) => a.minutes - b.minutes);
   if (pool.length === 0) return [];

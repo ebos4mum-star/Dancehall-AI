@@ -1,6 +1,13 @@
 import { CURATED_FOODS } from './food-data';
+import { CUISINES, regionTagsFor } from './cuisines';
 import { nutritionTargets, type NutritionTargets, type TargetInput } from './nutrition-plan';
-import { DANCE_STYLES, type DanceStyle, type Intensity } from './workouts';
+import {
+  DANCE_STYLES,
+  WORKOUTS,
+  isSeatedSuitable,
+  type DanceStyle,
+  type Intensity,
+} from './workouts';
 import {
   numbersHidden,
   weightTrackingOn,
@@ -65,14 +72,9 @@ const STYLE_LABELS: Record<StylePref, string> = {
   bollywood: 'Bollywood',
   soca: 'Soca',
 };
-const CUISINE_LABELS: Record<CuisinePref, string> = {
-  west_african: 'West African',
-  caribbean: 'Caribbean',
-  mediterranean: 'Mediterranean',
-  south_asian: 'South Asian',
-  asian: 'Asian',
-  latin_american: 'Latin American',
-};
+const CUISINE_LABELS: Record<CuisinePref, string> = Object.fromEntries(
+  Object.values(CUISINES).map((c) => [c.id, c.label]),
+) as Record<CuisinePref, string>;
 const list = (xs: readonly string[]): string =>
   xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`;
 
@@ -239,8 +241,11 @@ const MIN_FOODS_FOR_COVERAGE = 5;
 /** A gentle plan offers a few habit ideas at a time, never a long list. */
 const MAX_HABIT_IDEAS = 3;
 
-const foodsFor = (c: CuisinePref): number =>
-  CURATED_FOODS.filter((f) => f.regionTags.includes(c)).length;
+/** Foods in the reference data that count as this cuisine (itself, its parent or its children: see cuisines.ts). */
+const foodsFor = (c: CuisinePref): number => {
+  const tags = regionTagsFor([c]);
+  return CURATED_FOODS.filter((f) => f.regionTags.some((t) => tags.includes(t))).length;
+};
 
 const HABIT_TEMPLATES: Record<PathwayId, ReadonlyArray<{ name: string; why: string }>> = {
   healthy_habits: [
@@ -530,7 +535,13 @@ function workoutWhy(
     parts.push(
       `${list(missingStyles.map((s) => STYLE_LABELS[s as StylePref]))} sessions are not in the catalogue yet, so we show other styles for now.`,
     );
-  if (prefs.mobility.length > 0)
+  if (prefs.mobility.includes('seated'))
+    parts.push(
+      WORKOUTS.some(isSeatedSuitable)
+        ? 'You asked for seated options, so sessions you can do seated come first.'
+        : 'Seated sessions are not in the catalogue yet, so low-impact sessions are shown for now.',
+    );
+  else if (prefs.mobility.length > 0)
     parts.push('You asked for gentler movement, so low-impact options come first.');
   else if (readiness !== 'clear' && lowImpact)
     parts.push('Low-impact options come first until your safety questions say otherwise.');
@@ -596,12 +607,17 @@ function buildPathway(
         notes.push(
           `${list(absent.map((s) => STYLE_LABELS[s]))} sessions are not in the catalogue yet, so other styles are shown for now.`,
         );
+      if (prefs.mobility.includes('seated') && !WORKOUTS.some(isSeatedSuitable))
+        notes.push(
+          'Sessions you can do seated are not in the catalogue yet, so low-impact sessions are shown for now.',
+        );
       if (prefs.mobility.length > 0 || caution)
         actions.push({
           id: 'dance.low_impact',
-          text: prefs.mobility.includes('seated')
-            ? 'Use the seated and low-impact versions'
-            : 'Start with the low-impact versions',
+          text:
+            prefs.mobility.includes('seated') && WORKOUTS.some(isSeatedSuitable)
+              ? 'Choose sessions you can do seated'
+              : 'Start with the low-impact versions',
           why:
             prefs.mobility.length > 0
               ? 'You asked for gentler movement.'

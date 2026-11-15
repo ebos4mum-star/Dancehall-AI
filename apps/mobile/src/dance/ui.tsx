@@ -1,6 +1,19 @@
 import { Animated, Pressable, ScrollView, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import type { ActivitySummary, DanceStyle, Intensity, Level, WorkoutDef } from '@dancehall/shared';
+import {
+  isSeatedSuitable,
+  type ActivitySummary,
+  type DanceStyle,
+  type Intensity,
+  type Level,
+  type LevelSuggestion,
+  type WorkoutDef,
+} from '@dancehall/shared';
+import { router } from 'expo-router';
+import { strengthSessions } from './content';
+import { DepthCard } from '@/ui/Depth';
+import { Button } from '@/ui/Button';
+import { SectionTitle } from '@/ui/kit';
 import { t, type StringKey } from '@/i18n';
 import { formatDate } from '@/lib/format';
 import { brand, radius, spacing } from '@/theme/tokens';
@@ -38,9 +51,12 @@ export function Chip({ label, strong = false }: { label: string; strong?: boolea
 export const levelLabel = (l: Level) =>
   `${'●'.repeat(LEVEL_DOTS[l])}${'○'.repeat(3 - LEVEL_DOTS[l])} ${t(`level.${l}` as StringKey)}`;
 export const workoutSummaryLabel = (
-  w: Pick<WorkoutDef, 'title' | 'style' | 'minutes' | 'level' | 'intensity' | 'impact'>,
+  w: Pick<
+    WorkoutDef,
+    'title' | 'style' | 'minutes' | 'level' | 'intensity' | 'impact' | 'seatedSuitable' | 'fixture'
+  >,
 ) =>
-  `${w.title}, ${t(`style.${w.style}` as StringKey)}, ${t('dance.minutes', { n: w.minutes })}, ${t(`level.${w.level}` as StringKey)}, ${t(`intensity.${w.intensity}` as StringKey)}, ${t(`impact.${w.impact}` as StringKey)}`;
+  `${w.fixture ? `${t('wk.fixtureTag')}, ` : ''}${w.title}, ${t(`style.${w.style}` as StringKey)}, ${t('dance.minutes', { n: w.minutes })}, ${t(`level.${w.level}` as StringKey)}, ${t(`intensity.${w.intensity}` as StringKey)}, ${t(`impact.${w.impact}` as StringKey)}${isSeatedSuitable(w) ? `, ${t('wk.seatedSuitable')}` : ''}`;
 
 /** Workout card: a duration disc, the title and summary, and three facts (level, pace, impact) each with a meter and a text label. */
 export function WorkoutCard({ w, onPress }: { w: WorkoutDef; onPress: () => void }) {
@@ -129,6 +145,8 @@ export function WorkoutCard({ w, onPress }: { w: WorkoutDef; onPress: () => void
               icon={w.impact === 'low' ? 'leaf' : 'footsteps'}
               label={t(`impact.${w.impact}` as StringKey)}
             />
+            {isSeatedSuitable(w) ? <Chip label={t('wk.seatedSuitable')} /> : null}
+            {w.fixture ? <Chip strong label={t('wk.fixtureTag')} /> : null}
           </View>
         </LinearGradient>
       </Animated.View>
@@ -142,7 +160,7 @@ export function Fact({
   label,
 }: {
   meter?: 1 | 2 | 3;
-  icon?: 'leaf' | 'footsteps' | 'time';
+  icon?: 'leaf' | 'footsteps' | 'time' | 'layers' | 'accessibility';
   label: string;
 }) {
   return (
@@ -282,3 +300,75 @@ export function ActivityBars({ summary }: { summary: ActivitySummary }) {
 }
 
 export const intensityOptions: Intensity[] = ['low', 'moderate', 'high'];
+
+/** Strength sessions (counted sets, timed rests) through the same detail and session screens. Nothing appears until real content passes the review gate. */
+export function StrengthSessions() {
+  const list = strengthSessions();
+  if (list.length === 0) return null;
+  return (
+    <>
+      <SectionTitle icon="barbell" title={t('dance.strengthTitle')} />
+      <AppText variant="caption" muted>
+        {t('dance.strengthIntro')}
+      </AppText>
+      {list.map((c) => (
+        <Pressable
+          key={c.id}
+          accessibilityRole="button"
+          accessibilityLabel={`${c.fixture ? `${t('wk.fixtureTag')}, ` : ''}${c.title}, ${t('st.kind')}, ${t('dance.minutes', { n: c.minutes })}, ${t(`level.${c.level}` as StringKey)}`}
+          onPress={() => {
+            haptics.tap();
+            router.push({ pathname: '/dance/[id]', params: { id: c.id } });
+          }}
+        >
+          <DepthCard>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <IconBadge name="barbell" size={48} fill={brand.violet} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <AppText variant="heading">{c.title}</AppText>
+                <AppText variant="caption" muted>
+                  {`${t('dance.minutes', { n: c.minutes })} · ${t(`level.${c.level}` as StringKey)} · ${c.blocks.filter((b) => b.kind === 'main').length} ${t('st.setsTotal').toLowerCase()}`}
+                </AppText>
+                {c.fixture ? <Chip strong label={t('wk.fixtureTag')} /> : null}
+              </View>
+              <Ionicons name="chevron-forward" size={22} color="#8B7FA8" />
+            </View>
+          </DepthCard>
+        </Pressable>
+      ))}
+    </>
+  );
+}
+
+/** The next-level idea from the person's own history: an option, never a push, with the plain reasons and the note that staying is fine. */
+export function LevelSuggestionCard({
+  suggestion,
+  onSee,
+}: {
+  suggestion: LevelSuggestion;
+  onSee: (level: Level) => void;
+}) {
+  if (suggestion.direction === null || suggestion.to === null) return null;
+  const to = t(`level.${suggestion.to}` as StringKey);
+  return (
+    <DepthCard>
+      <SectionTitle icon="trending-up" title={t('prog.title')} />
+      <View accessibilityLiveRegion="polite" style={{ gap: spacing.xs }}>
+        {suggestion.reasons.map((r) => (
+          <AppText key={r}>{r}</AppText>
+        ))}
+        <AppText variant="caption" muted>
+          {suggestion.note}
+        </AppText>
+      </View>
+      <Button
+        variant="secondary"
+        label={t('prog.see', { level: to.toLowerCase() })}
+        onPress={() => onSee(suggestion.to!)}
+      />
+      <AppText variant="caption" muted>
+        {t('prog.provisional')}
+      </AppText>
+    </DepthCard>
+  );
+}
