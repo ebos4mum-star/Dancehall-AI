@@ -3,6 +3,7 @@ import { nutritionTargets, type NutritionTargets, type TargetInput } from './nut
 import { DANCE_STYLES, type DanceStyle, type Intensity } from './workouts';
 import {
   numbersHidden,
+  weightTrackingOn,
   type CuisinePref,
   type GoalIntent,
   type PathwayId,
@@ -76,6 +77,15 @@ const list = (xs: readonly string[]): string =>
   xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`;
 
 export type ReadinessState = 'clear' | 'cautious' | 'unknown';
+/** Maps a stored readiness screening outcome to the engine's state. No screening on record is `unknown`, which the engine treats cautiously. */
+export const readinessState = (
+  outcome: 'clear' | 'low_impact_and_check_with_professional' | null | undefined,
+): ReadinessState =>
+  outcome === 'clear'
+    ? 'clear'
+    : outcome === 'low_impact_and_check_with_professional'
+      ? 'cautious'
+      : 'unknown';
 export type PathwaySource = 'chosen' | 'from_goal' | 'suggested';
 export type EngineFocus = 'weight_loss' | 'maintenance' | 'weight_neutral';
 
@@ -87,6 +97,8 @@ export interface EngineInput {
   body?: Pick<TargetInput, 'weightKg' | 'heightCm' | 'ageYears' | 'sex' | 'activity' | 'targetKg'>;
   habits?: { active: number; max?: number; names?: readonly string[] };
   recent?: { goalReached?: boolean };
+  /** An active weight goal exists. Keeps weight tracking on for people who never chose either way (see `weightTrackingOn`). */
+  hasActiveWeightGoal?: boolean;
 }
 
 export interface PathwayAction {
@@ -287,6 +299,8 @@ export function resolvePathways(input: EngineInput): EngineOutput {
   const hidden = numbersHidden(prefs);
   const intent = prefs.goalIntent;
   const caution = prefs.eatingConcern || prefs.pregnantOrPostpartum || readiness !== 'clear';
+  /** Weight is only ever shown or asked for when the person tracks it (opt-in) and their numbers are not hidden. */
+  const weightOn = weightTrackingOn(prefs, input.hasActiveWeightGoal === true);
 
   // ---- nutrition numbers: only ever from nutritionTargets, and never when numbers are hidden ----
   let nutrition: NutritionTargets | null = null;
@@ -340,8 +354,21 @@ export function resolvePathways(input: EngineInput): EngineOutput {
   // ---- which pathways ----
   const chosen = prefs.pathways;
   const applied = new Map<PathwayId, PathwaySource>();
+  /** Which goal brought a pathway in, so its explanation can name it. */
+  const goalFor = new Map<PathwayId, GoalIntent>();
   for (const id of chosen) applied.set(id, 'chosen');
-  if (chosen.length === 0) for (const id of FROM_GOAL[intent]) applied.set(id, 'from_goal');
+  if (chosen.length === 0) {
+    for (const id of FROM_GOAL[intent]) {
+      applied.set(id, 'from_goal');
+      goalFor.set(id, intent);
+    }
+    for (const g of prefs.secondaryGoals)
+      for (const id of FROM_GOAL[g])
+        if (!applied.has(id)) {
+          applied.set(id, 'from_goal');
+          goalFor.set(id, g);
+        }
+  }
 
   const suggested = new Map<PathwayId, string>();
   const suggest = (id: PathwayId, why: string) => {
@@ -372,6 +399,8 @@ export function resolvePathways(input: EngineInput): EngineOutput {
     const source: PathwaySource = applied.get(id) ?? 'suggested';
     const built = buildPathway(id, source, suggested.get(id), {
       prefs,
+      goal: goalFor.get(id) ?? intent,
+      second: goalFor.has(id) && goalFor.get(id) !== intent,
       intent,
       focus,
       hidden,
@@ -413,7 +442,7 @@ export function resolvePathways(input: EngineInput): EngineOutput {
     intensityCeiling: ceiling,
     styles: styles as DanceStyle[],
     includeStrengthPrompt: has('strength_training'),
-    showWeightPrompts: !hidden && focus !== 'weight_neutral',
+    showWeightPrompts: !hidden && weightOn && exclusions.length === 0,
     workoutWhy: workoutWhy(prefs, styles, missingStyles, lowImpact, readiness, ceiling),
     mealWhy:
       prefs.cuisines.length > 0
@@ -422,7 +451,7 @@ export function resolvePathways(input: EngineInput): EngineOutput {
   };
 
   // ---- progress lens ----
-  const lens = progressLens({ prefs, active, hidden, focus });
+  const lens = progressLens({ prefs, active, hidden, weightOn });
 
   // ---- habit templates, within the five-habit limit and without repeating the person's own ----
   const have = new Set((input.habits?.names ?? []).map((n) => n.trim().toLowerCase()));
@@ -512,6 +541,9 @@ function workoutWhy(
 
 interface BuildCtx {
   prefs: WellnessPrefs;
+  /** The goal that brought this pathway in (the primary goal unless it came from a second goal). */
+  goal: GoalIntent;
+  second: boolean;
   intent: GoalIntent;
   focus: EngineFocus;
   hidden: boolean;
@@ -534,7 +566,9 @@ function buildPathway(
     source === 'chosen'
       ? 'You chose this pathway.'
       : source === 'from_goal'
-        ? `It fits your goal to ${GOAL_PHRASE[c.intent]}.`
+        ? c.second
+          ? `You chose this as a second goal: to ${GOAL_PHRASE[c.goal]}.`
+          : `It fits your goal to ${GOAL_PHRASE[c.goal]}.`
         : (suggestedWhy ?? 'Suggested from what you told us.');
   reasons.push(why);
   if (source === 'suggested')
@@ -712,6 +746,12 @@ function buildPathway(
   return { reasons, actions, notes };
 }
 
+const GOAL_TITLE: Record<GoalIntent, string> = {
+  lose: 'lose weight gently',
+  maintain: 'keep your weight steady',
+  fitness: 'improve fitness',
+  strength: 'build strength',
+};
 const GOAL_PHRASE: Record<GoalIntent, string> = {
   lose: 'lose weight at a gentle, steady pace',
   maintain: 'keep your weight steady',
@@ -733,6 +773,14 @@ function summarise(a: {
   const sug = a.pathways.filter((p) => p.source === 'suggested').map((p) => p.title);
   if (sug.length > 0)
     out.push(`You might also like: ${list(sug)}. Nothing changes until you choose it.`);
+  if (a.prefs.secondaryGoals.length > 0)
+    out.push(
+      `You are also working on: ${list(a.prefs.secondaryGoals.map((g) => GOAL_TITLE[g]))}. Their activities are part of your plan.`,
+    );
+  if (a.prefs.secondaryGoals.includes('lose') && a.prefs.goalIntent !== 'lose')
+    out.push(
+      'Weight-loss targets follow your main goal only. Choose Lose weight as your main goal if you want a gentle weight-loss pace.',
+    );
   if (a.focus === 'weight_loss')
     out.push('A gentle, steady pace with safety limits. Nothing here promises a result.');
   else if (a.focus === 'maintenance')
@@ -751,9 +799,9 @@ function progressLens(a: {
   prefs: WellnessPrefs;
   active: readonly PathwayId[];
   hidden: boolean;
-  focus: EngineFocus;
+  weightOn: boolean;
 }): ProgressLens {
-  const { prefs, active, hidden, focus } = a;
+  const { prefs, active, hidden, weightOn } = a;
   const has = (id: PathwayId) => active.includes(id);
   const show: LensId[] = [];
   const off: Array<{ id: LensId; reason: string }> = [];
@@ -784,10 +832,10 @@ function progressLens(a: {
   decide('maintenance', has('weight_maintenance'), 'Keeping steady is not one of your pathways.');
   decide(
     'weight_trend',
-    !hidden && (focus !== 'weight_neutral' || prefs.tracking === 'detailed'),
+    !hidden && weightOn,
     hidden
       ? 'Your weight numbers are hidden.'
-      : 'Your goal does not use weight. You can turn detailed tracking on to see it.',
+      : 'Weight tracking is off. You can turn it on any time in My approach.',
   );
   decide('calories', !hidden, 'Your calorie numbers are hidden.');
   decide(

@@ -127,11 +127,82 @@ async function step(name, fn) {
       assert.deepEqual(dup, []);
     },
   );
-  await step('A: weight logging updates the latest weight', async () => {
+  await step('B: a weight-neutral person is not shown or asked for weight', async () => {
+    // Onboarding chose no weight goal, so weight tracking is off until the person opts in.
+    assert.equal(await p.getByLabel('Log weight (kg)').count(), 0);
+    assert.equal(await p.getByText('Weigh in, if you like', { exact: false }).count(), 0);
+    await tab('Me');
+    assert.ok((await p.getByRole('button', { name: /^Your progress\./ }).count()) >= 1);
+    assert.equal(await p.getByRole('button', { name: /Weight progress/ }).count(), 0);
+    await btn(/^Your progress\./).click();
+    await seen('Weight tracking is off');
+    assert.equal(await p.getByLabel('Log weight (kg)').count(), 0);
+    await p.goBack();
+    await tab('Today');
+  });
+  await step('A: weight logging (after opting in) updates the latest weight', async () => {
+    await tab('Me');
+    await btn(/^Goals/).click();
+    await seen('Track my weight');
+    await lastSwitch('Track my weight').check({ force: true });
+    await p.goBack();
+    await tab('Today');
     await p.getByLabel('Log weight (kg)').fill('74.5');
     await btn('Log weight').click();
     await seen('74.5 kg');
   });
+  await step(
+    'B: My approach offers four goals, secondary goals and explains the plan',
+    async () => {
+      await tab('Me');
+      await btn(/^Goals/).click();
+      await seen('My approach');
+      for (const g of ['Lose weight', 'Maintain weight', 'Improve fitness', 'Build strength'])
+        assert.ok((await p.getByRole('button', { name: g }).count()) >= 1, g);
+      await btn('Build strength').click();
+      await seen('Get stronger at your own pace');
+      await seen('Your plan is built around');
+      await seen('Guided strength workouts are not available yet');
+      await seen('Why:');
+      await shot('goals-approach');
+      if (process.env.SHOTS_DIR) {
+        // A tall capture of the whole My approach card (only when screenshots are requested).
+        await p.setViewportSize({ width: 390, height: 2600 });
+        await p.waitForTimeout(500);
+        await shot('goals-approach-tall');
+        await p.setViewportSize({ width: 390, height: 844 });
+      }
+      // A compatible secondary goal joins the plan, and its pathway says which goal brought it.
+      await btn(/^Also working on/).click();
+      await btn('Improve fitness').click();
+      await seen('also working on: improve fitness');
+      await btn(/Everyday movement, From your goal/).click();
+      await seen('as a second goal');
+      // Editing: choosing a pathway makes it "Your choice"; going back restores the suggestions from the goals.
+      await btn('Mindful eating').click();
+      await seen('Go back to suggestions from my goals');
+      await btn('Go back to suggestions from my goals').click();
+      // A food preference is saved and the plan explains it as a suggestion until chosen.
+      await btn(/^Foods you eat/).click();
+      await btn('Caribbean').click();
+      await seen('Foods you grew up with');
+      // Everything survives a reload (device storage).
+      await p.reload();
+      await p.waitForTimeout(2500);
+      await seen('My approach');
+      // The saved goal and food preference came back: their explanations are on screen again.
+      await seen('Get stronger at your own pace');
+      await seen('Foods you grew up with');
+      await btn(/^Foods you eat/).click();
+      await btn('Caribbean').click();
+      // Restore the original goal for the flows that follow.
+      await p.getByRole('button', { name: 'Improve fitness', exact: true }).first().click();
+      await seen('Move more and feel better');
+      await p.goBack();
+      await p.waitForTimeout(400);
+      await tab('Today');
+    },
+  );
 
   // ---------------- Batch C: dance ----------------
   await step('C: Dance tab shows Quick Fit and the licensing note', async () => {

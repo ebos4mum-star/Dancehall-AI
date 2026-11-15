@@ -35,6 +35,8 @@ import {
   detectComeback,
   energyGuideFor,
   generateDailyPlan,
+  readinessState,
+  resolvePathways,
   recentActiveDayCount,
   localDateKey,
   monthlyAllowance,
@@ -1131,6 +1133,12 @@ export class MockStore implements DataStore {
         day: date,
         weightKg: latestW?.weightKg ?? null,
       }),
+      // The Stage A engine decides what the plan favours and why; the plan itself is still generated here.
+      bias: resolvePathways({
+        prefs: parsePrefs(s.wellnessPrefs),
+        readiness: readinessState(s.readiness[s.readiness.length - 1]?.outcome),
+        hasActiveWeightGoal: s.goals.some((g) => g.status === 'active'),
+      }).bias,
       seed: Number(date.replace(/-/g, '')) % 97,
     });
     return {

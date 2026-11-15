@@ -49,9 +49,9 @@ const everyText = (o: EngineOutput): string[] => [
 ];
 
 describe('each goal intent', () => {
-  it('knows four intents; the first three are unchanged and in their original order', () => {
+  it('knows four intents, all selectable; the first three are unchanged and in their original order', () => {
     expect([...GOAL_INTENTS]).toEqual(['lose', 'maintain', 'fitness', 'strength']);
-    expect([...SELECTABLE_GOAL_INTENTS]).toEqual(['lose', 'maintain', 'fitness']);
+    expect([...SELECTABLE_GOAL_INTENTS]).toEqual(['lose', 'maintain', 'fitness', 'strength']);
   });
   it('lose: a gentle weight-loss focus with a dance-led plan', () => {
     const o = run({ goalIntent: 'lose' });
@@ -464,9 +464,12 @@ describe('hidden calorie and weight numbers', () => {
     );
     expect(a.why).toMatch(/not a target you must hit/);
   });
-  it('weight-neutral goals do not show the weight trend unless detailed tracking is on', () => {
+  it('weight-neutral goals do not show the weight trend until the person opts in, and detailed tracking alone does not opt in', () => {
     expect(run({ goalIntent: 'strength' }).lens.hidden.map((h) => h.id)).toContain('weight_trend');
-    expect(run({ goalIntent: 'strength', tracking: 'detailed' }).lens.show).toContain(
+    expect(run({ goalIntent: 'strength', tracking: 'detailed' }).lens.show).not.toContain(
+      'weight_trend',
+    );
+    expect(run({ goalIntent: 'strength', weightTracking: true }).lens.show).toContain(
       'weight_trend',
     );
     expect(run({ goalIntent: 'lose' }).lens.show).toContain('weight_trend');

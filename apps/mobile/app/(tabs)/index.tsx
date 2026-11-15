@@ -13,7 +13,7 @@ import { goalFraction } from '@/progress/goalDisplay';
 import { todayGlance } from '@/today/glance';
 import { TodayHero, type HeroChip } from '@/today/TodayHero';
 import { heroLine } from '@/today/heroLine';
-import { useNumbersHidden } from '@/wellness/hooks';
+import { useNumbersHidden, useShowWeight } from '@/wellness/hooks';
 import { useTodaySummary } from '@/today/hooks';
 import { takeWelcome } from '@/today/welcome';
 import { usePulse } from '@/pulse/PulseStage';
@@ -49,6 +49,8 @@ export default function Today() {
   const { store, profile } = useApp();
   const { spacing, colors } = useTheme();
   const units: UnitSystem = profile?.unitSystem ?? 'metric';
+  // Weight is opt-in: with tracking off or numbers hidden, Today never shows or asks for it.
+  const showW = useShowWeight();
   const { data, loading, error } = useLoad(async (s) => ({
     weights: await s.listWeights(),
     goals: await s.listGoals(),
@@ -202,56 +204,58 @@ export default function Today() {
         </Card>
       </FadeIn>
 
-      <FadeIn>
-        <Card>
-          <SectionTitle icon="scale" title={t('today.latest')} />
-          {summary.latest ? (
-            <>
-              <AppText
-                variant="title"
-                accessibilityLabel={`${t('today.latest')}: ${formatWeight(summary.latest.weightKg, units)}`}
-              >
-                {formatWeight(summary.latest.weightKg, units)}
-              </AppText>
-              <AppText variant="caption" muted>
-                {formatDate(summary.latest.measuredAt)}
-              </AppText>
-              {summary.sevenDayAverageKg !== null ? (
+      {showW ? (
+        <FadeIn>
+          <Card>
+            <SectionTitle icon="scale" title={t('today.latest')} />
+            {summary.latest ? (
+              <>
                 <AppText
-                  muted
-                >{`${t('today.sevenDay')}: ${formatWeight(summary.sevenDayAverageKg, units)}`}</AppText>
-              ) : null}
-              {summary.change7dKg !== null ? (
-                <AppText
-                  muted
-                >{`${t('today.change7')}: ${formatChange(summary.change7dKg, units)}`}</AppText>
-              ) : null}
-            </>
-          ) : (
-            <AppText muted>{t('today.noWeight')}</AppText>
-          )}
-          <TextField
-            label={`${t('today.logWeight')} (${units === 'metric' ? 'kg' : 'lb'})`}
-            value={entry}
-            onChangeText={setEntry}
-            keyboardType="decimal-pad"
-            placeholder={t('today.weightPlaceholder')}
-          />
-          <Button
-            label={t('today.logWeight')}
-            onPress={log}
-            disabled={busy || entry.trim() === ''}
-          />
-          {msg ? <Notice tone={msg.warn ? 'warning' : 'info'}>{msg.text}</Notice> : null}
-          {summary.count > 0 ? (
-            <Button
-              variant="secondary"
-              label={t('today.viewProgress')}
-              onPress={() => router.push('/progress')}
+                  variant="title"
+                  accessibilityLabel={`${t('today.latest')}: ${formatWeight(summary.latest.weightKg, units)}`}
+                >
+                  {formatWeight(summary.latest.weightKg, units)}
+                </AppText>
+                <AppText variant="caption" muted>
+                  {formatDate(summary.latest.measuredAt)}
+                </AppText>
+                {summary.sevenDayAverageKg !== null ? (
+                  <AppText
+                    muted
+                  >{`${t('today.sevenDay')}: ${formatWeight(summary.sevenDayAverageKg, units)}`}</AppText>
+                ) : null}
+                {summary.change7dKg !== null ? (
+                  <AppText
+                    muted
+                  >{`${t('today.change7')}: ${formatChange(summary.change7dKg, units)}`}</AppText>
+                ) : null}
+              </>
+            ) : (
+              <AppText muted>{t('today.noWeight')}</AppText>
+            )}
+            <TextField
+              label={`${t('today.logWeight')} (${units === 'metric' ? 'kg' : 'lb'})`}
+              value={entry}
+              onChangeText={setEntry}
+              keyboardType="decimal-pad"
+              placeholder={t('today.weightPlaceholder')}
             />
-          ) : null}
-        </Card>
-      </FadeIn>
+            <Button
+              label={t('today.logWeight')}
+              onPress={log}
+              disabled={busy || entry.trim() === ''}
+            />
+            {msg ? <Notice tone={msg.warn ? 'warning' : 'info'}>{msg.text}</Notice> : null}
+            {summary.count > 0 ? (
+              <Button
+                variant="secondary"
+                label={t('today.viewProgress')}
+                onPress={() => router.push('/progress')}
+              />
+            ) : null}
+          </Card>
+        </FadeIn>
+      ) : null}
 
       <Celebration ids={insights.fresh} />
       <FadeIn>
@@ -385,8 +389,9 @@ export default function Today() {
       <FadeIn>
         <Card>
           <SectionTitle icon="flag" title={t('today.goalsTitle')} />
-          {active.length === 0 ? <AppText muted>{t('today.noGoals')}</AppText> : null}
-          {active.map((g) => {
+          {!showW ? <AppText muted>{t('today.approachLine')}</AppText> : null}
+          {showW && active.length === 0 ? <AppText muted>{t('today.noGoals')}</AppText> : null}
+          {(showW ? active : []).map((g) => {
             const fraction = goalFraction(g, summary.latest?.weightKg);
             return (
               <View key={g.id} style={{ gap: spacing.xs }}>

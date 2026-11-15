@@ -5,6 +5,7 @@ import { EmptyState } from '@/ui/EmptyState';
 import { InfoTile, SectionTitle } from '@/ui/kit';
 import { RecapCard } from '@/progress/RecapCard';
 import { useApp } from '@/data/AppProvider';
+import { useWeightState } from '@/wellness/hooks';
 import { useDanceData } from '@/dance/hooks';
 import { ActivityBars } from '@/dance/ui';
 import { errorMessage, useLoad } from '@/data/hooks';
@@ -29,6 +30,9 @@ export default function Progress() {
   const insights = useProgressInsights();
   const { spacing } = useTheme();
   const units = profile?.unitSystem ?? 'metric';
+  // Weight and body measurements are opt-in; with tracking off or numbers hidden this screen shows neither and asks for neither.
+  const weight = useWeightState();
+  const showW = weight.shown;
   const { data, error, loading } = useLoad(async (s) => ({
     weights: await s.listWeights(),
     goals: await s.listGoals(),
@@ -77,7 +81,13 @@ export default function Progress() {
       <RecapCard />
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {loading && !data ? <SkeletonList label={t('common.loading')} cards={2} /> : null}
-      {!data ? null : weights.length === 0 ? (
+      {!showW ? (
+        weight.on ? null : (
+          <AppText variant="caption" muted>
+            {t('progress.weightOffNote')}
+          </AppText>
+        )
+      ) : !data ? null : weights.length === 0 ? (
         <EmptyState icon="scale" title={t('progress.emptyTitle')} body={t('progress.empty')} />
       ) : (
         <Card>
@@ -124,7 +134,7 @@ export default function Progress() {
         <SectionTitle icon="leaf" title={t('habit.title')} />
         <HabitWeek habits={insights.habits} />
       </Card>
-      <MeasurementsCard />
+      {showW ? <MeasurementsCard /> : null}
       <SleepCard />
       <AchievementList items={insights.achievements} />
       <Card>
@@ -135,64 +145,68 @@ export default function Progress() {
           {t('hst.gentle')}
         </AppText>
       </Card>
-      <Card>
-        <AppText variant="heading">{t('progress.add')}</AppText>
-        <TextField
-          label={`${t('today.logWeight')} (${units === 'metric' ? 'kg' : 'lb'})`}
-          value={entry}
-          onChangeText={setEntry}
-          keyboardType="decimal-pad"
-        />
-        <Button
-          label={t('today.logWeight')}
-          onPress={add}
-          disabled={adding || entry.trim() === ''}
-        />
-        {msg ? <Notice tone="warning">{msg}</Notice> : null}
-      </Card>
-      {weights.length > 0 ? (
-        <Card>
-          <AppText variant="heading" accessibilityRole="header">
-            {t('progress.history')}
-          </AppText>
-          {weights.map((w) => (
-            <View
-              key={w.id}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: spacing.sm,
-              }}
-            >
-              <View style={{ flex: 1 }}>
-                <AppText variant="label">{formatWeight(w.weightKg, units)}</AppText>
-                <AppText variant="caption" muted>
-                  {formatDate(w.measuredAt)}
-                </AppText>
-              </View>
-              {confirming === w.id ? (
-                <Button
-                  label={`${t('common.delete')}?`}
-                  onPress={async () => {
-                    setConfirming(null);
-                    try {
-                      await store.deleteWeight(w.id);
-                    } catch (e) {
-                      setMsg(errorMessage(e));
-                    }
+      {showW ? (
+        <>
+          <Card>
+            <AppText variant="heading">{t('progress.add')}</AppText>
+            <TextField
+              label={`${t('today.logWeight')} (${units === 'metric' ? 'kg' : 'lb'})`}
+              value={entry}
+              onChangeText={setEntry}
+              keyboardType="decimal-pad"
+            />
+            <Button
+              label={t('today.logWeight')}
+              onPress={add}
+              disabled={adding || entry.trim() === ''}
+            />
+            {msg ? <Notice tone="warning">{msg}</Notice> : null}
+          </Card>
+          {weights.length > 0 ? (
+            <Card>
+              <AppText variant="heading" accessibilityRole="header">
+                {t('progress.history')}
+              </AppText>
+              {weights.map((w) => (
+                <View
+                  key={w.id}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: spacing.sm,
                   }}
-                />
-              ) : (
-                <Button
-                  variant="secondary"
-                  label={t('progress.delete')}
-                  onPress={() => setConfirming(w.id)}
-                />
-              )}
-            </View>
-          ))}
-        </Card>
+                >
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="label">{formatWeight(w.weightKg, units)}</AppText>
+                    <AppText variant="caption" muted>
+                      {formatDate(w.measuredAt)}
+                    </AppText>
+                  </View>
+                  {confirming === w.id ? (
+                    <Button
+                      label={`${t('common.delete')}?`}
+                      onPress={async () => {
+                        setConfirming(null);
+                        try {
+                          await store.deleteWeight(w.id);
+                        } catch (e) {
+                          setMsg(errorMessage(e));
+                        }
+                      }}
+                    />
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      label={t('progress.delete')}
+                      onPress={() => setConfirming(w.id)}
+                    />
+                  )}
+                </View>
+              ))}
+            </Card>
+          ) : null}
+        </>
       ) : null}
     </Screen>
   );

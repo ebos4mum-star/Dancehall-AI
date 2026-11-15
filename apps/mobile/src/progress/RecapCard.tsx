@@ -10,6 +10,7 @@ import { PulseStage } from '@/pulse/PulseStage';
 import { AppText } from '@/ui/AppText';
 import { Card } from '@/ui/Card';
 import { Notice } from '@/ui/Banner';
+import { useShowWeight } from '@/wellness/hooks';
 import { weeklyRecap } from './recap';
 
 /** Weekly Rhythm Recap: this week from recorded data only. Missing is shown as "not yet", never as zero progress. */
@@ -17,6 +18,8 @@ export function RecapCard() {
   const { profile } = useApp();
   const { colors } = useTheme();
   const tz = profile?.timeZone ?? null;
+  // Goal percentages and weight-based lines appear only for people who track weight and have not hidden their numbers.
+  const showW = useShowWeight();
   const { data, error } = useLoad(async (s) => {
     const weekStart = weekStartOf(localDateKey(new Date(), tz));
     return {
@@ -37,8 +40,8 @@ export function RecapCard() {
     foodLogTimes: data.logs.map((l) => l.loggedAt),
     habits: data.habits,
     checkins: data.checkins,
-    goals: data.goals,
-    weights: data.weights,
+    goals: showW ? data.goals : [],
+    weights: showW ? data.weights : [],
   });
   const goalLine = r.goals.map((g, idx) => ({
     key: `goal-${idx}`,

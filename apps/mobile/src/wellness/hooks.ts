@@ -6,7 +6,12 @@ import {
   ageYearsOn,
   localDateKey,
   nutritionTargets,
+  readinessState,
+  resolvePathways,
+  showWeight,
   waterGuideMl,
+  weightTrackingOn,
+  type EngineOutput,
   type NutritionTargets,
   type WellnessEntry,
   type WellnessEntryInput,
@@ -23,6 +28,14 @@ export interface WellnessData {
   waterGoalMl: number;
   /** Explainable nutrition targets, or an explanation of why there are none. */
   targets: NutritionTargets;
+  /** The Stage A engine's output for this person: pathways with reasons, plan bias, progress lens and habit ideas. */
+  engine: EngineOutput;
+  /** Weight is shown and asked for only when the person tracks it (opt-in) and their numbers are not hidden. */
+  weightShown: boolean;
+  /** Whether weight tracking is on, ignoring hidden numbers (what the toggle shows). */
+  weightOn: boolean;
+  /** Names of the person's active habits, for the habit ideas. */
+  habitNames: string[];
   loading: boolean;
   error: string | null;
   /** Loads again after a failed read. */
@@ -47,6 +60,7 @@ export function useWellness(): WellnessData {
       weights: await s.listWeights(),
       goals: await s.listGoals(),
       readiness: await s.latestReadiness(),
+      habits: await s.listHabits(),
     };
   });
   const [busy, setBusy] = useState(false);
@@ -75,9 +89,31 @@ export function useWellness(): WellnessData {
       eatingConcern: prefs.eatingConcern,
       readinessCautious: data?.readiness?.outcome === 'low_impact_and_check_with_professional',
     });
+    const hasActiveWeightGoal = (data?.goals ?? []).some((g) => g.status === 'active');
+    const activeHabits = data?.habits ?? [];
+    const engine = resolvePathways({
+      prefs,
+      readiness: readinessState(data?.readiness?.outcome),
+      body: priv
+        ? {
+            weightKg: latest?.weightKg ?? null,
+            heightCm: priv.heightCm ?? null,
+            ageYears: ageYearsOn(priv.birthDate, new Date()),
+            sex: priv.sex ?? null,
+            activity: priv.activityLevel ?? null,
+            targetKg: goal?.targetKg ?? null,
+          }
+        : undefined,
+      habits: { active: activeHabits.length, names: activeHabits.map((h) => h.name) },
+      hasActiveWeightGoal,
+    });
     return {
       prefs,
       targets,
+      engine,
+      weightOn: weightTrackingOn(prefs, hasActiveWeightGoal),
+      weightShown: showWeight(prefs, hasActiveWeightGoal),
+      habitNames: activeHabits.map((h) => h.name),
       waterGoalMl: prefs.waterGoalMl ?? waterGuideMl(latest?.weightKg ?? null),
     };
   }, [data]);
@@ -135,6 +171,10 @@ export function useWellness(): WellnessData {
     todayKey,
     waterGoalMl: derived.waterGoalMl,
     targets: derived.targets,
+    engine: derived.engine,
+    weightShown: derived.weightShown,
+    weightOn: derived.weightOn,
+    habitNames: derived.habitNames,
     loading,
     error,
     reload,
@@ -155,4 +195,24 @@ export function useNumbersHidden(): boolean {
   if (loading || error) return true;
   const p = parsePrefs(data);
   return numbersHidden(p);
+}
+
+/**
+ * Whether weight may be shown or asked for, and whether tracking is on. `shown` needs the person's opt-in (lose and maintain goals or an active weight goal keep it
+ * on by default) AND numbers not hidden. Both are false while loading or on error, so weight is never flashed at someone who has not chosen it.
+ */
+export function useWeightState(): { shown: boolean; on: boolean } {
+  const { data, loading, error } = useLoad(async (s) => ({
+    prefs: (await s.getWellnessPrefs?.()) ?? null,
+    goals: await s.listGoals(),
+  }));
+  if (loading || error || !data) return { shown: false, on: false };
+  const prefs = parsePrefs(data.prefs);
+  const goal = data.goals.some((g) => g.status === 'active');
+  return { shown: showWeight(prefs, goal), on: weightTrackingOn(prefs, goal) };
+}
+
+/** True when weight may be shown or asked for. See `useWeightState`. */
+export function useShowWeight(): boolean {
+  return useWeightState().shown;
 }
