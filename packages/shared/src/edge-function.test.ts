@@ -271,35 +271,56 @@ describe('account Edge Function wrapper (verify_jwt=false: each action guards it
     ).rejects.toThrow();
   });
 
-  it('network limits use the platform header and ignore spoofed leading forwarded entries; the service-wide cap is header-independent', async () => {
-    const { handler } = await load(BASE_ENV);
-    const statuses: number[] = [];
-    for (let i = 0; i < 22; i++) {
-      const p = await provisionBody();
-      // The client varies the FIRST forwarded entry; the platform's own header is fixed.
-      const r = await call(handler, 'provision', p.body, {
-        'cf-connecting-ip': '203.0.113.7',
-        'x-forwarded-for': `10.0.0.${i}, 198.51.100.1`,
-      });
-      statuses.push(r.status);
-    }
-    expect(statuses.slice(0, 20).every((s) => s === 200)).toBe(true);
-    expect(statuses.slice(20)).toEqual([429, 429]);
-    // With only X-Forwarded-For, the LAST entry decides (the nearest proxy's), so spoofing the first changes nothing.
-    const w2 = await load(BASE_ENV);
-    const s2: number[] = [];
-    for (let i = 0; i < 22; i++) {
-      const p = await provisionBody();
-      s2.push(
-        (
-          await call(w2.handler, 'provision', p.body, {
-            'x-forwarded-for': `10.9.9.${i}, 192.0.2.55`,
-          })
-        ).status,
-      );
-    }
-    expect(s2.slice(20)).toEqual([429, 429]);
+  it('network limits key on cf-connecting-ip ONLY: spoofed forwarding headers change nothing, other networks are separate, an IPv6 /64 is one network, and no identity fails closed', async () => {
+    const sendMany = async (headersFor: (i: number) => Record<string, string>, n = 22) => {
+      const { handler } = await load(BASE_ENV);
+      const statuses: number[] = [];
+      for (let i = 0; i < n; i++) {
+        const p = await provisionBody();
+        statuses.push((await call(handler, 'provision', p.body, headersFor(i))).status);
+      }
+      return statuses;
+    };
+    // One real network; the caller varies every header it can write: only the 20 per-network provisions are allowed.
+    const spoof = await sendMany((i) => ({
+      'cf-connecting-ip': '203.0.113.7',
+      'x-forwarded-for': `10.0.0.${i}, 198.51.100.${i}`,
+      'x-real-ip': `192.0.2.${i}`,
+      'true-client-ip': `198.18.0.${i}`,
+    }));
+    expect(spoof.slice(0, 20).every((s) => s === 200)).toBe(true);
+    expect(spoof.slice(20)).toEqual([429, 429]);
+    // Different real networks are counted separately.
+    expect(
+      (await sendMany((i) => ({ 'cf-connecting-ip': `203.0.113.${i + 1}` }))).every(
+        (s) => s === 200,
+      ),
+    ).toBe(true);
+    // One IPv6 /64 is one network, however the low 64 bits vary.
+    const v6 = await sendMany((i) => ({
+      'cf-connecting-ip': `2001:db8:1:2:${i.toString(16)}:aaaa:bbbb:cccc`,
+    }));
+    expect(v6.slice(20)).toEqual([429, 429]);
+    // No platform identity at all (even with spoofed headers): everyone shares one bucket, so it fails closed.
+    const none = await sendMany((i) => ({
+      'x-forwarded-for': `10.1.1.${i}`,
+      'x-real-ip': `10.2.2.${i}`,
+    }));
+    expect(none.slice(20)).toEqual([429, 429]);
   });
+
+  it('the service-wide account cap does not depend on any address header', async () => {
+    const { handler } = await load(BASE_ENV);
+    let ok = 0;
+    for (let i = 0; i < 330; i++) {
+      const p = await provisionBody();
+      const r = await call(handler, 'provision', p.body, {
+        'cf-connecting-ip': `10.${i >> 8}.${i & 255}.1`,
+      });
+      if (r.status === 200) ok++;
+    }
+    expect(ok).toBe(300);
+  }, 60_000);
 
   it('the cooling-off cannot be switched off by configuration; a short wait needs the explicit test flag', async () => {
     const wait = async (env: Record<string, string | undefined>) => {

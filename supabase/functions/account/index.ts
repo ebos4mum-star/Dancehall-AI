@@ -14,6 +14,7 @@ import {
   DEFAULT_IDENTIFIER_DOMAIN,
   coolingOffMsFromEnv,
   createAccountCore,
+  networkIdentity,
   safeEqual,
   type AuthAdmin,
   type Ctx,
@@ -91,14 +92,8 @@ const json = (status: number, body: unknown): Response =>
   });
 
 async function ipBucket(req: Request): Promise<string> {
-  // Prefer headers the platform sets itself; if only X-Forwarded-For is present take its LAST entry (the one the nearest proxy added), never the first (the client can write that).
-  // This limit slows abuse from one network; the per-account lockouts do not depend on it. Which header the hosted platform sets is to be confirmed at activation.
-  const xff = (req.headers.get('x-forwarded-for') ?? '')
-    .split(',')
-    .map((x) => x.trim())
-    .filter(Boolean);
-  const raw =
-    req.headers.get('cf-connecting-ip') ?? req.headers.get('x-real-ip') ?? xff.at(-1) ?? 'unknown';
+  // Only `cf-connecting-ip` is trusted (see networkIdentity). x-forwarded-for, x-real-ip and the like are ignored: callers can write some of them and proxies rotate the rest.
+  const identity = networkIdentity(req.headers.get('cf-connecting-ip'));
   const key = await crypto.subtle.importKey(
     'raw',
     pepper,
@@ -106,10 +101,9 @@ async function ipBucket(req: Request): Promise<string> {
     false,
     ['sign'],
   );
-  return hex(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`ip:${raw}`))).slice(
-    0,
-    32,
-  );
+  return hex(
+    await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`ip:${identity}`)),
+  ).slice(0, 32);
 }
 
 Deno.serve(async (req) => {

@@ -146,6 +146,37 @@ export function coolingOffMsFromEnv(hours: string | undefined, allowShort: boole
   return Math.min(h, 24 * 30) * 3600_000;
 }
 
+/**
+ * The caller's network identity for rate limiting, from the one value the platform guarantees: `cf-connecting-ip`. Cloudflare sits in front of every Edge request and
+ * REJECTS a request that carries its own copy (403, error 1000), so a caller cannot choose it; every other address header (x-real-ip, true-client-ip, x-forwarded-for)
+ * passes through from the client or rotates between proxies and is never used. IPv6 callers are grouped by their /64 (one subscriber's whole block), because an
+ * attacker holding a /64 can otherwise rotate through 2^64 addresses. Anything missing or unreadable shares ONE bucket, so the limit fails closed, never open.
+ */
+export function networkIdentity(raw: string | null | undefined): string {
+  const NONE = 'no-identity';
+  let v = (raw ?? '').trim().toLowerCase();
+  if (!v || v.length > 64) return NONE;
+  v = v.replace(/^\[|\]$/g, '').replace(/%.*$/, '');
+  const mapped = /^(?:::ffff:|0:0:0:0:0:ffff:)(\d{1,3}(?:\.\d{1,3}){3})$/.exec(v);
+  if (mapped) v = mapped[1]!;
+  const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(v);
+  if (v4)
+    return v4.slice(1).every((o) => Number(o) <= 255)
+      ? `v4:${v4.slice(1).map(Number).join('.')}`
+      : NONE;
+  if (!v.includes(':') || /[^0-9a-f:]/.test(v) || (v.match(/::/g) ?? []).length > 1) return NONE;
+  const [head, tail] = v.includes('::') ? (v.split('::') as [string, string]) : [v, null];
+  const a = head === '' ? [] : head.split(':');
+  const b = tail === null || tail === '' ? [] : tail.split(':');
+  const groups =
+    tail === null ? a : [...a, ...Array<string>(8 - a.length - b.length).fill('0'), ...b];
+  if (groups.length !== 8 || groups.some((g) => !/^[0-9a-f]{1,4}$/.test(g))) return NONE;
+  return `v6:${groups
+    .slice(0, 4)
+    .map((g) => g.padStart(4, '0'))
+    .join(':')}`;
+}
+
 /** Compares two secrets without stopping at the first difference. */
 export function safeEqual(a: string, b: string): boolean {
   const x = utf8ToBytes(a);
