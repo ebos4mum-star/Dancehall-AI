@@ -1,6 +1,11 @@
 import type { ReviewStatus } from './instruction-media';
 import { fixturesEnabled } from './content-state';
-import { sessionSegments, type SessionSegment, type WorkoutBlock } from './workouts';
+import {
+  sessionSegments,
+  type DraftInfo,
+  type SessionSegment,
+  type WorkoutBlock,
+} from './workouts';
 import data from './strength-data.json';
 
 /**
@@ -50,6 +55,8 @@ export interface StrengthExerciseDef {
   reviewer: ContentReviewer | null;
   /** Internal test fixture: never real content, never bundled, active only when fixtures are switched on in development. */
   fixture?: true;
+  /** Original draft that no qualified reviewer has approved: shown only in development and review builds, labelled, never bundled. */
+  draft?: DraftInfo;
 }
 
 export interface StrengthBlock {
@@ -75,6 +82,8 @@ export interface StrengthWorkoutDef {
   reviewer: ContentReviewer | null;
   /** Internal test fixture: see StrengthExerciseDef. */
   fixture?: true;
+  /** Unreviewed draft: see StrengthExerciseDef. */
+  draft?: DraftInfo;
 }
 
 /**
@@ -100,7 +109,8 @@ const reviewProblem = (
 
 export function exerciseProblems(e: StrengthExerciseDef): string[] {
   const p: string[] = [];
-  const rp = reviewProblem(`Exercise "${e.name}"`, e.review, e.reviewer);
+  // A draft is judged on its structure only: it is by definition not reviewed, which is why it is never bundled or shown in a normal build.
+  const rp = e.draft ? null : reviewProblem(`Exercise "${e.name}"`, e.review, e.reviewer);
   if (rp) p.push(rp);
   if (e.cues.length === 0) p.push(`Exercise "${e.name}" has no form cues.`);
   if (!e.regression.trim()) p.push(`Exercise "${e.name}" has no easier version.`);
@@ -117,7 +127,7 @@ export function strengthWorkoutProblems(
   exercises: readonly StrengthExerciseDef[] = STRENGTH_EXERCISES,
 ): string[] {
   const p: string[] = [];
-  const rp = reviewProblem(`Workout "${w.title}"`, w.review, w.reviewer);
+  const rp = w.draft ? null : reviewProblem(`Workout "${w.title}"`, w.review, w.reviewer);
   if (rp) p.push(rp);
   if (w.blocks.length === 0) p.push(`Workout "${w.title}" has no exercises.`);
   if (w.safety.length === 0) p.push(`Workout "${w.title}" has no safety notes.`);
@@ -130,6 +140,8 @@ export function strengthWorkoutProblems(
       p.push(`Workout "${w.title}" uses an exercise that does not exist (${b.exerciseId}).`);
       continue;
     }
+    if (e.draft && !w.draft)
+      p.push(`"${e.name}" is an unreviewed draft, so a reviewed workout cannot use it.`);
     p.push(...exerciseProblems(e));
     if ((b.reps === null) === (b.seconds === null))
       p.push(`"${e.name}" must be timed or counted in reps, not both or neither.`);
@@ -147,9 +159,11 @@ export function activeStrengthWorkouts(
   exercises: readonly StrengthExerciseDef[] = STRENGTH_EXERCISES,
 ): StrengthWorkoutDef[] {
   // Real content must pass the review gate. A fixture is shown only while fixtures are switched on (development), is labelled as a fixture, and is never reviewed.
-  return workouts.filter((w) =>
-    w.fixture ? fixturesEnabled() : strengthWorkoutProblems(w, exercises).length === 0,
-  );
+  return workouts.filter((w) => {
+    if (w.fixture) return fixturesEnabled();
+    if (w.draft) return fixturesEnabled() && strengthWorkoutProblems(w, exercises).length === 0;
+    return strengthWorkoutProblems(w, exercises).length === 0;
+  });
 }
 
 /** Estimated length of a counted set, for the progress bar only. */

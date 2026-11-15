@@ -143,7 +143,7 @@ export default function AddFood() {
             <Pressable
               key={r.id}
               accessibilityRole="button"
-              accessibilityLabel={r.name}
+              accessibilityLabel={r.staged ? `${r.name}, ${t('food.stagedTag')}` : r.name}
               onPress={() => {
                 setPicked(r);
                 setGrams(r.servingG);
@@ -171,12 +171,25 @@ export default function AddFood() {
                         kcal: Math.round((r.per100g.kcal * r.servingG) / 100),
                       })}
                 </AppText>
+                {r.staged ? (
+                  <AppText variant="caption" muted>
+                    {t('food.stagedTag')}
+                  </AppText>
+                ) : null}
               </View>
             </Pressable>
           ))}
           {picked && preview ? (
             <DepthCard>
               <AppText variant="heading">{picked.name}</AppText>
+              {picked.staged ? (
+                <AppText variant="caption" muted>
+                  {t('food.stagedSource', {
+                    source: picked.staged.sourceFoodId,
+                    version: picked.staged.sourceVersion,
+                  })}
+                </AppText>
+              ) : null}
               <AppText variant="caption" muted>
                 {t('add.portion')}
               </AppText>

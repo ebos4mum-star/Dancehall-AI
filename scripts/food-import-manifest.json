@@ -1,0 +1,345 @@
+{
+  "_notice": "Which USDA SR Legacy foods to stage, and how each maps to an app food. Only the identifiers, names, tags and search aliases are written here. Every nutrient value and serving weight is read from the USDA files by scripts/import-fdc-sr.mjs; nothing is typed in. Region tags and aliases are cultural claims that a dietitian and a cultural reviewer must confirm. Cost tier is a rough planning aid, not a price or a nutrient value.",
+  "foods": [
+    {
+      "id": "yam-boiled",
+      "fdcId": 170072,
+      "name": "Yam, boiled",
+      "category": "vegetable",
+      "regionTags": ["jamaican", "caribbean", "west_african"],
+      "costTier": 1,
+      "aliases": ["yam"],
+      "portion": "cup"
+    },
+    {
+      "id": "plantain-green-boiled",
+      "fdcId": 168216,
+      "name": "Green plantain, boiled",
+      "category": "vegetable",
+      "regionTags": ["jamaican", "caribbean", "west_african"],
+      "costTier": 1,
+      "aliases": ["plantain", "green plantain"],
+      "portion": "cup"
+    },
+    {
+      "id": "plantain-yellow-baked",
+      "fdcId": 169131,
+      "name": "Ripe plantain, baked",
+      "category": "fruit",
+      "regionTags": ["jamaican", "caribbean", "west_african"],
+      "costTier": 1,
+      "aliases": ["plantain", "ripe plantain"],
+      "portion": "cup"
+    },
+    {
+      "id": "breadfruit-raw",
+      "fdcId": 171714,
+      "name": "Breadfruit, raw",
+      "category": "vegetable",
+      "regionTags": ["jamaican", "caribbean"],
+      "costTier": 1,
+      "aliases": ["breadfruit"],
+      "portion": ""
+    },
+    {
+      "id": "sweet-potato-boiled",
+      "fdcId": 168484,
+      "name": "Sweet potato, boiled, no skin",
+      "category": "vegetable",
+      "regionTags": ["jamaican", "caribbean", "west_african"],
+      "costTier": 1,
+      "aliases": ["sweet potato"],
+      "portion": ""
+    },
+    {
+      "id": "taro-cooked",
+      "fdcId": 168486,
+      "name": "Taro, cooked",
+      "category": "vegetable",
+      "regionTags": ["jamaican", "caribbean", "west_african"],
+      "costTier": 1,
+      "aliases": ["taro", "dasheen", "cocoyam"],
+      "portion": "cup"
+    },
+    {
+      "id": "pumpkin-boiled",
+      "fdcId": 168449,
+      "name": "Pumpkin, boiled",
+      "category": "vegetable",
+      "regionTags": ["jamaican", "caribbean"],
+      "costTier": 1,
+      "aliases": ["pumpkin"],
+      "portion": "cup"
+    },
+    {
+      "id": "chayote-boiled",
+      "fdcId": 170403,
+      "name": "Chayote, boiled",
+      "category": "vegetable",
+      "regionTags": ["jamaican", "caribbean"],
+      "costTier": 1,
+      "aliases": ["chayote", "cho cho", "christophene"],
+      "portion": "cup"
+    },
+    {
+      "id": "okra-boiled",
+      "fdcId": 169261,
+      "name": "Okra, boiled",
+      "category": "vegetable",
+      "regionTags": ["jamaican", "caribbean", "west_african"],
+      "costTier": 1,
+      "aliases": ["okra", "okro"],
+      "portion": "cup"
+    },
+    {
+      "id": "amaranth-leaves-boiled",
+      "fdcId": 169202,
+      "name": "Amaranth leaves, boiled",
+      "category": "vegetable",
+      "regionTags": ["jamaican", "caribbean", "west_african"],
+      "costTier": 1,
+      "aliases": ["amaranth", "callaloo", "calaloo"],
+      "portion": "cup"
+    },
+    {
+      "id": "cowpea-leaves-boiled",
+      "fdcId": 168406,
+      "name": "Cowpea leaves, boiled",
+      "category": "vegetable",
+      "regionTags": ["west_african"],
+      "costTier": 1,
+      "aliases": ["cowpea leaves", "bean leaves"],
+      "portion": "cup"
+    },
+    {
+      "id": "sweet-potato-leaves-steamed",
+      "fdcId": 169304,
+      "name": "Sweet potato leaves, steamed",
+      "category": "vegetable",
+      "regionTags": ["west_african"],
+      "costTier": 1,
+      "aliases": ["sweet potato leaves"],
+      "portion": "cup"
+    },
+    {
+      "id": "eggplant-boiled",
+      "fdcId": 169229,
+      "name": "Eggplant, boiled",
+      "category": "vegetable",
+      "regionTags": ["west_african", "caribbean"],
+      "costTier": 1,
+      "aliases": ["eggplant", "aubergine"],
+      "portion": "cup"
+    },
+    {
+      "id": "pigeon-peas-boiled",
+      "fdcId": 170430,
+      "name": "Pigeon peas (green), boiled",
+      "category": "legume",
+      "regionTags": ["jamaican", "caribbean"],
+      "costTier": 1,
+      "aliases": ["pigeon peas", "gungo peas", "gandules"],
+      "portion": "cup"
+    },
+    {
+      "id": "kidney-beans-boiled",
+      "fdcId": 173740,
+      "name": "Kidney beans, boiled",
+      "category": "legume",
+      "regionTags": ["jamaican", "caribbean"],
+      "costTier": 1,
+      "aliases": ["kidney beans", "red peas"],
+      "portion": "cup"
+    },
+    {
+      "id": "cowpeas-boiled",
+      "fdcId": 173759,
+      "name": "Black-eyed peas (cowpeas), boiled",
+      "category": "legume",
+      "regionTags": ["west_african", "caribbean"],
+      "costTier": 1,
+      "aliases": ["black-eyed peas", "cowpeas", "beans"],
+      "portion": "cup"
+    },
+    {
+      "id": "salt-cod-dried",
+      "fdcId": 174190,
+      "name": "Salted cod, dried (before soaking)",
+      "category": "protein",
+      "regionTags": ["jamaican", "caribbean"],
+      "costTier": 2,
+      "aliases": ["saltfish", "salt fish", "salted cod"],
+      "portion": ""
+    },
+    {
+      "id": "mackerel-atlantic-cooked",
+      "fdcId": 175120,
+      "name": "Atlantic mackerel, cooked",
+      "category": "protein",
+      "regionTags": ["jamaican", "caribbean", "west_african"],
+      "costTier": 2,
+      "aliases": ["mackerel"],
+      "portion": ""
+    },
+    {
+      "id": "tilapia-cooked",
+      "fdcId": 175177,
+      "name": "Tilapia, cooked",
+      "category": "protein",
+      "regionTags": ["west_african", "caribbean"],
+      "costTier": 2,
+      "aliases": ["tilapia"],
+      "portion": ""
+    },
+    {
+      "id": "goat-roasted",
+      "fdcId": 175304,
+      "name": "Goat, roasted",
+      "category": "protein",
+      "regionTags": ["jamaican", "caribbean", "west_african"],
+      "costTier": 3,
+      "aliases": ["goat", "curry goat"],
+      "portion": ""
+    },
+    {
+      "id": "millet-cooked",
+      "fdcId": 168871,
+      "name": "Millet, cooked",
+      "category": "grain",
+      "regionTags": ["west_african"],
+      "costTier": 1,
+      "aliases": ["millet"],
+      "portion": "cup"
+    },
+    {
+      "id": "sorghum-grain-dry",
+      "fdcId": 169716,
+      "name": "Sorghum grain (dry)",
+      "category": "grain",
+      "regionTags": ["west_african"],
+      "costTier": 1,
+      "aliases": ["sorghum", "guinea corn"],
+      "portion": ""
+    },
+    {
+      "id": "cornmeal-yellow-dry",
+      "fdcId": 169697,
+      "name": "Cornmeal, yellow (dry)",
+      "category": "grain",
+      "regionTags": ["jamaican", "caribbean", "west_african"],
+      "costTier": 1,
+      "aliases": ["cornmeal", "maize meal"],
+      "portion": "cup"
+    },
+    {
+      "id": "peanuts-raw",
+      "fdcId": 172430,
+      "name": "Peanuts, raw",
+      "category": "snack",
+      "regionTags": ["west_african"],
+      "costTier": 1,
+      "aliases": ["peanuts", "groundnuts"],
+      "portion": ""
+    },
+    {
+      "id": "watermelon-seeds-dried",
+      "fdcId": 169407,
+      "name": "Watermelon seed kernels, dried",
+      "category": "snack",
+      "regionTags": ["west_african"],
+      "costTier": 2,
+      "aliases": ["watermelon seeds"],
+      "portion": ""
+    },
+    {
+      "id": "palm-oil",
+      "fdcId": 171015,
+      "name": "Palm oil",
+      "category": "fat",
+      "regionTags": ["west_african"],
+      "costTier": 2,
+      "aliases": ["palm oil", "red palm oil"],
+      "portion": "tablespoon"
+    },
+    {
+      "id": "coconut-milk-canned",
+      "fdcId": 170173,
+      "name": "Coconut milk, canned",
+      "category": "fat",
+      "regionTags": ["jamaican", "caribbean"],
+      "costTier": 2,
+      "aliases": ["coconut milk"],
+      "portion": "cup"
+    },
+    {
+      "id": "hot-chili-pepper-red-raw",
+      "fdcId": 170106,
+      "name": "Hot chili pepper, red, raw",
+      "category": "vegetable",
+      "regionTags": ["jamaican", "caribbean", "west_african"],
+      "costTier": 1,
+      "aliases": ["hot pepper", "chili pepper"],
+      "portion": ""
+    },
+    {
+      "id": "mango-raw",
+      "fdcId": 169910,
+      "name": "Mango, raw",
+      "category": "fruit",
+      "regionTags": ["jamaican", "caribbean", "west_african"],
+      "costTier": 1,
+      "aliases": ["mango"],
+      "portion": "cup"
+    },
+    {
+      "id": "papaya-raw",
+      "fdcId": 169926,
+      "name": "Papaya, raw",
+      "category": "fruit",
+      "regionTags": ["jamaican", "caribbean", "west_african"],
+      "costTier": 1,
+      "aliases": ["papaya", "pawpaw"],
+      "portion": "cup"
+    },
+    {
+      "id": "guava-raw",
+      "fdcId": 173044,
+      "name": "Guava, raw",
+      "category": "fruit",
+      "regionTags": ["jamaican", "caribbean"],
+      "costTier": 1,
+      "aliases": ["guava"],
+      "portion": ""
+    },
+    {
+      "id": "soursop-raw",
+      "fdcId": 167761,
+      "name": "Soursop, raw",
+      "category": "fruit",
+      "regionTags": ["jamaican", "caribbean", "west_african"],
+      "costTier": 2,
+      "aliases": ["soursop", "graviola"],
+      "portion": ""
+    },
+    {
+      "id": "banana-raw",
+      "fdcId": 173944,
+      "name": "Banana, raw",
+      "category": "fruit",
+      "regionTags": ["jamaican", "caribbean", "west_african"],
+      "costTier": 1,
+      "aliases": ["banana"],
+      "portion": ""
+    },
+    {
+      "id": "roselle-raw",
+      "fdcId": 168170,
+      "name": "Roselle (sorrel), raw",
+      "category": "fruit",
+      "regionTags": ["jamaican", "caribbean", "west_african"],
+      "costTier": 2,
+      "aliases": ["roselle", "sorrel", "hibiscus"],
+      "portion": "cup"
+    }
+  ]
+}

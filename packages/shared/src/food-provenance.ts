@@ -71,6 +71,17 @@ export interface FoodProvenance {
   culturalReviewRef?: string;
 }
 
+/** Where a staged (not yet reviewed) food's values came from. Everything needed to trace a number, and nothing about review: that comes later. */
+export interface StagedFoodSource {
+  sourceId: FoodSourceId;
+  sourceFoodId: string;
+  sourceVersion: string;
+  retrievedOn: string;
+  attribution: string;
+  /** What the source says about its own licence. A reviewer still has to confirm it before the food is published. */
+  licenceNote: string;
+}
+
 const ID = /^[a-z0-9-]{2,60}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const PRIORITY_TAGS = new Set(
@@ -132,3 +143,41 @@ export function foodProblems(f: FoodRef): string[] {
 /** A food is reviewed only when it has provenance and no problems. */
 export const isReviewedFood = (f: FoodRef): boolean =>
   !!f.provenance && foodProblems(f).length === 0;
+
+/**
+ * Checks a staged food: its source must be complete and traceable, its values plausible, its serving positive, and it must not carry review or provenance (it must
+ * not look reviewed). It judges the numbers' internal consistency only; whether they are right for the food as eaten is the dietitian's call.
+ */
+export function stagedFoodProblems(f: FoodRef): string[] {
+  const p: string[] = [];
+  const n = f.per100g;
+  const s = f.staged;
+  if (!s) return [`${f.id}: not a staged food`];
+  if (f.provenance)
+    p.push(`${f.id}: a staged food must not carry provenance (it must not look reviewed)`);
+  if (!ID.test(f.id)) p.push(`${f.id}: id must be kebab-case, 2 to 60 characters`);
+  if (!(f.servingG > 0)) p.push(`${f.id}: serving size must be positive`);
+  if (!filled(f.servingLabel)) p.push(`${f.id}: no serving description`);
+  if (![1, 2, 3].includes(f.costTier)) p.push(`${f.id}: cost tier must be 1, 2 or 3`);
+  if (n.kcal < 0 || n.kcal > 950) p.push(`${f.id}: energy out of range`);
+  for (const [k, v] of [
+    ['protein', n.proteinG],
+    ['carbohydrate', n.carbsG],
+    ['fat', n.fatG],
+  ] as const)
+    if (!(v >= 0 && v <= 100)) p.push(`${f.id}: ${k} missing or out of range`);
+  if (n.proteinG + n.carbsG + n.fatG > 100.5) p.push(`${f.id}: macros exceed 100 g per 100 g`);
+  if (!(s.sourceId in FOOD_SOURCES)) p.push(`${f.id}: unknown source`);
+  if (!/^FDC \d+|\S{3,}/.test(s.sourceFoodId) || !filled(s.sourceFoodId))
+    p.push(`${f.id}: no source food identifier`);
+  if (!filled(s.sourceVersion)) p.push(`${f.id}: no source edition`);
+  if (!DATE.test(s.retrievedOn)) p.push(`${f.id}: retrieval date must be YYYY-MM-DD`);
+  if (!filled(s.attribution)) p.push(`${f.id}: no attribution`);
+  if (!filled(s.licenceNote)) p.push(`${f.id}: no licence note`);
+  for (const t of f.regionTags)
+    if (t !== 'global' && t !== 'american' && !isCuisineId(t))
+      p.push(`${f.id}: unknown region tag "${t}"`);
+  if (!energyIsPlausible({ kcal: n.kcal, proteinG: n.proteinG, carbsG: n.carbsG, fatG: n.fatG }))
+    p.push(`${f.id}: energy does not match the macros (check the source row)`);
+  return p;
+}

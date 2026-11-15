@@ -133,7 +133,20 @@ export interface WorkoutDef {
   provenance?: WorkoutProvenance;
   /** Internal test fixture: never real content, never bundled, shown only when fixtures are switched on in development. */
   fixture?: true;
+  /** Original draft content that no qualified person has reviewed: never bundled, shown only in development and review builds, labelled as a draft. */
+  draft?: DraftInfo;
 }
+/**
+ * What a draft still needs before it can be published. A draft carries no provenance, so it can never look reviewed; the gate rejects it from the bundle until a
+ * reviewer-approved version replaces it (the draft marker is removed and the real provenance is added at that point).
+ */
+export interface DraftInfo {
+  pack: string;
+  needs: string[];
+}
+/** Content shown only in development and review builds (fixtures and unreviewed drafts). */
+export const isPreviewOnly = (w: { fixture?: true; draft?: DraftInfo }): boolean =>
+  w.fixture === true || w.draft !== undefined;
 export interface WorkoutProvenance {
   credits: string[];
   /** Reference to the signed agreement. Never the agreement itself or personal data. */
@@ -231,7 +244,7 @@ export function suggestQuickFit(
   // Internal fixtures (development builds only) are never picked for a generic request: only when the person explicitly asked for that style, or for seated sessions.
   const list = all.filter(
     (w) =>
-      !w.fixture ||
+      !isPreviewOnly(w) ||
       (args.style !== undefined && w.style === args.style) ||
       (args.seated === true && isSeatedSuitable(w)),
   );

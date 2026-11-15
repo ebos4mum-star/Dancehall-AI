@@ -1,4 +1,4 @@
-import { filterWorkouts, WORKOUTS, type WorkoutDef } from './workouts';
+import { filterWorkouts, isPreviewOnly, WORKOUTS, type WorkoutDef } from './workouts';
 
 /** Voluntary, self-chosen moods. Never detected or inferred; never stored as a record about the person. */
 export const MOODS = ['energized', 'tired', 'stressed', 'happy', 'motivation'] as const;
@@ -49,7 +49,7 @@ export function recommendByMood(
 ): MoodPick[] {
   const limit = opts.limit ?? 3;
   const allowed = filterWorkouts({ lowImpactOnly: opts.lowImpactOnly || undefined }, list)
-    .filter((w) => !w.fixture)
+    .filter((w) => !isPreviewOnly(w))
     .filter((w) => !opts.excludeIds?.includes(w.id));
   let pool = allowed.filter(rules[mood]);
   if (pool.length === 0) pool = [...allowed].sort((a, b) => a.minutes - b.minutes);

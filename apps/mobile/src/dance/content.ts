@@ -38,6 +38,8 @@ export interface SessionContent {
   seatedOnly: boolean;
   /** Placeholder content for pipeline tests in development builds. */
   fixture: boolean;
+  /** Original draft content that no qualified person has reviewed (development and review builds only). */
+  draft: boolean;
   dance?: WorkoutDef;
   strength?: StrengthWorkoutDef;
   exercises?: StrengthExerciseDef[];
@@ -63,6 +65,7 @@ export function resolveContent(id: string): SessionContent | undefined {
       seatedSuitable: isSeatedSuitable(w),
       seatedOnly: w.style === 'chair_dance',
       fixture: w.fixture === true,
+      draft: w.draft !== undefined,
       dance: w,
     };
   const s = activeStrengthWorkouts().find((x) => x.id === id);
@@ -87,6 +90,7 @@ export function resolveContent(id: string): SessionContent | undefined {
     seatedSuitable: false,
     seatedOnly: false,
     fixture: s.fixture === true,
+    draft: s.draft !== undefined,
     strength: s,
     exercises,
   };

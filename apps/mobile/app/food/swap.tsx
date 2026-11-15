@@ -55,7 +55,7 @@ export default function SwapScreen() {
             <Pressable
               key={r.id}
               accessibilityRole="button"
-              accessibilityLabel={r.name}
+              accessibilityLabel={r.staged ? `${r.name}, ${t('food.stagedTag')}` : r.name}
               onPress={() => setFood(r)}
               style={{
                 minHeight: 60,
@@ -73,7 +73,7 @@ export default function SwapScreen() {
               <View style={{ flex: 1 }}>
                 <AppText variant="label">{r.name}</AppText>
                 <AppText variant="caption" muted>
-                  {r.servingLabel}
+                  {r.staged ? `${r.servingLabel}. ${t('food.stagedTag')}` : r.servingLabel}
                 </AppText>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />

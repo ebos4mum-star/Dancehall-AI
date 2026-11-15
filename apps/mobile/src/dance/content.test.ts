@@ -42,7 +42,12 @@ describe('session content resolver', () => {
     expect(c.exercises?.length).toBe(3);
     expect(c.blocks.some((b) => b.manual)).toBe(true);
     expect(c.blocks.some((b) => b.kind === 'rest')).toBe(true);
-    expect(strengthSessions().map((s) => s.id)).toEqual(['fixture-strength-bodyweight']);
+    expect(
+      strengthSessions()
+        .filter((s) => s.fixture)
+        .map((s) => s.id),
+    ).toEqual(['fixture-strength-bodyweight']);
+    expect(strengthSessions().filter((s) => s.draft).length).toBeGreaterThanOrEqual(2);
   });
   it('with fixtures on, chair dance is seated throughout and another session can be seated-suitable', () => {
     enableInternalFixtures();

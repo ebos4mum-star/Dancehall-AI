@@ -19,6 +19,8 @@ for (const w of wk.workouts) {
     );
   if (w.fixture)
     throw new Error(`workout ${w.id} is an internal fixture and must never be bundled or seeded`);
+  if (w.draft)
+    throw new Error(`workout ${w.id} is an unreviewed draft and must never be bundled or seeded`);
 }
 const jsonb = (v) => `${q(JSON.stringify(v))}::jsonb`;
 const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
