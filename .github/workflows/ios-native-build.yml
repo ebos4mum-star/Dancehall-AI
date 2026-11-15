@@ -3,7 +3,8 @@ name: iOS native build (unsigned)
 # Manual only. Proves the Expo project compiles natively with Xcode. UNSIGNED: no certificates, no provisioning profiles,
 # no secrets, no IPA, no upload. Signing and TestFlight are a separate, separately approved step.
 on:
-  workflow_dispatch:
+  push:
+    branches: [ci-probe/ios-native]
 
 permissions:
   contents: read
