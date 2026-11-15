@@ -1,5 +1,5 @@
 {
-  "_comment": "Record of the migration history on the dedicated DanceHall Fit AI development project. Re-read (read-only) on 2026-11-15: 14 migrations applied (13 originally, then account_recovery at Gate 1) and 48 public tables, all with RLS enabled. Hosted versions are apply-time timestamps; names match the repository files. sha256 pins the repository content of every applied migration: editing one is an error (add a new migration instead). For the five migrations applied after the first eight, byte-equality with the hosted statements was not read back; instead the catalog fingerprint (columns, constraints, functions including a hash of each function body, indexes, policies, triggers, RLS) of a clean local build of the applied migrations plus seed was compared with the hosted catalog and matched on every category. The fingerprint does not cover grants or privileges, so execute privileges are not covered by that comparison. Update this file only after a hosted migration has been authorized, applied and re-verified. account_recovery (20261214000100) was applied at Gate 1 (hosted version 20261115172840) while 20261213000100 is still pending: the two are independent, and `outOfOrder` records that on purpose. The functions fingerprint now includes the 17 account functions (57 to 74 functions); the other six categories are unchanged. Verified read-only against the hosted catalog after applying: new tables have RLS on and no API-role grants, and the new functions are executable by the service role only (grants are not part of the fingerprint).",
+  "_comment": "Record of the migration history on the dedicated DanceHall Fit AI development project. Re-read (read-only) on 2026-11-15: 15 migrations applied (13 originally, then account_recovery at Gate 1 and account_recovery_replay_fix after Gate 5) and 48 public tables, all with RLS enabled. Hosted versions are apply-time timestamps; names match the repository files. sha256 pins the repository content of every applied migration: editing one is an error (add a new migration instead). For the five migrations applied after the first eight, byte-equality with the hosted statements was not read back; instead the catalog fingerprint (columns, constraints, functions including a hash of each function body, indexes, policies, triggers, RLS) of a clean local build of the applied migrations plus seed was compared with the hosted catalog and matched on every category. The fingerprint does not cover grants or privileges, so execute privileges are not covered by that comparison. Update this file only after a hosted migration has been authorized, applied and re-verified. account_recovery (20261214000100) was applied at Gate 1 (hosted version 20261115172840) while 20261213000100 is still pending: the two are independent, and `outOfOrder` records that on purpose. The functions fingerprint now includes the 17 account functions (57 to 74 functions); the other six categories are unchanged. Verified read-only against the hosted catalog after applying: new tables have RLS on and no API-role grants, and the new functions are executable by the service role only (grants are not part of the fingerprint). account_recovery_replay_fix (20261215000100) was applied after Gate 5 (hosted version 20261115191325), also ahead of the still-pending 20261213000100. The functions fingerprint now covers 75 functions (the replay fix adds acct_tx_applied and replaces two function bodies); the other six categories are unchanged. Verified read-only after applying: the three function bodies hash identically to a local build, all 17 acct_* functions are service-role only with a pinned search_path, and no existing object changed.",
   "projectRef": "vvwjhbsyxetnktimgaxg",
   "applied": [
     {
@@ -85,20 +85,26 @@
       "name": "account_recovery",
       "file": "20261214000100_account_recovery.sql",
       "sha256": "fc15a4fa9718f690c07be5a13e6ccb28dca7bdbe1b0056d21486c146da70ddbd"
+    },
+    {
+      "hostedVersion": "20261115191325",
+      "name": "account_recovery_replay_fix",
+      "file": "20261215000100_account_recovery_replay_fix.sql",
+      "sha256": "db095369816722aa9b479f9bb9ee6598bcb3ddc0cb318bc5f4f5266cc00ef3d3"
     }
   ],
-  "pending": [
-    "20261213000100_household_trigger_revoke.sql",
-    "20261215000100_account_recovery_replay_fix.sql"
-  ],
+  "pending": ["20261213000100_household_trigger_revoke.sql"],
   "fingerprintAfterApplied": {
     "columns": "36c4d7c04f4e3f44f454995a68deb0db",
     "constraints": "2faa63a25f3201aae81f045fa8705167",
-    "functions": "78c8169e8b9ddcf764deb87d0c13aaa7",
+    "functions": "d60c38363070720ce69239199d463f87",
     "indexes": "2b761162460821c1cf46805803398384",
     "policies": "8cb09362522e9c0393779e2632a5aa5e",
     "rls": "7c09e471047097e906257046e65bb7a1",
     "triggers": "4f8f9c5b67ab0615fdb300e293c9d555"
   },
-  "outOfOrder": ["20261214000100_account_recovery.sql"]
+  "outOfOrder": [
+    "20261214000100_account_recovery.sql",
+    "20261215000100_account_recovery_replay_fix.sql"
+  ]
 }
