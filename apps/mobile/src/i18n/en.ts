@@ -851,6 +851,7 @@ export const en = {
   'wl.intent.maintain': 'Maintain weight',
   'wl.intent.fitness': 'Improve fitness',
   'wl.intent.strength': 'Build strength',
+  'wl.intent.gain': 'Gain weight',
   'wl.secondary': 'Also working on (optional)',
   'wl.secondaryNote':
     'Pick goals that go well with your main one. Their activities join your plan. Weight-loss targets follow your main goal only.',
@@ -927,6 +928,8 @@ export const en = {
   'progress.weightOffNote': 'Weight tracking is off. You can turn it on in your goals any time.',
   'wl.intentNote.lose': 'A gentle, steady pace with safety limits. Nothing here promises a result.',
   'wl.intentNote.maintain': 'Keep your weight steady while you enjoy moving and eating well.',
+  'wl.intentNote.gain':
+    'A small, gentle surplus with safety limits. Weight tracking is optional. Nothing here promises a result.',
   'wl.intentNote.fitness': 'Move more and feel better. No weight or calorie numbers needed.',
   'wl.intentNote.strength':
     'Get stronger at your own pace. No weight target and no calorie deficit.',
@@ -979,6 +982,18 @@ export const en = {
   'wl.targetsTitle': 'Your estimates',
   'wl.targetsBadge': 'Estimate · not reviewed by a dietitian',
   'wl.kcal': 'Daily energy guide',
+  'wl.yourGoal': 'Your goal',
+  'wl.maintenanceKcal': 'Estimated maintenance',
+  'wl.goalKcal': 'Estimated for your goal',
+  'wl.kcalWithheld': 'Not shown for your details',
+  'wl.missingInputs': 'To see an estimate we still need your {list}. We never guess these.',
+  'wl.missing.weight': 'weight',
+  'wl.missing.height': 'height',
+  'wl.missing.age': 'age',
+  'wl.missing.sex': 'sex',
+  'wl.missing.activity': 'usual activity',
+  'wl.targetsProvisional':
+    'Provisional estimates only. They are not clinically validated and have not been reviewed by a dietitian or clinician.',
   'wl.kcalValue': 'about {kcal} kcal',
   'wl.protein': 'Protein range',
   'wl.proteinValue': '{low} to {high} g',

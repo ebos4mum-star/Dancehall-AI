@@ -33,7 +33,8 @@ import {
   buildWeekFacts,
   contextSummaryLines,
   detectComeback,
-  energyGuideFor,
+  calorieNeedsFromRecords,
+  energyGuideFromTargets,
   generateDailyPlan,
   readinessState,
   resolvePathways,
@@ -1231,21 +1232,20 @@ export class MockStore implements DataStore {
       .pop();
     const todaysLogs = s.foodLogs.filter((l) => localDateKey(l.loggedAt, tz) === today);
     const latest = [...s.weights].sort((a, b) => b.measuredAt.localeCompare(a.measuredAt))[0];
-    let guide: number | undefined;
-    if (s.private && latest) {
-      const age = Math.floor(
-        (this.now().getTime() - Date.parse(`${s.private.birthDate}T00:00:00Z`)) /
-          (365.25 * 86_400_000),
-      );
-      guide = energyGuideFor({
-        weightKg: latest.weightKg,
-        heightCm: s.private.heightCm,
-        ageYears: age,
-        sex: s.private.sex,
-        activity: s.private.activityLevel,
-        weeklyChangeKg: s.goals.find((g) => g.status === 'active')?.plannedWeeklyChangeKg ?? 0,
-      }).guideKcal;
-    }
+    // The same engine and safety rules as every other screen (calorieNeeds); numbers are withheld exactly when they are withheld elsewhere.
+    const guide: number | undefined =
+      s.private && latest
+        ? (energyGuideFromTargets(
+            calorieNeedsFromRecords({
+              prefs: parsePrefs(s.wellnessPrefs),
+              readinessOutcome: s.readiness[s.readiness.length - 1]?.outcome ?? null,
+              priv: s.private,
+              latestWeightKg: latest.weightKg,
+              goals: s.goals,
+              now: this.now(),
+            }),
+          )?.guideKcal ?? undefined)
+        : undefined;
     const lastItems = [...todaysLogs]
       .sort((a, b) => b.loggedAt.localeCompare(a.loggedAt))[0]
       ?.items.map((i) => ({ name: i.name, foodId: i.foodId, grams: i.grams, kcal: i.kcal }));

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { generateDailyPlan, type DailyPlanInput } from './daily-plan';
-import { readinessState, resolvePathways, type EngineInput, type EngineOutput } from './pathways';
+import { readinessState } from './calorie-needs';
+import { resolvePathways, type EngineInput, type EngineOutput } from './pathways';
 import {
   GOAL_COMPATIBILITY,
   GOAL_INTENTS,
@@ -20,16 +21,19 @@ describe('primary and secondary goals', () => {
   it('offers lose and maintain only together with goals that do not pull against them', () => {
     expect(compatibleSecondaryGoals('lose')).toEqual(['fitness', 'strength']);
     expect(compatibleSecondaryGoals('maintain')).toEqual(['fitness', 'strength']);
-    expect(compatibleSecondaryGoals('fitness')).toEqual(['lose', 'maintain', 'strength']);
-    expect(compatibleSecondaryGoals('strength')).toEqual(['lose', 'maintain', 'fitness']);
+    expect(compatibleSecondaryGoals('gain')).toEqual(['fitness', 'strength']);
+    expect(compatibleSecondaryGoals('fitness')).toEqual(['lose', 'maintain', 'strength', 'gain']);
+    expect(compatibleSecondaryGoals('strength')).toEqual(['lose', 'maintain', 'fitness', 'gain']);
   });
-  it('compatibility is symmetric and never pairs lose with maintain', () => {
+  it('compatibility is symmetric and never pairs lose, maintain or gain with each other', () => {
     for (const a of GOAL_INTENTS)
       for (const b of GOAL_INTENTS) {
         if (a === b) continue;
         expect(GOAL_COMPATIBILITY[a].includes(b)).toBe(GOAL_COMPATIBILITY[b].includes(a));
       }
     expect(GOAL_COMPATIBILITY.lose).not.toContain('maintain');
+    expect(GOAL_COMPATIBILITY.lose).not.toContain('gain');
+    expect(GOAL_COMPATIBILITY.maintain).not.toContain('gain');
   });
   it('stored secondary goals are cleaned: no repeats, no primary, no incompatible, no lose with maintain, fixed order', () => {
     const clean = (primary: GoalIntent, raw: GoalIntent[]) => sanitizeSecondaryGoals(primary, raw);
@@ -97,8 +101,8 @@ describe('primary and secondary goals', () => {
     const lose = run({ goalIntent: 'lose', secondaryGoals: ['strength'] }, { body });
     expect(lose.focus).toBe('weight_loss');
     const k = lose.nutrition!.kcal!;
-    expect(k.maintenance - k.guide).toBeLessThanOrEqual(Math.round(k.maintenance * 0.2) + 1);
-    expect(k.guide).toBeGreaterThanOrEqual(k.floor);
+    expect(k.maintenance - k.guide!).toBeLessThanOrEqual(Math.round(k.maintenance * 0.2) + 1);
+    expect(k.guide!).toBeGreaterThanOrEqual(k.floor);
     const withheld = resolvePathways({
       prefs: parsePrefs({ goalIntent: 'lose', secondaryGoals: ['strength'], eatingConcern: true }),
       readiness: 'clear',

@@ -28,9 +28,9 @@ describe('nutrition targets: the three goals', () => {
   it('lose: a capped, explained estimate that never goes below resting energy', () => {
     const t = nutritionTargets(adult);
     expect(t.mode).toBe('estimate');
-    expect(t.kcal!.guide).toBeLessThan(t.kcal!.maintenance);
-    expect(t.kcal!.guide).toBeGreaterThanOrEqual(t.kcal!.floor);
-    expect(t.kcal!.maintenance - t.kcal!.guide).toBeLessThanOrEqual(
+    expect(t.kcal!.guide!).toBeLessThan(t.kcal!.maintenance);
+    expect(t.kcal!.guide!).toBeGreaterThanOrEqual(t.kcal!.floor);
+    expect(t.kcal!.maintenance - t.kcal!.guide!).toBeLessThanOrEqual(
       Math.round(t.kcal!.maintenance * 0.2) + 1,
     );
     expect(t.reasons.join(' ')).toMatch(/Mifflin-St Jeor/);

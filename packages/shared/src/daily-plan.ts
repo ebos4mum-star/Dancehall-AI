@@ -45,7 +45,7 @@ export interface DailyPlanInput {
   recentActiveDays?: number;
   /** Optional wellness context. When absent the plan is exactly the original dance, food, habit and goal plan. */
   wellness?: {
-    intent: 'lose' | 'maintain' | 'fitness' | 'strength';
+    intent: 'lose' | 'maintain' | 'fitness' | 'strength' | 'gain';
     tracking: 'detailed' | 'light' | 'none';
     activities: ReadonlyArray<'dance' | 'walking' | 'strength'>;
     hydrationMl: number;
@@ -323,6 +323,8 @@ export function generateDailyPlan(i: DailyPlanInput): {
   // Goals (optional, never pressure). With wellness preferences, weigh-ins are offered only to people who chose weight numbers.
   const wantsWeight =
     (w ? w.tracking !== 'none' && w.intent !== 'fitness' && w.intent !== 'strength' : true) &&
+    // Gain Weight never prompts for weight on its own: only when the person chose to track it (the engine says so through `bias`).
+    (w?.intent !== 'gain' || i.bias?.showWeightPrompts === true) &&
     i.bias?.showWeightPrompts !== false;
   if (
     i.mode === 'normal' &&

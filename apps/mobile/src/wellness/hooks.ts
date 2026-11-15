@@ -5,7 +5,8 @@ import {
   parsePrefs,
   ageYearsOn,
   localDateKey,
-  nutritionTargets,
+  calorieNeedsFromRecords,
+  pickActiveWeightGoal,
   readinessState,
   resolvePathways,
   showWeight,
@@ -75,19 +76,13 @@ export function useWellness(): WellnessData {
       b.measuredAt.localeCompare(a.measuredAt),
     )[0];
     const priv = data?.priv ?? null;
-    const goal = (data?.goals ?? []).find((g) => g.status === 'active' && g.type === 'lose');
-    const targets = nutritionTargets({
-      intent: prefs.goalIntent,
-      tracking: prefs.tracking,
-      weightKg: latest?.weightKg ?? null,
-      heightCm: priv?.heightCm ?? null,
-      ageYears: priv ? ageYearsOn(priv.birthDate, new Date()) : null,
-      sex: priv?.sex ?? null,
-      activity: priv?.activityLevel ?? null,
-      targetKg: goal?.targetKg ?? null,
-      pregnantOrPostpartum: prefs.pregnantOrPostpartum,
-      eatingConcern: prefs.eatingConcern,
-      readinessCautious: data?.readiness?.outcome === 'low_impact_and_check_with_professional',
+    const targets = calorieNeedsFromRecords({
+      prefs,
+      readinessOutcome: data?.readiness?.outcome ?? null,
+      priv,
+      latestWeightKg: latest?.weightKg ?? null,
+      goals: data?.goals ?? [],
+      now: new Date(),
     });
     const hasActiveWeightGoal = (data?.goals ?? []).some((g) => g.status === 'active');
     const activeHabits = data?.habits ?? [];
@@ -101,9 +96,10 @@ export function useWellness(): WellnessData {
             ageYears: ageYearsOn(priv.birthDate, new Date()),
             sex: priv.sex ?? null,
             activity: priv.activityLevel ?? null,
-            targetKg: goal?.targetKg ?? null,
+            targetKg: null,
           }
         : undefined,
+      weightGoal: pickActiveWeightGoal(data?.goals ?? []),
       habits: { active: activeHabits.length, names: activeHabits.map((h) => h.name) },
       hasActiveWeightGoal,
     });

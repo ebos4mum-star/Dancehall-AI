@@ -2,7 +2,8 @@ import { CURATED_FOODS } from './food-data';
 import { CUISINES, regionTagsFor } from './cuisines';
 import { homeWorkoutsAvailable } from './home-equipment';
 import { HOME_ITEMS } from './home-items';
-import { nutritionTargets, type NutritionTargets, type TargetInput } from './nutrition-plan';
+import { calorieNeeds, type ActiveWeightGoal, type ReadinessKind } from './calorie-needs';
+import type { NutritionTargets, TargetInput } from './nutrition-plan';
 import {
   DANCE_STYLES,
   WORKOUTS,
@@ -80,16 +81,7 @@ const CUISINE_LABELS: Record<CuisinePref, string> = Object.fromEntries(
 const list = (xs: readonly string[]): string =>
   xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`;
 
-export type ReadinessState = 'clear' | 'cautious' | 'unknown';
-/** Maps a stored readiness screening outcome to the engine's state. No screening on record is `unknown`, which the engine treats cautiously. */
-export const readinessState = (
-  outcome: 'clear' | 'low_impact_and_check_with_professional' | null | undefined,
-): ReadinessState =>
-  outcome === 'clear'
-    ? 'clear'
-    : outcome === 'low_impact_and_check_with_professional'
-      ? 'cautious'
-      : 'unknown';
+export type ReadinessState = ReadinessKind;
 export type PathwaySource = 'chosen' | 'from_goal' | 'suggested';
 export type EngineFocus = 'weight_loss' | 'maintenance' | 'weight_neutral';
 
@@ -101,6 +93,8 @@ export interface EngineInput {
   body?: Pick<TargetInput, 'weightKg' | 'heightCm' | 'ageYears' | 'sex' | 'activity' | 'targetKg'>;
   habits?: { active: number; max?: number; names?: readonly string[] };
   recent?: { goalReached?: boolean };
+  /** The person's stored weight goal (type, target, planned pace), if any. Lets the one calorie engine follow it for accounts that predate the Gain Weight goal. */
+  weightGoal?: ActiveWeightGoal | null;
   /** An active weight goal exists. Keeps weight tracking on for people who never chose either way (see `weightTrackingOn`). */
   hasActiveWeightGoal?: boolean;
 }
@@ -231,12 +225,23 @@ const ORDER: Record<GoalIntent, readonly PathwayId[]> = {
     'mindful_eating',
     'weight_maintenance',
   ],
+  gain: [
+    'strength_training',
+    'balanced_nutrition',
+    'healthy_habits',
+    'dance_aerobic',
+    'everyday_movement',
+    'cultural_eating',
+    'mindful_eating',
+    'weight_maintenance',
+  ],
 };
 const FROM_GOAL: Record<GoalIntent, readonly PathwayId[]> = {
   lose: ['dance_aerobic', 'balanced_nutrition', 'healthy_habits', 'everyday_movement'],
   maintain: ['weight_maintenance', 'dance_aerobic', 'balanced_nutrition', 'healthy_habits'],
   fitness: ['dance_aerobic', 'everyday_movement', 'healthy_habits'],
   strength: ['strength_training', 'balanced_nutrition', 'dance_aerobic', 'healthy_habits'],
+  gain: ['strength_training', 'balanced_nutrition', 'healthy_habits'],
 };
 const INTENSITY_BY_EXPERIENCE = { new: 'low', some: 'moderate', regular: 'high' } as const;
 const MIN_FOODS_FOR_COVERAGE = 5;
@@ -309,31 +314,10 @@ export function resolvePathways(input: EngineInput): EngineOutput {
   /** Weight is only ever shown or asked for when the person tracks it (opt-in) and their numbers are not hidden. */
   const weightOn = weightTrackingOn(prefs, input.hasActiveWeightGoal === true);
 
-  // ---- nutrition numbers: only ever from nutritionTargets, and never when numbers are hidden ----
-  let nutrition: NutritionTargets | null = null;
-  if (input.body) {
-    const target = {
-      intent,
-      ...input.body,
-      pregnantOrPostpartum: prefs.pregnantOrPostpartum,
-      eatingConcern: prefs.eatingConcern,
-    };
-    if (readiness === 'unknown' && intent === 'lose') {
-      // No answers is not a finding: do not say the person's answers suggest anything, and do not flag professional support. Just withhold the estimate.
-      nutrition = {
-        ...nutritionTargets({ ...target, tracking: 'none' }),
-        reasons: ['Finish the quick safety questions to see an estimate.'],
-        seeProfessional: false,
-      };
-    } else {
-      nutrition = nutritionTargets({
-        ...target,
-        tracking: prefs.tracking,
-        readinessCautious: readiness === 'cautious',
-      });
-    }
-    if (hidden) nutrition = { ...nutrition, kcal: null, proteinG: null };
-  }
+  // ---- nutrition numbers: only ever from calorieNeeds (one engine for the whole app), and never when numbers are hidden ----
+  const nutrition: NutritionTargets | null = input.body
+    ? calorieNeeds({ prefs, readiness, body: input.body, activeGoal: input.weightGoal ?? null })
+    : null;
 
   // ---- focus: weight-loss framing is withheld whenever there is any reason for caution ----
   const professionalNutrition = nutrition?.mode === 'professional';
@@ -780,12 +764,14 @@ const GOAL_TITLE: Record<GoalIntent, string> = {
   maintain: 'keep your weight steady',
   fitness: 'improve fitness',
   strength: 'build strength',
+  gain: 'gain weight gently',
 };
 const GOAL_PHRASE: Record<GoalIntent, string> = {
   lose: 'lose weight at a gentle, steady pace',
   maintain: 'keep your weight steady',
   fitness: 'improve your fitness',
   strength: 'build strength',
+  gain: 'gain weight at a gentle, steady pace',
 };
 
 function summarise(a: {
@@ -814,6 +800,10 @@ function summarise(a: {
     out.push('A gentle, steady pace with safety limits. Nothing here promises a result.');
   else if (a.focus === 'maintenance')
     out.push('The focus is keeping steady while you enjoy moving and eating well.');
+  else if (a.prefs.goalIntent === 'gain')
+    out.push(
+      'The focus is nourishing meals and strength work at a gentle pace. A weight target is optional, and any calorie estimate is provisional.',
+    );
   else if (a.exclusions.length === 0)
     out.push(
       'Your goal does not use a weight target, so progress is about how you feel and what you do.',
