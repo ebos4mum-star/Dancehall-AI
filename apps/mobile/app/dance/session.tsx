@@ -12,6 +12,7 @@ import {
   strengthEntryLabel,
   type Presentation,
 } from '@dancehall/shared';
+import { previewBanner } from '@/dance/preview';
 import { resolveContent } from '@/dance/content';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage } from '@/data/hooks';
@@ -272,7 +273,7 @@ export default function Session() {
             <PulseStage state="welcome" size={112} />
           </View>
         </HeroScene>
-        {workout.fixture ? <Notice tone="warning">{t('wk.fixtureBanner')}</Notice> : null}
+        {previewBanner(workout) ? <Notice tone="warning">{previewBanner(workout)!}</Notice> : null}
         {restored ? <Notice>{t('ses.restored')}</Notice> : null}
         <DepthCard>
           {[
@@ -657,7 +658,7 @@ export default function Session() {
           }}
         />
       ) : null}
-      {workout.fixture ? <Notice tone="warning">{t('wk.fixtureBanner')}</Notice> : null}
+      {previewBanner(workout) ? <Notice tone="warning">{previewBanner(workout)!}</Notice> : null}
 
       <Disclosure title={t('pl.audio')}>
         <AudioPanel audio={audio} onChange={updateAudio} voiceAvailable={voiceAvailable} />

@@ -6,6 +6,7 @@ import {
   CUISINE_IDS,
   CURATED_FOODS,
   DANCE_STYLES,
+  DRAFT_WORKOUTS,
   FOOD_SOURCES,
   LIVE_STYLES,
   PENDING_STYLES,
@@ -28,6 +29,7 @@ import {
   generateDailyPlan,
   initRunner,
   initRunnerFromSegments,
+  isPreviewOnly,
   isProtectedStyle,
   isReviewedFood,
   isSeatedSuitable,
@@ -428,10 +430,10 @@ describe('internal fixtures switch', () => {
     };
     enableInternalFixtures();
     enableInternalFixtures(); // idempotent
-    expect(WORKOUTS.length).toBe(before.w + FIXTURE_WORKOUTS.length);
+    expect(WORKOUTS.length).toBe(before.w + FIXTURE_WORKOUTS.length + DRAFT_WORKOUTS.length);
     for (const s of PENDING_STYLES) expect(DANCE_STYLES).toContain(s);
     for (const s of PENDING_STYLES)
-      expect(WORKOUTS.some((w) => w.style === s && w.fixture)).toBe(true);
+      expect(WORKOUTS.some((w) => w.style === s && isPreviewOnly(w))).toBe(true);
     disableInternalFixtures();
     expect(WORKOUTS.length).toBe(before.w);
     expect([...DANCE_STYLES]).toEqual(before.s);
@@ -687,8 +689,12 @@ describe('strength pipeline', () => {
   it('shows no guided strength content unless fixtures are on: real content must pass the review gate', () => {
     expect(activeStrengthWorkouts()).toEqual([]);
     enableInternalFixtures();
-    expect(activeStrengthWorkouts().map((x) => x.id)).toEqual(['fixture-strength-bodyweight']);
-    expect(activeStrengthWorkouts().every((x) => x.fixture)).toBe(true);
+    expect(
+      activeStrengthWorkouts()
+        .filter((x) => x.fixture)
+        .map((x) => x.id),
+    ).toEqual(['fixture-strength-bodyweight']);
+    expect(activeStrengthWorkouts().every((x) => x.fixture || x.draft)).toBe(true);
   });
   it('an unreviewed non-fixture workout is never active, even with fixtures on', () => {
     enableInternalFixtures();
@@ -787,17 +793,22 @@ describe('fixtures never leak into generic suggestions', () => {
     enableInternalFixtures();
     for (let seed = 0; seed < 12; seed++)
       for (const minutes of [5, 10, 15] as const) {
-        expect(suggestQuickFit({ minutes, seed })?.fixture).toBeUndefined();
-        expect(suggestQuickFit({ minutes, lowImpactOnly: true, seed })?.fixture).toBeUndefined();
+        expect(isPreviewOnly(suggestQuickFit({ minutes, seed }) ?? {})).toBe(false);
+        expect(isPreviewOnly(suggestQuickFit({ minutes, lowImpactOnly: true, seed }) ?? {})).toBe(
+          false,
+        );
       }
     for (const mood of ['energized', 'tired', 'stressed', 'happy', 'motivation'] as const)
       for (const pick of recommendByMood(mood, { seed: 1 }))
-        expect(pick.workout.fixture).toBeUndefined();
-    expect(suggestQuickFit({ minutes: 10, style: 'dancehall' })?.fixture).toBe(true);
-    expect(suggestQuickFit({ minutes: 10, seated: true, lowImpactOnly: true })?.fixture).toBe(true);
+        expect(isPreviewOnly(pick.workout)).toBe(false);
+    expect(isPreviewOnly(suggestQuickFit({ minutes: 10, style: 'dancehall' }) ?? {})).toBe(true);
+    expect(
+      isPreviewOnly(suggestQuickFit({ minutes: 10, seated: true, lowImpactOnly: true }) ?? {}),
+    ).toBe(true);
     // The browse list shows them (labelled), so they can be tested.
-    expect(filterWorkouts({ styles: ['reggae'] }).map((w) => w.id)).toEqual([
+    expect(filterWorkouts({ styles: ['reggae'] }).every(isPreviewOnly)).toBe(true);
+    expect(filterWorkouts({ styles: ['reggae'] }).map((w) => w.id)).toContain(
       'fixture-reggae-flow',
-    ]);
+    );
   });
 });

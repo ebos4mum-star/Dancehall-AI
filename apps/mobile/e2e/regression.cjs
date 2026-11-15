@@ -216,6 +216,10 @@ async function step(name, fn) {
       'Internal fixture',
       'Strength sessions',
       'Seated-friendly',
+      'Draft, not reviewed',
+      'Dancehall Foundations',
+      'Beginner Strength: Full Body',
+      'Chair Dance Groove',
     ])
       assert.equal(
         await p.getByText(absent, { exact: true }).locator('visible=true').count(),

@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import {
   BUDGET_LEVELS,
+  FOOD_BY_ID,
   planMeals,
   totals,
   type BudgetLevel,
@@ -220,6 +221,11 @@ export default function Plan() {
           <AppText variant="heading" accessibilityRole="header">
             {t('food2.planStep2')}
           </AppText>
+          {preview.days.some((d) =>
+            d.meals.some((m) => m.items.some((i) => i.foodId && FOOD_BY_ID.get(i.foodId)?.staged)),
+          ) ? (
+            <Notice tone="warning">{t('plan.stagedNote')}</Notice>
+          ) : null}
           {preview.days.map((d) => (
             <DepthCard key={d.dayIndex}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>

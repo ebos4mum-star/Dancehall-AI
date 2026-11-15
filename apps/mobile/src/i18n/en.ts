@@ -349,6 +349,11 @@ export const en = {
   'food.tag.entered': 'Entered by you',
   'food.tag.reference': 'From reference data',
   'food.sourceNote': 'Sample reference data (development)',
+  'plan.stagedNote':
+    'This preview includes foods whose values come from a published source but have not been reviewed by a dietitian. They are for development and review builds only.',
+  'food.stagedTag': 'Source data, awaiting dietitian review',
+  'food.stagedSource':
+    'Values from {source} ({version}). Not yet reviewed by a dietitian; for development and review builds only.',
   'food.itemDelete': 'Remove',
   'food.adjust': 'Adjust portion',
   'food.grams': '{g} g',
@@ -946,6 +951,9 @@ export const en = {
     'Internal test fixture. This is placeholder text for testing the app, not a real workout, and it has not been reviewed.',
   'wk.seatedSuitable': 'Can be done seated',
   'wk.fixtureTag': 'Internal fixture',
+  'wk.draftTag': 'Draft, not reviewed',
+  'wk.draftBanner':
+    'Draft, not reviewed. This session was written for the app but no exercise professional, practitioner or cultural reviewer has checked it, no music is licensed for it and it is only visible in development and review builds.',
   'wk.seated': 'Seated version',
   'wk.seatedBody':
     'Switches each block to its seated instructions. You can switch back at any time without losing your place.',

@@ -228,6 +228,62 @@ async function step(name, fn) {
       await seen('Jamaican');
       await seen('East African');
       await seen('Southern African');
+      await p.goBack(); // a detail screen hides the tab bar
+      await p.waitForTimeout(500);
+    },
+  );
+
+  await step(
+    'drafts: an original Dancehall session is labelled as an unreviewed draft and plays in the player',
+    async () => {
+      await tab('Dance');
+      await exact(ALL).click();
+      await exact('Dancehall').click();
+      await btn(/Dancehall Foundations/).click();
+      await seen('Draft, not reviewed');
+      await btn('Start guided session').click();
+      await seen('Draft, not reviewed');
+      await exact('Start').click();
+      await btn('Skip countdown').click();
+      await seen('Weight shifts and shoulder rolls');
+      await shot('draft-dancehall-session');
+      await p.goBack();
+      await p.goBack();
+    },
+  );
+
+  await step(
+    'drafts: a beginner strength draft counts sets in reps and says it is not reviewed',
+    async () => {
+      await tab('Dance');
+      await btn(/Beginner Strength: Full Body/).click();
+      await seen('Draft, not reviewed');
+      await seen('Chair sit-to-stand');
+      await seen('2 × 8 reps');
+      await btn('Start guided session').click();
+      await exact('Start').click();
+      await btn('Skip countdown').click();
+      await tap(btn('Skip')); // finish the warm-up
+      await seen('Set 1 of 2');
+      await seen('Chair sit-to-stand');
+      await shot('draft-strength-set');
+      await p.goBack();
+      await p.goBack();
+    },
+  );
+
+  await step(
+    'foods: a sourced Caribbean food is found, labelled as awaiting review, and names its source',
+    async () => {
+      await tab('Food');
+      await btn('Add food').click();
+      await p.getByLabel('Search foods').fill('callaloo');
+      await p.waitForTimeout(500);
+      await seen('Source data, awaiting dietitian review');
+      await p.locator('[role="button"][aria-label*="Amaranth"]').first().click();
+      await seen('FDC 169202');
+      await shot('staged-food');
+      await p.goBack();
     },
   );
 

@@ -65,6 +65,15 @@ export function workoutProblems(w: WorkoutDef): string[] {
         'a session marked suitable for seated participation needs a seated version of every block',
       );
   }
+  if (w.draft) {
+    if (w.fixture) out.push('a draft cannot also be a fixture');
+    if (w.draft.needs.length === 0) out.push('a draft must list what it still needs');
+    if (w.provenance)
+      out.push(
+        'a draft must not carry provenance (it must not look reviewed): remove the draft marker only when the review is approved',
+      );
+    return out;
+  }
   if (w.fixture) {
     if (!w.title.startsWith('[Internal fixture]'))
       out.push('fixture titles must start with "[Internal fixture]"');
@@ -101,19 +110,28 @@ export function bundledContentProblems(
   const out: string[] = [];
   for (const w of lists.workouts ?? WORKOUTS) {
     if (w.fixture) out.push(`${w.id}: an internal fixture is in the bundle`);
+    else if (w.draft) out.push(`${w.id}: an unreviewed draft is in the bundle`);
     else for (const p of workoutProblems(w)) out.push(`${w.id}: ${p}`);
   }
-  for (const f of lists.foods ?? CURATED_FOODS) for (const p of foodProblems(f)) out.push(p);
+  for (const f of lists.foods ?? CURATED_FOODS) {
+    if (f.staged) out.push(`${f.id}: a staged, unreviewed food is in the bundle`);
+    else for (const p of foodProblems(f)) out.push(p);
+  }
   const sw = lists.strengthWorkouts ?? STRENGTH_WORKOUTS;
   const se = lists.strengthExercises ?? STRENGTH_EXERCISES;
   for (const w of sw) {
-    if (w.fixture) {
-      out.push(`${w.id}: an internal fixture is in the bundle`);
+    if (w.fixture || w.draft) {
+      out.push(
+        `${w.id}: an ${w.fixture ? 'internal fixture' : 'unreviewed draft'} is in the bundle`,
+      );
       continue;
     }
     // Strength content in the bundle must already pass the review gate: there is no "sample" strength content.
     for (const p of strengthWorkoutProblems(w, se)) out.push(`${w.id}: ${p}`);
   }
-  for (const e of se) if (e.fixture) out.push(`${e.id}: an internal fixture is in the bundle`);
+  for (const e of se) {
+    if (e.fixture) out.push(`${e.id}: an internal fixture is in the bundle`);
+    else if (e.draft) out.push(`${e.id}: an unreviewed draft is in the bundle`);
+  }
   return out;
 }

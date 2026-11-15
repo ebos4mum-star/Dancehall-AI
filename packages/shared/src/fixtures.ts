@@ -1,4 +1,7 @@
 import { setFixturesEnabled } from './content-state';
+import { CURATED_FOODS, FOOD_BY_ID, type FoodRef } from './food-data';
+import { STAGED_FOODS } from './food-staged';
+import { DRAFT_STRENGTH_EXERCISES, DRAFT_STRENGTH_WORKOUTS, DRAFT_WORKOUTS } from './draft-packs';
 import { STRENGTH_EXERCISES, STRENGTH_WORKOUTS } from './strength';
 import type { StrengthExerciseDef, StrengthWorkoutDef } from './strength';
 import {
@@ -154,13 +157,17 @@ export function enableInternalFixtures(): void {
   enabled = true;
   setFixturesEnabled(true);
   const workouts = WORKOUTS as WorkoutDef[];
-  for (const w of FIXTURE_WORKOUTS) {
+  for (const w of [...FIXTURE_WORKOUTS, ...DRAFT_WORKOUTS]) {
     workouts.push(w);
     (WORKOUT_BY_ID as Map<string, WorkoutDef>).set(w.id, w);
   }
   for (const s of PENDING_STYLES) if (!DANCE_STYLES.includes(s)) DANCE_STYLES.push(s);
-  STRENGTH_EXERCISES.push(...FIXTURE_STRENGTH_EXERCISES);
-  STRENGTH_WORKOUTS.push(...FIXTURE_STRENGTH_WORKOUTS);
+  for (const f of STAGED_FOODS) {
+    (CURATED_FOODS as FoodRef[]).push(f);
+    (FOOD_BY_ID as Map<string, FoodRef>).set(f.id, f);
+  }
+  STRENGTH_EXERCISES.push(...FIXTURE_STRENGTH_EXERCISES, ...DRAFT_STRENGTH_EXERCISES);
+  STRENGTH_WORKOUTS.push(...FIXTURE_STRENGTH_WORKOUTS, ...DRAFT_STRENGTH_WORKOUTS);
 }
 
 /** Removes everything `enableInternalFixtures` added (used by tests so they cannot leak into each other). */
@@ -169,7 +176,7 @@ export function disableInternalFixtures(): void {
   enabled = false;
   setFixturesEnabled(false);
   const workouts = WORKOUTS as WorkoutDef[];
-  for (const w of FIXTURE_WORKOUTS) {
+  for (const w of [...FIXTURE_WORKOUTS, ...DRAFT_WORKOUTS]) {
     const i = workouts.indexOf(w);
     if (i >= 0) workouts.splice(i, 1);
     (WORKOUT_BY_ID as Map<string, WorkoutDef>).delete(w.id);
@@ -178,7 +185,15 @@ export function disableInternalFixtures(): void {
     const i = DANCE_STYLES.indexOf(s);
     if (i >= 0) DANCE_STYLES.splice(i, 1);
   }
-  for (const arr of [STRENGTH_EXERCISES, STRENGTH_WORKOUTS] as Array<Array<{ fixture?: true }>>) {
-    for (let i = arr.length - 1; i >= 0; i--) if (arr[i]!.fixture) arr.splice(i, 1);
+  for (const f of STAGED_FOODS) {
+    const i = (CURATED_FOODS as FoodRef[]).indexOf(f);
+    if (i >= 0) (CURATED_FOODS as FoodRef[]).splice(i, 1);
+    (FOOD_BY_ID as Map<string, FoodRef>).delete(f.id);
+  }
+  for (const arr of [STRENGTH_EXERCISES, STRENGTH_WORKOUTS] as Array<
+    Array<{ fixture?: true; draft?: unknown }>
+  >) {
+    for (let i = arr.length - 1; i >= 0; i--)
+      if (arr[i]!.fixture || arr[i]!.draft) arr.splice(i, 1);
   }
 }

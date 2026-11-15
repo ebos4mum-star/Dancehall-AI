@@ -12,9 +12,15 @@ What exists in code, what is deliberately empty, and how reviewed content gets i
 - **Provenance gates** (`content-gate.ts`, `food-provenance.ts`): protected styles need credits, rights, independent professional review, tempo and (dancehall/reggae) cultural review; foods need a published source, licence, dietitian review and a plausible Atwater energy check. `scripts/gen-seed.mjs` refuses fixtures, provenance-less protected content and non-DB styles.
 - **Internal fixtures** (`fixtures.ts`): placeholder content labelled "[Internal fixture]". Only active when `EXPO_PUBLIC_CONTENT_FIXTURES=1` in a development/preview build; production config throws; never in the bundle.
 
+## Draft packs and staged foods (Stage D)
+
+- **Draft workout packs** (`packages/shared/src/draft-packs.ts`): original structures with timings, transitions, instructions, easier and seated versions, in the five requested packs: Dancehall (2 sessions), reggae (2), chair dance (3), low-impact dance (1, seated-capable) and beginner strength (2 sessions, 7 exercises). They run in the existing player, seated mode and strength player. Each carries a `draft` marker listing what it still needs (credited author and rights, independent fitness review, licensed or royalty-free music at the target tempo, practitioner tempo confirmation, cultural review for Dancehall and reggae). They have no provenance, so they never look reviewed; the gate rejects them from the bundle and the seed script refuses them. Visible only in development and review builds, labelled "Draft, not reviewed", and left out of automatic suggestions. No music is included.
+- **Staged foods** (`packages/shared/src/food-staged.json`): 34 Jamaican, Caribbean and West African foods whose values and serving weights were read unchanged from the USDA FoodData Central SR Legacy release (April 2018) by `scripts/import-fdc-sr.mjs`, with source ID, edition, retrieval date, attribution and the source's licence statement. Not typed in, not reviewed: they need a registered dietitian and a cultural reviewer, are never bundled or seeded, and appear (labelled) only in development and review builds. Foods missing from the source (for example ackee) are not included. Refresh with the commands in the script header; extend by adding rows to `scripts/food-import-manifest.json`. The Caribbean and West African composition tables are better regional sources and are the next step once their licences are confirmed.
+- **Promotion**: when a reviewer approves an item, replace its `draft` or `staged` marker with real provenance; the gate then judges it as reviewed content. Hosted seeding stays a separate approval, and the hosted foreign keys mean a preview build must not be pointed at a live backend.
+
 ## Intentionally empty
 
-No Dancehall, reggae, chair-dance or strength workouts and no reviewed regional foods are bundled. A normal build shows none of the new styles; the regression suite asserts this.
+No Dancehall, reggae, chair-dance or strength workouts and no reviewed regional foods are bundled (the drafts and staged foods above are preview-only). A normal build shows none of the new styles; the regression suite asserts this.
 
 ## Adding reviewed content
 

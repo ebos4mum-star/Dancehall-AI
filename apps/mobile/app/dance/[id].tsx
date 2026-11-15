@@ -3,6 +3,7 @@ import { Switch, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { addDaysIso } from '@dancehall/shared';
+import { previewBanner } from '@/dance/preview';
 import { STRENGTH_META, resolveContent } from '@/dance/content';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage } from '@/data/hooks';
@@ -160,7 +161,7 @@ export default function WorkoutDetail() {
         </LinearGradient>
       </Reveal>
 
-      {w.fixture ? <Notice tone="warning">{t('wk.fixtureBanner')}</Notice> : null}
+      {previewBanner(w) ? <Notice tone="warning">{previewBanner(w)!}</Notice> : null}
       <Button
         label={t('wk.start')}
         onPress={() =>

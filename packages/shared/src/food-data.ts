@@ -1,6 +1,6 @@
 import data from './food-data.json';
 import type { Macros } from './nutrition';
-import type { FoodProvenance } from './food-provenance';
+import type { FoodProvenance, StagedFoodSource } from './food-provenance';
 
 export const FOOD_CATEGORIES = [
   'grain',
@@ -30,6 +30,11 @@ export interface FoodRef {
   aliases: string[];
   /** Where the numbers came from and who reviewed them. Absent on synthetic sample foods. See food-provenance.ts. */
   provenance?: FoodProvenance;
+  /**
+   * Values taken from a published source but not yet reviewed by a dietitian or a cultural reviewer. Such a food is never bundled or seeded and appears only in
+   * development and review builds (see food-staged.ts). When a dietitian approves it, `staged` is replaced by `provenance`.
+   */
+  staged?: StagedFoodSource;
 }
 
 /** SYNTHETIC development data (see the notice inside food-data.json). Never present these values as authoritative. */

@@ -10,6 +10,7 @@ import {
   type WorkoutDef,
 } from '@dancehall/shared';
 import { router } from 'expo-router';
+import { previewTag } from './preview';
 import { strengthSessions } from './content';
 import { DepthCard } from '@/ui/Depth';
 import { Button } from '@/ui/Button';
@@ -53,10 +54,18 @@ export const levelLabel = (l: Level) =>
 export const workoutSummaryLabel = (
   w: Pick<
     WorkoutDef,
-    'title' | 'style' | 'minutes' | 'level' | 'intensity' | 'impact' | 'seatedSuitable' | 'fixture'
+    | 'title'
+    | 'style'
+    | 'minutes'
+    | 'level'
+    | 'intensity'
+    | 'impact'
+    | 'seatedSuitable'
+    | 'fixture'
+    | 'draft'
   >,
 ) =>
-  `${w.fixture ? `${t('wk.fixtureTag')}, ` : ''}${w.title}, ${t(`style.${w.style}` as StringKey)}, ${t('dance.minutes', { n: w.minutes })}, ${t(`level.${w.level}` as StringKey)}, ${t(`intensity.${w.intensity}` as StringKey)}, ${t(`impact.${w.impact}` as StringKey)}${isSeatedSuitable(w) ? `, ${t('wk.seatedSuitable')}` : ''}`;
+  `${previewTag(w) ? `${previewTag(w)}, ` : ''}${w.title}, ${t(`style.${w.style}` as StringKey)}, ${t('dance.minutes', { n: w.minutes })}, ${t(`level.${w.level}` as StringKey)}, ${t(`intensity.${w.intensity}` as StringKey)}, ${t(`impact.${w.impact}` as StringKey)}${isSeatedSuitable(w) ? `, ${t('wk.seatedSuitable')}` : ''}`;
 
 /** Workout card: a duration disc, the title and summary, and three facts (level, pace, impact) each with a meter and a text label. */
 export function WorkoutCard({ w, onPress }: { w: WorkoutDef; onPress: () => void }) {
@@ -146,7 +155,7 @@ export function WorkoutCard({ w, onPress }: { w: WorkoutDef; onPress: () => void
               label={t(`impact.${w.impact}` as StringKey)}
             />
             {isSeatedSuitable(w) ? <Chip label={t('wk.seatedSuitable')} /> : null}
-            {w.fixture ? <Chip strong label={t('wk.fixtureTag')} /> : null}
+            {previewTag(w) ? <Chip strong label={previewTag(w)!} /> : null}
           </View>
         </LinearGradient>
       </Animated.View>
@@ -315,7 +324,7 @@ export function StrengthSessions() {
         <Pressable
           key={c.id}
           accessibilityRole="button"
-          accessibilityLabel={`${c.fixture ? `${t('wk.fixtureTag')}, ` : ''}${c.title}, ${t('st.kind')}, ${t('dance.minutes', { n: c.minutes })}, ${t(`level.${c.level}` as StringKey)}`}
+          accessibilityLabel={`${previewTag(c) ? `${previewTag(c)}, ` : ''}${c.title}, ${t('st.kind')}, ${t('dance.minutes', { n: c.minutes })}, ${t(`level.${c.level}` as StringKey)}`}
           onPress={() => {
             haptics.tap();
             router.push({ pathname: '/dance/[id]', params: { id: c.id } });
@@ -329,7 +338,7 @@ export function StrengthSessions() {
                 <AppText variant="caption" muted>
                   {`${t('dance.minutes', { n: c.minutes })} · ${t(`level.${c.level}` as StringKey)} · ${c.blocks.filter((b) => b.kind === 'main').length} ${t('st.setsTotal').toLowerCase()}`}
                 </AppText>
-                {c.fixture ? <Chip strong label={t('wk.fixtureTag')} /> : null}
+                {previewTag(c) ? <Chip strong label={previewTag(c)!} /> : null}
               </View>
               <Ionicons name="chevron-forward" size={22} color="#8B7FA8" />
             </View>
