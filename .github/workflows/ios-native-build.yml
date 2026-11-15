@@ -76,6 +76,11 @@ jobs:
           echo "== built product =="
           ls "$RUNNER_TEMP/dd/Build/Products/Release-iphoneos" | head
 
+      - name: Show the first errors (only when the compile failed)
+        if: failure()
+        run: |
+          grep -n -E "error:|ExpoModulesJSI|Command .* failed|No such file|not found|xcframework" "$RUNNER_TEMP/xcodebuild.log" | grep -v "note:" | cut -c1-400 | head -n 60 || true
+
       - name: Keep the build log (short retention)
         if: always()
         uses: actions/upload-artifact@v4
