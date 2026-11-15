@@ -1,5 +1,6 @@
 import { CURATED_FOODS, type FoodRef } from './food-data';
 import { foodProblems } from './food-provenance';
+import { homeExerciseProblems } from './home-equipment';
 import { structureProblems } from './licensing';
 import { STRENGTH_EXERCISES, STRENGTH_WORKOUTS, strengthWorkoutProblems } from './strength';
 import {
@@ -130,6 +131,7 @@ export function bundledContentProblems(
     for (const p of strengthWorkoutProblems(w, se)) out.push(`${w.id}: ${p}`);
   }
   for (const e of se) {
+    if (e.household) out.push(...homeExerciseProblems(e));
     if (e.fixture) out.push(`${e.id}: an internal fixture is in the bundle`);
     else if (e.draft) out.push(`${e.id}: an unreviewed draft is in the bundle`);
   }

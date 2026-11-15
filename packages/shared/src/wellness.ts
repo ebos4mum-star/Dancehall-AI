@@ -1,3 +1,4 @@
+import { HOME_ITEM_IDS, type HomeItemId } from './home-items';
 import { waterGuideMl } from './nutrition-plan';
 import { CUISINE_IDS, type CuisineId } from './cuisines';
 import { localDateKey } from './food';
@@ -103,6 +104,8 @@ export interface WellnessPrefs {
   exerciseMinutesPerWeek: number | null;
   activities: ActivityPref[];
   equipment: EquipmentPref[];
+  /** Household items the person has for "Use what you have". Empty means no equipment. Changing it never touches their history. */
+  homeItems: HomeItemId[];
   diet: DietPref[];
   /** detailed = log meals and amounts; light = log meals only; none = no calorie or weight numbers at all. */
   tracking: TrackingStyle;
@@ -142,6 +145,7 @@ export const DEFAULT_PREFS: WellnessPrefs = {
   exerciseMinutesPerWeek: null,
   activities: ['dance'],
   equipment: ['none'],
+  homeItems: [],
   diet: [],
   tracking: 'light',
   waterGoalMl: null,
@@ -182,6 +186,7 @@ export function parsePrefs(raw: unknown): WellnessPrefs {
     exerciseMinutesPerWeek: num(r.exerciseMinutesPerWeek, 0, 1000),
     activities: acts.length > 0 ? acts : DEFAULT_PREFS.activities,
     equipment: equip.length > 0 ? equip : DEFAULT_PREFS.equipment,
+    homeItems: pick(r.homeItems, HOME_ITEM_IDS),
     diet: pick(r.diet, DIET_PREFS),
     tracking,
     waterGoalMl: num(r.waterGoalMl, 500, 6000),

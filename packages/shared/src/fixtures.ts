@@ -1,6 +1,7 @@
 import { setFixturesEnabled } from './content-state';
 import { CURATED_FOODS, FOOD_BY_ID, type FoodRef } from './food-data';
 import { STAGED_FOODS } from './food-staged';
+import { HOME_EXERCISES } from './home-exercises';
 import { DRAFT_STRENGTH_EXERCISES, DRAFT_STRENGTH_WORKOUTS, DRAFT_WORKOUTS } from './draft-packs';
 import { STRENGTH_EXERCISES, STRENGTH_WORKOUTS } from './strength';
 import type { StrengthExerciseDef, StrengthWorkoutDef } from './strength';
@@ -166,7 +167,11 @@ export function enableInternalFixtures(): void {
     (CURATED_FOODS as FoodRef[]).push(f);
     (FOOD_BY_ID as Map<string, FoodRef>).set(f.id, f);
   }
-  STRENGTH_EXERCISES.push(...FIXTURE_STRENGTH_EXERCISES, ...DRAFT_STRENGTH_EXERCISES);
+  STRENGTH_EXERCISES.push(
+    ...FIXTURE_STRENGTH_EXERCISES,
+    ...DRAFT_STRENGTH_EXERCISES,
+    ...HOME_EXERCISES,
+  );
   STRENGTH_WORKOUTS.push(...FIXTURE_STRENGTH_WORKOUTS, ...DRAFT_STRENGTH_WORKOUTS);
 }
 

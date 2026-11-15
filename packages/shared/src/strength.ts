@@ -6,6 +6,7 @@ import {
   type SessionSegment,
   type WorkoutBlock,
 } from './workouts';
+import type { HomeItemId } from './home-items';
 import data from './strength-data.json';
 
 /**
@@ -53,6 +54,18 @@ export interface StrengthExerciseDef {
   contentOrigin: 'original_text' | 'licensed' | 'commissioned';
   review: ReviewStatus;
   reviewer: ContentReviewer | null;
+  /** "Use what you have": the household items this exercise needs (all of them). An empty list means no equipment. Absent on the exercises of the workouts above. */
+  household?: HomeItemId[];
+  /** How demanding it is, for matching to the person's level. */
+  level?: 'beginner' | 'intermediate' | 'advanced';
+  /** Done seated as written, so it can be offered in a seated session. */
+  seated?: boolean;
+  /** Needs good standing balance (single-leg or unsupported), so it is left out when the person asked for balance support. */
+  needsBalance?: boolean;
+  /** How heavy a load to use, in words (never a made-up weight). */
+  loadNote?: string;
+  /** Held for this many seconds instead of counted in repetitions. */
+  holdSeconds?: number;
   /** Internal test fixture: never real content, never bundled, active only when fixtures are switched on in development. */
   fixture?: true;
   /** Original draft that no qualified reviewer has approved: shown only in development and review builds, labelled, never bundled. */
@@ -70,7 +83,7 @@ export interface StrengthBlock {
 export interface StrengthWorkoutDef {
   id: string;
   title: string;
-  level: 'beginner' | 'intermediate';
+  level: 'beginner' | 'intermediate' | 'advanced';
   minutes: number;
   equipment: StrengthEquipment;
   warmup: { title: string; seconds: number; cue: string };
@@ -195,7 +208,7 @@ export function strengthBlocks(
   for (const b of w.blocks) {
     const e = byId.get(b.exerciseId);
     if (!e) continue;
-    const cue = e.cues.join(' ');
+    const cue = [...e.cues, e.loadNote].filter(Boolean).join(' ');
     for (let set = 1; set <= b.sets; set++) {
       doneSets++;
       const manual = b.reps !== null;

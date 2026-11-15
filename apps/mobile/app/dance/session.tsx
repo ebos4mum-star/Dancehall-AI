@@ -12,6 +12,7 @@ import {
   strengthEntryLabel,
   type Presentation,
 } from '@dancehall/shared';
+import { DemoStatus } from '@/dance/home';
 import { previewBanner } from '@/dance/preview';
 import { resolveContent } from '@/dance/content';
 import { useApp } from '@/data/AppProvider';
@@ -591,6 +592,16 @@ export default function Session() {
           </View>
         ) : null}
       </HeroScene>
+
+      {seg.exerciseId ? (
+        <DepthCard>
+          <AppText variant="label" accessibilityRole="header">
+            {t('home.howTo')}
+          </AppText>
+          <AppText variant="caption">{seg.cue}</AppText>
+          <DemoStatus exerciseId={seg.exerciseId} />
+        </DepthCard>
+      ) : null}
 
       <SegmentedBar
         segments={barSegments}

@@ -287,6 +287,79 @@ async function step(name, fn) {
     },
   );
 
+  await step(
+    'home: Use what you have is on the Dance tab, matches the items, and asks for an equipment check before starting',
+    async () => {
+      await tab('Dance');
+      await seen('Use what you have');
+      await exact('Sturdy chair').click();
+      await exact('Wall').click();
+      await seen('exercises, about');
+      await shot('home-card');
+      await btn('See this session').click();
+      await seen('Draft, not reviewed');
+      await seen('Check your equipment');
+      await seen('Sturdy chair, Wall');
+      await seen('Chair sit-to-stand');
+      await seen('There is no video demonstration for this exercise yet');
+      // Starting needs the equipment check first.
+      assert.equal(await btn('Start guided session').isDisabled(), true);
+      await seen('Confirm your equipment check to start.');
+      await lastSwitch('I have checked my equipment').check({ force: true });
+      assert.equal(await btn('Start guided session').isDisabled(), false);
+      await shot('home-detail');
+    },
+  );
+
+  await step(
+    'home: a safer swap replaces an exercise with one that is never harder and needs nothing else',
+    async () => {
+      await btn(/^Swap for a safer option: Seated knee extension/).click();
+      await seen('Seated knee extension');
+      assert.equal(await p.getByText('Chair sit-to-stand', { exact: true }).count(), 0);
+    },
+  );
+
+  await step(
+    'home: the session runs in the existing player with counted sets and written instructions',
+    async () => {
+      await btn('Start guided session').click();
+      await exact('Start').click();
+      await btn('Skip countdown').click();
+      await tap(btn('Skip')); // finish the warm-up
+      await seen('Set 1 of 2');
+      await seen('How to do it');
+      await seen('There is no video demonstration for this exercise yet');
+      await shot('home-session');
+      await tap(btn('Done with this set'));
+      await p.goBack();
+      await p.goBack();
+    },
+  );
+
+  await step(
+    'home: a seated session uses only seated exercises, and changing items works at any time',
+    async () => {
+      await tab('Dance');
+      await exact('Water bottles').click();
+      await exact('Towel').click();
+      await lastSwitch('Seated session').check({ force: true });
+      await seen('exercises, about');
+      assert.equal(
+        await p
+          .getByText(/Wall push-up/)
+          .locator('visible=true')
+          .count(),
+        0,
+      );
+      await seen('Seated knee extension', 3000).catch(() => undefined);
+      await exact('No equipment').click();
+      await lastSwitch('Seated session').uncheck({ force: true });
+      await seen('exercises, about');
+      await shot('home-none');
+    },
+  );
+
   console.log(
     `\n${results.filter((r) => r[0] === 'PASS').length}/${results.length} fixture checks passed`,
   );

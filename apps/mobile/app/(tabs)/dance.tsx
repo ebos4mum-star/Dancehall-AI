@@ -26,6 +26,7 @@ import {
 import { useDanceData } from '@/dance/hooks';
 import { useApp } from '@/data/AppProvider';
 import { useLoad } from '@/data/hooks';
+import { HomeWorkoutCard } from '@/dance/home';
 import { LevelSuggestionCard, StrengthSessions, StyleCarousel, WorkoutCard } from '@/dance/ui';
 import { IconChoice, Disclosure, IconBadge, SectionTitle, type IconName } from '@/ui/kit';
 import { Ionicons } from '@expo/vector-icons';
@@ -392,6 +393,7 @@ export default function Dance() {
       <MovementCard />
       <LevelSuggestionCard suggestion={suggestion} onSee={setLevel} />
       <StrengthSessions />
+      <HomeWorkoutCard />
       <StrengthContentCard />
       <RecoveryCard />
 

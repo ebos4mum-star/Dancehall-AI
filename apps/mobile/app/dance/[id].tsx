@@ -2,13 +2,23 @@ import { useEffect, useMemo, useState } from 'react';
 import { Switch, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { addDaysIso } from '@dancehall/shared';
+import {
+  HOME_LEVELS,
+  addDaysIso,
+  buildHomeWorkout,
+  decodeHomeId,
+  encodeHomeId,
+  makeRequest,
+  safeSubstitutes,
+  type StrengthExerciseDef,
+} from '@dancehall/shared';
 import { previewBanner } from '@/dance/preview';
 import { STRENGTH_META, resolveContent } from '@/dance/content';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage } from '@/data/hooks';
 import { mmss, STYLE_META } from '@/dance/meta';
 import { useDanceData } from '@/dance/hooks';
+import { DemoStatus, HomeSafetyCard } from '@/dance/home';
 import { Fact } from '@/dance/ui';
 import { Disclosure, IconBadge, SegmentedBar } from '@/ui/kit';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,6 +51,7 @@ export default function WorkoutDetail() {
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [checkedFor, setCheckedFor] = useState<string | null>(null);
 
   // Start in the low-impact version when the readiness screening asked for it (until the person chooses otherwise).
   useEffect(() => {
@@ -56,6 +67,29 @@ export default function WorkoutDetail() {
   }
   const meta = w.style ? STYLE_META[w.style] : STRENGTH_META;
   const strength = w.kind === 'strength';
+  const itemsKey = w.home?.itemsUsed.join(',') ?? '';
+  const needsCheck = !!w.home && w.home.itemsUsed.length > 0;
+  const equipmentChecked = checkedFor === itemsKey;
+  /** The exercise that would replace this one if it were swapped, only if it is never harder than the one it replaces. */
+  const swapTarget = (e: StrengthExerciseDef): StrengthExerciseDef | null => {
+    const req = w.home ? decodeHomeId(w.id) : null;
+    if (!req || safeSubstitutes(e, req).length === 0) return null;
+    const next = buildHomeWorkout({ ...req, exclude: [...req.exclude, e.id] });
+    if (!next.ok) return null;
+    const added = next.build.exercises.filter((x) => !w.exercises?.some((y) => y.id === x.id));
+    const r = added[0];
+    if (added.length !== 1 || !r) return null;
+    const rank = (x: StrengthExerciseDef) => HOME_LEVELS.indexOf(x.level ?? 'beginner');
+    return rank(r) <= rank(e) ? r : null;
+  };
+  const swap = (e: StrengthExerciseDef) => {
+    const req = decodeHomeId(w.id);
+    if (!req) return;
+    haptics.tap();
+    router.setParams({
+      id: encodeHomeId(makeRequest({ ...req, exclude: [...req.exclude, e.id] })),
+    });
+  };
   const days = Array.from({ length: 7 }, (_, i) => addDaysIso(dance.todayKey, i));
   const dayLabel = (d: string, i: number) =>
     i === 0
@@ -162,8 +196,22 @@ export default function WorkoutDetail() {
       </Reveal>
 
       {previewBanner(w) ? <Notice tone="warning">{previewBanner(w)!}</Notice> : null}
+      {w.home ? (
+        <HomeSafetyCard
+          items={w.home.itemsUsed}
+          checks={w.home.checks}
+          checked={checkedFor === itemsKey}
+          onChecked={(v) => setCheckedFor(v ? itemsKey : null)}
+        />
+      ) : null}
+      {needsCheck && !equipmentChecked ? (
+        <AppText variant="caption" muted>
+          {t('home.confirmFirst')}
+        </AppText>
+      ) : null}
       <Button
         label={t('wk.start')}
+        disabled={needsCheck && !equipmentChecked}
         onPress={() =>
           router.push({
             pathname: '/dance/session',
@@ -304,6 +352,11 @@ export default function WorkoutDetail() {
               return (
                 <Disclosure key={e.id} title={e.name} summary={plan} initiallyOpen>
                   <AppText variant="caption">{e.cues.join(' ')}</AppText>
+                  {e.loadNote ? (
+                    <AppText variant="caption" muted>
+                      {e.loadNote}
+                    </AppText>
+                  ) : null}
                   <AppText variant="caption" muted>{`${t('st.easier')}: ${e.regression}`}</AppText>
                   {e.progression ? (
                     <AppText variant="caption" muted>{`+ ${e.progression}`}</AppText>
@@ -311,6 +364,23 @@ export default function WorkoutDetail() {
                   {e.safety.map((x) => (
                     <AppText key={x} variant="caption" muted>{`• ${x}`}</AppText>
                   ))}
+                  {w.home ? <DemoStatus exerciseId={e.id} /> : null}
+                  {w.home
+                    ? (() => {
+                        const target = swapTarget(e);
+                        return target ? (
+                          <Button
+                            variant="secondary"
+                            label={`${t('home.swap')}: ${target.name}`}
+                            onPress={() => swap(e)}
+                          />
+                        ) : (
+                          <AppText variant="caption" muted>
+                            {t('home.swapNone')}
+                          </AppText>
+                        );
+                      })()
+                    : null}
                 </Disclosure>
               );
             })
