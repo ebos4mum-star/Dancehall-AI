@@ -37,6 +37,7 @@ jobs:
       - run: pnpm check:workspace
       - run: pnpm check:ci
       - run: pnpm check:seed
+      - run: pnpm check:edge
       - run: pnpm test:scripts
       - run: pnpm format:check
       - run: pnpm lint
@@ -69,4 +70,12 @@ jobs:
       - run: command -v psql >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client)
       - run: bash supabase/tests/run.sh
       - run: bash supabase/tests/replica.sh
+      # The account core's shared suite, run against the real SQL functions on a throwaway local database (no hosted project, no secrets).
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: bash supabase/tests/account-pg.sh
       - run: bash supabase/live/run-local.sh

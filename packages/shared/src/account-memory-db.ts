@@ -87,11 +87,12 @@ export class MemoryAccountDb implements AccountDb {
     };
   }
   async provisionAttach(requestId: string, userId: string, identifier: string) {
-    const p = this.prov.get(requestId);
-    if (p) {
+    const p = this.prov.get(requestId)!;
+    if (!p.userId) {
       p.userId = userId;
       p.identifier = identifier;
     }
+    return { userId: p.userId!, identifier: p.identifier! };
   }
   async provisionFinalize(a: Parameters<AccountDb['provisionFinalize']>[0]) {
     const p = this.prov.get(a.requestId);

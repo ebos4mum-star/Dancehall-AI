@@ -52,7 +52,8 @@ export interface AccountDb {
     secretMac: string;
     now: number;
   }): Promise<{ state: ProvisionState; userId?: string; identifier?: string }>;
-  provisionAttach(requestId: string, userId: string, identifier: string): Promise<void>;
+  /** Records the created user unless another attempt already did; returns the winning user either way. */
+  provisionAttach(requestId: string, userId: string, identifier: string): Promise<{ userId: string; identifier: string }>;
   provisionFinalize(a: {
     requestId: string;
     userId: string;
@@ -215,13 +216,21 @@ export function createAccountCore(deps: CoreDeps) {
     }
     const identifier = `u${hex(16)}@accounts.dancehall.invalid`;
     let userId: string;
+    let winner: { userId: string; identifier: string };
     try {
       userId = await auth.createUser({ identifier, secret });
-      await db.provisionAttach(requestId, userId, identifier);
     } catch {
       return reply(503, { ok: false, error: 'unavailable', retry: true });
     }
-    return finishProvision(requestId, userId, identifier, digest, q1, q2, salt, proof, true);
+    try {
+      winner = await db.provisionAttach(requestId, userId, identifier);
+    } catch {
+      await auth.deleteUser(userId).catch(() => undefined);
+      return reply(503, { ok: false, error: 'unavailable', retry: true });
+    }
+    // Two simultaneous attempts with one request id both created a user: keep exactly one (they hold the same device secret, so either works).
+    if (winner.userId !== userId) await auth.deleteUser(userId).catch(() => undefined);
+    return finishProvision(requestId, winner.userId, winner.identifier, digest, q1, q2, salt, proof, true);
   }
 
   async function finishProvision(

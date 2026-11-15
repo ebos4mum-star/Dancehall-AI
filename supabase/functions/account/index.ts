@@ -1,0 +1,97 @@
+// Edge Function `account`: email-free cloud accounts and lost-phone recovery. NOT DEPLOYED by this change: it ships as reviewed code only.
+//
+// Routes (POST, JSON):  provision · recover/start · recover/verify · recover/complete · recover/cancel · rotate · status · maintenance/reap
+// Secrets (set with `supabase secrets set`, never in the app or the repo):
+//   ACCOUNT_PEPPER       base64, >= 32 random bytes. Keys the HMACs stored in the database. Losing it makes every stored recovery verifier unusable.
+//   MAINTENANCE_KEY      random string that authorises the scheduled `maintenance/reap` call.
+//   ACCOUNT_COOLING_OFF_HOURS  optional, default 24.
+// SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by the platform to the function and never reach a client.
+//
+// This function never receives a PIN, a Recovery Key or a security answer, and never logs request bodies.
+import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
+import { createAccountCore, type AuthAdmin, type Ctx } from '../_shared/generated/account-core.ts';
+import { createRpcAccountDb } from '../_shared/generated/account-rpc-db.ts';
+
+declare const Deno: { env: { get(k: string): string | undefined }; serve(h: (req: Request) => Response | Promise<Response>): void };
+
+const env = (k: string): string => {
+  const v = Deno.env.get(k);
+  if (!v) throw new Error(`missing configuration: ${k}`);
+  return v;
+};
+const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+const hex = (b: ArrayBuffer): string => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
+
+const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false, autoRefreshToken: false } });
+const pepper = b64(env('ACCOUNT_PEPPER'));
+
+const authAdmin: AuthAdmin = {
+  async createUser({ identifier, secret }) {
+    // The device secret is a 256-bit random value held in the phone's secure storage. It is the account's "password" to GoTrue only; people never see or type it.
+    const { data, error } = await admin.auth.admin.createUser({ email: identifier, password: secret, email_confirm: true });
+    if (error || !data.user) throw new Error('create_failed');
+    return data.user.id;
+  },
+  async deleteUser(userId) {
+    const { error } = await admin.auth.admin.deleteUser(userId);
+    if (error) throw new Error('delete_failed');
+  },
+  async setSecret(userId, secret) {
+    const { error } = await admin.auth.admin.updateUserById(userId, { password: secret });
+    if (error) throw new Error('update_failed');
+  },
+};
+
+const db = createRpcAccountDb(async (fn, args) => {
+  const { data, error } = await admin.rpc(fn, { p: args });
+  if (error) throw new Error('db_failed');
+  return data;
+});
+
+const hoursEnv = Number(Deno.env.get('ACCOUNT_COOLING_OFF_HOURS') ?? '24');
+const core = createAccountCore({
+  db,
+  auth: authAdmin,
+  random: (n) => crypto.getRandomValues(new Uint8Array(n)),
+  now: () => Date.now(),
+  pepper,
+  policy: { coolingOffMs: (Number.isFinite(hoursEnv) && hoursEnv >= 0 ? hoursEnv : 24) * 3600_000 },
+});
+
+const NEEDS_USER = new Set(['recover/cancel', 'rotate', 'status']);
+const json = (status: number, body: unknown): Response =>
+  new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
+
+async function ipBucket(req: Request): Promise<string> {
+  const raw = (req.headers.get('x-forwarded-for') ?? req.headers.get('cf-connecting-ip') ?? 'unknown').split(',')[0]!.trim();
+  const key = await crypto.subtle.importKey('raw', pepper, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return hex(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`ip:${raw}`))).slice(0, 32);
+}
+
+Deno.serve(async (req) => {
+  if (req.method !== 'POST') return json(405, { ok: false, error: 'method_not_allowed' });
+  const op = new URL(req.url).pathname.replace(/^.*\/account\/?/, '').replace(/\/$/, '');
+  try {
+    if (op === 'maintenance/reap') {
+      if (req.headers.get('x-maintenance-key') !== env('MAINTENANCE_KEY')) return json(401, { ok: false, error: 'unauthenticated' });
+      const reaped = await core.reap();
+      const pruned = await admin.rpc('acct_prune', { p: { now: Date.now() } });
+      return json(200, { ok: true, reaped, pruned: pruned.data });
+    }
+    const text = await req.text();
+    if (text.length > 8192) return json(413, { ok: false, error: 'too_large' });
+    const input = text ? (JSON.parse(text) as Record<string, unknown>) : {};
+    const ctx: Ctx = { ipBucket: await ipBucket(req) };
+    if (NEEDS_USER.has(op)) {
+      const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
+      const { data } = token ? await admin.auth.getUser(token) : { data: { user: null } };
+      if (!data.user) return json(401, { ok: false, error: 'unauthenticated' });
+      ctx.userId = data.user.id;
+    }
+    const r = await core.handle(op, input, ctx);
+    return json(r.status, r.body);
+  } catch {
+    // No detail: errors here may sit near secrets. The platform's own logs record that the invocation failed.
+    return json(500, { ok: false, error: 'internal' });
+  }
+});
