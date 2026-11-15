@@ -48,6 +48,8 @@ export interface CoachContext {
   };
   comeback?: { daysAway: number; missedPlanned: number } | null;
   guideKcal?: number;
+  /** Set only when the calorie guide rests on a weight older than 60 days: the coach must call it an older weight, never a current one. */
+  guideWeightDaysOld?: number;
 }
 
 const round50 = (n: number) => Math.round(n / 50) * 50;
@@ -67,6 +69,7 @@ export function buildCoachContext(args: {
   wellness?: CoachContext['wellness'];
   comeback?: CoachContext['comeback'];
   guideKcal?: number;
+  guideWeightDaysOld?: number;
 }): CoachContext {
   let localHour = args.now.getUTCHours();
   let weekday = args.now.toLocaleDateString('en', { weekday: 'long', timeZone: 'UTC' });
@@ -118,6 +121,10 @@ export function buildCoachContext(args: {
     wellness: args.wellness,
     comeback: args.comeback ?? null,
     guideKcal: hidden || args.guideKcal === undefined ? undefined : round50(args.guideKcal),
+    guideWeightDaysOld:
+      hidden || args.guideKcal === undefined || args.guideWeightDaysOld === undefined
+        ? undefined
+        : args.guideWeightDaysOld,
   };
 }
 

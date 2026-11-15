@@ -50,6 +50,7 @@ export function useFoodData(): {
               readinessOutcome: data.readiness?.outcome ?? null,
               priv: data.priv,
               latestWeightKg: latest.weightKg,
+              latestWeightAt: latest.measuredAt,
               goals: data.goals ?? [],
               now: new Date(),
             }),

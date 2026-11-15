@@ -81,6 +81,7 @@ export function useWellness(): WellnessData {
       readinessOutcome: data?.readiness?.outcome ?? null,
       priv,
       latestWeightKg: latest?.weightKg ?? null,
+      latestWeightAt: latest?.measuredAt ?? null,
       goals: data?.goals ?? [],
       now: new Date(),
     });

@@ -264,3 +264,22 @@ describe('existing accounts keep every stored preference', () => {
     expect((await new MockStore(kv, NOW).getWellnessPrefs!()).goalIntent).toBe('fitness');
   });
 });
+
+describe('older weights', () => {
+  it('the device coach is told when the guide rests on an old weight, and the weight is never replaced', async () => {
+    const s = await setup(); // the weight was recorded 14 days before NOW
+    await s.setWellnessPrefs!({ goalIntent: 'maintain', goalChosen: true });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ctx = async () => (s as any).coachContext(await (s as any).authed(), true);
+    expect((await ctx()).guideWeightDaysOld).toBeUndefined();
+    const later = new MockStore(
+      (s as unknown as { kv: KeyValue }).kv,
+      () => new Date('2026-09-15T12:00:00Z'),
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const c = await (later as any).coachContext(await (later as any).authed(), true);
+    expect(c.guideWeightDaysOld).toBe(106);
+    expect(c.guideKcal).toBeDefined();
+    expect((await later.listWeights()).map((w) => w.weightKg)).toEqual([70]);
+  });
+});

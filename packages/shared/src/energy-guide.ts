@@ -6,6 +6,8 @@ export interface EnergyGuide {
   maintenanceKcal: number;
   /** The person's own estimated resting energy: the guide is never lower than this. */
   floorKcal: number;
+  /** Days old when the weight behind the guide is older than 60 days; otherwise undefined. */
+  staleWeightDays?: number;
 }
 
 /**
@@ -20,5 +22,6 @@ export function energyGuideFromTargets(t: NutritionTargets): EnergyGuide | null 
     guideKcal: t.kcal.guide ?? t.kcal.maintenance,
     maintenanceKcal: t.kcal.maintenance,
     floorKcal: t.kcal.floor,
+    staleWeightDays: t.weightStale && t.weightAgeDays !== null ? t.weightAgeDays : undefined,
   };
 }

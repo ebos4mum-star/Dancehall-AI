@@ -28,6 +28,10 @@ export interface NutritionTargets {
   waterMl: number;
   /** Plain-language explanation of how each number was reached, or why there is none. */
   reasons: string[];
+  /** How many days old the weight behind the estimate is (null when unknown or not used). The weight is never replaced or invented: it is only described honestly. */
+  weightAgeDays: number | null;
+  /** True when that weight is older than `STALE_WEIGHT_DAYS`. The estimate then says so and suggests updating it. */
+  weightStale: boolean;
   /** Inputs that are needed for an estimate and are not available. The engine never invents them; the app tells the person what to add. */
   missing: MissingInput[];
   /** Always true: nothing here is professionally reviewed. */
@@ -36,12 +40,17 @@ export interface NutritionTargets {
   seeProfessional: boolean;
 }
 
+/** A recorded weight older than this is described as older, never as a current measurement. */
+export const STALE_WEIGHT_DAYS = 60;
+
 export type MissingInput = 'weight' | 'height' | 'age' | 'sex' | 'activity' | 'safety';
 
 export interface TargetInput {
   intent: GoalIntent;
   tracking: TrackingStyle;
   weightKg: number | null;
+  /** Age in days of the recorded weight, when known. Used only to describe the estimate honestly. */
+  weightAgeDays?: number | null;
   heightCm: number | null;
   ageYears: number | null;
   sex: Sex | null;
@@ -84,6 +93,8 @@ export function nutritionTargets(i: TargetInput): NutritionTargets {
     reasons,
     seeProfessional,
     missing,
+    weightAgeDays: null,
+    weightStale: false,
   });
 
   if (i.pregnantOrPostpartum)
@@ -248,6 +259,15 @@ export function nutritionTargets(i: TargetInput): NutritionTargets {
       `The daily surplus is capped at ${Math.round(PROVISIONAL_LIMITS.maxSurplusFraction * 100)}% of your estimated maintenance.`,
     );
   if (bmi(weightKg, heightCm) < 18.5 && i.intent === 'lose') seeProfessional = true;
+  const age =
+    typeof i.weightAgeDays === 'number' && i.weightAgeDays >= 0
+      ? Math.floor(i.weightAgeDays)
+      : null;
+  const stale = age !== null && age > STALE_WEIGHT_DAYS;
+  if (stale)
+    reasons.push(
+      `This estimate uses the weight you recorded about ${age} days ago. It is not a current measurement, so it may be off if your weight has changed. Update your weight whenever you like to refresh it.`,
+    );
   reasons.push(
     `Method: Mifflin-St Jeor resting energy (${g.floorKcal} kcal) times an activity factor gives about ${g.maintenanceKcal} kcal to maintain. This is an estimate, not a target you must hit.`,
     'Your usual activity level already includes your regular exercise, so we do not add workout calories on top of this estimate.',
@@ -265,5 +285,7 @@ export function nutritionTargets(i: TargetInput): NutritionTargets {
     reasons,
     seeProfessional,
     missing,
+    weightAgeDays: age,
+    weightStale: stale,
   };
 }

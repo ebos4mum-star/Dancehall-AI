@@ -987,6 +987,8 @@ export const en = {
   'wl.goalKcal': 'Estimated for your goal',
   'wl.kcalWithheld': 'Not shown for your details',
   'wl.missingInputs': 'To see an estimate we still need your {list}. We never guess these.',
+  'wl.weightOld':
+    'Based on a weight you recorded about {days} days ago, not a current measurement. Update your weight to refresh it.',
   'wl.missing.weight': 'weight',
   'wl.missing.height': 'height',
   'wl.missing.age': 'age',

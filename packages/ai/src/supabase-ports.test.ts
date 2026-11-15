@@ -7,7 +7,13 @@ import {
   SupabaseUserAiPause,
 } from './supabase-ports';
 import { SupabaseServerRepo } from './server/supabase-repo';
-import { DEFAULT_PREFS, calorieNeedsFromRecords, type GoalIntent } from '@dancehall/shared';
+import {
+  DEFAULT_PREFS,
+  buildCoachContext,
+  calorieNeedsFromRecords,
+  type GoalIntent,
+} from '@dancehall/shared';
+import { buildCoachPrompt } from './prompts';
 
 type Call = { op: string; args: unknown[] };
 /** Recording fake of the supabase-js query builder: every chained call is logged and the final await yields `result`. */
@@ -350,6 +356,34 @@ describe('server coach wellness context (privacy, validity, isolation)', () => {
         ).toBeUndefined();
       expect(await guideFor(calorieTables({ weight_entries: { data: [] } }))).toBeUndefined();
       expect(await guideFor(calorieTables({ profile_private: { data: null } }))).toBeUndefined();
+    });
+    it('an old recorded weight is flagged to the coach as old (never as current); a recent one is not; hidden numbers send nothing', async () => {
+      const ctxOf = async (t: Tables) =>
+        new SupabaseServerRepo(tables(t).db).coachContext('user-A', true, NOW);
+      const old = await ctxOf(calorieTables(prefsOf({ goalIntent: 'gain' })));
+      expect(old.guideKcal).toBeDefined();
+      expect(old.guideWeightDaysOld).toBeGreaterThan(400); // the fixture weight is from 2025-01-01
+      const recent = await ctxOf(
+        calorieTables({
+          ...prefsOf({ goalIntent: 'gain' }),
+          weight_entries: { data: [{ weight_kg: 70, measured_at: '2026-05-30T08:00:00Z' }] },
+        }),
+      );
+      expect(recent.guideKcal).toBeDefined();
+      expect(recent.guideWeightDaysOld).toBeUndefined();
+      const hidden = await ctxOf(
+        calorieTables(prefsOf({ goalIntent: 'gain', eatingConcern: true })),
+      );
+      expect(hidden.guideKcal).toBeUndefined();
+      expect(hidden.guideWeightDaysOld).toBeUndefined();
+    });
+    it('tells the model how to treat the estimate: provisional, and an older weight is never called current', () => {
+      const text = buildCoachPrompt(
+        buildCoachContext({ personalized: false, unitSystem: 'metric', now: NOW }),
+        'hi',
+      );
+      expect(text).toMatch(/guideWeightDaysOld/);
+      expect(text).toMatch(/never call it the current weight/);
     });
     it('fails closed: a failed read gives no guide and does not break the rest of the context', async () => {
       const t = calorieTables({ profile_private: { data: null, error: { message: 'down' } } });

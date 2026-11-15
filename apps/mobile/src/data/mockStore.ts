@@ -1233,19 +1233,22 @@ export class MockStore implements DataStore {
     const todaysLogs = s.foodLogs.filter((l) => localDateKey(l.loggedAt, tz) === today);
     const latest = [...s.weights].sort((a, b) => b.measuredAt.localeCompare(a.measuredAt))[0];
     // The same engine and safety rules as every other screen (calorieNeeds); numbers are withheld exactly when they are withheld elsewhere.
-    const guide: number | undefined =
+    const guideTargets =
       s.private && latest
-        ? (energyGuideFromTargets(
+        ? energyGuideFromTargets(
             calorieNeedsFromRecords({
               prefs: parsePrefs(s.wellnessPrefs),
               readinessOutcome: s.readiness[s.readiness.length - 1]?.outcome ?? null,
               priv: s.private,
               latestWeightKg: latest.weightKg,
+              latestWeightAt: latest.measuredAt,
               goals: s.goals,
               now: this.now(),
             }),
-          )?.guideKcal ?? undefined)
-        : undefined;
+          )
+        : null;
+    const guide: number | undefined = guideTargets?.guideKcal;
+    const guideWeightDaysOld: number | undefined = guideTargets?.staleWeightDays;
     const lastItems = [...todaysLogs]
       .sort((a, b) => b.loggedAt.localeCompare(a.loggedAt))[0]
       ?.items.map((i) => ({ name: i.name, foodId: i.foodId, grams: i.grams, kcal: i.kcal }));
@@ -1302,6 +1305,7 @@ export class MockStore implements DataStore {
       wellness: this.coachWellness(s, today),
       comeback: detectComeback(s.sessions, { now: this.now(), timeZone: tz }),
       guideKcal: guide,
+      guideWeightDaysOld,
     });
   }
   /** Only what the person recorded. Returns undefined when nothing was logged and no preferences were set, so the coach says nothing about it. */

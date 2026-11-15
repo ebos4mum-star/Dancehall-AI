@@ -335,7 +335,7 @@ export function FocusCard({ part = 'all' }: { part?: 'all' | 'goals' | 'rest' })
 }
 
 /** Estimates with their reasons. When there is no number, it says why and, where it matters, points to a professional. */
-export function TargetsCard() {
+export function TargetsCard({ compact = false }: { compact?: boolean }) {
   const w = useWellness();
   const { colors } = useTheme();
   const g = w.targets;
@@ -373,7 +373,7 @@ export function TargetsCard() {
                   : t('wl.kcalValue', { kcal: g.kcal.guide })
               }
             />
-            {g.proteinG ? (
+            {g.proteinG && !compact ? (
               <Row
                 icon="barbell"
                 label={t('wl.protein')}
@@ -384,8 +384,17 @@ export function TargetsCard() {
         ) : (
           <AppText variant="label">{t('wl.noTargets')}</AppText>
         )}
-        <Row icon="water" label={t('wl.water')} value={t('wl.waterValue', { ml: w.waterGoalMl })} />
+        {compact ? null : (
+          <Row
+            icon="water"
+            label={t('wl.water')}
+            value={t('wl.waterValue', { ml: w.waterGoalMl })}
+          />
+        )}
       </View>
+      {g.kcal && g.weightStale && g.weightAgeDays !== null ? (
+        <Notice>{t('wl.weightOld', { days: g.weightAgeDays })}</Notice>
+      ) : null}
       {g.missing.length > 0 ? (
         <Notice>
           {t('wl.missingInputs', {

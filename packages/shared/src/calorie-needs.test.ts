@@ -12,6 +12,8 @@ import {
   STYLE_PREFS,
   GOAL_INTENTS,
   PROVISIONAL_LIMITS,
+  STALE_WEIGHT_DAYS,
+  buildCoachContext,
   SELECTABLE_GOAL_INTENTS,
   calorieNeeds,
   calorieNeedsFromRecords,
@@ -485,5 +487,76 @@ describe('stored preferences stay compatible', () => {
     expect(worst.cuisines.length).toBe(CUISINE_PREFS.length);
     const bytes = new TextEncoder().encode(JSON.stringify(worst)).length;
     expect(bytes).toBeLessThan(1500);
+  });
+});
+
+describe('older weight records are described honestly, never presented as current', () => {
+  const priv = {
+    birthDate: '1990-01-01',
+    heightCm: 170,
+    sex: 'female' as const,
+    activityLevel: 'moderate' as const,
+  };
+  const now = new Date('2026-06-15T12:00:00Z');
+  const at = (days: number) => new Date(now.getTime() - days * 86_400_000).toISOString();
+  const from = (days: number | null, over: Record<string, unknown> = {}) =>
+    calorieNeedsFromRecords({
+      prefs: prefs({ goalIntent: 'gain', goalChosen: true }),
+      readinessOutcome: 'clear',
+      priv,
+      latestWeightKg: 70,
+      latestWeightAt: days === null ? null : at(days),
+      goals: [],
+      now,
+      ...over,
+    });
+
+  it('a recent weight carries no notice; an old one says how old it is and that it is not a current measurement', () => {
+    const fresh = from(10);
+    expect(fresh.weightAgeDays).toBe(10);
+    expect(fresh.weightStale).toBe(false);
+    expect(fresh.reasons.join(' ')).not.toMatch(/not a current measurement/);
+    const old = from(STALE_WEIGHT_DAYS + 30);
+    expect(old.weightAgeDays).toBe(STALE_WEIGHT_DAYS + 30);
+    expect(old.weightStale).toBe(true);
+    expect(old.reasons.join(' ')).toMatch(/weight you recorded about 90 days ago/);
+    expect(old.reasons.join(' ')).toMatch(/not a current measurement/);
+    // The boundary: exactly at the limit is still recent.
+    expect(from(STALE_WEIGHT_DAYS).weightStale).toBe(false);
+    expect(from(STALE_WEIGHT_DAYS + 1).weightStale).toBe(true);
+  });
+  it('the weight itself is never replaced or invented: the numbers are identical, only the wording differs', () => {
+    expect(from(400).kcal).toEqual(from(1).kcal);
+    expect(from(null).weightAgeDays).toBeNull();
+    expect(from(null).weightStale).toBe(false);
+    // No weight at all still asks for one; it is not guessed from an old record.
+    expect(from(400, { latestWeightKg: null, latestWeightAt: null }).kcal).toBeNull();
+  });
+  it('the compact guide carries the age only when it is stale, and nothing is flagged when numbers are withheld', () => {
+    expect(energyGuideFromTargets(from(5))!.staleWeightDays).toBeUndefined();
+    expect(energyGuideFromTargets(from(200))!.staleWeightDays).toBe(200);
+    expect(
+      energyGuideFromTargets(
+        from(200, { prefs: prefs({ goalIntent: 'gain', eatingConcern: true }) }),
+      ),
+    ).toBeNull();
+  });
+  it('the coach is told when the guide rests on an older weight, and only then, and never when numbers are hidden', () => {
+    const base = { personalized: true as const, unitSystem: 'metric' as const, now };
+    expect(
+      buildCoachContext({ ...base, guideKcal: 2200, guideWeightDaysOld: 200 }).guideWeightDaysOld,
+    ).toBe(200);
+    expect(buildCoachContext({ ...base, guideKcal: 2200 }).guideWeightDaysOld).toBeUndefined();
+    expect(
+      buildCoachContext({ ...base, guideWeightDaysOld: 200 }).guideWeightDaysOld,
+    ).toBeUndefined();
+    const hidden = buildCoachContext({
+      ...base,
+      guideKcal: 2200,
+      guideWeightDaysOld: 200,
+      wellness: { numbersHidden: true } as never,
+    });
+    expect(hidden.guideKcal).toBeUndefined();
+    expect(hidden.guideWeightDaysOld).toBeUndefined();
   });
 });

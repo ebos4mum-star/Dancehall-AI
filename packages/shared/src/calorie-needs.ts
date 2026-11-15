@@ -36,7 +36,7 @@ export interface CalorieNeedsInput {
   /** Facts the person gave. Any missing fact is reported in `missing`, never guessed. A single recorded weight is enough: repeated weigh-ins are not required. */
   body?: Pick<
     TargetInput,
-    'weightKg' | 'heightCm' | 'ageYears' | 'sex' | 'activity' | 'targetKg'
+    'weightKg' | 'weightAgeDays' | 'heightCm' | 'ageYears' | 'sex' | 'activity' | 'targetKg'
   > | null;
   activeGoal?: ActiveWeightGoal | null;
 }
@@ -65,6 +65,7 @@ export function calorieNeeds(input: CalorieNeedsInput): NutritionTargets {
     intent,
     tracking: prefs.tracking,
     weightKg: input.body?.weightKg ?? null,
+    weightAgeDays: input.body?.weightAgeDays ?? null,
     heightCm: input.body?.heightCm ?? null,
     ageYears: input.body?.ageYears ?? null,
     sex: input.body?.sex ?? null,
@@ -124,6 +125,8 @@ export function calorieNeedsFromRecords(a: {
   readinessOutcome: 'clear' | 'low_impact_and_check_with_professional' | null | undefined;
   priv: { birthDate: string; heightCm: number; sex: Sex; activityLevel: ActivityLevel } | null;
   latestWeightKg: number | null;
+  /** When the latest weight was recorded (ISO). Lets the estimate say how old it is; the weight itself is never replaced or invented. */
+  latestWeightAt?: string | null;
   goals: readonly StoredWeightGoal[];
   now: Date;
 }): NutritionTargets {
@@ -132,6 +135,9 @@ export function calorieNeedsFromRecords(a: {
     readiness: readinessState(a.readinessOutcome),
     body: {
       weightKg: a.latestWeightKg,
+      weightAgeDays: a.latestWeightAt
+        ? Math.max(0, Math.floor((a.now.getTime() - Date.parse(a.latestWeightAt)) / 86_400_000))
+        : null,
       heightCm: a.priv?.heightCm ?? null,
       ageYears: a.priv ? ageYearsOn(a.priv.birthDate, a.now) : null,
       sex: a.priv?.sex ?? null,

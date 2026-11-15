@@ -130,7 +130,7 @@ export class SupabaseServerRepo implements ServerRepo {
     userId: string,
     prefs: WellnessPrefs | null,
     now: Date,
-  ): Promise<number | undefined> {
+  ): Promise<{ kcal: number; weightDaysOld?: number } | undefined> {
     try {
       const first = (v: unknown): Row | null =>
         (Array.isArray(v) ? (v[0] ?? null) : v) as Row | null;
@@ -176,6 +176,7 @@ export class SupabaseServerRepo implements ServerRepo {
             } as never)
           : null,
         latestWeightKg: w ? Number(w.weight_kg) : null,
+        latestWeightAt: w ? String(w.measured_at) : null,
         goals: ((ok(goals, 'goals') ?? []) as Row[]).map((g) => ({
           type: g.type,
           status: String(g.status),
@@ -185,7 +186,8 @@ export class SupabaseServerRepo implements ServerRepo {
         })) as never,
         now,
       });
-      return energyGuideFromTargets(targets)?.guideKcal;
+      const g = energyGuideFromTargets(targets);
+      return g ? { kcal: g.guideKcal, weightDaysOld: g.staleWeightDays } : undefined;
     } catch {
       return undefined;
     }
@@ -212,10 +214,11 @@ export class SupabaseServerRepo implements ServerRepo {
       .sort((a, b) => a.at.localeCompare(b.at));
     const change = w.length >= 2 ? w[w.length - 1]!.kg - w[0]!.kg : null;
     const wl = await this.wellness(userId, today);
-    const guideKcal = wl.failed ? undefined : await this.calorieGuide(userId, wl.prefs, now);
+    const guide = wl.failed ? undefined : await this.calorieGuide(userId, wl.prefs, now);
     return buildCoachContext({
       personalized: true,
-      guideKcal,
+      guideKcal: guide?.kcal,
+      guideWeightDaysOld: guide?.weightDaysOld,
       unitSystem: r.profile.unit_system === 'imperial' ? 'imperial' : unitSystem,
       now,
       timeZone: tz,
