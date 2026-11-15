@@ -622,6 +622,14 @@ export const en = {
   'cam.consentBody':
     'Photo analysis is optional and separate from logging food by hand. You can turn it off any time in Privacy and settings.',
   'cam.allow': 'Allow photo analysis',
+  'plate.title': 'Plate, protein and fibre',
+  'plate.protein': 'Protein today',
+  'plate.fibre': 'Fibre today',
+  'plate.coverage':
+    'Based on {n} of {total} logged foods we could classify. Foods you entered by hand or scanned are not counted here.',
+  'plate.about': 'About this guidance',
+  'plate.aboutBody':
+    'A general plate picture and a general fibre guide, drawn from common public-health advice. Provisional: not reviewed by a dietitian, not medical advice, and needs differ from person to person. If you have a health condition or food allergy, ask a doctor or registered dietitian.',
   'food.scan': 'Scan a barcode',
   'cam.scanInstead': 'Scan a barcode instead',
   'ban.barcode.title': 'Scan a barcode',

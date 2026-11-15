@@ -29,6 +29,7 @@ export * from './nutrition-plan';
 export * from './calorie-needs';
 export * from './barcode';
 export * from './barcode-samples';
+export * from './plate-guidance';
 export * from './strength';
 export * from './celebrations';
 export * from './evidence';

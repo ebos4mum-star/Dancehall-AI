@@ -14,6 +14,7 @@ import { MacroBars } from '@/food/ui';
 import { HungerCard } from '@/wellness/trackers';
 import { useNumbersHidden } from '@/wellness/hooks';
 import { HydrationCard, TargetsCard } from '@/wellness/ui';
+import { PlateCard } from '@/food/PlateCard';
 import { t, type StringKey } from '@/i18n';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
@@ -279,6 +280,7 @@ function FoodDashboardAccount() {
           </Reveal>
         ) : null,
       )}
+      <PlateCard />
       <TargetsCard />
     </Screen>
   );
