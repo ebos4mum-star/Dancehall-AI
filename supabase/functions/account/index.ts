@@ -12,7 +12,10 @@ import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { createAccountCore, type AuthAdmin, type Ctx } from '../_shared/generated/account-core.ts';
 import { createRpcAccountDb } from '../_shared/generated/account-rpc-db.ts';
 
-declare const Deno: { env: { get(k: string): string | undefined }; serve(h: (req: Request) => Response | Promise<Response>): void };
+declare const Deno: {
+  env: { get(k: string): string | undefined };
+  serve(h: (req: Request) => Response | Promise<Response>): void;
+};
 
 const env = (k: string): string => {
   const v = Deno.env.get(k);
@@ -20,15 +23,22 @@ const env = (k: string): string => {
   return v;
 };
 const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
-const hex = (b: ArrayBuffer): string => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
+const hex = (b: ArrayBuffer): string =>
+  [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
 
-const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false, autoRefreshToken: false } });
+const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
 const pepper = b64(env('ACCOUNT_PEPPER'));
 
 const authAdmin: AuthAdmin = {
   async createUser({ identifier, secret }) {
     // The device secret is a 256-bit random value held in the phone's secure storage. It is the account's "password" to GoTrue only; people never see or type it.
-    const { data, error } = await admin.auth.admin.createUser({ email: identifier, password: secret, email_confirm: true });
+    const { data, error } = await admin.auth.admin.createUser({
+      email: identifier,
+      password: secret,
+      email_confirm: true,
+    });
     if (error || !data.user) throw new Error('create_failed');
     return data.user.id;
   },
@@ -61,12 +71,31 @@ const core = createAccountCore({
 
 const NEEDS_USER = new Set(['recover/cancel', 'rotate', 'status']);
 const json = (status: number, body: unknown): Response =>
-  new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+  });
 
 async function ipBucket(req: Request): Promise<string> {
-  const raw = (req.headers.get('x-forwarded-for') ?? req.headers.get('cf-connecting-ip') ?? 'unknown').split(',')[0]!.trim();
-  const key = await crypto.subtle.importKey('raw', pepper, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  return hex(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`ip:${raw}`))).slice(0, 32);
+  // Prefer headers the platform sets itself; if only X-Forwarded-For is present take its LAST entry (the one the nearest proxy added), never the first (the client can write that).
+  // This limit slows abuse from one network; the per-account lockouts do not depend on it. Which header the hosted platform sets is to be confirmed at activation.
+  const xff = (req.headers.get('x-forwarded-for') ?? '')
+    .split(',')
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const raw =
+    req.headers.get('cf-connecting-ip') ?? req.headers.get('x-real-ip') ?? xff.at(-1) ?? 'unknown';
+  const key = await crypto.subtle.importKey(
+    'raw',
+    pepper,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  return hex(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`ip:${raw}`))).slice(
+    0,
+    32,
+  );
 }
 
 Deno.serve(async (req) => {
@@ -74,7 +103,8 @@ Deno.serve(async (req) => {
   const op = new URL(req.url).pathname.replace(/^.*\/account\/?/, '').replace(/\/$/, '');
   try {
     if (op === 'maintenance/reap') {
-      if (req.headers.get('x-maintenance-key') !== env('MAINTENANCE_KEY')) return json(401, { ok: false, error: 'unauthenticated' });
+      if (req.headers.get('x-maintenance-key') !== env('MAINTENANCE_KEY'))
+        return json(401, { ok: false, error: 'unauthenticated' });
       const reaped = await core.reap();
       const pruned = await admin.rpc('acct_prune', { p: { now: Date.now() } });
       return json(200, { ok: true, reaped, pruned: pruned.data });

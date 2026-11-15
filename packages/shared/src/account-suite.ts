@@ -165,6 +165,7 @@ export function defineAccountSuite(
       it('rejects malformed input before touching anything', async () => {
         const a = await newAccount();
         for (const bad of [
+          { ...a.body, deviceSecret: 'a'.repeat(73) },
           { ...a.body, deviceSecret: 'short' },
           { ...a.body, digest: 'zz' },
           { ...a.body, q1: 'q-first-pet', q2: 'q-first-pet' },

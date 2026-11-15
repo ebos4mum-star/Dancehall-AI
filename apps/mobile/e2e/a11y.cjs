@@ -110,7 +110,11 @@ const ROUTES = [
   await go('/');
   await createAccountViaPin(p, undefined, {
     // The Recovery Key screen exists only for a moment during setup, so it is audited here.
-    onKeyScreen: async () => report('Recovery Key screen', await audit()),
+    onKeyScreen: async () => {
+      const f = await audit();
+      console.log('audited Recovery Key screen:', f.length, 'findings');
+      report('Recovery Key screen', f);
+    },
   });
   await p.getByLabel('What should we call you?').fill('Sam');
   await p.getByLabel('Date of birth (YYYY-MM-DD)').fill('1990-05-05');

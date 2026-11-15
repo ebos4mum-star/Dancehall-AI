@@ -13,7 +13,6 @@ const {
   ANSWERS,
   enterPin,
   createAccountViaPin,
-  setUpRecoveryAndPin,
   readKey,
   unlockIfLocked,
   onboard,

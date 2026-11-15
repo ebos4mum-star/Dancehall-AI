@@ -27,6 +27,7 @@ async function setUpRecoveryAndPin(p, pin = PIN, hooks = {}) {
   await btn('Create my account').click();
   await p.getByText('Save your Recovery Key').first().waitFor({ state: 'visible', timeout: 20000 });
   const key = await readKey(p);
+  if (hooks.onKeyScreen) await hooks.onKeyScreen();
   await p
     .getByRole('switch', { name: 'I have saved my Recovery Key somewhere safe' })
     .last()

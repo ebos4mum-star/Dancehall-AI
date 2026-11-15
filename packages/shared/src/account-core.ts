@@ -150,7 +150,8 @@ const UNAUTHENTICATED: Reply = reply(401, { ok: false, error: 'unauthenticated' 
 
 const HEX64 = /^[0-9a-f]{64}$/;
 const HEX32 = /^[0-9a-f]{32}$/;
-const SECRET = /^[A-Za-z0-9_-]{43,128}$/;
+/** 256 bits as 43 URL-safe characters. At most 72: GoTrue hashes passwords with bcrypt, which silently ignores everything past 72 bytes. */
+const SECRET = /^[A-Za-z0-9_-]{43,72}$/;
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
 
 export function createAccountCore(deps: CoreDeps) {
