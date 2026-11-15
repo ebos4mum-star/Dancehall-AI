@@ -37,7 +37,7 @@ Consequences: removes one advisor warning; staff can no longer call it directly 
 
 **Household invite attempts (prepared as `20261211000100_household_join_limit.sql`, not applied).** Invite codes have about 40 bits of entropy, are hashed at rest, single use and expire after 48 hours. The migration adds a per-person limit: 5 incorrect codes in 15 minutes pause joining for that person (even a correct code) until the window passes; a correct join clears their count, and a typo or two is unaffected. Because an exception would roll back the record of a failed attempt, an incorrect or used code now **returns `null`** (the app maps it to "invalid invite") and only the limit raises (`too_many_attempts`). The function keeps its name, arguments, owner, empty `search_path` and grants, so the reviewed allowlist is unchanged; the new `household_join_attempts` table lets a person read only their own rows and nobody write directly. It is additive (one table, one in-place function replacement) and tested locally, in the replica path and in the mock store. Limit: an attacker with many accounts is bounded by sign-up limits rather than by this counter.
 
-## Exact hosted changes to authorize first
+## Exact hosted changes to authorize first (historical: these five migrations have since been applied; as of 2026-11-15 only `20261213000100_household_trigger_revoke.sql` is pending)
 
 Only the migrations listed as `pending` in `supabase/hosted-history.json` (files in `supabase/migrations/`), applied one at a time in file order:
 

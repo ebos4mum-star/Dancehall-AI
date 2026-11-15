@@ -22,7 +22,7 @@ node -e '
 const b = require("./'$HIST'").fingerprintAfterApplied;
 for (const [k, v] of Object.entries(b)) console.log(k, v);' | sort > /tmp/dh_expected.txt
 fp $R | grep -v '^$' > /tmp/dh_actual.txt
-diff -u /tmp/dh_expected.txt /tmp/dh_actual.txt && echo "replica matches the hosted fingerprint (8 applied migrations)"
+diff -u /tmp/dh_expected.txt /tmp/dh_actual.txt && echo "replica matches the hosted fingerprint ($(node -e 'console.log(require("./'$HIST'").applied.length)') applied migrations)"
 
 for f in $(node -e 'for (const f of require("./'$HIST'").pending) console.log(f)'); do echo "apply pending $f"; q -d $R -f "supabase/migrations/$f" >/dev/null; done
 helpers() { q -d "$1" -f supabase/tests/helpers.sql >/dev/null; }

@@ -310,7 +310,7 @@ Fasting leaderboards, fasting badges or streaks, OMAD or extended fasting, weigh
 - Pathway selection and most preferences: **stored in existing `wellness_prefs.data`** if they fit the 2 KB cap (see F.1).
 - Pathway feature switches: existing `feature_flags` (adding rows is a data change, needs approval, but no schema change).
 - Education content, evidence labels, review status, exclusions and rules: **versioned in code** (`packages/shared`), exactly like food and workout data. Review is gated in code and recorded in git history.
-- New celebration kinds: code only (the `celebrations.kind` column accepts text; to be confirmed against its check constraint before relying on this).
+- ~~New celebration kinds are code only.~~ **Corrected 2026-11-15:** `celebrations.achievement_id` has a regex check that allows only the kinds water, habits, movement, movement_minutes and movement_weeks, so a new celebration kind needs a migration. V1 reuses the existing kinds (movement already counts dance, walking and strength).
 - New foods: seed data through the existing generator and review flow, no schema change.
 - Pulse never needs a fasting or weight kind.
 
