@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   WORKOUT_BY_ID,
+  buildHomeWorkout,
+  requestFromPrefs,
   disableInternalFixtures,
   enableInternalFixtures,
   isSeatedSuitable,
@@ -105,5 +107,60 @@ describe('strength completion tracking', () => {
     await s.addWellness(input);
     await s.addWellness(input);
     expect(await s.listWellness(DAY)).toHaveLength(1);
+  });
+});
+
+describe('Use what you have: items are a preference, history is separate', () => {
+  it('changing the items at any time never touches what was already logged, and the next session follows the new items', async () => {
+    enableInternalFixtures();
+    const s = await setup();
+    await s.setWellnessPrefs!({ homeItems: ['chair'] });
+    const before = await s.getWellnessPrefs!();
+    expect(before.homeItems).toEqual(['chair']);
+    const first = buildHomeWorkout(requestFromPrefs(before));
+    if (!first.ok) throw new Error('should build');
+    // Complete the session the way the player does: the existing strength entry.
+    await s.addWellness({
+      kind: 'strength',
+      day: DAY,
+      amount: 15,
+      label: strengthEntryLabel(first.build.workout),
+      clientKey: 'st-test-home-1',
+    });
+    const logged = await s.listWellness('2026-06-01');
+    expect(logged.filter((e) => e.kind === 'strength')).toHaveLength(1);
+
+    for (const items of [['chair', 'wall'], [], ['towel']] as const) {
+      await s.setWellnessPrefs!({ homeItems: [...items] });
+      const now = await s.listWellness('2026-06-01');
+      expect(now.filter((e) => e.kind === 'strength')).toEqual(
+        logged.filter((e) => e.kind === 'strength'),
+      );
+      const next = buildHomeWorkout(requestFromPrefs(await s.getWellnessPrefs!()));
+      if (next.ok)
+        expect(
+          next.build.exercises.every((e) =>
+            e.household!.every((i) => ['chair', ...items].includes(i)),
+          ),
+        ).toBe(true);
+    }
+    // A second completed session adds to the history rather than replacing it.
+    await s.addWellness({
+      kind: 'strength',
+      day: DAY,
+      amount: 10,
+      label: 'bodyweight',
+      clientKey: 'st-test-home-2',
+    });
+    expect((await s.listWellness('2026-06-01')).filter((e) => e.kind === 'strength')).toHaveLength(
+      2,
+    );
+  });
+
+  it('uses the existing strength label, so nothing in the database or progress views changes', () => {
+    enableInternalFixtures();
+    const r = buildHomeWorkout({ items: ['water_bottles', 'chair'], level: 'intermediate' });
+    if (!r.ok) throw new Error('should build');
+    expect(strengthEntryLabel(r.build.workout)).toBe('bodyweight');
   });
 });

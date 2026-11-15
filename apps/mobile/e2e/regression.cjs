@@ -220,6 +220,7 @@ async function step(name, fn) {
       'Dancehall Foundations',
       'Beginner Strength: Full Body',
       'Chair Dance Groove',
+      'Use what you have',
     ])
       assert.equal(
         await p.getByText(absent, { exact: true }).locator('visible=true').count(),

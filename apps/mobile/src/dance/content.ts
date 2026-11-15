@@ -2,9 +2,13 @@ import {
   STRENGTH_EXERCISES,
   WORKOUT_BY_ID,
   activeStrengthWorkouts,
+  buildHomeWorkout,
+  decodeHomeId,
+  isHomeId,
   isSeatedSuitable,
   strengthBlocks,
   type DanceStyle,
+  type HomeBuild,
   type Intensity,
   type Level,
   type StrengthExerciseDef,
@@ -40,12 +44,46 @@ export interface SessionContent {
   fixture: boolean;
   /** Original draft content that no qualified person has reviewed (development and review builds only). */
   draft: boolean;
+  /** A "Use what you have" session: its items, safety checks and what never to use. */
+  home?: HomeBuild;
   dance?: WorkoutDef;
   strength?: StrengthWorkoutDef;
   exercises?: StrengthExerciseDef[];
 }
 
+/** A "Use what you have" session is rebuilt from its id alone (the id carries the whole request), so resume and logging need nothing else. */
+function resolveHome(id: string): SessionContent | undefined {
+  const req = decodeHomeId(id);
+  if (!req) return undefined;
+  const res = buildHomeWorkout(req);
+  if (!res.ok) return undefined;
+  const { workout, exercises } = res.build;
+  return {
+    kind: 'strength',
+    id: workout.id,
+    title: workout.title,
+    summary: `${exercises.length} exercises, ${workout.blocks.reduce((n, b) => n + b.sets, 0)} sets, with rests between.`,
+    minutes: workout.minutes,
+    level: workout.level,
+    style: null,
+    intensity: null,
+    impact: null,
+    equipment: workout.equipment,
+    safety: workout.safety,
+    blocks: strengthBlocks(workout, exercises),
+    instructorId: null,
+    seatedSuitable: false,
+    seatedOnly: false,
+    fixture: false,
+    draft: workout.draft !== undefined,
+    strength: workout,
+    exercises,
+    home: res.build,
+  };
+}
+
 export function resolveContent(id: string): SessionContent | undefined {
+  if (isHomeId(id)) return resolveHome(id);
   const w = WORKOUT_BY_ID.get(id);
   if (w)
     return {

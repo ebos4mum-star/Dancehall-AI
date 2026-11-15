@@ -1,5 +1,7 @@
 import { CURATED_FOODS } from './food-data';
 import { CUISINES, regionTagsFor } from './cuisines';
+import { homeWorkoutsAvailable } from './home-equipment';
+import { HOME_ITEMS } from './home-items';
 import { nutritionTargets, type NutritionTargets, type TargetInput } from './nutrition-plan';
 import {
   DANCE_STYLES,
@@ -667,8 +669,19 @@ function buildPathway(
           prefs.equipment.includes('none') || prefs.equipment.length === 0
             ? 'Log your strength sessions (bodyweight is fine)'
             : `Log your strength sessions (${list(prefs.equipment.filter((e) => e !== 'none'))})`,
-        why: 'Guided strength workouts are not available yet, so you log self-directed sessions.',
+        why: homeWorkoutsAvailable()
+          ? 'You can also log self-directed sessions by hand.'
+          : 'Guided strength workouts are not available yet, so you log self-directed sessions.',
       });
+      if (homeWorkoutsAvailable())
+        actions.push({
+          id: 'strength.home',
+          text:
+            prefs.homeItems.length > 0
+              ? `Try a short strength session with what you have (${list(prefs.homeItems.map((i) => HOME_ITEMS[i].label.toLowerCase()))})`
+              : 'Try a short strength session with no equipment, or tell us what you have at home',
+          why: 'It is built only from exercises that fit the items you chose, your level and any seated or balance needs. You can change your items at any time and your history stays.',
+        });
       actions.push({
         id: 'strength.progress',
         text: 'Make it a little harder only when the current level feels comfortable and your body feels fine',
@@ -679,7 +692,7 @@ function buildPathway(
         text: 'Keep easy or rest days between harder days',
         why: 'Recovery is part of getting stronger.',
       });
-      notes.push('Guided strength routines are not available yet.');
+      if (!homeWorkoutsAvailable()) notes.push('Guided strength routines are not available yet.');
       if (caution)
         notes.push('Check with a health professional before starting new strength training.');
       break;

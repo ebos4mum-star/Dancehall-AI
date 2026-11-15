@@ -3,6 +3,9 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   WORKOUTS,
+  buildHomeWorkout,
+  encodeHomeId,
+  makeRequest,
   disableInternalFixtures,
   enableInternalFixtures,
   initRunnerFromSegments,
@@ -89,4 +92,37 @@ describe('screens resolve session content once per id', () => {
       expect(src).toMatch(/useMemo\(\(\) => resolveContent\(String\(id\)\), \[id\]\)/);
       expect(src.match(/resolveContent\(/g)).toHaveLength(1);
     });
+});
+
+describe('Use what you have in the session resolver', () => {
+  const id = encodeHomeId(
+    makeRequest({ items: ['chair', 'wall'], level: 'beginner', minutes: 15 }),
+  );
+  it('is not found in a normal build, even for a well-formed id', () => {
+    expect(resolveContent(id)).toBeUndefined();
+  });
+  it('with the preview switch on, resolves through the same shape as other strength sessions, with its checks and draft label', () => {
+    enableInternalFixtures();
+    const c = resolveContent(id)!;
+    expect(c).toMatchObject({ kind: 'strength', id, draft: true, fixture: false, style: null });
+    expect(c.home?.itemsUsed.length).toBeGreaterThan(0);
+    expect(c.home?.checks.length).toBeGreaterThan(0);
+    expect(c.blocks.some((b) => b.manual)).toBe(true);
+    expect(c.blocks.some((b) => b.kind === 'rest')).toBe(true);
+    expect(c.exercises?.length).toBe(c.strength?.blocks.length);
+    // The same id always gives the same session, which is what resume and the player rely on.
+    const again = resolveContent(id)!;
+    expect(again.blocks.map((b) => b.title)).toEqual(c.blocks.map((b) => b.title));
+  });
+  it('rejects ids that are not canonical or that nothing can be built for', () => {
+    enableInternalFixtures();
+    expect(resolveContent('home~bad')).toBeUndefined();
+    expect(resolveContent(id.replace('beginner', 'expert'))).toBeUndefined();
+    const nothing = buildHomeWorkout({ items: ['towel'], seated: false });
+    expect(nothing.ok).toBe(true);
+  });
+  it('is never a strength session offered in the generic strength list', () => {
+    enableInternalFixtures();
+    expect(strengthSessions().some((s) => s.id.startsWith('home~'))).toBe(false);
+  });
 });
