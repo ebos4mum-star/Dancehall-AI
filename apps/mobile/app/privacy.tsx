@@ -188,6 +188,7 @@ function Privacy() {
         {t('privacy.account')}
       </AppText>
       <Card>
+        <Notice tone="warning">{t('sec.signOutWarn')}</Notice>
         <Button
           variant="secondary"
           label={t('privacy.signOut')}

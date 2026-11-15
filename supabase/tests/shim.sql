@@ -13,6 +13,10 @@ create table auth.users (
   created_at timestamptz not null default now()
 );
 
+-- Sessions and refresh tokens, so session revocation can be tested (the real tables have more columns; these are the ones revocation touches).
+create table auth.sessions (id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users (id) on delete cascade, created_at timestamptz not null default now());
+create table auth.refresh_tokens (id bigserial primary key, user_id varchar(255), session_id uuid references auth.sessions (id) on delete cascade, token text);
+
 create function auth.uid() returns uuid language sql stable as
 $$ select nullif(coalesce(current_setting('request.jwt.claim.sub', true), (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')), '')::uuid $$;
 create function auth.jwt() returns jsonb language sql stable as

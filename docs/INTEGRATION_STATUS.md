@@ -10,12 +10,12 @@ Evidence-based status of each feature. **Hosted schema (verified 2026-11-15, rea
 | PR 46 (Stage A) | Weight Management Engine in `packages/shared` (rules, explanations, evidence gate with no content shipped), `strength` goal intent, new preference fields; planning docs and record corrections | Unit tests (323 shared); CI                                                                            |
 | PR 47 (Stage B) | Goals screen is "My approach"; engine drives the daily plan in both stores; weight tracking is opt-in; weight-neutral Today, Progress, Me and recap                                             | Unit and store tests; browser regression 36 of 36 (mock mode); accessibility sweep; reduced motion; CI |
 
-**Accounts (2026-11-15):** the app is browse-first and an account is made with a six-digit PIN (no email, no password); the PIN is a local app lock and `docs/ACCOUNT_SECURITY.md` explains why cloud sign-up and recovery need backend changes that are not authorized. **A cloud account cannot be created or recovered in any build yet**; Face ID and Touch ID are not verified on a device.
+**Accounts (2026-11-15):** browse-first with a six-digit PIN lock (no email, no password). **Cloud accounts and recovery are implemented as code and tested locally only** (Recovery Key + two security questions + cooling-off, Supabase-compatible identity via an Edge Function and a migration): see `docs/ACCOUNT_SECURITY.md` and `docs/CLOUD_ACCOUNTS_ACTIVATION.md`. **Not applied or deployed anywhere**: migration `20261214000100_account_recovery.sql`, the `account` Edge Function, its secrets and the Auth settings all need separate authorisation, and nothing has been verified against the hosted project. The development build runs the same logic against a clearly-labelled local simulation.
 
 **Stage G (2026-11-15):** the approved development project was re-read (read-only): same 13 migrations, 6-style constraint, 0 users, so the live HTTP and Storage suites still cannot run (no test users exist and the build sandbox cannot reach the API). M3 v2 and its rollback are rehearsed locally only (`supabase/proposed/`).
 
 **Not verified anywhere:** native iOS behaviour (token refresh on foreground and background, camera upload, haptics, secure storage), sign-in and the adapters over HTTP against the hosted project, Storage uploads, and every professional or clinical review (none has taken place; all wording and rules are provisional).
-**Not applied to the hosted project:** `20261213000100_household_trigger_revoke.sql`. It is committed and pending, and applying it needs the owner's separate authorisation. The three SQL proposals in `docs/planning/SQL_PROPOSALS_NOT_APPLIED.md` are not migrations and not applied.
+**Not applied to the hosted project:** `20261213000100_household_trigger_revoke.sql` and `20261214000100_account_recovery.sql`. It is committed and pending, and applying it needs the owner's separate authorisation. The three SQL proposals in `docs/planning/SQL_PROPOSALS_NOT_APPLIED.md` are not migrations and not applied.
 **Not built:** fasting (and the coach's fasting refusals are unchanged), local notifications, Dancehall and reggae sessions, guided strength and seated sessions, the medical companion.
 
 ## How each layer is checked
@@ -64,6 +64,8 @@ Legend: **Local** = mock store (device storage). **Contract** = Supabase adapter
 - `docs/LIVE_INTEGRATION.md` still described the coach and plan as unbuilt; it now matches the code.
 
 ## Remaining blockers (need the owner)
+
+0. **Authorise and activate cloud accounts** (`docs/CLOUD_ACCOUNTS_ACTIVATION.md`): migration, Auth settings (JWT expiry, sign-up off, identifier acceptance), the `account` Edge Function and its secrets, the scheduled reaper, then the live checks in step 7. Until then cloud registration and recovery are **not live**.
 
 1. **Apply `20261213000100_household_trigger_revoke.sql`** to the hosted project: committed and tested locally and on the replica, **not applied**, needs explicit authorisation, then a post-apply check.
 2. Run the live HTTP and Storage suites from a machine that can reach the project (`docs/LIVE_HTTP_RUNBOOK.md`; two temporary test users, publishable key only). Until then hosted app behaviour is unknown.

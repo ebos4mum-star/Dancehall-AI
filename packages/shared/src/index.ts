@@ -49,3 +49,7 @@ export * from './trainer-motions';
 export * from './trainer-clips';
 export * from './pin';
 export * from './account-gate';
+export * from './recovery-key';
+export * from './security-questions';
+export * from './account-core';
+export * from './account-memory-db';

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { View } from 'react-native';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { isGateIntent, sanitizeNext } from '@dancehall/shared';
@@ -21,11 +20,11 @@ export default function AccountStart() {
   const params = useLocalSearchParams<{ next?: string; intent?: string }>();
   const { ready, session, store, config } = useApp();
   const account = useAccount();
-  const [haveOpen, setHaveOpen] = useState(false);
   const next = sanitizeNext(params.next);
   const intent = isGateIntent(params.intent) ? params.intent : 'profile';
-  // A new account can be created only where the data store can create one. A build that has no way to create a cloud account yet says so, and creates nothing.
-  const canCreate = typeof store.signInDev === 'function';
+  // A new account can be created only where this build offers cloud accounts (the development simulation, or a Supabase build with them switched on).
+  // Otherwise the screen says so and creates nothing.
+  const canCreate = account.cloudEnabled && typeof store.signInWithDevice === 'function';
   const expired = account.ready && account.pinSet && !session;
 
   useOnce(() => {
@@ -72,16 +71,13 @@ export default function AccountStart() {
         </Card>
       ) : canCreate ? (
         <Card>
-          <Button
-            label={t('gate.create')}
-            onPress={() => router.push('/account/pin?mode=create')}
-          />
+          <Button label={t('gate.create')} onPress={() => router.push('/account/questions')} />
           <Button
             variant="secondary"
             label={t('gate.have')}
-            onPress={() => setHaveOpen((v) => !v)}
+            onPress={() => router.push('/account/recover')}
           />
-          {haveOpen ? <Notice>{t('gate.haveBody')}</Notice> : null}
+          {account.cloud.kind === 'simulation' ? <Notice>{t('sec.sim')}</Notice> : null}
         </Card>
       ) : (
         <Card>

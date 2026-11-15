@@ -81,7 +81,7 @@
       "sha256": "09b8409918de302d704468d2fe0cd33fded514d8c13a6c31acf9ace760fd439c"
     }
   ],
-  "pending": ["20261213000100_household_trigger_revoke.sql"],
+  "pending": ["20261213000100_household_trigger_revoke.sql", "20261214000100_account_recovery.sql"],
   "fingerprintAfterApplied": {
     "columns": "36c4d7c04f4e3f44f454995a68deb0db",
     "constraints": "2faa63a25f3201aae81f045fa8705167",

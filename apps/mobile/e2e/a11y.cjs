@@ -101,13 +101,21 @@ const ROUTES = [
     '/food',
     '/me',
     '/account/start?intent=start_workout',
-    '/account/pin?mode=create',
+    '/account/questions',
+    '/account/recover',
   ]) {
     await go(r);
     report(`guest ${r}`, await audit());
   }
   await go('/');
-  await createAccountViaPin(p);
+  await createAccountViaPin(p, undefined, {
+    // The Recovery Key screen exists only for a moment during setup, so it is audited here.
+    onKeyScreen: async () => {
+      const f = await audit();
+      console.log('audited Recovery Key screen:', f.length, 'findings');
+      report('Recovery Key screen', f);
+    },
+  });
   await p.getByLabel('What should we call you?').fill('Sam');
   await p.getByLabel('Date of birth (YYYY-MM-DD)').fill('1990-05-05');
   await p.getByLabel('Country or region').fill('Jam');

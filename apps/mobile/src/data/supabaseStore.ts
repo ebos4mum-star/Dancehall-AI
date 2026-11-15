@@ -272,6 +272,24 @@ function createBaseStore(
       await db.auth.signOut();
       emit();
     },
+    async signInWithDevice(identifier, secret) {
+      const { data, error } = await db.auth.signInWithPassword({
+        email: identifier,
+        password: secret,
+      });
+      if (error || !data.user) {
+        // 400 invalid_credentials means the server answered and refused; anything else (offline, timeout, 5xx) is "could not reach it".
+        const refused =
+          error && (error.status === 400 || /invalid.*credentials/i.test(error.message ?? ''));
+        throw new StoreError(refused ? 'not_authenticated' : 'unknown', 'device sign-in failed');
+      }
+      emit();
+      return toSession(data.user);
+    },
+    async accessToken() {
+      const { data } = await db.auth.getSession();
+      return data.session?.access_token ?? null;
+    },
     async sendEmailCode(email) {
       const { error } = await db.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
       if (error) throw mapSupabaseError(error);

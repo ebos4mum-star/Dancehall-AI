@@ -12,6 +12,7 @@ export default tseslint.config(
       '**/.next/**',
       '**/.expo/**',
       '**/coverage/**',
+      'supabase/functions/**',
       '**/next-env.d.ts',
       '**/*.config.js',
     ],

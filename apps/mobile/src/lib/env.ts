@@ -12,6 +12,11 @@ export interface AppConfig {
    * content. A production build refuses to start with this on.
    */
   contentFixtures: boolean;
+  /**
+   * Whether this build offers cloud account creation and recovery. Always on in the development mock build (a clearly-labelled local SIMULATION). In a Supabase build
+   * it is OFF unless EXPO_PUBLIC_CLOUD_ACCOUNTS=1, because it needs the account Edge Function and migration deployed and authorised first.
+   */
+  cloudAccounts: boolean;
 }
 
 export class ConfigError extends Error {
@@ -52,7 +57,7 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
       throw new ConfigError(
         'Mock authentication is development-only and is not allowed in a production build.',
       );
-    return { appEnv, authMode: 'mock', contentFixtures };
+    return { appEnv, authMode: 'mock', contentFixtures, cloudAccounts: true };
   }
   if (!url || !key)
     throw new ConfigError(
@@ -75,5 +80,6 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
     supabasePublishableKey: key,
     aiApiUrl: ai,
     contentFixtures,
+    cloudAccounts: env.EXPO_PUBLIC_CLOUD_ACCOUNTS === '1',
   };
 }

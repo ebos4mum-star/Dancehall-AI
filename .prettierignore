@@ -6,3 +6,5 @@ dist-fixtures
 .expo
 coverage
 docs/review
+
+supabase/functions/_shared/generated

@@ -38,11 +38,15 @@ describe('no paid provider or live cloud service is wired in', () => {
       expect(read(f), f).not.toMatch(/service_role|SERVICE_ROLE|sb_secret_/);
     }
   });
-  it('the app only talks to the AI service through the optional, https-only gateway URL', () => {
+  it("the app only talks to the AI service through the optional, https-only gateway URL (plus its own project's account function)", () => {
     const hits = src(join(repo, 'apps', 'mobile', 'src')).filter((f) =>
       /\bfetch\(|fetchImpl \?\? fetch/.test(read(f)),
     );
-    expect(hits.map((f) => f.split('/').pop())).toEqual(['supabaseCoach.ts']);
+    expect(hits.map((f) => f.split('/').pop())).toEqual(['accountApi.ts', 'supabaseCoach.ts']);
+    // The one extra caller reaches only the configured project's `account` Edge Function, never another host.
+    const account = read(hits.find((f) => f.endsWith('accountApi.ts'))!);
+    expect(account).toMatch(/\/functions\/v1\/account\//);
+    expect(account.match(/https?:\/\//g) ?? []).toEqual([]);
   });
   it('the server handlers default to the mock provider label', () => {
     const t = read(join(repo, 'packages', 'ai', 'src', 'provider.ts'));
