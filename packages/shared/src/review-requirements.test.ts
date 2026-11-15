@@ -17,7 +17,7 @@ import {
   buildHomeWorkout,
   enableInternalFixtures,
   disableInternalFixtures,
-  FIXTURE_DEMO_CLIPS,
+  TRAINER_CLIPS,
   type WorkoutDef,
 } from './index';
 
@@ -94,7 +94,7 @@ describe('review requirements', () => {
     expect(none.requirements.find((x) => x.id === 'media_rights')?.status).toBe('not_applicable');
     const withClip = exerciseReview(
       HOME_EXERCISES.find((e) => e.id === 'home-wall-push-up')!,
-      FIXTURE_DEMO_CLIPS,
+      TRAINER_CLIPS,
     );
     expect(withClip.requirements.find((x) => x.id === 'media_rights')?.status).toBe('outstanding');
   });
@@ -136,6 +136,49 @@ describe('review requirements', () => {
     } finally {
       disableInternalFixtures();
     }
+  });
+});
+
+describe('technical readiness', () => {
+  it('every draft is technically complete, or says exactly what is missing (and none is missing anything today)', () => {
+    const q = reviewQueue();
+    const notReady = q.filter((i) => !i.technical.ready);
+    expect(notReady.map((i) => `${i.id}: ${i.technical.problems.join('; ')}`)).toEqual([]);
+    expect(q.length).toBeGreaterThan(80);
+  });
+
+  it('technical completeness is never approval: every technically complete draft still has outstanding external requirements', () => {
+    for (const i of reviewQueue()) {
+      expect(i.technical.ready, i.id).toBe(true);
+      expect(i.outstanding, i.id).toBeGreaterThan(0);
+    }
+  });
+
+  it('catches an incomplete workout, exercise and food', () => {
+    const w: WorkoutDef = {
+      ...DRAFT_WORKOUTS[0]!,
+      blocks: DRAFT_WORKOUTS[0]!.blocks.slice(0, 3),
+      safety: ['Be careful.'],
+      tempoBpm: undefined,
+    };
+    const r = workoutReview(w);
+    expect(r.technical.ready).toBe(false);
+    expect(r.technical.problems.join(' ')).toMatch(/add up|cool-down|safety|tempo/);
+    const e = exerciseReview({ ...HOME_EXERCISES[0]!, cues: ['One step only.'], regression: '' });
+    expect(e.technical.ready).toBe(false);
+    const f = foodReview({ ...STAGED_FOODS[0]!, servingG: 0 });
+    expect(f.technical.ready).toBe(false);
+  });
+
+  it('a seated-suitable session without a seated version of every block is not technically complete', () => {
+    const low = DRAFT_WORKOUTS.find((x) => x.style === 'low_impact')!;
+    const broken = {
+      ...low,
+      blocks: low.blocks.map((b, i) => (i === 0 ? { ...b, seatedAlt: undefined } : b)),
+    };
+    expect(workoutReview(broken).technical.problems.join(' ')).toMatch(
+      /seated version of every block/,
+    );
   });
 });
 

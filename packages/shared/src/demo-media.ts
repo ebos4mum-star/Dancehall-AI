@@ -23,7 +23,8 @@ export interface CaptionCue {
 export interface DemoClip {
   id: string;
   subjectId: string;
-  kind: 'video' | 'audio';
+  /** `animation` is an animated trainer: `uri` is `trainer:` followed by motion ids joined with `+` (see trainer-motions.ts). */
+  kind: 'video' | 'audio' | 'animation';
   /** Where the renderer loads it from. `fixture:placeholder` means the built-in placeholder surface (no file). */
   uri: string;
   posterUri?: string;

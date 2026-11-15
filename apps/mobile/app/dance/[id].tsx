@@ -368,7 +368,7 @@ export default function WorkoutDetail() {
                   {e.safety.map((x) => (
                     <AppText key={x} variant="caption" muted>{`• ${x}`}</AppText>
                   ))}
-                  <DemoPanel subjectId={e.id} />
+                  <DemoPanel subjectId={e.id} easier={low} />
                   {w.home
                     ? (() => {
                         const target = swapTarget(e);
@@ -408,7 +408,12 @@ export default function WorkoutDetail() {
                     {seated && b.seatedAlt ? b.seatedAlt : low ? b.lowImpactAlt : b.cue}
                   </AppText>
                   {strength ? null : (
-                    <DemoPanel subjectId={movementId(w.id, w.blocks.indexOf(b))} hideWhenNone />
+                    <DemoPanel
+                      subjectId={movementId(w.id, w.blocks.indexOf(b))}
+                      hideWhenNone
+                      seated={seated}
+                      easier={low}
+                    />
                   )}
                 </View>
               </View>

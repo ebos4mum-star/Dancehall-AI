@@ -12,7 +12,10 @@ import { Pressable, Switch, View } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import {
   DEMO_RATES,
+  VIEWS,
   activeCaption,
+  canSeat,
+  clipView,
   clockText,
   demoFor,
   initPlayback,
@@ -20,6 +23,7 @@ import {
   type DemoClip,
   type DemoEvent,
   type DemoRate,
+  type TrainerView,
 } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
 import { useReducedMotion } from '@/a11y/useReducedMotion';
@@ -29,6 +33,7 @@ import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
 import { Notice } from '@/ui/Banner';
 import { ProgressBar } from '@/ui/ProgressBar';
+import { TrainerSurface } from './TrainerSurface';
 
 /**
  * ONE demonstration player for every place a movement is shown: dance blocks, chair dance, strength exercises and "Use what you have". The rules live in the
@@ -167,7 +172,19 @@ function Chip({
 
 const rateLabel = (r: DemoRate): string => `${r}×`;
 
-export function DemoPlayer({ clip, onFailed }: { clip: DemoClip; onFailed: (id: string) => void }) {
+export function DemoPlayer({
+  clip,
+  onFailed,
+  seated = false,
+  easier = false,
+}: {
+  clip: DemoClip;
+  onFailed: (id: string) => void;
+  /** Show the seated version (animated trainer clips). */
+  seated?: boolean;
+  /** Show the beginner modification, with half-size movements (animated trainer clips). */
+  easier?: boolean;
+}) {
   const reduced = useReducedMotion();
   const { colors } = useTheme();
   const [state, dispatch] = useReducer(playbackReduce, undefined, () =>
@@ -176,16 +193,39 @@ export function DemoPlayer({ clip, onFailed }: { clip: DemoClip; onFailed: (id: 
   // A ref, not state: the surface hands over its controls through the ref, and state here would re-render in a loop.
   const surfaceRef = useRef<SurfaceControl | null>(null);
   const isFixture = clip.uri.startsWith('fixture:');
+  const isTrainer = clip.uri.startsWith('trainer:');
+  const motionIds = useMemo(
+    () => (isTrainer ? clip.uri.slice('trainer:'.length).split('+') : []),
+    [isTrainer, clip.uri],
+  );
+  const [viewPick, setViewPick] = useState<TrainerView | null>(null);
+  const view = viewPick ?? clipView(motionIds, seated);
+  // Seated was asked for, but this movement has no seated animation: say so and show nothing that would mislead.
+  const noSeated = isTrainer && seated && !motionIds.some(canSeat);
 
   // The system setting is read asynchronously, so keep the state in step with it.
   useEffect(() => dispatch({ type: 'motion', reduced }), [reduced]);
 
-  // The placeholder has no clock of its own, so the shared clock moves it while it plays.
+  // The placeholder frame has no clock of its own, so the shared clock moves it while it plays.
   useEffect(() => {
     if (!isFixture || state.status !== 'playing') return;
     const id = setInterval(() => dispatch({ type: 'tick', seconds: 0.25 }), 250);
     return () => clearInterval(id);
   }, [isFixture, state.status]);
+  // The animated trainer is drawn every frame, so its clock follows the display.
+  useEffect(() => {
+    if (!isTrainer || state.status !== 'playing') return;
+    let raf = 0;
+    let last = Date.now();
+    const frame = () => {
+      const now = Date.now();
+      dispatch({ type: 'tick', seconds: Math.min(0.1, (now - last) / 1000) });
+      last = now;
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [isTrainer, state.status]);
 
   const act = useCallback(
     (e: DemoEvent) => {
@@ -214,20 +254,45 @@ export function DemoPlayer({ clip, onFailed }: { clip: DemoClip; onFailed: (id: 
   }, [clip.id, onFailed]);
 
   const Surface = isFixture ? PlaceholderSurface : VideoSurface;
+  const variant = seated ? t('demo.variantSeated') : easier ? t('demo.variantEasier') : null;
   const caption = activeCaption(clip, state.positionS, state.captionsOn);
   const playing = state.status === 'playing';
   const progress = `${clockText(state.positionS)} / ${clockText(state.durationS)}`;
 
   return (
     <View style={{ gap: spacing.sm }}>
-      <Surface
-        ref={surfaceRef}
-        clip={clip}
-        status={state.status}
-        onSync={onSync}
-        onEnded={onEnded}
-        onError={onError}
-      />
+      {isTrainer ? (
+        noSeated ? (
+          <AppText variant="caption" muted>
+            {t('demo.noSeated')}
+          </AppText>
+        ) : (
+          <TrainerSurface
+            motionIds={motionIds}
+            positionS={state.positionS}
+            durationS={state.durationS}
+            view={view}
+            seated={seated}
+            easier={easier}
+            stepped={state.reducedMotion}
+            label={`${clip.audioDescription ?? t('demo.title')} ${activeCaption(clip, state.positionS, state.captionsOn) ?? ''}`.trim()}
+          />
+        )
+      ) : (
+        <Surface
+          ref={surfaceRef}
+          clip={clip}
+          status={state.status}
+          onSync={onSync}
+          onEnded={onEnded}
+          onError={onError}
+        />
+      )}
+      {isTrainer && !noSeated && variant ? (
+        <AppText variant="caption" muted accessibilityLiveRegion="polite">
+          {variant}
+        </AppText>
+      ) : null}
       <ProgressBar
         fraction={state.durationS > 0 ? state.positionS / state.durationS : 0}
         label={`${t('demo.title')}: ${progress}`}
@@ -260,6 +325,45 @@ export function DemoPlayer({ clip, onFailed }: { clip: DemoClip; onFailed: (id: 
           />
         ))}
       </View>
+      {isTrainer && !noSeated ? (
+        <>
+          <View
+            accessibilityRole="radiogroup"
+            accessibilityLabel={t('demo.view')}
+            style={{
+              flexDirection: 'row',
+              gap: spacing.sm,
+              flexWrap: 'wrap',
+              alignItems: 'center',
+            }}
+          >
+            <AppText variant="caption" muted>
+              {t('demo.view')}
+            </AppText>
+            {VIEWS.map((v) => (
+              <Chip
+                key={v}
+                role="radio"
+                label={t(`demo.view.${v}` as never)}
+                selected={view === v}
+                onPress={() => setViewPick(v)}
+              />
+            ))}
+          </View>
+          <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
+            <Chip
+              label={t('demo.stepBack')}
+              onPress={() => act({ type: 'seek', positionS: Math.max(0, state.positionS - 1) })}
+            />
+            <Chip
+              label={t('demo.stepForward')}
+              onPress={() =>
+                act({ type: 'seek', positionS: Math.min(state.durationS, state.positionS + 1) })
+              }
+            />
+          </View>
+        </>
+      ) : null}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
         <AppText style={{ flex: 1 }} variant="label">
           {t('demo.captions')}
@@ -301,9 +405,13 @@ export function DemoPlayer({ clip, onFailed }: { clip: DemoClip; onFailed: (id: 
 export function DemoPanel({
   subjectId,
   hideWhenNone = false,
+  seated = false,
+  easier = false,
 }: {
   subjectId: string;
   hideWhenNone?: boolean;
+  seated?: boolean;
+  easier?: boolean;
 }) {
   const { profile } = useApp();
   const [missing, setMissing] = useState<ReadonlySet<string>>(new Set());
@@ -324,7 +432,7 @@ export function DemoPanel({
         {t('demo.title')}
       </AppText>
       {r.state === 'draft' ? <Notice tone="warning">{t('demo.draftBadge')}</Notice> : null}
-      <DemoPlayer key={r.clip.id} clip={r.clip} onFailed={failed} />
+      <DemoPlayer key={r.clip.id} clip={r.clip} onFailed={failed} seated={seated} easier={easier} />
     </View>
   );
 }

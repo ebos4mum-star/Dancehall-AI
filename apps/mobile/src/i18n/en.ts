@@ -373,6 +373,16 @@ export const en = {
   'review.intro':
     'None of these has been done. This is a draft, so it is visible only in development and review builds.',
   'demo.title': 'Demonstration',
+  'demo.view': 'View',
+  'demo.view.front': 'Front',
+  'demo.view.three_quarter': 'Three-quarter',
+  'demo.view.side': 'Side',
+  'demo.stepBack': 'Back 1 second',
+  'demo.stepForward': 'Forward 1 second',
+  'demo.variantSeated': 'Showing the seated version.',
+  'demo.variantEasier': 'Showing the beginner modification: smaller movements.',
+  'demo.noSeated':
+    'There is no seated animation for this movement. Follow the seated written steps.',
   'demo.play': 'Play demonstration',
   'demo.pause': 'Pause demonstration',
   'demo.replay': 'Replay',
