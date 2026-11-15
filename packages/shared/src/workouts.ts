@@ -147,7 +147,10 @@ export function suggestQuickFit(
     ).filter((w) => !args.excludeIds?.includes(w.id));
     const rank = (w: WorkoutDef) => INTENSITIES.indexOf(w.intensity);
     const lowest = Math.min(...all.map(rank));
-    return all.filter((w) => rank(w) === lowest);
+    const gentle = all.filter((w) => rank(w) === lowest);
+    // Among equally gentle sessions, the person's chosen style still wins.
+    const styled = args.style ? gentle.filter((w) => w.style === args.style) : [];
+    return styled.length > 0 ? styled : gentle;
   };
   const chosen = fallback.length === 0 && args.intensities ? gentlest() : fallback;
   return chosen.length === 0 ? null : (chosen[(args.seed ?? 0) % chosen.length] ?? null);

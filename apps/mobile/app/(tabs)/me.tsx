@@ -7,6 +7,7 @@ import { t, type StringKey } from '@/i18n';
 import { formatDate } from '@/lib/format';
 import { initials } from '@/lib/initials';
 import { useProgressInsights } from '@/progress/hooks';
+import { useShowWeight } from '@/wellness/hooks';
 import { brand, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
@@ -30,9 +31,15 @@ const MENU: Array<{ icon: IconName; title: StringKey; sub: StringKey; to: string
 
 export default function MeScreen() {
   const { profile } = useApp();
+  // The progress row says "Weight progress" only for people who track weight.
+  const showW = useShowWeight();
   const { colors, spacing: sp, radius } = useTheme();
   const dance = useDanceData();
   const insights = useProgressInsights();
+  const rowTitle = (m: (typeof MENU)[number]): StringKey =>
+    m.to === '/progress' && !showW ? 'me.progressNoScale' : m.title;
+  const rowSub = (m: (typeof MENU)[number]): StringKey =>
+    m.to === '/progress' && !showW ? 'me.progressNoScaleSub' : m.sub;
   const recent = insights.achievements.slice(0, 6);
   const name = profile?.displayName ?? null;
   return (
@@ -128,7 +135,7 @@ export default function MeScreen() {
           <Pressable
             key={m.to}
             accessibilityRole="button"
-            accessibilityLabel={`${t(m.title)}. ${t(m.sub)}`}
+            accessibilityLabel={`${t(rowTitle(m))}. ${t(rowSub(m))}`}
             onPress={() => {
               haptics.tap();
               router.push(m.to as never);
@@ -145,9 +152,9 @@ export default function MeScreen() {
           >
             <IconBadge name={m.icon} size={44} fill={colors.primary} color={colors.onPrimary} />
             <View style={{ flex: 1 }}>
-              <AppText variant="label">{t(m.title)}</AppText>
+              <AppText variant="label">{t(rowTitle(m))}</AppText>
               <AppText variant="caption" muted>
-                {t(m.sub)}
+                {t(rowSub(m))}
               </AppText>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />

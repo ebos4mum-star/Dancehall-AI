@@ -19,6 +19,8 @@ import { useApp } from '@/data/AppProvider';
 import { errorMessage, useLoad } from '@/data/hooks';
 import type { Goal } from '@/data/types';
 import { FocusCard } from '@/wellness/ui';
+import { ApproachCard } from '@/wellness/approach';
+import { useShowWeight } from '@/wellness/hooks';
 import { t, type StringKey } from '@/i18n';
 import { formatDate, formatWeight, parseDecimal, todayIso } from '@/lib/format';
 import { useTheme } from '@/theme/useTheme';
@@ -34,6 +36,7 @@ import { TextField } from '@/ui/TextField';
 export default function Goals() {
   const { store, profile } = useApp();
   const { spacing, colors } = useTheme();
+  const showW = useShowWeight();
   const units = profile?.unitSystem ?? 'metric';
   const unitWord = units === 'metric' ? 'kg' : 'lb';
   const { data, error } = useLoad(async (s) => ({
@@ -104,12 +107,14 @@ export default function Goals() {
         pulse: 'idle',
       }}
     >
-      <FocusCard />
+      <FocusCard part="goals" />
+      <ApproachCard />
+      <FocusCard part="rest" />
       {error ? <Notice tone="warning">{error}</Notice> : null}
-      {goals.length === 0 ? (
+      {showW && goals.length === 0 ? (
         <EmptyState icon="flag" title={t('goals.emptyTitle')} body={t('goals.empty')} />
       ) : null}
-      {goals.map((g) => {
+      {(showW ? goals : []).map((g) => {
         const fraction = goalFraction(g, summary.latest?.weightKg);
         const label = `${t(`goals.${g.type}` as StringKey)} · ${t(`goals.${g.period}` as StringKey)}`;
         return (
@@ -177,68 +182,72 @@ export default function Goals() {
         );
       })}
 
-      <Card>
-        <SectionTitle icon="add-circle" title={t('goals.new')} />
-        {startKg === null || !data?.priv ? (
-          <Notice>{t('goals.needWeight')}</Notice>
-        ) : (
-          <>
-            <Choice
-              label={t('goals.type')}
-              value={type}
-              onChange={setType}
-              options={(['lose', 'maintain', 'gain'] as const).map((v) => ({
-                value: v,
-                label: t(`goals.${v}` as StringKey),
-              }))}
-            />
-            <Choice
-              label={t('goals.period')}
-              value={period}
-              onChange={setPeriod}
-              options={(['weekly', 'monthly', 'yearly'] as const).map((v) => ({
-                value: v,
-                label: t(`goals.${v}` as StringKey),
-              }))}
-            />
-            {type !== 'maintain' ? (
-              <TextField
-                label={t('goals.target', { unit: unitWord })}
-                hint={t('goals.targetHint')}
-                value={target}
-                onChangeText={setTarget}
-                keyboardType="decimal-pad"
+      {showW ? (
+        <Card>
+          <SectionTitle icon="add-circle" title={t('goals.new')} />
+          {startKg === null || !data?.priv ? (
+            <Notice>{t('goals.needWeight')}</Notice>
+          ) : (
+            <>
+              <Choice
+                label={t('goals.type')}
+                value={type}
+                onChange={setType}
+                options={(['lose', 'maintain', 'gain'] as const).map((v) => ({
+                  value: v,
+                  label: t(`goals.${v}` as StringKey),
+                }))}
               />
-            ) : null}
-            {proposal ? (
-              <View style={{ gap: spacing.xs }}>
-                <AppText variant="label">
-                  {t(proposal.status === 'block' ? 'goals.blocked' : 'goals.preview')}
-                </AppText>
-                {proposal.goal ? (
-                  <AppText>{`${formatWeight(proposal.goal.startKg, units)} → ${formatWeight(proposal.goal.targetKg, units)} (${t('goals.until', { date: formatDate(goalEndDate(todayIso(), period)) })})`}</AppText>
-                ) : null}
-                {proposal.reasons.map((r) => (
-                  <AppText key={r} variant="caption" muted>
-                    {r}
+              <Choice
+                label={t('goals.period')}
+                value={period}
+                onChange={setPeriod}
+                options={(['weekly', 'monthly', 'yearly'] as const).map((v) => ({
+                  value: v,
+                  label: t(`goals.${v}` as StringKey),
+                }))}
+              />
+              {type !== 'maintain' ? (
+                <TextField
+                  label={t('goals.target', { unit: unitWord })}
+                  hint={t('goals.targetHint')}
+                  value={target}
+                  onChangeText={setTarget}
+                  keyboardType="decimal-pad"
+                />
+              ) : null}
+              {proposal ? (
+                <View style={{ gap: spacing.xs }}>
+                  <AppText variant="label">
+                    {t(proposal.status === 'block' ? 'goals.blocked' : 'goals.preview')}
                   </AppText>
-                ))}
-              </View>
-            ) : null}
-            {activeSamePeriod ? (
-              <Notice>
-                {t('goals.exists', { period: t(`goals.${period}` as StringKey).toLowerCase() })}
-              </Notice>
-            ) : null}
-            {msg ? <Notice tone="warning">{msg}</Notice> : null}
-            <Button
-              label={t('goals.create')}
-              onPress={create}
-              disabled={busy || !proposal?.goal || proposal.status === 'block' || activeSamePeriod}
-            />
-          </>
-        )}
-      </Card>
+                  {proposal.goal ? (
+                    <AppText>{`${formatWeight(proposal.goal.startKg, units)} → ${formatWeight(proposal.goal.targetKg, units)} (${t('goals.until', { date: formatDate(goalEndDate(todayIso(), period)) })})`}</AppText>
+                  ) : null}
+                  {proposal.reasons.map((r) => (
+                    <AppText key={r} variant="caption" muted>
+                      {r}
+                    </AppText>
+                  ))}
+                </View>
+              ) : null}
+              {activeSamePeriod ? (
+                <Notice>
+                  {t('goals.exists', { period: t(`goals.${period}` as StringKey).toLowerCase() })}
+                </Notice>
+              ) : null}
+              {msg ? <Notice tone="warning">{msg}</Notice> : null}
+              <Button
+                label={t('goals.create')}
+                onPress={create}
+                disabled={
+                  busy || !proposal?.goal || proposal.status === 'block' || activeSamePeriod
+                }
+              />
+            </>
+          )}
+        </Card>
+      ) : null}
     </Screen>
   );
 }

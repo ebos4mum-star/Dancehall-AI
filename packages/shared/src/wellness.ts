@@ -14,8 +14,35 @@ import type { CoachContext } from './coach-context';
  */
 export const GOAL_INTENTS = ['lose', 'maintain', 'fitness', 'strength'] as const;
 export type GoalIntent = (typeof GOAL_INTENTS)[number];
-/** The intents the Goals screen offers today. `strength` is understood and stored but is not offered in the UI until the screens are approved (Stage B). */
-export const SELECTABLE_GOAL_INTENTS = ['lose', 'maintain', 'fitness'] as const;
+/** The primary goals the Goals screen offers: all four. */
+export const SELECTABLE_GOAL_INTENTS = GOAL_INTENTS;
+
+/**
+ * Which goals can sit alongside a primary goal. Losing and maintaining weight pull in opposite directions, so they are never combined; every other pairing is fine.
+ * A secondary goal adds its pathways to the plan. It never changes the weight-loss safety rules, which follow the primary goal only.
+ */
+export const GOAL_COMPATIBILITY: Record<GoalIntent, readonly GoalIntent[]> = {
+  lose: ['fitness', 'strength'],
+  maintain: ['fitness', 'strength'],
+  fitness: ['lose', 'maintain', 'strength'],
+  strength: ['lose', 'maintain', 'fitness'],
+};
+/** The secondary goals a person may choose next to this primary goal. */
+export const compatibleSecondaryGoals = (primary: GoalIntent): readonly GoalIntent[] =>
+  GOAL_COMPATIBILITY[primary];
+/** Keeps only goals that are compatible with the primary goal and with each other, in a fixed order, without repeats. Never throws. */
+export function sanitizeSecondaryGoals(
+  primary: GoalIntent,
+  raw: readonly GoalIntent[],
+): GoalIntent[] {
+  const out: GoalIntent[] = [];
+  for (const g of GOAL_INTENTS) {
+    if (!raw.includes(g) || g === primary || !GOAL_COMPATIBILITY[primary].includes(g)) continue;
+    if (out.some((o) => !GOAL_COMPATIBILITY[o].includes(g))) continue;
+    out.push(g);
+  }
+  return out;
+}
 
 /** The eight coordinated pathways the engine can combine (see pathways.ts). Pathways are rules and tags, not screens or products. */
 export const PATHWAY_IDS = [
@@ -108,6 +135,13 @@ export interface WellnessPrefs {
   /** Null means not told. The engine then starts gently and says so; it never guesses. */
   experience: ExperienceLevel | null;
   schedule: SchedulePref | null;
+  /** Goals worked on alongside the primary one. Only compatible goals are kept (see GOAL_COMPATIBILITY). */
+  secondaryGoals: GoalIntent[];
+  /**
+   * Whether the person tracks their weight. Null means "never chosen": existing people keep what they had (weight tracking for the lose and maintain goals, or while
+   * an active weight goal exists) and everyone else is not asked for weight. See `weightTrackingOn`.
+   */
+  weightTracking: boolean | null;
 }
 export const DEFAULT_PREFS: WellnessPrefs = {
   goalIntent: 'fitness',
@@ -130,6 +164,8 @@ export const DEFAULT_PREFS: WellnessPrefs = {
   mobility: [],
   experience: null,
   schedule: null,
+  secondaryGoals: [],
+  weightTracking: null,
 };
 const pick = <T extends string>(v: unknown, all: readonly T[]): T[] =>
   Array.isArray(v) ? all.filter((x) => v.includes(x)) : [];
@@ -169,8 +205,30 @@ export function parsePrefs(raw: unknown): WellnessPrefs {
     mobility: pick(r.mobility, MOBILITY_PREFS),
     experience: EXPERIENCE_LEVELS.find((g) => g === r.experience) ?? null,
     schedule: SCHEDULE_PREFS.find((g) => g === r.schedule) ?? null,
+    secondaryGoals: sanitizeSecondaryGoals(intent, pick(r.secondaryGoals, GOAL_INTENTS)),
+    weightTracking: typeof r.weightTracking === 'boolean' ? r.weightTracking : null,
   };
 }
+
+/**
+ * Is weight tracking on for this person? Explicit choice wins. With no choice, behaviour is what it always was: on for the lose and maintain goals, and while an active
+ * weight goal exists; off for fitness and strength. Weight surfaces use `showWeight`, which also honours hidden numbers.
+ */
+export const weightTrackingOn = (
+  p: Pick<WellnessPrefs, 'weightTracking' | 'goalIntent'>,
+  hasActiveWeightGoal = false,
+): boolean =>
+  p.weightTracking ??
+  (p.goalIntent === 'lose' || p.goalIntent === 'maintain' || hasActiveWeightGoal);
+
+/** The single rule every screen uses before showing or asking for weight: the person tracks weight AND their numbers are not hidden. */
+export const showWeight = (
+  p: Pick<
+    WellnessPrefs,
+    'weightTracking' | 'goalIntent' | 'eatingConcern' | 'pregnantOrPostpartum' | 'tracking'
+  >,
+  hasActiveWeightGoal = false,
+): boolean => !numbersHidden(p) && weightTrackingOn(p, hasActiveWeightGoal);
 
 /** The one rule for hiding calorie, nutrient and weight numbers: an eating concern, pregnancy or postpartum, or tracking turned off. */
 export const numbersHidden = (

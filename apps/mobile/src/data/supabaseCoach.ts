@@ -9,6 +9,8 @@ import {
   contextSummaryLines,
   detectComeback,
   generateDailyPlan,
+  readinessState,
+  resolvePathways,
   parsePrefs,
   wellnessPlanContext,
   addDaysIso,
@@ -228,6 +230,12 @@ export function createCoachAdapter(d: CoachAdapterDeps): Partial<DataStore> {
         day: date,
         weightKg: latestW?.weightKg ?? null,
       }),
+      // The Stage A engine decides what the plan favours and why; the plan itself is still generated here.
+      bias: resolvePathways({
+        prefs: wellnessPrefs,
+        readiness: readinessState(readiness?.outcome),
+        hasActiveWeightGoal: goals.some((g) => g.status === 'active'),
+      }).bias,
       seed: Number(date.replace(/-/g, '')) % 97,
     });
   }

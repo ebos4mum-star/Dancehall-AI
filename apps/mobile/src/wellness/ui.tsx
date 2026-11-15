@@ -5,6 +5,7 @@ import {
   DIET_PREFS,
   EQUIPMENT_PREFS,
   SELECTABLE_GOAL_INTENTS,
+  compatibleSecondaryGoals,
   TRACKING_STYLES,
   entriesOf,
   hydrationOn,
@@ -44,15 +45,23 @@ export function IntentChoice({
 }) {
   return (
     <View style={{ gap: spacing.sm }}>
-      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+      <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
         {SELECTABLE_GOAL_INTENTS.map((g) => (
-          <View key={g} style={{ flex: 1 }}>
+          <View key={g} style={{ flexBasis: '47%', flexGrow: 1 }}>
             <IconChoice
               icon={INTENT_ICON[g]}
               label={t(`wl.intent.${g}` as StringKey)}
               selected={value === g}
               onPress={() => onChange(g)}
-              tint={g === 'lose' ? brand.coral : g === 'maintain' ? brand.violet : brand.lime}
+              tint={
+                g === 'lose'
+                  ? brand.coral
+                  : g === 'maintain'
+                    ? brand.violet
+                    : g === 'strength'
+                      ? brand.violet
+                      : brand.lime
+              }
             />
           </View>
         ))}
@@ -68,7 +77,7 @@ const toggle = <T extends string>(list: readonly T[], v: T): T[] =>
   list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
 
 /** Goal, tracking style, movement and food preferences, and the optional safety flags. Every change saves immediately. */
-export function FocusCard() {
+export function FocusCard({ part = 'all' }: { part?: 'all' | 'goals' | 'rest' }) {
   const w = useWellness();
   const { prefs } = w;
   const [minutes, setMinutes] = useState('');
@@ -93,13 +102,53 @@ export function FocusCard() {
     const n = Number(v.replace(',', '.'));
     return v.trim() !== '' && Number.isFinite(n) && n >= 0 ? n : null;
   };
-  return (
-    <DepthCard>
+  const goals = (
+    <>
       <SectionTitle icon="flag" title={t('wl.focusTitle')} />
       <AppText variant="caption" muted>
         {t('wl.focusIntro')}
       </AppText>
       <IntentChoice value={prefs.goalIntent} onChange={(v) => void w.setPrefs({ goalIntent: v })} />
+      <Disclosure
+        title={t('wl.secondary')}
+        summary={
+          prefs.secondaryGoals.length === 0
+            ? undefined
+            : prefs.secondaryGoals.map((g) => t(`wl.intent.${g}` as StringKey)).join(', ')
+        }
+      >
+        <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
+          {compatibleSecondaryGoals(prefs.goalIntent).map((g) => (
+            <View key={g} style={{ flexBasis: '47%', flexGrow: 1 }}>
+              <IconChoice
+                icon={INTENT_ICON[g]}
+                label={t(`wl.intent.${g}` as StringKey)}
+                selected={prefs.secondaryGoals.includes(g)}
+                onPress={() => void w.setPrefs({ secondaryGoals: toggle(prefs.secondaryGoals, g) })}
+              />
+            </View>
+          ))}
+        </View>
+        <AppText variant="caption" muted>
+          {t('wl.secondaryNote')}
+        </AppText>
+      </Disclosure>
+      <SettingRow
+        icon="scale"
+        title={t('wl.weightTracking')}
+        body={t('wl.weightTrackingBody')}
+        value={w.weightOn}
+        onChange={(v) => void w.setPrefs({ weightTracking: v })}
+      />
+      {w.weightOn && !w.weightShown ? (
+        <AppText variant="caption" muted>
+          {t('wl.weightTrackingHidden')}
+        </AppText>
+      ) : null}
+    </>
+  );
+  const others = (
+    <>
       <AppText variant="label">{t('wl.tracking')}</AppText>
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
         {TRACKING_STYLES.map((k) => (
@@ -269,6 +318,14 @@ export function FocusCard() {
         onChange={(v) => void w.setPrefs({ eatingConcern: v })}
       />
       {w.problem ? <Notice tone="warning">{w.problem}</Notice> : null}
+    </>
+  );
+  if (part === 'goals') return <DepthCard>{goals}</DepthCard>;
+  if (part === 'rest') return <DepthCard>{others}</DepthCard>;
+  return (
+    <DepthCard>
+      {goals}
+      {others}
     </DepthCard>
   );
 }
