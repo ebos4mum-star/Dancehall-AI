@@ -40,7 +40,8 @@ create table app.acct_tx (
   completion_mac text,
   ready_at bigint,
   expires_at bigint not null,
-  prev_digest_mac text
+  prev_digest_mac text,
+  secret_mac text
 );
 create index acct_tx_user_idx on app.acct_tx (user_id) where state in ('open', 'verified');
 
@@ -177,6 +178,11 @@ create function public.acct_tx_complete(p jsonb) returns jsonb language plpgsql 
 declare t app.acct_tx; a app.acct_recovery; now_ bigint := (p ->> 'now')::bigint;
 begin
   select * into t from app.acct_tx where tx_id = p ->> 'txId' for update;
+  -- An identical retry of a completion whose reply was lost returns the same success (same secret, same new key); anything else on a finished transaction fails.
+  if found and t.state = 'done' and t.completion_mac = p ->> 'completionMac' and now_ < t.expires_at and t.secret_mac = p ->> 'newSecretMac'
+     and exists (select 1 from app.acct_recovery r where r.user_id = t.user_id and r.digest_mac = p ->> 'newDigestMac') then
+    return jsonb_build_object('result', 'ok', 'userId', t.user_id);
+  end if;
   if not found or t.state <> 'verified' or t.completion_mac is distinct from p ->> 'completionMac' then return jsonb_build_object('result', 'invalid'); end if;
   if now_ >= t.expires_at then return jsonb_build_object('result', 'invalid'); end if;
   if now_ < t.ready_at then return jsonb_build_object('result', 'early', 'readyAt', t.ready_at); end if;
@@ -187,7 +193,7 @@ begin
   exception when unique_violation then
     return jsonb_build_object('result', 'invalid');
   end;
-  update app.acct_tx set state = 'done', prev_digest_mac = a.digest_mac where tx_id = t.tx_id;
+  update app.acct_tx set state = 'done', prev_digest_mac = a.digest_mac, secret_mac = p ->> 'newSecretMac' where tx_id = t.tx_id;
   return jsonb_build_object('result', 'ok', 'userId', t.user_id);
 end $$;
 

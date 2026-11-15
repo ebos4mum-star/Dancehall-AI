@@ -10,7 +10,8 @@ export function createRpcAccountDb(rpc: Rpc): AccountDb {
   const call = <T>(fn: string, args: Record<string, unknown>) => rpc(fn, args) as Promise<T>;
   return {
     provisionBegin: (a) => call('acct_provision_begin', a),
-    provisionAttach: (requestId, userId, identifier) => call('acct_provision_attach', { requestId, userId, identifier }),
+    provisionAttach: (requestId, userId, identifier) =>
+      call('acct_provision_attach', { requestId, userId, identifier }),
     provisionFinalize: (a) => call('acct_provision_finalize', a),
     async provisionAbort(requestId) {
       await call('acct_provision_abort', { requestId });

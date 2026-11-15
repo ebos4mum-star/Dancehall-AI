@@ -15,8 +15,13 @@ if (!url) {
   const pool = new pg.Pool({ connectionString: url, max: 8 });
   let n = 0;
   defineAccountSuite('postgres functions', async (): Promise<SuiteEnv> => {
-    await pool.query('truncate app.acct_tx, app.acct_recovery, app.acct_provisioning, app.acct_hits, auth.users cascade');
-    const db = createRpcAccountDb(async (fn, args) => (await pool.query(`select public.${fn}($1::jsonb) as r`, [JSON.stringify(args)])).rows[0].r);
+    await pool.query(
+      'truncate app.acct_tx, app.acct_recovery, app.acct_provisioning, app.acct_hits, auth.users cascade',
+    );
+    const db = createRpcAccountDb(
+      async (fn, args) =>
+        (await pool.query(`select public.${fn}($1::jsonb) as r`, [JSON.stringify(args)])).rows[0].r,
+    );
     const users = new Map<string, string>();
     const revoked: string[] = [];
     let failRevoke = false;
@@ -24,7 +29,9 @@ if (!url) {
       users,
       async createUser({ identifier, secret }) {
         if (auth.failCreate) throw new Error('auth down');
-        const id = (await pool.query('insert into auth.users (email) values ($1) returning id', [identifier])).rows[0].id as string;
+        const id = (
+          await pool.query('insert into auth.users (email) values ($1) returning id', [identifier])
+        ).rows[0].id as string;
         users.set(id, secret);
         return id;
       },
@@ -35,6 +42,7 @@ if (!url) {
       async setSecret(id, secret) {
         if (auth.failSetSecret) throw new Error('auth down');
         users.set(id, secret);
+        return `${id}@fake.invalid`;
       },
     };
     const realRevoke = db.revokeSessions.bind(db);

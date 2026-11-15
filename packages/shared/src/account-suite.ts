@@ -309,7 +309,22 @@ export function defineAccountSuite(
           (await call('recover/complete', { ...body, completionSecret: hexOf(csprng(32)) })).status,
         ).toBe(400);
         expect((await call('recover/complete', body)).status).toBe(200);
-        expect((await call('recover/complete', body)).status).toBe(400);
+        // A different secret or key on a finished transaction is refused...
+        expect(
+          (await call('recover/complete', { ...body, deviceSecret: 'q'.repeat(50) })).status,
+        ).toBe(400);
+        expect(
+          (
+            await call('recover/complete', {
+              ...body,
+              newDigest: recoveryDigest(generateRecoveryKey(csprng)),
+            })
+          ).status,
+        ).toBe(400);
+        // ...while an identical retry (a lost reply) returns the same success and names the account.
+        const again = await call('recover/complete', body);
+        expect(again.status).toBe(200);
+        expect(String(again.body.identifier)).toContain('@');
         expect(
           (
             await call('recover/verify', {

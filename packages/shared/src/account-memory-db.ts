@@ -32,6 +32,7 @@ interface Tx {
   completionMac?: string;
   readyAt?: number;
   prevDigestMac?: string;
+  secretMac?: string;
 }
 
 export interface MemorySnapshot {
@@ -174,6 +175,17 @@ export class MemoryAccountDb implements AccountDb {
   }
   async txComplete(a: Parameters<AccountDb['txComplete']>[0]) {
     const t = this.txs.get(a.txId);
+    const cur = t && this.accts.get(t.userId);
+    if (
+      t &&
+      cur &&
+      t.state === 'done' &&
+      t.completionMac === a.completionMac &&
+      cur.digestMac === a.newDigestMac &&
+      t.secretMac === a.newSecretMac &&
+      a.now < t.expiresAt
+    )
+      return { result: 'ok' as const, userId: t.userId }; // an identical retry of a completion whose reply was lost
     if (!t || t.state !== 'verified' || t.completionMac !== a.completionMac)
       return { result: 'invalid' as const };
     if (a.now >= t.expiresAt) return { result: 'invalid' as const };
@@ -184,6 +196,7 @@ export class MemoryAccountDb implements AccountDb {
       if (x.digestMac === a.newDigestMac && x.userId !== t.userId)
         return { result: 'invalid' as const };
     t.prevDigestMac = acct.digestMac;
+    t.secretMac = a.newSecretMac;
     acct.digestMac = a.newDigestMac;
     acct.rotatedAt = a.now;
     t.state = 'done';

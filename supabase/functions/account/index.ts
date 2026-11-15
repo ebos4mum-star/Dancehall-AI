@@ -37,8 +37,9 @@ const authAdmin: AuthAdmin = {
     if (error) throw new Error('delete_failed');
   },
   async setSecret(userId, secret) {
-    const { error } = await admin.auth.admin.updateUserById(userId, { password: secret });
-    if (error) throw new Error('update_failed');
+    const { data, error } = await admin.auth.admin.updateUserById(userId, { password: secret });
+    if (error || !data.user?.email) throw new Error('update_failed');
+    return data.user.email;
   },
 };
 

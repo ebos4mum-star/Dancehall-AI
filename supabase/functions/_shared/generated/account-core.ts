@@ -54,7 +54,11 @@ export interface AccountDb {
     now: number;
   }): Promise<{ state: ProvisionState; userId?: string; identifier?: string }>;
   /** Records the created user unless another attempt already did; returns the winning user either way. */
-  provisionAttach(requestId: string, userId: string, identifier: string): Promise<{ userId: string; identifier: string }>;
+  provisionAttach(
+    requestId: string,
+    userId: string,
+    identifier: string,
+  ): Promise<{ userId: string; identifier: string }>;
   provisionFinalize(a: {
     requestId: string;
     userId: string;
@@ -80,10 +84,12 @@ export interface AccountDb {
     maxFailures: number;
     lockMs: number;
   }): Promise<{ result: 'cooling' | 'wrong' | 'locked' | 'expired' | 'unknown'; readyAt?: number }>;
+  /** Single use, except that repeating the IDENTICAL completion (same secret, same new key, same device secret) returns the same success, so a lost reply can be retried. */
   txComplete(a: {
     txId: string;
     completionMac: string;
     newDigestMac: string;
+    newSecretMac: string;
     now: number;
   }): Promise<{ result: 'ok' | 'early' | 'invalid'; userId?: string; readyAt?: number }>;
   /** Undoes a txComplete whose follow-up failed, so the person can try again. */
@@ -115,7 +121,8 @@ export interface AccountDb {
 export interface AuthAdmin {
   createUser(a: { identifier: string; secret: string }): Promise<string>;
   deleteUser(userId: string): Promise<void>;
-  setSecret(userId: string, secret: string): Promise<void>;
+  /** Replaces the device secret and returns the account's identifier (the app needs it to sign in on a new phone). */
+  setSecret(userId: string, secret: string): Promise<string>;
 }
 
 export interface CoreDeps {
@@ -231,7 +238,17 @@ export function createAccountCore(deps: CoreDeps) {
     }
     // Two simultaneous attempts with one request id both created a user: keep exactly one (they hold the same device secret, so either works).
     if (winner.userId !== userId) await auth.deleteUser(userId).catch(() => undefined);
-    return finishProvision(requestId, winner.userId, winner.identifier, digest, q1, q2, salt, proof, true);
+    return finishProvision(
+      requestId,
+      winner.userId,
+      winner.identifier,
+      digest,
+      q1,
+      q2,
+      salt,
+      proof,
+      true,
+    );
   }
 
   async function finishProvision(
@@ -345,20 +362,22 @@ export function createAccountCore(deps: CoreDeps) {
       txId,
       completionMac: mac('completion', completionSecret),
       newDigestMac: mac('digest', newDigest),
+      newSecretMac: mac('secret', newSecret),
       now: deps.now(),
     });
     if (done.result === 'early')
       return reply(425, { ok: false, error: 'cooling_off', readyAt: done.readyAt });
     if (done.result !== 'ok' || !done.userId) return GENERIC_FAILURE;
+    let identifier: string;
     try {
       // Secure default: the new device secret replaces the old one, then EVERY existing session is revoked, so a thief's device is signed out.
-      await auth.setSecret(done.userId, newSecret);
+      identifier = await auth.setSecret(done.userId, newSecret);
       await db.revokeSessions(done.userId);
     } catch {
       await db.txRevert(txId);
       return reply(503, { ok: false, error: 'unavailable', retry: true });
     }
-    return reply(200, { ok: true });
+    return reply(200, { ok: true, identifier });
   }
 
   async function recoverCancel(ctx: Ctx): Promise<Reply> {

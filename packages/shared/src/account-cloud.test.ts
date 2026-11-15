@@ -20,6 +20,7 @@ defineAccountSuite('in-memory reference', async (): Promise<SuiteEnv> => {
     async setSecret(id, secret) {
       if (auth.failSetSecret) throw new Error('auth down');
       users.set(id, secret);
+      return `${id}@fake.invalid`;
     },
   };
   const realRevoke = db.revokeSessions.bind(db);
