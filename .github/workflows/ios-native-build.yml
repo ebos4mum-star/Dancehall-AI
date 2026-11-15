@@ -47,17 +47,20 @@ jobs:
         working-directory: apps/mobile
         run: npx expo prebuild --platform ios --no-install
 
-      - name: Confirm identity and deployment target
-        working-directory: apps/mobile
-        run: |
-          set -e
-          grep -q 'PRODUCT_BUNDLE_IDENTIFIER = com.dancehallfit.app;' ios/*.xcodeproj/project.pbxproj
-          echo "bundle identifier: com.dancehallfit.app"
-          grep -h 'IPHONEOS_DEPLOYMENT_TARGET' ios/*.xcodeproj/project.pbxproj | sort -u
-
       - name: Install pods
         working-directory: apps/mobile/ios
         run: pod install
+
+      - name: Confirm identity and deployment target
+        working-directory: apps/mobile/ios
+        run: |
+          set -eo pipefail
+          WS=$(ls -d *.xcworkspace | head -n 1)
+          SCHEME="${WS%.xcworkspace}"
+          xcodebuild -workspace "$WS" -scheme "$SCHEME" -configuration Release -showBuildSettings > "$RUNNER_TEMP/settings.txt"
+          grep -E '^\s+(PRODUCT_BUNDLE_IDENTIFIER|IPHONEOS_DEPLOYMENT_TARGET|SWIFT_VERSION) =' "$RUNNER_TEMP/settings.txt" | sort -u
+          grep -qE '^\s+PRODUCT_BUNDLE_IDENTIFIER = com\.dancehallfit\.app$' "$RUNNER_TEMP/settings.txt"
+          echo "bundle identifier confirmed: com.dancehallfit.app"
 
       - name: Compile (Release, device SDK, signing disabled)
         working-directory: apps/mobile/ios
