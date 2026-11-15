@@ -597,9 +597,12 @@ export const en = {
   'wl.intent.lose': 'Lose weight',
   'wl.intent.maintain': 'Maintain weight',
   'wl.intent.fitness': 'Improve fitness',
+  'wl.intent.strength': 'Build strength',
   'wl.intentNote.lose': 'A gentle, steady pace with safety limits. Nothing here promises a result.',
   'wl.intentNote.maintain': 'Keep your weight steady while you enjoy moving and eating well.',
   'wl.intentNote.fitness': 'Move more and feel better. No weight or calorie numbers needed.',
+  'wl.intentNote.strength':
+    'Get stronger at your own pace. No weight target and no calorie deficit.',
   'wl.tracking': 'How much do you want to track?',
   'wl.tracking.detailed': 'Meals and amounts',
   'wl.tracking.light': 'Meals only',

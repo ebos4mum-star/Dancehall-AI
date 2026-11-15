@@ -8,8 +8,55 @@ import type { CoachContext } from './coach-context';
  * summaries built on them. Everything is OPTIONAL and gentle: no streaks, no penalties, nothing here claims device-measured data.
  * One source of truth for the app and for the database checks (supabase/migrations/20261209000100_wellness.sql mirrors these ranges).
  */
-export const GOAL_INTENTS = ['lose', 'maintain', 'fitness'] as const;
+/**
+ * Goal intents. `strength` (build strength, weight-neutral) was added after the first three: stored values are unchanged, and an older app version that does not
+ * know `strength` reads it as the default (`fitness`) rather than failing. `strength` never creates a calorie deficit or a weight target.
+ */
+export const GOAL_INTENTS = ['lose', 'maintain', 'fitness', 'strength'] as const;
 export type GoalIntent = (typeof GOAL_INTENTS)[number];
+/** The intents the Goals screen offers today. `strength` is understood and stored but is not offered in the UI until the screens are approved (Stage B). */
+export const SELECTABLE_GOAL_INTENTS = ['lose', 'maintain', 'fitness'] as const;
+
+/** The eight coordinated pathways the engine can combine (see pathways.ts). Pathways are rules and tags, not screens or products. */
+export const PATHWAY_IDS = [
+  'dance_aerobic',
+  'balanced_nutrition',
+  'strength_training',
+  'everyday_movement',
+  'cultural_eating',
+  'mindful_eating',
+  'healthy_habits',
+  'weight_maintenance',
+] as const;
+export type PathwayId = (typeof PATHWAY_IDS)[number];
+/** Preferred dance styles. A preference may name a style the catalogue does not have yet (for example dancehall); the engine says so plainly. */
+export const STYLE_PREFS = [
+  'dancehall',
+  'reggae',
+  'afrobeats',
+  'amapiano',
+  'hip_hop',
+  'latin',
+  'bollywood',
+  'soca',
+] as const;
+export type StylePref = (typeof STYLE_PREFS)[number];
+/** Cuisines the person cooks and eats; names match the food reference data's region tags. */
+export const CUISINE_PREFS = [
+  'west_african',
+  'caribbean',
+  'mediterranean',
+  'south_asian',
+  'asian',
+  'latin_american',
+] as const;
+export type CuisinePref = (typeof CUISINE_PREFS)[number];
+export const MOBILITY_PREFS = ['low_impact', 'seated', 'balance_support'] as const;
+export type MobilityPref = (typeof MOBILITY_PREFS)[number];
+export const EXPERIENCE_LEVELS = ['new', 'some', 'regular'] as const;
+export type ExperienceLevel = (typeof EXPERIENCE_LEVELS)[number];
+export const SCHEDULE_PREFS = ['morning', 'afternoon', 'evening', 'varies'] as const;
+export type SchedulePref = (typeof SCHEDULE_PREFS)[number];
 export const ACTIVITY_PREFS = ['dance', 'walking', 'strength'] as const;
 export type ActivityPref = (typeof ACTIVITY_PREFS)[number];
 export const EQUIPMENT_PREFS = ['none', 'dumbbells', 'bands'] as const;
@@ -53,6 +100,14 @@ export interface WellnessPrefs {
   /** Safety flags the person chose to share. Used only to avoid unsuitable targets. */
   pregnantOrPostpartum: boolean;
   eatingConcern: boolean;
+  /** Pathways the person chose. Empty means none chosen: the engine then only SUGGESTS, and nothing is activated for them. */
+  pathways: PathwayId[];
+  danceStyles: StylePref[];
+  cuisines: CuisinePref[];
+  mobility: MobilityPref[];
+  /** Null means not told. The engine then starts gently and says so; it never guesses. */
+  experience: ExperienceLevel | null;
+  schedule: SchedulePref | null;
 }
 export const DEFAULT_PREFS: WellnessPrefs = {
   goalIntent: 'fitness',
@@ -69,6 +124,12 @@ export const DEFAULT_PREFS: WellnessPrefs = {
   celebrations: 'full',
   pregnantOrPostpartum: false,
   eatingConcern: false,
+  pathways: [],
+  danceStyles: [],
+  cuisines: [],
+  mobility: [],
+  experience: null,
+  schedule: null,
 };
 const pick = <T extends string>(v: unknown, all: readonly T[]): T[] =>
   Array.isArray(v) ? all.filter((x) => v.includes(x)) : [];
@@ -102,6 +163,12 @@ export function parsePrefs(raw: unknown): WellnessPrefs {
       CELEBRATION_LEVELS.find((g) => g === r.celebrations) ?? DEFAULT_PREFS.celebrations,
     pregnantOrPostpartum: r.pregnantOrPostpartum === true,
     eatingConcern: r.eatingConcern === true,
+    pathways: pick(r.pathways, PATHWAY_IDS),
+    danceStyles: pick(r.danceStyles, STYLE_PREFS),
+    cuisines: pick(r.cuisines, CUISINE_PREFS),
+    mobility: pick(r.mobility, MOBILITY_PREFS),
+    experience: EXPERIENCE_LEVELS.find((g) => g === r.experience) ?? null,
+    schedule: SCHEDULE_PREFS.find((g) => g === r.schedule) ?? null,
   };
 }
 

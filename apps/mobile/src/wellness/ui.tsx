@@ -4,13 +4,14 @@ import {
   CELEBRATION_LEVELS,
   DIET_PREFS,
   EQUIPMENT_PREFS,
-  GOAL_INTENTS,
+  SELECTABLE_GOAL_INTENTS,
   TRACKING_STYLES,
   entriesOf,
   hydrationOn,
   type ActivityPref,
   type DietPref,
   type EquipmentPref,
+  type GoalIntent,
 } from '@dancehall/shared';
 import { t, type StringKey } from '@/i18n';
 import { brand, radius, spacing } from '@/theme/tokens';
@@ -26,7 +27,8 @@ import { BigField } from '@/onboarding/kit';
 import { useWellness, type WellnessData } from './hooks';
 import { useEffect, useState } from 'react';
 
-const INTENT_ICON: Record<(typeof GOAL_INTENTS)[number], IconName> = {
+const INTENT_ICON: Record<GoalIntent, IconName> = {
+  strength: 'barbell',
   lose: 'trending-down',
   maintain: 'swap-horizontal',
   fitness: 'fitness',
@@ -37,13 +39,13 @@ export function IntentChoice({
   value,
   onChange,
 }: {
-  value: (typeof GOAL_INTENTS)[number];
-  onChange: (v: (typeof GOAL_INTENTS)[number]) => void;
+  value: GoalIntent;
+  onChange: (v: GoalIntent) => void;
 }) {
   return (
     <View style={{ gap: spacing.sm }}>
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-        {GOAL_INTENTS.map((g) => (
+        {SELECTABLE_GOAL_INTENTS.map((g) => (
           <View key={g} style={{ flex: 1 }}>
             <IconChoice
               icon={INTENT_ICON[g]}

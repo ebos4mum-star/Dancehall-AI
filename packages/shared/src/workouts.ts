@@ -109,6 +109,8 @@ export function suggestQuickFit(
     minutes: QuickFitMinutes;
     lowImpactOnly?: boolean;
     style?: DanceStyle;
+    /** Only these intensities (a safety limit: it is kept even when the style preference cannot be met). */
+    intensities?: readonly Intensity[];
     excludeIds?: readonly string[];
     seed?: number;
   },
@@ -119,6 +121,7 @@ export function suggestQuickFit(
       minutes: [args.minutes],
       quickFitOnly: true,
       lowImpactOnly: args.lowImpactOnly,
+      intensities: args.intensities,
       styles: args.style ? [args.style] : undefined,
     },
     list,
@@ -127,10 +130,27 @@ export function suggestQuickFit(
     pool.length > 0
       ? pool
       : filterWorkouts(
-          { minutes: [args.minutes], quickFitOnly: true, lowImpactOnly: args.lowImpactOnly },
+          {
+            minutes: [args.minutes],
+            quickFitOnly: true,
+            lowImpactOnly: args.lowImpactOnly,
+            intensities: args.intensities,
+          },
           list,
         );
-  return fallback.length === 0 ? null : (fallback[(args.seed ?? 0) % fallback.length] ?? null);
+  // An intensity ceiling is a comfort limit, impact is a joint-safety limit. If no session meets the ceiling at this length, keep the impact limit and offer the
+  // gentlest session available rather than nothing.
+  const gentlest = (): WorkoutDef[] => {
+    const all = filterWorkouts(
+      { minutes: [args.minutes], quickFitOnly: true, lowImpactOnly: args.lowImpactOnly },
+      list,
+    ).filter((w) => !args.excludeIds?.includes(w.id));
+    const rank = (w: WorkoutDef) => INTENSITIES.indexOf(w.intensity);
+    const lowest = Math.min(...all.map(rank));
+    return all.filter((w) => rank(w) === lowest);
+  };
+  const chosen = fallback.length === 0 && args.intensities ? gentlest() : fallback;
+  return chosen.length === 0 ? null : (chosen[(args.seed ?? 0) % chosen.length] ?? null);
 }
 
 export interface SessionSegment {

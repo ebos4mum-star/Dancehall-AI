@@ -1,5 +1,7 @@
 # Migration setup checklist (owner actions)
 
+> **Status note (2026-11-15):** this document predates the current hosted state. The development project now has all 13 migrations applied and 48 public tables with RLS (read-only verified; see `supabase/hosted-history.json`). Read the sections below as history; the only migration not applied is `20261213000100_household_trigger_revoke.sql`.
+
 Placeholders only. Never paste real keys into this repository (it is public) or into chat.
 Nothing here has been run for you: no project, build, or paid service has been created.
 

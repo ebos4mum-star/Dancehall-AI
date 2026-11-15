@@ -122,6 +122,10 @@ export function nutritionTargets(i: TargetInput): NutritionTargets {
     reasons.push(
       'Maintaining: the estimate is your estimated maintenance energy, so there is no deficit.',
     );
+  } else if (i.intent === 'strength') {
+    reasons.push(
+      'Building strength: the estimate is your estimated maintenance energy, so there is no deficit and no weight target. Eating enough, with protein spread through the day, supports training.',
+    );
   } else {
     reasons.push(
       'Improving fitness: the estimate is your estimated maintenance energy to fuel your movement.',

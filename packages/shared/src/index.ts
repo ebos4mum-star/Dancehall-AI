@@ -28,3 +28,5 @@ export * from './wellness';
 export * from './nutrition-plan';
 export * from './strength';
 export * from './celebrations';
+export * from './evidence';
+export * from './pathways';
