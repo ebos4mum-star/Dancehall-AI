@@ -65,7 +65,7 @@ async function http(u: string, init: RequestInit): Promise<R> {
 }
 /** Calls the account function; a 429 comes from a per-network limit before anything is evaluated, so it is retried (this sandbox's address rotates). */
 async function fn(op: string, body: unknown, token?: string): Promise<R> {
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 40; i++) {
     const r = await http(`${url}/functions/v1/account/${op}`, {
       method: 'POST',
       headers: {
@@ -182,6 +182,134 @@ async function makeAccount(name: string, qs: [string, string]): Promise<Acct> {
   a.refreshToken = si.refresh!;
   a.userId = sub(si.access!);
   return a;
+}
+
+/** The checks that follow a completed recovery: replays, the identical-retry behaviour, concurrent verifies and completions, a key-only attacker race, and owner cancel. */
+/** A key-only attacker racing the owner, then the signed-in owner cancelling a pending recovery. */
+async function attackerAndCancel(st: State, A: Acct) {
+  // an attacker holding only the key cannot take over concurrently with the owner's real recovery
+  const owner = startAndVerify(A, A.key, A.answers);
+  const attacker = startAndVerify(A, A.key, wrong(A));
+  const [ov, av] = await Promise.all([owner, attacker]);
+  check(
+    'with the owner and a key-only attacker racing, only the owner verifies',
+    ov.v?.status === 200 && av.v?.status === 400,
+  );
+  // owner cancels from the signed-in session
+  const stat = await fn('status', {}, A.accessToken);
+  check(
+    'the signed-in owner sees the pending recovery',
+    stat.status === 200 && !!stat.body.pendingRecovery,
+  );
+  const canc = await fn('recover/cancel', {}, A.accessToken);
+  check('the owner cancels it', canc.status === 200 && canc.body.cancelled >= 1);
+  const compCancelled = await fn('recover/complete', {
+    txId: ov.s.body.txId,
+    completionSecret: ov.completionSecret,
+    deviceSecret: b64url(rnd(32)),
+    newDigest: recoveryDigest(generateRecoveryKey(rnd)),
+  });
+  check(
+    'a cancelled recovery cannot be completed',
+    compCancelled.status === 400 || compCancelled.status === 425,
+  );
+  save(st);
+  info('recover phase done');
+}
+
+async function afterCompletion(
+  st: State,
+  A: Acct,
+  comp: { txId: string; completionSecret: string; deviceSecret: string; newDigest: string },
+) {
+  // replays
+  const replayDiffSecret = await fn('recover/complete', {
+    ...comp,
+    deviceSecret: b64url(rnd(32)),
+  });
+  check('replay with a different device secret is rejected', replayDiffSecret.status === 400);
+  const replayDiffKey = await fn('recover/complete', {
+    ...comp,
+    newDigest: recoveryDigest(generateRecoveryKey(rnd)),
+  });
+  check('replay with a different new key is rejected', replayDiffKey.status === 400);
+  const replayVerify = await fn('recover/verify', {
+    txId: comp.txId,
+    proof: await proofOf(A, A.answers),
+    completionSecret: hex(rnd(32)),
+  });
+  check('re-verifying a finished transaction is rejected', replayVerify.status === 400);
+  const preReplay = await refreshWith(A.refreshToken);
+  info(`new session refresh before identical replay: status ${preReplay.status}`);
+  const si2 = await signIn(A, A.secret);
+  A.accessToken = si2.access!;
+  A.refreshToken = si2.refresh!;
+  save(st);
+  const replaySame = await fn('recover/complete', comp);
+  info(`identical replay (designed as a lost-reply retry): status ${replaySame.status}`);
+  const afterReplay = await refreshWith(A.refreshToken);
+  info(
+    `new session refresh AFTER an identical replay: status ${afterReplay.status} (a non-2xx here means the replay signed the new device out)`,
+  );
+  const si3 = await signIn(A, A.secret);
+  A.accessToken = si3.access!;
+  A.refreshToken = si3.refresh!;
+  check(
+    'after an identical replay the account is still accessible with the same new credential',
+    si3.status === 200,
+  );
+  save(st);
+
+  // concurrent verify on one transaction, then concurrent completions
+  const s2 = await fn('recover/start', { digest: recoveryDigest(A.key) });
+  const proof2 = await proofOf(A, A.answers, s2.body.salt);
+  const cs = [hex(rnd(32)), hex(rnd(32))];
+  const vs = await Promise.all(
+    cs.map((c) => fn('recover/verify', { txId: s2.body.txId, proof: proof2, completionSecret: c })),
+  );
+  check(
+    'concurrent verifies of one transaction: exactly one succeeds',
+    vs.filter((v) => v.status === 200).length === 1,
+    vs.map((v) => v.status).join(','),
+  );
+  const winnerCs = cs[vs.findIndex((v) => v.status === 200)]!;
+  const readyAt = vs.find((v) => v.status === 200)!.body.readyAt as number;
+  await sleep(Math.max(0, readyAt - Date.now()) + 1500);
+  const cands = [0, 1, 2].map(() => ({
+    secret: b64url(rnd(32)),
+    key: generateRecoveryKey(rnd),
+  }));
+  const outs = await Promise.all(
+    cands.map((c) =>
+      fn('recover/complete', {
+        txId: s2.body.txId,
+        completionSecret: winnerCs,
+        deviceSecret: c.secret,
+        newDigest: recoveryDigest(c.key),
+      }),
+    ),
+  );
+  const winners = outs.map((o, i) => (o.status === 200 ? i : -1)).filter((i) => i >= 0);
+  check(
+    'three concurrent completions of one transaction: exactly one takes effect',
+    winners.length === 1,
+    outs.map((o) => o.status).join(','),
+  );
+  const w = cands[winners[0]!]!;
+  const results2 = await Promise.all(cands.map((c) => signIn(A, c.secret)));
+  check(
+    'only the winning device secret authenticates',
+    results2.filter((r) => r.status === 200).length === 1 && results2[winners[0]!]!.status === 200,
+  );
+  const finalSi = results2[winners[0]!]!;
+  A.secret = w.secret;
+  A.key = w.key;
+  A.accessToken = finalSi.access!;
+  A.refreshToken = finalSi.refresh!;
+  check('the account is still the same user after the race', sub(A.accessToken) === A.userId);
+  save(st);
+
+  await attackerAndCancel(st, A);
 }
 
 describe.skipIf(!on)('gate 5 live verification', () => {
@@ -465,124 +593,64 @@ describe.skipIf(!on)('gate 5 live verification', () => {
         oldKeyTry.v?.status === 400 &&
           JSON.stringify(oldKeyTry.v.body) === JSON.stringify(unknown.v?.body),
       );
-      // replays
-      const replayDiffSecret = await fn('recover/complete', {
-        ...comp,
-        deviceSecret: b64url(rnd(32)),
-      });
-      check('replay with a different device secret is rejected', replayDiffSecret.status === 400);
-      const replayDiffKey = await fn('recover/complete', {
-        ...comp,
-        newDigest: recoveryDigest(generateRecoveryKey(rnd)),
-      });
-      check('replay with a different new key is rejected', replayDiffKey.status === 400);
-      const replayVerify = await fn('recover/verify', {
-        txId: comp.txId,
-        proof: await proofOf(A, A.answers),
-        completionSecret: hex(rnd(32)),
-      });
-      check('re-verifying a finished transaction is rejected', replayVerify.status === 400);
-      const preReplay = await refreshWith(A.refreshToken);
-      info(`new session refresh before identical replay: status ${preReplay.status}`);
-      const si2 = await signIn(A, A.secret);
-      A.accessToken = si2.access!;
-      A.refreshToken = si2.refresh!;
-      save(st);
-      const replaySame = await fn('recover/complete', comp);
-      info(`identical replay (designed as a lost-reply retry): status ${replaySame.status}`);
-      const afterReplay = await refreshWith(A.refreshToken);
-      info(
-        `new session refresh AFTER an identical replay: status ${afterReplay.status} (a non-2xx here means the replay signed the new device out)`,
-      );
-      const si3 = await signIn(A, A.secret);
-      A.accessToken = si3.access!;
-      A.refreshToken = si3.refresh!;
-      check(
-        'after an identical replay the account is still accessible with the same new credential',
-        si3.status === 200,
-      );
-      save(st);
-
-      // concurrent verify on one transaction, then concurrent completions
-      const s2 = await fn('recover/start', { digest: recoveryDigest(A.key) });
-      const proof2 = await proofOf(A, A.answers, s2.body.salt);
-      const cs = [hex(rnd(32)), hex(rnd(32))];
-      const vs = await Promise.all(
-        cs.map((c) =>
-          fn('recover/verify', { txId: s2.body.txId, proof: proof2, completionSecret: c }),
-        ),
-      );
-      check(
-        'concurrent verifies of one transaction: exactly one succeeds',
-        vs.filter((v) => v.status === 200).length === 1,
-        vs.map((v) => v.status).join(','),
-      );
-      const winnerCs = cs[vs.findIndex((v) => v.status === 200)]!;
-      const readyAt = vs.find((v) => v.status === 200)!.body.readyAt as number;
-      await sleep(Math.max(0, readyAt - Date.now()) + 1500);
-      const cands = [0, 1, 2].map(() => ({
-        secret: b64url(rnd(32)),
-        key: generateRecoveryKey(rnd),
-      }));
-      const outs = await Promise.all(
-        cands.map((c) =>
-          fn('recover/complete', {
-            txId: s2.body.txId,
-            completionSecret: winnerCs,
-            deviceSecret: c.secret,
-            newDigest: recoveryDigest(c.key),
-          }),
-        ),
-      );
-      const winners = outs.map((o, i) => (o.status === 200 ? i : -1)).filter((i) => i >= 0);
-      check(
-        'three concurrent completions of one transaction: exactly one takes effect',
-        winners.length === 1,
-        outs.map((o) => o.status).join(','),
-      );
-      const w = cands[winners[0]!]!;
-      const results2 = await Promise.all(cands.map((c) => signIn(A, c.secret)));
-      check(
-        'only the winning device secret authenticates',
-        results2.filter((r) => r.status === 200).length === 1 &&
-          results2[winners[0]!]!.status === 200,
-      );
-      const finalSi = results2[winners[0]!]!;
-      A.secret = w.secret;
-      A.key = w.key;
-      A.accessToken = finalSi.access!;
-      A.refreshToken = finalSi.refresh!;
-      check('the account is still the same user after the race', sub(A.accessToken) === A.userId);
-      save(st);
-
-      // an attacker holding only the key cannot take over concurrently with the owner's real recovery
-      const owner = startAndVerify(A, A.key, A.answers);
-      const attacker = startAndVerify(A, A.key, wrong(A));
-      const [ov, av] = await Promise.all([owner, attacker]);
-      check(
-        'with the owner and a key-only attacker racing, only the owner verifies',
-        ov.v?.status === 200 && av.v?.status === 400,
-      );
-      // owner cancels from the signed-in session
-      const stat = await fn('status', {}, A.accessToken);
-      check(
-        'the signed-in owner sees the pending recovery',
-        stat.status === 200 && !!stat.body.pendingRecovery,
-      );
-      const canc = await fn('recover/cancel', {}, A.accessToken);
-      check('the owner cancels it', canc.status === 200 && canc.body.cancelled >= 1);
-      const compCancelled = await fn('recover/complete', {
-        txId: ov.s.body.txId,
-        completionSecret: ov.completionSecret,
-        deviceSecret: b64url(rnd(32)),
-        newDigest: recoveryDigest(generateRecoveryKey(rnd)),
-      });
-      check(
-        'a cancelled recovery cannot be completed',
-        compCancelled.status === 400 || compCancelled.status === 425,
-      );
-      save(st);
+      await afterCompletion(st, A, comp);
       info('recover phase done');
+    }
+
+    // -------------------------------------------------------------------------
+    if (phase === 'recover2') {
+      // A fresh recovery cycle on A, then the later checks (used to resume after an interrupted run).
+      const st = load();
+      const { A } = st;
+      const sv = await startAndVerify(A, A.key, A.answers);
+      check('A verifies with its current key and answers', sv.v?.status === 200);
+      const wait = (sv.v!.body.readyAt as number) - Date.now();
+      check(
+        'the temporary short cooling-off configuration is still in force',
+        wait > 1000 && wait < 300_000,
+        `${Math.round(wait / 1000)} s`,
+      );
+      const newKey = generateRecoveryKey(rnd);
+      const newSecret = b64url(rnd(32));
+      const comp = {
+        txId: sv.s.body.txId,
+        completionSecret: sv.completionSecret,
+        deviceSecret: newSecret,
+        newDigest: recoveryDigest(newKey),
+      };
+      await sleep(Math.max(0, (sv.v!.body.readyAt as number) - Date.now()) + 1500);
+      const done = await fn('recover/complete', comp);
+      check(
+        'recovery completes again after the wait',
+        done.status === 200 && done.body.identifier === A.identifier,
+      );
+      A.secret = newSecret;
+      A.key = newKey;
+      const si = await signIn(A, newSecret);
+      A.accessToken = si.access!;
+      A.refreshToken = si.refresh!;
+      check(
+        'the recovered account keeps its original user id',
+        si.status === 200 && sub(si.access!) === A.userId,
+      );
+      st.firstCompletion = comp;
+      save(st);
+      await afterCompletion(st, A, comp);
+      info('recover2 phase done');
+    }
+
+    // -------------------------------------------------------------------------
+    if (phase === 'recover3') {
+      const st = load();
+      const si = await signIn(st.A, st.A.secret);
+      check(
+        'A authenticates with its saved credential',
+        si.status === 200 && sub(si.access!) === st.A.userId,
+      );
+      st.A.accessToken = si.access!;
+      st.A.refreshToken = si.refresh!;
+      await attackerAndCancel(st, st.A);
+      info('recover3 phase done');
     }
 
     // ------------------------------------------------------------------------------------------------------------------------------------------------
