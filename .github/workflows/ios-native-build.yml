@@ -14,7 +14,7 @@ concurrency:
 
 env:
   # Pinned toolchain: the runner image and Xcode are fixed, never the moving "latest".
-  XCODE_APP: /Applications/Xcode_16.4.app
+  XCODE_APP: /Applications/Xcode_26.3.app
   # Placeholders only. The unsigned compile needs no real project; real values never belong in this file.
   EXPO_PUBLIC_APP_ENV: preview
   EXPO_PUBLIC_AUTH_MODE: supabase
