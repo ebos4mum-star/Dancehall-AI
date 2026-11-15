@@ -622,6 +622,8 @@ export const en = {
   'cam.consentBody':
     'Photo analysis is optional and separate from logging food by hand. You can turn it off any time in Privacy and settings.',
   'cam.allow': 'Allow photo analysis',
+  'habits.hint': 'Your logs show this today. Tap to mark it done.',
+  'habits.ideas': 'Simple ideas to start with',
   'plate.title': 'Plate, protein and fibre',
   'plate.protein': 'Protein today',
   'plate.fibre': 'Fibre today',
