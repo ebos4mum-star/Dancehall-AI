@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  EXERCISE_DEMOS,
   HOME_EXERCISES,
   HOME_ITEMS,
   HOME_ITEM_IDS,
@@ -22,7 +21,6 @@ import {
   makeRequest,
   parsePrefs,
   requestFromPrefs,
-  resolveExerciseDemo,
   resolvePathways,
   runnerReduce,
   initRunnerFromSegments,
@@ -31,7 +29,6 @@ import {
   whyNot,
   type HomeItemId,
   type HomeRequest,
-  type Licence,
 } from './index';
 
 afterEach(() => disableInternalFixtures());
@@ -450,57 +447,5 @@ describe('preferences and the engine', () => {
     expect(act?.text).toMatch(/sturdy chair and wall|sturdy chair, wall/);
     expect(act?.why).toMatch(/your history stays/);
     expect(on.notes.join(' ')).not.toMatch(/not available yet/);
-  });
-});
-
-describe('exercise demonstrations', () => {
-  const licence: Licence = {
-    id: 'lic-test',
-    status: 'cleared',
-    territories: ['*'],
-    startsOn: '2026-01-01',
-    endsOn: null,
-  } as never;
-  const demo = {
-    id: 'demo-test',
-    exerciseId: 'home-wall-push-up',
-    kind: 'video' as const,
-    uri: 'test://none',
-    captions: 'Test captions describing the movement.',
-    licenceId: 'lic-test',
-    review: 'approved' as const,
-    attribution: { creditLine: 'Test credit' },
-  };
-  const args = {
-    exerciseId: 'home-wall-push-up',
-    licences: [licence],
-    country: 'AU',
-    today: '2026-06-01',
-  };
-
-  it('none exist today, so none is ever offered or implied', () => {
-    expect(EXERCISE_DEMOS).toEqual([]);
-    expect(resolveExerciseDemo(args)).toEqual({ available: false, reason: 'no_demo' });
-    for (const e of HOME_EXERCISES)
-      expect(resolveExerciseDemo({ ...args, exerciseId: e.id }).available).toBe(false);
-  });
-
-  it('is offered only when licensed, approved, captioned and loading', () => {
-    expect(resolveExerciseDemo({ ...args, demos: [demo] }).available).toBe(true);
-    expect(resolveExerciseDemo({ ...args, demos: [demo], licences: [] }).reason).toBe(
-      'not_licensed',
-    );
-    expect(
-      resolveExerciseDemo({ ...args, demos: [{ ...demo, review: 'unreviewed' }] }).reason,
-    ).toBe('not_reviewed');
-    expect(resolveExerciseDemo({ ...args, demos: [{ ...demo, captions: '' }] }).reason).toBe(
-      'no_captions',
-    );
-    expect(
-      resolveExerciseDemo({ ...args, demos: [demo], missing: new Set(['demo-test']) }).reason,
-    ).toBe('media_missing');
-    expect(resolveExerciseDemo({ ...args, exerciseId: 'other', demos: [demo] }).reason).toBe(
-      'no_demo',
-    );
   });
 });

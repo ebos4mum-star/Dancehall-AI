@@ -29,3 +29,4 @@ scripts/forbidden-references.local.txt
 
 # Live-test credentials (never commit)
 apps/mobile/.env.live
+dist-ios-check/

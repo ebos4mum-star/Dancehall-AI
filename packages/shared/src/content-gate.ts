@@ -1,3 +1,4 @@
+import { DEMO_CLIPS, demoClipProblems, type DemoClip } from './demo-media';
 import { CURATED_FOODS, type FoodRef } from './food-data';
 import { foodProblems } from './food-provenance';
 import { homeExerciseProblems } from './home-equipment';
@@ -106,6 +107,7 @@ export function bundledContentProblems(
     foods?: readonly FoodRef[];
     strengthWorkouts?: typeof STRENGTH_WORKOUTS;
     strengthExercises?: typeof STRENGTH_EXERCISES;
+    demoClips?: readonly DemoClip[];
   } = {},
 ): string[] {
   const out: string[] = [];
@@ -118,6 +120,7 @@ export function bundledContentProblems(
     if (f.staged) out.push(`${f.id}: a staged, unreviewed food is in the bundle`);
     else for (const p of foodProblems(f)) out.push(p);
   }
+  for (const c of lists.demoClips ?? DEMO_CLIPS) out.push(...demoClipProblems(c));
   const sw = lists.strengthWorkouts ?? STRENGTH_WORKOUTS;
   const se = lists.strengthExercises ?? STRENGTH_EXERCISES;
   for (const w of sw) {

@@ -41,4 +41,6 @@ export * from './food-staged';
 export * from './home-items';
 export * from './home-equipment';
 export * from './home-exercises';
-export * from './exercise-demos';
+export * from './demo-media';
+export * from './demo-playback';
+export * from './review-requirements';

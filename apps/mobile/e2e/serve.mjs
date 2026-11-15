@@ -12,10 +12,28 @@ const types = {
   '.ttf': 'font/ttf',
   '.css': 'text/css',
   '.svg': 'image/svg+xml',
+  '.webm': 'video/webm',
 };
+// A synthetic test pattern (not a demonstration) served only by this test server, with byte ranges so a browser can seek.
+const mediaDir = join(dirname(fileURLToPath(import.meta.url)), 'media');
 export function serve(port = 8099) {
   const s = http.createServer(async (req, res) => {
     const p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+    if (p === '/e2e-clip.webm') {
+      const f = await readFile(join(mediaDir, 'e2e-clip.webm'));
+      const m = /bytes=(\d*)-(\d*)/.exec(req.headers.range ?? '');
+      const start = m && m[1] ? Number(m[1]) : 0;
+      const end = m && m[2] ? Number(m[2]) : f.length - 1;
+      res
+        .writeHead(m ? 206 : 200, {
+          'content-type': 'video/webm',
+          'accept-ranges': 'bytes',
+          'content-length': end - start + 1,
+          ...(m ? { 'content-range': `bytes ${start}-${end}/${f.length}` } : {}),
+        })
+        .end(f.subarray(start, end + 1));
+      return;
+    }
     try {
       const f = await readFile(join(root, p));
       res
