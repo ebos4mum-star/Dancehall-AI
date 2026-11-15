@@ -1,5 +1,8 @@
 import {
   FOOD_BY_ID,
+  MAINTENANCE_EDUCATION,
+  PLATE_MODEL,
+  PLATE_NOTE,
   WORKOUT_BY_ID,
   addDaysIso,
   classifyIntent,
@@ -242,6 +245,54 @@ export function composeCoachReply(userText: string, c: CoachContext): Reply {
       return {
         message: `Habits stick when they are small and tied to something you already do. Pick one: ${ideas.join(', ')}. Missing a day does not reset anything.${wl && !wl.numbersHidden && wl.walkMinutesWeek > 0 ? ` You have logged ${wl.walkMinutesWeek} minutes of walking this week, which is a good base.` : ''}`,
         because: reasons(c, ['Small habits are easier to repeat than big changes.']),
+        proposedChanges: [],
+      };
+    }
+    case 'calorie_needs': {
+      const hidden = c.wellness?.numbersHidden === true;
+      if (hidden)
+        return {
+          message:
+            'I will not share calorie numbers, because of the privacy choices you made. We can focus on how meals feel, regular movement, sleep and water instead.',
+          because: reasons(c, ['Your settings turn calorie and weight numbers off.']),
+          proposedChanges: [],
+        };
+      if (c.guideKcal === undefined)
+        return {
+          message:
+            'I do not have a calorie estimate for you yet, and I will not guess one. The Goals screen shows what is still needed: usually your weight, height, birth date, usual activity and the quick safety questions. Some answers also mean we suggest talking to a professional first.',
+          because: reasons(c, ['Estimates come from the same calculation as your Goals screen.']),
+          proposedChanges: [],
+        };
+      const old =
+        c.guideWeightDaysOld !== undefined
+          ? ` It rests on a weight recorded about ${c.guideWeightDaysOld} days ago, not a current measurement, so updating your weight would refresh it.`
+          : '';
+      return {
+        message: `Your current daily estimate is about ${c.guideKcal} kcal. It is provisional: a rough estimate from general formulas that no dietitian has reviewed, not a target to hit. Your usual activity level already includes your regular exercise, so I do not add workout calories on top.${old}`,
+        because: reasons(c, [
+          'This is the same estimate your Goals and Food screens show, rounded.',
+        ]),
+        proposedChanges: [],
+      };
+    }
+    case 'nutrition_balance':
+      return {
+        message: `A simple plate picture, for any cuisine: ${PLATE_MODEL.map((p) => `${p.share} ${p.label.toLowerCase()}`).join('; ')}. ${PLATE_NOTE} Your Food tab shows today's protein and fibre guidance${c.wellness?.numbersHidden ? ' as a plate picture only' : ''}.`,
+        because: reasons(c, ['Plate guidance is general and provisional, not medical advice.']),
+        proposedChanges: [],
+      };
+    case 'maintenance': {
+      if (c.wellness?.numbersHidden === true)
+        return {
+          message:
+            'Keeping steady is mostly about habits you enjoy: movement, regular meals, sleep and water. We can build those together without any numbers.',
+          because: reasons(c, ['Your settings turn weight and calorie numbers off.']),
+          proposedChanges: [],
+        };
+      return {
+        message: `${MAINTENANCE_EDUCATION[0]} ${MAINTENANCE_EDUCATION[2]} If you have reached a goal, you can choose Maintain weight on the Goals screen at any time; your history stays as it is.`,
+        because: reasons(c, ['This is general guidance, not medical advice.']),
         proposedChanges: [],
       };
     }

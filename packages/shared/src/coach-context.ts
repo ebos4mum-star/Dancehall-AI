@@ -156,6 +156,9 @@ export type CoachIntent =
   | 'plateau'
   | 'recovery'
   | 'habits'
+  | 'calorie_needs'
+  | 'nutrition_balance'
+  | 'maintenance'
   | 'workout_request'
   | 'food_swap'
   | 'goal_too_hard'
@@ -209,6 +212,24 @@ export function classifyIntent(text: string): { intent: CoachIntent; minutes?: 5
     )
   )
     return { intent: 'goal_too_hard' };
+  if (
+    /\b(calor\w*|kcal|maintenance (?:calories|level)|how much (?:should i|do i) eat|how many.*\beat\b)\b/.test(
+      t,
+    )
+  )
+    return { intent: 'calorie_needs' };
+  if (
+    /\b(protein|fib(?:re|er)|balanced (?:plate|meal|diet)|healthy plate|plate|what (?:should|can) i eat)\b/.test(
+      t,
+    )
+  )
+    return { intent: 'nutrition_balance' };
+  if (
+    /\b(maintain|maintaining|maintenance|keep (?:my )?weight|reached my goal|hit my goal|goal weight|after (?:losing|i lose|i lost)|regain\w*)\b/.test(
+      t,
+    )
+  )
+    return { intent: 'maintenance' };
   if (/\b(swap|instead of|alternative|replace|lighter|healthier option|substitute)\b/.test(t))
     return { intent: 'food_swap' };
   if (/\b(weigh|weight|scale|goal|progress|plateau)\b/.test(t))
