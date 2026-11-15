@@ -62,6 +62,16 @@ export function defineAccountSuite(
         pepper,
         policy: { staleProvisionMs: 60_000, ...opts.policy },
       });
+    const createAccountCoreWith = (policy: Partial<AccountPolicy>, identifierDomain?: string) =>
+      createAccountCore({
+        db: env.db,
+        auth: env.auth,
+        random: csprng,
+        now: () => clock,
+        pepper,
+        policy: { staleProvisionMs: 60_000, ...opts.policy, ...policy },
+        ...(identifierDomain ? { identifierDomain } : {}),
+      });
     const call = (op: string, body: Record<string, unknown>, userId?: string): Promise<Reply> =>
       core().handle(op, body, { ipBucket: ip, ...(userId ? { userId } : {}) });
 
@@ -175,6 +185,32 @@ export function defineAccountSuite(
           expect((await call('provision', bad)).status).toBe(400);
         }
         expect(env.auth.users.size).toBe(0);
+      });
+      it('caps accounts created service-wide even when every request claims a different network bucket (no reliance on headers)', async () => {
+        let created = 0;
+        let refused = 0;
+        for (let i = 0; i < 12; i++) {
+          ip = `spoofed-${i}`;
+          const r = await createAccountCoreWith({ globalProvisionLimit: 5 }).handle(
+            'provision',
+            (await newAccount()).body,
+            { ipBucket: ip },
+          );
+          if (r.status === 200) created++;
+          else if (r.status === 429) refused++;
+        }
+        expect(created).toBe(5);
+        expect(refused).toBe(7);
+        expect(env.auth.users.size).toBe(5);
+      });
+      it('uses the configured identifier domain and refuses a malformed one', async () => {
+        const r = await createAccountCoreWith({}, 'accounts.example.test').handle(
+          'provision',
+          (await newAccount()).body,
+          { ipBucket: 'x' },
+        );
+        expect(String(r.body.identifier)).toMatch(/^u[0-9a-f]{32}@accounts\.example\.test$/);
+        expect(() => createAccountCoreWith({}, 'bad domain!')).toThrow();
       });
       it('rate limits provisioning per network bucket', async () => {
         let last = 0;
@@ -295,6 +331,43 @@ export function defineAccountSuite(
         expect(String(s1.txId)).toMatch(/^[0-9a-f]{32}$/);
         expect(String(s1.salt)).toHaveLength(32);
         expect(real.questions).toEqual([answers[1].id, answers[0].id].sort());
+      });
+      it("recovery cannot be skipped: completing needs a VERIFIED transaction, and one transaction's secret does not open another", async () => {
+        const a = await ready();
+        const body = (txId: string, completionSecret: string) => ({
+          txId,
+          completionSecret,
+          deviceSecret: 'n'.repeat(50),
+          newDigest: recoveryDigest(generateRecoveryKey(csprng)),
+        });
+        clock += core().policy.coolingOffMs + 1;
+        // only the key (a started, unverified transaction): refused whatever secret is sent
+        const started = (await call('recover/start', { digest: a.digest })).body as {
+          txId: string;
+        };
+        expect((await call('recover/complete', body(started.txId, hexOf(csprng(32))))).status).toBe(
+          400,
+        );
+        // a transaction that never existed
+        expect(
+          (await call('recover/complete', body(hexOf(csprng(16)), hexOf(csprng(32))))).status,
+        ).toBe(400);
+        // a failed (burned) transaction
+        const wrong = await recoverTo(a.key, [answers[0], { id: answers[1].id, answer: 'nope' }]);
+        expect(
+          (await call('recover/complete', body(wrong.txId, wrong.completionSecret))).status,
+        ).toBe(400);
+        // a verified transaction opened with ANOTHER completion secret
+        ip = 'ip-z';
+        const real = await recoverTo(a.key);
+        expect(real.verify.status).toBe(200);
+        clock += core().policy.coolingOffMs + 1;
+        expect((await call('recover/complete', body(real.txId, hexOf(csprng(32))))).status).toBe(
+          400,
+        );
+        // and nothing above changed the account's secret or sessions
+        expect([...env.auth.users.values()]).toEqual([a.secret]);
+        expect(env.revoked).toHaveLength(0);
       });
       it('a completion secret is required and single use (replay fails)', async () => {
         const a = await ready();

@@ -23,6 +23,11 @@ export interface AccountPolicy {
   lockMs: number;
   ipWindowMs: number;
   ipLimits: { provision: number; start: number; verify: number; complete: number };
+  /**
+   * Accounts the whole service will create per window, whatever the callers' addresses. This does not rely on any request header (a client can influence those), so it
+   * bounds account-creation spam from a distributed or address-spoofing caller. The cost is that a flood can briefly stop NEW sign-ups; it never touches recovery.
+   */
+  globalProvisionLimit: number;
   /** A provisioning that has not finished after this long is abandoned and its user is removed. */
   staleProvisionMs: number;
 }
@@ -34,6 +39,7 @@ export const DEFAULT_POLICY: AccountPolicy = {
   lockMs: 3600_000,
   ipWindowMs: 3600_000,
   ipLimits: { provision: 20, start: 10, verify: 20, complete: 20 },
+  globalProvisionLimit: 300,
   staleProvisionMs: 10 * 60_000,
 };
 
@@ -124,6 +130,31 @@ export interface AuthAdmin {
   setSecret(userId: string, secret: string): Promise<string>;
 }
 
+/** The domain of the synthetic account identifiers. `.invalid` is reserved (RFC 2606): it can never receive mail. Whether the hosted Auth server accepts it is a live gate. */
+export const DEFAULT_IDENTIFIER_DOMAIN = 'accounts.dancehall.invalid';
+
+/**
+ * The cooling-off from configuration. Anything missing or unreadable gives the 24-hour default, and nothing shorter than one hour is accepted unless short waits are
+ * explicitly allowed (for a live test only), so a mistyped setting cannot silently switch the protection off.
+ */
+export function coolingOffMsFromEnv(hours: string | undefined, allowShort: boolean): number {
+  const DEFAULT = 24 * 3600_000;
+  if (hours === undefined || hours.trim() === '') return DEFAULT;
+  const h = Number(hours);
+  if (!Number.isFinite(h) || h < 0) return DEFAULT;
+  if (h < 1 && !allowShort) return DEFAULT;
+  return Math.min(h, 24 * 30) * 3600_000;
+}
+
+/** Compares two secrets without stopping at the first difference. */
+export function safeEqual(a: string, b: string): boolean {
+  const x = utf8ToBytes(a);
+  const y = utf8ToBytes(b);
+  let d = x.length ^ y.length;
+  for (let i = 0; i < Math.max(x.length, y.length); i++) d |= (x[i] ?? 0) ^ (y[i] ?? 0);
+  return d === 0;
+}
+
 export interface CoreDeps {
   db: AccountDb;
   auth: AuthAdmin;
@@ -132,6 +163,8 @@ export interface CoreDeps {
   /** Server-side secret, at least 32 bytes. Never leaves the server. */
   pepper: Uint8Array;
   policy?: Partial<AccountPolicy>;
+  /** Domain for the synthetic identifiers; defaults to DEFAULT_IDENTIFIER_DOMAIN. */
+  identifierDomain?: string;
 }
 
 export interface Ctx {
@@ -161,6 +194,9 @@ export function createAccountCore(deps: CoreDeps) {
     ipLimits: { ...DEFAULT_POLICY.ipLimits, ...deps.policy?.ipLimits },
   };
   if (deps.pepper.length < 32) throw new Error('pepper must be at least 32 bytes');
+  const domain = deps.identifierDomain ?? DEFAULT_IDENTIFIER_DOMAIN;
+  if (!/^[a-z0-9]([a-z0-9.-]{0,60}[a-z0-9])?\.[a-z]{2,}$/.test(domain))
+    throw new Error('invalid identifier domain');
   const { db, auth } = deps;
   const mac = (domain: string, value: string): string =>
     bytesToHex(hmac(sha256, deps.pepper, utf8ToBytes(`${domain}:${value}`)));
@@ -199,6 +235,15 @@ export function createAccountCore(deps: CoreDeps) {
       return INVALID;
     if (!isQuestionId(q1) || !isQuestionId(q2) || q1 >= q2) return INVALID;
     if (await limited('provision', ctx)) return RATE_LIMITED;
+    if (
+      !(await db.hit(
+        'provision:global',
+        deps.now(),
+        policy.ipWindowMs,
+        policy.globalProvisionLimit,
+      ))
+    )
+      return RATE_LIMITED;
 
     const begin = await db.provisionBegin({
       requestId,
@@ -222,7 +267,7 @@ export function createAccountCore(deps: CoreDeps) {
         false,
       );
     }
-    const identifier = `u${hex(16)}@accounts.dancehall.invalid`;
+    const identifier = `u${hex(16)}@${domain}`;
     let userId: string;
     let winner: { userId: string; identifier: string };
     try {

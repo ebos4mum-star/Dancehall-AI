@@ -72,3 +72,29 @@ describe('security answers', () => {
     expect(Date.now() - t).toBeLessThan(10_000);
   });
 });
+
+import { coolingOffMsFromEnv, safeEqual } from './account-core';
+
+describe('operational guards', () => {
+  const H = 3600_000;
+  it('cooling-off: default 24 hours; unreadable or too-short values cannot switch it off', () => {
+    expect(coolingOffMsFromEnv(undefined, false)).toBe(24 * H);
+    expect(coolingOffMsFromEnv('', false)).toBe(24 * H);
+    expect(coolingOffMsFromEnv('banana', false)).toBe(24 * H);
+    expect(coolingOffMsFromEnv('-5', false)).toBe(24 * H);
+    expect(coolingOffMsFromEnv('0', false)).toBe(24 * H);
+    expect(coolingOffMsFromEnv('0.2', false)).toBe(24 * H);
+    expect(coolingOffMsFromEnv('48', false)).toBe(48 * H);
+    expect(coolingOffMsFromEnv('100000', false)).toBe(24 * 30 * H);
+  });
+  it('a short wait is possible only when explicitly allowed (live test)', () => {
+    expect(coolingOffMsFromEnv('0', true)).toBe(0);
+    expect(coolingOffMsFromEnv('0.01', true)).toBe(0.01 * H);
+  });
+  it('safeEqual compares whole values', () => {
+    expect(safeEqual('abc', 'abc')).toBe(true);
+    expect(safeEqual('abc', 'abd')).toBe(false);
+    expect(safeEqual('abc', 'abcd')).toBe(false);
+    expect(safeEqual('', '')).toBe(true);
+  });
+});

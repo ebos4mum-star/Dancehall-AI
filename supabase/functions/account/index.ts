@@ -4,12 +4,20 @@
 // Secrets (set with `supabase secrets set`, never in the app or the repo):
 //   ACCOUNT_PEPPER       base64, >= 32 random bytes. Keys the HMACs stored in the database. Losing it makes every stored recovery verifier unusable.
 //   MAINTENANCE_KEY      random string that authorises the scheduled `maintenance/reap` call.
-//   ACCOUNT_COOLING_OFF_HOURS  optional, default 24.
+//   ACCOUNT_COOLING_OFF_HOURS  optional, default 24; values under 1 are ignored unless ACCOUNT_ALLOW_SHORT_COOLING_OFF=1 (live test only).
+//   ACCOUNT_IDENTIFIER_DOMAIN  optional, default accounts.dancehall.invalid (see docs/CLOUD_ACCOUNTS_ACTIVATION.md gate 2).
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by the platform to the function and never reach a client.
 //
 // This function never receives a PIN, a Recovery Key or a security answer, and never logs request bodies.
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
-import { createAccountCore, type AuthAdmin, type Ctx } from '../_shared/generated/account-core.ts';
+import {
+  DEFAULT_IDENTIFIER_DOMAIN,
+  coolingOffMsFromEnv,
+  createAccountCore,
+  safeEqual,
+  type AuthAdmin,
+  type Ctx,
+} from '../_shared/generated/account-core.ts';
 import { createRpcAccountDb } from '../_shared/generated/account-rpc-db.ts';
 
 declare const Deno: {
@@ -59,14 +67,20 @@ const db = createRpcAccountDb(async (fn, args) => {
   return data;
 });
 
-const hoursEnv = Number(Deno.env.get('ACCOUNT_COOLING_OFF_HOURS') ?? '24');
 const core = createAccountCore({
   db,
   auth: authAdmin,
   random: (n) => crypto.getRandomValues(new Uint8Array(n)),
   now: () => Date.now(),
   pepper,
-  policy: { coolingOffMs: (Number.isFinite(hoursEnv) && hoursEnv >= 0 ? hoursEnv : 24) * 3600_000 },
+  // A cooling-off shorter than an hour is honoured only when ACCOUNT_ALLOW_SHORT_COOLING_OFF=1 (a live test); otherwise it falls back to the 24-hour default.
+  policy: {
+    coolingOffMs: coolingOffMsFromEnv(
+      Deno.env.get('ACCOUNT_COOLING_OFF_HOURS'),
+      Deno.env.get('ACCOUNT_ALLOW_SHORT_COOLING_OFF') === '1',
+    ),
+  },
+  identifierDomain: Deno.env.get('ACCOUNT_IDENTIFIER_DOMAIN') ?? DEFAULT_IDENTIFIER_DOMAIN,
 });
 
 const NEEDS_USER = new Set(['recover/cancel', 'rotate', 'status']);
@@ -103,12 +117,14 @@ Deno.serve(async (req) => {
   const op = new URL(req.url).pathname.replace(/^.*\/account\/?/, '').replace(/\/$/, '');
   try {
     if (op === 'maintenance/reap') {
-      if (req.headers.get('x-maintenance-key') !== env('MAINTENANCE_KEY'))
+      if (!safeEqual(req.headers.get('x-maintenance-key') ?? '', env('MAINTENANCE_KEY')))
         return json(401, { ok: false, error: 'unauthenticated' });
       const reaped = await core.reap();
       const pruned = await admin.rpc('acct_prune', { p: { now: Date.now() } });
       return json(200, { ok: true, reaped, pruned: pruned.data });
     }
+    if (Number(req.headers.get('content-length') ?? '0') > 8192)
+      return json(413, { ok: false, error: 'too_large' });
     const text = await req.text();
     if (text.length > 8192) return json(413, { ok: false, error: 'too_large' });
     const input = text ? (JSON.parse(text) as Record<string, unknown>) : {};
