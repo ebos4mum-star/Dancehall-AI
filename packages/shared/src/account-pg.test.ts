@@ -40,6 +40,7 @@ if (!url) {
         users.delete(id);
       },
       async setSecret(id, secret) {
+        auth.setSecretCalls = (auth.setSecretCalls ?? 0) + 1;
         if (auth.failSetSecret) throw new Error('auth down');
         users.set(id, secret);
         return `${id}@fake.invalid`;

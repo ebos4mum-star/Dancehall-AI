@@ -33,6 +33,7 @@ interface Tx {
   readyAt?: number;
   prevDigestMac?: string;
   secretMac?: string;
+  appliedAt?: number;
 }
 
 export interface MemorySnapshot {
@@ -185,7 +186,12 @@ export class MemoryAccountDb implements AccountDb {
       t.secretMac === a.newSecretMac &&
       a.now < t.expiresAt
     )
-      return { result: 'ok' as const, userId: t.userId }; // an identical retry of a completion whose reply was lost
+      return {
+        result: 'ok' as const,
+        userId: t.userId,
+        applied: t.appliedAt !== undefined,
+        ...this.identifierOf(t.userId), // an identical retry of a completion whose reply was lost
+      };
     if (!t || t.state !== 'verified' || t.completionMac !== a.completionMac)
       return { result: 'invalid' as const };
     if (a.now >= t.expiresAt) return { result: 'invalid' as const };
@@ -200,7 +206,18 @@ export class MemoryAccountDb implements AccountDb {
     acct.digestMac = a.newDigestMac;
     acct.rotatedAt = a.now;
     t.state = 'done';
-    return { result: 'ok' as const, userId: t.userId };
+    delete t.appliedAt;
+    return { result: 'ok' as const, userId: t.userId, applied: false };
+  }
+  async txApplied(txId: string, now: number) {
+    const t = this.txs.get(txId);
+    if (t && t.state === 'done' && t.appliedAt === undefined) t.appliedAt = now;
+  }
+  private identifierOf(userId: string): { identifier?: string } {
+    for (const p of this.prov.values())
+      if (p.userId === userId && p.state === 'ready' && p.identifier)
+        return { identifier: p.identifier };
+    return {};
   }
   async txRevert(txId: string) {
     const t = this.txs.get(txId);
@@ -208,6 +225,7 @@ export class MemoryAccountDb implements AccountDb {
     if (t && acct && t.state === 'done' && t.prevDigestMac) {
       acct.digestMac = t.prevDigestMac;
       t.state = 'verified';
+      delete t.appliedAt;
     }
   }
   async cancelRecoveries(userId: string) {
