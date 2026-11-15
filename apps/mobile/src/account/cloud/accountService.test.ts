@@ -7,7 +7,7 @@ import {
   type SimulationApi,
 } from './accountApi';
 import { createAccountService, type Answers } from './accountService';
-import type { VaultStorage } from '../pinVault';
+import type { SecretStorage } from './accountService';
 
 const FAST = { N: 16, r: 8, p: 1, dkLen: 32 };
 const rnd = (n: number) => globalThis.crypto.getRandomValues(new Uint8Array(n));
@@ -15,7 +15,7 @@ const ANS: Answers = [
   { id: 'q-first-pet', answer: 'Rex' },
   { id: 'q-family-dish', answer: 'Curry goat' },
 ];
-const memoryStorage = (): VaultStorage & { data: Map<string, string> } => {
+const memoryStorage = (): SecretStorage & { data: Map<string, string> } => {
   const data = new Map<string, string>();
   return {
     data,

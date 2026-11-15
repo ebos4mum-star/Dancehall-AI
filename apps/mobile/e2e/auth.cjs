@@ -16,7 +16,7 @@ const ANSWERS = ['Curry goat', 'Mama Joyce'];
  * Creates the two security questions, the Recovery Key backup and the PIN, in the order a person meets them. Starts at the "Set up recovery" screen and ends at
  * the PIN screen where "Protect my account" is pressed; onboarding follows.
  */
-async function setUpRecoveryAndPin(p, pin = PIN) {
+async function setUpRecoveryAndPin(p, pin = PIN, hooks = {}) {
   const btn = (n) => p.getByRole('button', { name: n, exact: true }).locator('visible=true').last();
   await p.getByText('Set up recovery').first().waitFor({ state: 'visible' });
   // The first list has all twelve questions; once one is chosen the second list offers the other eleven, and it starts right after the first list.
@@ -50,7 +50,7 @@ async function readKey(p) {
 }
 
 /** From the guest home (or the account screen) to the onboarding form. Returns the Recovery Key that was shown. */
-async function createAccountViaPin(p, pin = PIN) {
+async function createAccountViaPin(p, pin = PIN, hooks = {}) {
   const create = () =>
     p.getByRole('button', { name: 'Create account', exact: true }).locator('visible=true').last();
   // From the guest card to the account screen to the questions: press "Create account" until the recovery screen is there (a screen can still be sliding in or out).
@@ -68,7 +68,7 @@ async function createAccountViaPin(p, pin = PIN) {
       .catch(() => undefined);
     await p.waitForTimeout(700);
   }
-  const key = await setUpRecoveryAndPin(p, pin);
+  const key = await setUpRecoveryAndPin(p, pin, hooks);
   await p.getByLabel('What should we call you?').waitFor({ state: 'visible' });
   return key;
 }

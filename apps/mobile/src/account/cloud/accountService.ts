@@ -9,7 +9,6 @@ import {
 } from '@dancehall/shared';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import type { Session } from '@/data/types';
-import type { VaultStorage } from '../pinVault';
 import type { AccountApi, ApiReply } from './accountApi';
 
 /**
@@ -18,6 +17,13 @@ import type { AccountApi, ApiReply } from './accountApi';
  * and no step reports success until the server has said so. The PIN, the Recovery Key and the answers are never sent to the server in a recoverable form and are
  * never logged: the server gets a digest of the key and a slow-hash proof of the answers (see packages/shared/src/account-core.ts).
  */
+/** Where the account's secrets are kept: the platform's secure storage (Keychain/Keystore) on a phone. */
+export interface SecretStorage {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string): Promise<void>;
+  remove(key: string): Promise<void>;
+}
+
 export interface SignInPort {
   /** Signs in with the account's device credential (a long random secret, not the PIN) and returns the session. */
   signInWithDevice(identifier: string, secret: string): Promise<Session>;
@@ -26,7 +32,7 @@ export interface SignInPort {
 export interface ServiceDeps {
   api: AccountApi;
   /** Secure storage (Keychain/Keystore on a phone). */
-  secrets: VaultStorage;
+  secrets: SecretStorage;
   signIn: SignInPort;
   random: (n: number) => Uint8Array;
   now?: () => number;

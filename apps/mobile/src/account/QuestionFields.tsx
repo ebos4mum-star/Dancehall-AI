@@ -2,7 +2,6 @@ import { View } from 'react-native';
 import { SECURITY_QUESTIONS } from '@dancehall/shared';
 import { t } from '@/i18n';
 import { spacing } from '@/theme/tokens';
-import { AppText } from '@/ui/AppText';
 import { Choice } from '@/ui/Choice';
 import { TextField } from '@/ui/TextField';
 
