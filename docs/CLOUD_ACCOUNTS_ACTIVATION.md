@@ -73,6 +73,12 @@ Set `ACCOUNT_COOLING_OFF_HOURS=0.05` and `ACCOUNT_ALLOW_SHORT_COOLING_OFF=1` for
 
 Record results in `docs/LIVE_VERIFICATION.md`. Only now may anyone say cloud registration or recovery is verified on the development project.
 
+## Gate 6A and 6B (done in code; no build created)
+
+**6A, live mobile-client check:** `apps/mobile/src/account/cloud/accountLive.test.ts` (skipped by default; guarded to the project named in `DH_LIVE_APPROVED_REF`) runs the app's own account service, Edge API client and Supabase store against the development project with one throwaway account, records every request and console call, and proves: no email is needed, the PIN, answers and Recovery Keys never leave the device, and nothing sensitive is logged. Passed live; the account was deleted and its records verified gone.
+
+**6B, `preview-cloud` EAS profile:** the only profile with `EXPO_PUBLIC_CLOUD_ACCOUNTS=1`. It is an internal preview build with no `extends`, no `autoIncrement`, no channel and no submit entry. It takes the project URL and publishable key from the EAS `preview` **environment** (`"environment": "preview"`), because the public repository must not contain the project hostname. **Owner step before any build:** create `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in the EAS `preview` environment (publishable key only). The default, preview and production profiles are unchanged. A production build refuses to start with the flag on (`resolveConfig`), and tests enforce that only `preview-cloud` enables it.
+
 ## Gate 6: enable the mobile flag
 
 Set `EXPO_PUBLIC_CLOUD_ACCOUNTS=1` in a **development or preview** build only. It is off by default and no EAS profile sets it (a unit test enforces this). Native checks (Keychain item storage, share sheet, Face ID, scrypt time on an older phone) need a Mac, simulator or an authorised build and are **not** covered by Gates 0 to 5. No TestFlight upload and no production profile are part of this proposal.

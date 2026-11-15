@@ -78,10 +78,15 @@ describe('cloud accounts: what the app must never do', () => {
     expect(src).toMatch(/const copy = async/);
   });
 
-  it('a build only offers cloud accounts when explicitly switched on: no EAS profile enables them', () => {
-    expect(JSON.stringify(JSON.parse(readFileSync(join(root, 'eas.json'), 'utf8')))).not.toMatch(
-      /CLOUD_ACCOUNTS/,
+  it('only the preview-cloud profile enables cloud accounts, and nothing that can reach production does', () => {
+    const eas = JSON.parse(readFileSync(join(root, 'eas.json'), 'utf8')) as {
+      build: Record<string, { env?: Record<string, string> }>;
+    };
+    const enabled = Object.entries(eas.build).filter(
+      ([, p]) => p.env?.EXPO_PUBLIC_CLOUD_ACCOUNTS !== undefined,
     );
+    expect(enabled.map(([n]) => n)).toEqual(['preview-cloud']);
+    expect(eas.build.production!.env).not.toHaveProperty('EXPO_PUBLIC_CLOUD_ACCOUNTS');
   });
 
   it('the Edge Function holds its secrets in the environment, not in the code', () => {

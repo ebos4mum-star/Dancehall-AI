@@ -73,6 +73,12 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
   const ai = env.EXPO_PUBLIC_AI_API_URL?.trim().replace(/\/+$/, '') || undefined;
   if (ai && !/^https:\/\//.test(ai) && !/^http:\/\/(localhost|127\.0\.0\.1)/.test(ai))
     throw new ConfigError('The AI service URL must use https.');
+  // Cloud accounts are being rolled out on development and preview builds only. A production build refuses to start with the flag on, so it cannot be switched
+  // on there by accident (an EAS profile, a copied .env, a mistaken variable); lifting this needs a deliberate code change and its own review.
+  if (appEnv === 'production' && env.EXPO_PUBLIC_CLOUD_ACCOUNTS === '1')
+    throw new ConfigError(
+      'Cloud accounts are not allowed in a production build yet. Remove EXPO_PUBLIC_CLOUD_ACCOUNTS.',
+    );
   return {
     appEnv,
     authMode: 'supabase',

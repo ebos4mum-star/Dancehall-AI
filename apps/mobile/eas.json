@@ -14,6 +14,15 @@
       "distribution": "internal",
       "env": { "EXPO_PUBLIC_APP_ENV": "preview", "EXPO_PUBLIC_AUTH_MODE": "supabase" }
     },
+    "preview-cloud": {
+      "distribution": "internal",
+      "environment": "preview",
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "preview",
+        "EXPO_PUBLIC_AUTH_MODE": "supabase",
+        "EXPO_PUBLIC_CLOUD_ACCOUNTS": "1"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "env": { "EXPO_PUBLIC_APP_ENV": "production", "EXPO_PUBLIC_AUTH_MODE": "supabase" }
