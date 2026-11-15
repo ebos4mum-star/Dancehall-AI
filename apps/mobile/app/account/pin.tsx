@@ -28,7 +28,7 @@ type Stage = 'old' | 'pin' | 'bio' | 'finish';
  */
 export default function PinScreen() {
   const params = useLocalSearchParams<{ mode?: string }>();
-  const { session, store, refresh } = useApp();
+  const { session } = useApp();
   const account = useAccount();
   const requested: Mode =
     params.mode === 'protect' || params.mode === 'change' ? params.mode : 'create';
@@ -43,8 +43,8 @@ export default function PinScreen() {
   const [error, setError] = useState<string | null>(null);
 
   if (mode === 'change' && account.ready && !account.pinSet) return <Redirect href="/" />;
-  if (mode === 'create' && typeof store.signInDev !== 'function')
-    return <Redirect href="/account/start" />;
+  // A new account starts with its recovery questions and key (the account must exist before it can be protected with a PIN).
+  if (mode === 'create') return <Redirect href="/account/questions" />;
 
   const kind = account.biometric.kind ? t(`pin.kind.${account.biometric.kind}` as StringKey) : '';
   const err = (e: PinProblem | 'mismatch' | null) => (e ? t(`pin.err.${e}` as StringKey) : null);
@@ -79,12 +79,7 @@ export default function PinScreen() {
         router.back();
         return;
       }
-      // A new account is created first; if that fails nothing has been stored. Then the PIN is set, and the app continues (onboarding, then what was being done).
-      if (!session) {
-        if (!store.signInDev) throw new Error('no account creation');
-        await store.signInDev();
-        await refresh();
-      }
+      // The account already exists (it was created with its Recovery Key before this step). Set the PIN, and the app continues (onboarding, then what was being done).
       await account.createPin(pin, { biometric: bio });
       resetToStart();
     } catch {
@@ -140,22 +135,16 @@ export default function PinScreen() {
         <Notice tone="warning">{t('pin.noRecoveryBody')}</Notice>
         {error ? <Notice tone="warning">{error}</Notice> : null}
         <Button
-          label={
-            busy ? t('pin.working') : mode === 'create' ? t('pin.finish') : t('pin.finishProtect')
-          }
+          label={busy ? t('pin.working') : t('pin.finishProtect')}
           disabled={busy}
           onPress={() => void finalize(setup.entry, wantBio)}
         />
-        {mode === 'create' ? (
-          <Button variant="secondary" label={t('pin.cancel')} disabled={busy} onPress={cancel} />
-        ) : (
-          <Button
-            variant="secondary"
-            label={t('pin.signOutInstead')}
-            disabled={busy}
-            onPress={() => void account.signOutDevice().then(resetToStart)}
-          />
-        )}
+        <Button
+          variant="secondary"
+          label={t('pin.signOutInstead')}
+          disabled={busy}
+          onPress={() => void account.signOutDevice().then(resetToStart)}
+        />
       </Screen>
     );
 

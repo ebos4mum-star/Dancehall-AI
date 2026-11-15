@@ -393,7 +393,7 @@ export const en = {
   'pin.bioNotNow': 'Not now',
   'pin.noRecoveryTitle': 'Before you finish',
   'pin.noRecoveryBody':
-    'Moving this account to a new phone needs account recovery, which is not available yet. Until it is, if you lose this phone you will not be able to restore this account.',
+    'Your PIN opens the app on this phone only. If you lose this phone, you get your account back with your Recovery Key and the answers to your two questions, so keep them safe.',
   'pin.finish': 'Create my account',
   'pin.finishProtect': 'Protect my account',
   'pin.cancel': 'Cancel',
@@ -416,6 +416,95 @@ export const en = {
   'lock.signOut': 'Sign out of this phone',
   'lock.bio': 'Use {kind}',
   'lock.checking': 'Checking…',
+  'acct.q.title': 'Set up recovery',
+  'acct.q.intro':
+    'If you lose this phone, you get your account back with a Recovery Key and the answers to two questions. Choose questions only you can answer.',
+  'acct.q.first': 'First question',
+  'acct.q.second': 'Second question',
+  'acct.q.answerFirst': 'Answer to the first question',
+  'acct.q.answerSecond': 'Answer to the second question',
+  'acct.q.privacy':
+    'Your answers are scrambled on this phone before anything leaves it. We never see them and cannot reset them. Capital letters and punctuation do not matter.',
+  'acct.q.guidance':
+    'Pick answers only you would know and that are not on your social media. An answer does not have to be true: a made-up answer you will remember is stronger.',
+  'acct.q.create': 'Create my account',
+  'acct.q.working': 'Securing your account…',
+  'acct.q.resume': 'Finish the setup you started earlier',
+  'acct.q.resumeBody':
+    'An earlier setup was interrupted. Finishing it will not create a second account.',
+  'acct.q.cancel': 'Cancel',
+  'acct.q.same-question': 'Choose two different questions.',
+  'acct.q.unknown-question': 'Choose a question from the list.',
+  'acct.q.too-short': 'Each answer needs at least three characters.',
+  'acct.q.same-answer': 'The two answers must be different.',
+  'acct.err.network':
+    'Could not reach the account service. Nothing was changed. Check your connection and try again.',
+  'acct.err.unavailable':
+    'The account service could not finish. Your setup was kept, so trying again will not create a second account.',
+  'acct.err.rate_limited':
+    'Too many attempts from this connection. Please wait a while and try again.',
+  'acct.err.invalid': 'Something in the form was not valid. Please check it and try again.',
+  'acct.err.bad_key':
+    'That key does not look right. Check each group of four characters. It has 36 letters and numbers.',
+  'acct.err.failed':
+    'We could not verify those details. Check the key and your answers and try again. After a few wrong tries, recovery pauses for a while.',
+  'acct.err.sign_in_failed':
+    'Your account was created, but this phone could not sign in yet. Try again: you will not get a second account.',
+  'acct.k.title': 'Save your Recovery Key',
+  'acct.k.body':
+    'This key and the answers to your two questions are the only way to get this account back on a new phone. We cannot recover it for you, and there is no email.',
+  'acct.k.warn':
+    'Anyone who has both the key and your answers can take over your account. Keep them in different places if you can.',
+  'acct.k.label': 'Your Recovery Key',
+  'acct.k.share': 'Save with another app',
+  'acct.k.shareHint':
+    'Opens your phone’s share sheet, where you can pick a password manager or a secure notes app. DanceHall Fit cannot save it there for you automatically.',
+  'acct.k.shareFailed': 'The share sheet could not open. Copy the key or write it down instead.',
+  'acct.k.copy': 'Copy key',
+  'acct.k.copied':
+    'Copied. Paste it somewhere safe now: it is cleared from the clipboard after a minute where the phone allows it. Clipboard history on some keyboards may keep a copy.',
+  'acct.k.copyFailed': 'The key could not be copied. Share it or write it down instead.',
+  'acct.k.write':
+    'Or write it down by hand and keep it somewhere safe. Do not take a screenshot or save it to your photos.',
+  'acct.k.lostBoth':
+    'If you lose the key and cannot be sure of your answers, this account may be impossible to recover. There is no email fallback.',
+  'acct.k.confirm': 'I have saved my Recovery Key somewhere safe',
+  'acct.k.continue': 'Continue',
+  'acct.k.saving': 'Saving…',
+  'acct.k.rotateNote':
+    'This is a new key. The old key no longer works, so replace it wherever you saved it.',
+  'acct.k.noCapture': 'Screenshots and screen recording are blocked on this screen.',
+  'acct.k.none': 'There is no Recovery Key to show right now.',
+  'acct.r.title': 'Recover my account',
+  'acct.r.keyIntro':
+    'Enter the Recovery Key you saved when you made your account. You will then answer your two questions.',
+  'acct.r.keyLabel': 'Recovery Key',
+  'acct.r.keyHint': 'Letters and numbers, in groups of four. Capitals and dashes do not matter.',
+  'acct.r.continue': 'Continue',
+  'acct.r.questionsTitle': 'Answer your two questions',
+  'acct.r.verify': 'Check my answers',
+  'acct.r.checking': 'Checking…',
+  'acct.r.waitTitle': 'Recovery started',
+  'acct.r.waitBody':
+    'For your protection, recovery finishes after a waiting period. If this was not you, open the app on your old phone and cancel it. You can close this screen and come back.',
+  'acct.r.readyAt': 'Ready at {time}',
+  'acct.r.sim': 'This development build simulates the waiting period as a few seconds.',
+  'acct.r.check': 'Check again',
+  'acct.r.finish': 'Finish recovery',
+  'acct.r.finishing': 'Finishing…',
+  'acct.r.notYet': 'Not ready yet. Please come back after the time above.',
+  'acct.r.cancel': 'Cancel recovery',
+  'acct.r.cancelled': 'Recovery was cancelled on this phone.',
+  'acct.r.lostBoth':
+    'If you no longer have your Recovery Key, this account cannot be recovered. You can make a new account, but the old data stays out of reach.',
+  'acct.r.signedOutNote':
+    'When recovery finishes, this account is signed out of every other phone and you choose a new PIN here.',
+  'acct.rot.title': 'Replace your Recovery Key',
+  'acct.rot.body':
+    'Answer your two questions to make a new key. The old key stops working straight away.',
+  'acct.rot.go': 'Make a new key',
+  'acct.rot.wrong': 'Those answers were not right. Nothing was changed.',
+  'acct.rot.working': 'Working…',
   'gate.title': 'Create your account',
   'gate.reason': 'To {action}, you need an account.',
   'gate.intent.start_workout': 'start a workout',
@@ -431,9 +520,9 @@ export const en = {
   'gate.body':
     'Browsing is free. An account keeps your workouts, food and plans safe, and lets you pick up where you left off.',
   'gate.how':
-    'There is no email and no password. You choose a six-digit PIN, and can open the app with Face ID or Touch ID if your phone has it.',
+    'There is no email and no password. You save a Recovery Key, choose two security questions, and set a six-digit PIN. You can open the app with Face ID or Touch ID if your phone has it.',
   'gate.create': 'Create account',
-  'gate.have': 'I already have an account',
+  'gate.have': 'Recover my account',
   'gate.haveBody':
     'On the phone where you created your account, open the app and enter your PIN. Signing in on a different phone needs account recovery, which is not available yet.',
   'gate.browse': 'Keep browsing',
@@ -466,6 +555,19 @@ export const en = {
     'You do not need an account to look around. Create one, with a PIN and no email or password, when you want to start workouts, log food or save progress.',
   'guest.privacyTitle': 'Your privacy',
   'sec.title': 'Security',
+  'sec.recovery': 'Recovery Key',
+  'sec.recoverySaved': 'Saved. You confirmed you keep it safe.',
+  'sec.recoveryPending': 'Not confirmed yet. Save it and confirm.',
+  'sec.recoveryNone': 'No recovery is set up for this account.',
+  'sec.recoveryShow': 'Save my Recovery Key',
+  'sec.recoveryRotate': 'Replace Recovery Key',
+  'sec.pendingRecovery':
+    'Someone started recovering this account. It can finish from {time}. If this was not you, cancel it now.',
+  'sec.cancelRecovery': 'Cancel recovery',
+  'sec.sim':
+    'Development simulation: this account lives on this device only. Nothing is saved to the cloud.',
+  'sec.signOutWarn':
+    'Signing out removes this phone’s access. You will need your Recovery Key and answers to get back in.',
   'sec.pinOn': 'Your account opens with a six-digit PIN on this phone.',
   'sec.changePin': 'Change PIN',
   'sec.lockNow': 'Lock now',
