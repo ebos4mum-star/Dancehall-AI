@@ -30,6 +30,7 @@ const ACCOUNT_PATHS: ReadonlyArray<readonly [string, GateIntent]> = [
   ['/food/add', 'log_food'],
   ['/food/review', 'log_food'],
   ['/food/camera', 'log_food'],
+  ['/food/barcode', 'log_food'],
   ['/food/history', 'log_food'],
   ['/food/saved', 'log_food'],
   ['/food/household', 'log_food'],

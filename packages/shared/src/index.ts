@@ -27,6 +27,8 @@ export * from './session-clock';
 export * from './wellness';
 export * from './nutrition-plan';
 export * from './calorie-needs';
+export * from './barcode';
+export * from './barcode-samples';
 export * from './strength';
 export * from './celebrations';
 export * from './evidence';
