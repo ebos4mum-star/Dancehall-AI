@@ -80,10 +80,7 @@ jobs:
         if: failure()
         run: |
           L="$RUNNER_TEMP/xcodebuild.log"
-          grep -n -E "(^|[^a-zA-Z])error:|fatal error|Command PhaseScriptExecution failed|\*\* BUILD FAILED" "$L" | cut -c1-300 | head -n 25 || true
-          echo "== output of the failing script phase =="
-          N=$(grep -n 'PhaseScriptExecution.*ExpoModulesJSI' "$L" | head -n 1 | cut -d: -f1)
-          [ -n "$N" ] && sed -n "$((N+1)),$((N+45))p" "$L" | cut -c1-300 || true
+          grep -n -A16 "Could not resolve package" "$L" | cut -c1-300 | head -n 50 || true
 
       - name: Keep the build log (short retention)
         if: always()
