@@ -5,6 +5,7 @@
  * Needs Playwright's Chromium (pre-installed in the cloud sandbox; locally: npx playwright install chromium).
  */
 const { chromium } = require('playwright');
+const { createAccountViaPin, unlockIfLocked } = require('./auth.cjs');
 const assert = require('node:assert/strict');
 
 const results = [];
@@ -59,12 +60,19 @@ async function step(name, fn) {
   await p.waitForTimeout(2500);
 
   // ---------------- Batch A: sign-in, onboarding, consent, readiness ----------------
-  await step('A: dev sign-in screen is shown in mock mode, adults only', async () => {
-    await seen('Development mode: mock sign-in');
-    await seen('adults aged 18 and over');
-  });
+  await step(
+    'A: the app opens to browsing, and the account screen says adults only (account made with a PIN)',
+    async () => {
+      await seen('Development mode: mock sign-in');
+      await seen('Welcome to DanceHall Fit');
+      await btn('Create account').click();
+      await seen('adults aged 18 and over');
+      await p.goBack();
+      await p.waitForTimeout(400);
+    },
+  );
   await step('A: under-18 date of birth is refused', async () => {
-    await text('Continue with development sign-in').click();
+    await createAccountViaPin(p);
     await p.getByLabel('What should we call you?').fill('Sam');
     await p.getByLabel('Date of birth (YYYY-MM-DD)').fill('2015-05-05');
     await p.getByLabel('Country or region').fill('Aus');
@@ -188,6 +196,7 @@ async function step(name, fn) {
       await seen('Foods you grew up with');
       // Everything survives a reload (device storage).
       await p.reload();
+      await unlockIfLocked(p);
       await p.waitForTimeout(2500);
       await seen('My approach');
       // The saved goal and food preference came back: their explanations are on screen again.
@@ -611,6 +620,7 @@ async function step(name, fn) {
       ];
       for (const r of routes) {
         await p.goto(base + r);
+        await unlockIfLocked(p);
         await p.waitForTimeout(1600);
         const hits = await p
           .getByText(/\bkcal\b|kilocalorie|\bprotein\b.*\d+ ?g|\d+ ?g protein/i)
@@ -620,6 +630,8 @@ async function step(name, fn) {
       }
       // Swap ideas offer no calorie-based mode.
       await p.goto(base + '/food/swap');
+      await unlockIfLocked(p);
+      await unlockIfLocked(p);
       await p.waitForTimeout(1500);
       assert.equal(
         await p
@@ -632,6 +644,7 @@ async function step(name, fn) {
   );
   await step('Privacy: data survives a reload (device storage), no page errors', async () => {
     await p.goto(base);
+    await unlockIfLocked(p);
     await p.waitForTimeout(2500);
     await seen('Hello, Sam K');
     await seen('1 of 7 days this week');

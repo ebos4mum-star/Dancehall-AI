@@ -1,3 +1,4 @@
+import { withAccount } from '@/account/gate';
 import { Disclosure, IconBadge, IconChoice, type IconName } from '@/ui/kit';
 import { FoodHero } from '@/food/kit';
 import { BigField } from '@/onboarding/kit';
@@ -52,7 +53,7 @@ const MEAL_ICON: Record<string, IconName> = {
   snack: 'nutrition',
 };
 
-export default function Plan() {
+function Plan() {
   const hideNumbers = useNumbersHidden();
   const { store } = useApp();
   const { guide } = useFoodData();
@@ -311,3 +312,6 @@ export default function Plan() {
     </Screen>
   );
 }
+
+/** Needs an account: a guest is sent to create one and then brought back here. */
+export default withAccount(Plan, 'meal_plan');

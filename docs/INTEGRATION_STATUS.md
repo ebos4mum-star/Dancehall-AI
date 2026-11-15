@@ -10,6 +10,8 @@ Evidence-based status of each feature. **Hosted schema (verified 2026-11-15, rea
 | PR 46 (Stage A) | Weight Management Engine in `packages/shared` (rules, explanations, evidence gate with no content shipped), `strength` goal intent, new preference fields; planning docs and record corrections | Unit tests (323 shared); CI                                                                            |
 | PR 47 (Stage B) | Goals screen is "My approach"; engine drives the daily plan in both stores; weight tracking is opt-in; weight-neutral Today, Progress, Me and recap                                             | Unit and store tests; browser regression 36 of 36 (mock mode); accessibility sweep; reduced motion; CI |
 
+**Accounts (2026-11-15):** the app is browse-first and an account is made with a six-digit PIN (no email, no password); the PIN is a local app lock and `docs/ACCOUNT_SECURITY.md` explains why cloud sign-up and recovery need backend changes that are not authorized. **A cloud account cannot be created or recovered in any build yet**; Face ID and Touch ID are not verified on a device.
+
 **Stage G (2026-11-15):** the approved development project was re-read (read-only): same 13 migrations, 6-style constraint, 0 users, so the live HTTP and Storage suites still cannot run (no test users exist and the build sandbox cannot reach the API). M3 v2 and its rollback are rehearsed locally only (`supabase/proposed/`).
 
 **Not verified anywhere:** native iOS behaviour (token refresh on foreground and background, camera upload, haptics, secure storage), sign-in and the adapters over HTTP against the hosted project, Storage uploads, and every professional or clinical review (none has taken place; all wording and rules are provisional).

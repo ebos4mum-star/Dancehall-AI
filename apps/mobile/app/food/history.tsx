@@ -1,3 +1,4 @@
+import { withAccount } from '@/account/gate';
 import { View } from 'react-native';
 import { Disclosure, IconBadge, SectionTitle, type IconName } from '@/ui/kit';
 import { FoodHero } from '@/food/kit';
@@ -26,7 +27,7 @@ const MEAL_ICON: Record<string, IconName> = {
   snack: 'nutrition',
 };
 
-export default function History() {
+function History() {
   const hideNumbers = useNumbersHidden();
   const { logs, timeZone, error, loading } = useFoodData();
   const { spacing } = useTheme();
@@ -101,3 +102,6 @@ export default function History() {
     </Screen>
   );
 }
+
+/** Needs an account: a guest is sent to create one and then brought back here. */
+export default withAccount(History, 'log_food');

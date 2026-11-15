@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 import { Redirect, Tabs } from 'expo-router';
-import { useApp } from '@/data/AppProvider';
+import { useEntryTarget } from '@/account/useEntryTarget';
 import { Ionicons } from '@expo/vector-icons';
 import { t, type StringKey } from '@/i18n';
 import { brand, radius } from '@/theme/tokens';
@@ -17,8 +17,9 @@ const TABS: Array<{ name: string; label: StringKey; icon: IconName }> = [
 
 export default function TabLayout() {
   const { colors } = useTheme();
-  const { ready, session, profile } = useApp();
-  if (ready && (!session || !profile?.onboardedAt)) return <Redirect href="/" />;
+  // Guests browse the tabs. Someone with an account who has not finished setting up goes back to finish it (never to '/', which is also this screen).
+  const target = useEntryTarget();
+  if (target) return <Redirect href={target} />;
   return (
     <Tabs
       screenOptions={{

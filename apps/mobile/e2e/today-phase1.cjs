@@ -2,6 +2,7 @@
 /* Captures the Phase 1 Today reference screens from the web export in MOCK mode (synthetic data).
  * Usage: pnpm export:web && SHOTS_DIR=../../docs/preview/phase1 node e2e/today-phase1.cjs */
 const { chromium } = require('playwright');
+const { createAccountViaPin } = require('./auth.cjs');
 const out = process.env.SHOTS_DIR || 'shots';
 require('node:fs').mkdirSync(out, { recursive: true });
 
@@ -18,7 +19,7 @@ async function session(browser, scheme, reduced) {
   const btn = (n) => p.getByRole('button', { name: n }).last();
   await p.goto('http://127.0.0.1:8095');
   await p.waitForTimeout(2500);
-  await p.getByText('Continue with development sign-in').last().click();
+  await createAccountViaPin(p);
   await p.getByLabel('What should we call you?').fill('Sam');
   await p.getByLabel('Date of birth (YYYY-MM-DD)').fill('1990-05-05');
   await p.getByLabel('Country or region').fill('Jam');

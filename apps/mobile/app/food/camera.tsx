@@ -1,3 +1,4 @@
+import { withAccount } from '@/account/gate';
 import { useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
 import { router } from 'expo-router';
@@ -22,7 +23,7 @@ import { brand } from '@/theme/tokens';
 
 let sampleCounter = 0;
 
-export default function CameraScreen() {
+function CameraScreen() {
   const { store, config } = useApp();
   const { dispatch } = useDraft();
   const { colors, radius, spacing } = useTheme();
@@ -275,3 +276,6 @@ export default function CameraScreen() {
     </Screen>
   );
 }
+
+/** Needs an account: a guest is sent to create one and then brought back here. */
+export default withAccount(CameraScreen, 'log_food');

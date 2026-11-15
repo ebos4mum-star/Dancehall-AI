@@ -15,6 +15,7 @@ import {
 } from '@dancehall/shared';
 import { previewBanner } from '@/dance/preview';
 import { STRENGTH_META, resolveContent } from '@/dance/content';
+import { useAccountGate } from '@/account/gate';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage } from '@/data/hooks';
 import { mmss, STYLE_META } from '@/dance/meta';
@@ -45,6 +46,8 @@ export default function WorkoutDetail() {
   // A dance workout or a strength workout (strength only while it passes the review gate, or as an internal fixture in development).
   const w = useMemo(() => resolveContent(String(id)), [id]);
   const { store } = useApp();
+  const gate = useAccountGate();
+  const here = `/dance/${encodeURIComponent(String(id))}`;
   const { colors } = useTheme();
   const dance = useDanceData();
   const [low, setLow] = useState(false);
@@ -108,6 +111,7 @@ export default function WorkoutDetail() {
   const schedule = async () => {
     setErr(null);
     if (busy) return;
+    if (!gate.signedIn) return gate.go('schedule_workout', here);
     setBusy(true);
     try {
       const date = when === 'today' ? dance.todayKey : when;
@@ -217,10 +221,13 @@ export default function WorkoutDetail() {
         label={t('wk.start')}
         disabled={needsCheck && !equipmentChecked}
         onPress={() =>
-          router.push({
-            pathname: '/dance/session',
-            params: { id: w.id, low: low ? '1' : '0', seated: seated ? '1' : '0' },
-          })
+          // Browsing is free; starting needs an account, and after creating one the person comes straight back to this session.
+          gate.guard('start_workout', here, () =>
+            router.push({
+              pathname: '/dance/session',
+              params: { id: w.id, low: low ? '1' : '0', seated: seated ? '1' : '0' },
+            }),
+          )
         }
       />
 

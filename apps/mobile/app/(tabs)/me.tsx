@@ -1,3 +1,5 @@
+import { GuestMe } from '@/account/guest';
+import { SecurityCard } from '@/account/SecurityCard';
 import { View } from 'react-native';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
@@ -29,7 +31,7 @@ const MENU: Array<{ icon: IconName; title: StringKey; sub: StringKey; to: string
   { icon: 'shield-checkmark', title: 'me.privacy', sub: 'me.privacySub', to: '/privacy' },
 ];
 
-export default function MeScreen() {
+function MeScreenAccount() {
   const { profile } = useApp();
   // The progress row says "Weight progress" only for people who track weight.
   const showW = useShowWeight();
@@ -161,6 +163,7 @@ export default function MeScreen() {
           </Pressable>
         ))}
       </Card>
+      <SecurityCard />
       <Card>
         <View style={{ flexDirection: 'row', gap: sp.sm, alignItems: 'center' }}>
           <IconBadge name="lock-closed" size={36} fill={brand.violet} />
@@ -175,4 +178,10 @@ export default function MeScreen() {
       </AppText>
     </Screen>
   );
+}
+
+/** A guest sees the public version of this tab; a person with an account sees their own. */
+export default function MeScreen() {
+  const { session } = useApp();
+  return session ? <MeScreenAccount /> : <GuestMe />;
 }

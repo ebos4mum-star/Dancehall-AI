@@ -19,7 +19,14 @@ export function useLoad<T>(loader: (s: DataStore) => Promise<T>): {
   const alive = useRef(true);
 
   const run = useCallback(async () => {
-    if (!session) return;
+    // A guest has no data to load. Say so (not loading, no data) instead of waiting for a session that is not coming.
+    if (!session) {
+      if (alive.current) {
+        setData(undefined);
+        setLoading(false);
+      }
+      return;
+    }
     try {
       const v = await loaderRef.current(store);
       if (alive.current) {

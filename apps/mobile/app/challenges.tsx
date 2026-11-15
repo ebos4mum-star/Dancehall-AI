@@ -1,3 +1,4 @@
+import { withAccount } from '@/account/gate';
 import { Ring } from '@/ui/motion';
 import { showMoment } from '@/pulse/moment';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -25,7 +26,7 @@ import { Screen } from '@/ui/Screen';
 import { SkeletonList } from '@/ui/Skeleton';
 import { haptics } from '@/ui/haptics';
 
-export default function Challenges() {
+function Challenges() {
   const { store, profile } = useApp();
   const { spacing, colors } = useTheme();
   const { data, error, loading } = useLoad(async (s) => ({
@@ -251,3 +252,6 @@ export default function Challenges() {
     </Screen>
   );
 }
+
+/** Needs an account: a guest is sent to create one and then brought back here. */
+export default withAccount(Challenges, 'challenges');

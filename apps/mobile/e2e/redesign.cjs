@@ -2,6 +2,7 @@
 /* Captures the redesigned flows from the web export in MOCK mode (synthetic data).
  * Usage: pnpm export:web && GROUP=dance SHOTS_DIR=../../docs/preview/redesign-light node e2e/redesign.cjs   (E2E_SCHEME=dark, E2E_REDUCED=1 optional) */
 const { chromium } = require('playwright');
+const { createAccountViaPin } = require('./auth.cjs');
 const out = process.env.SHOTS_DIR || 'shots';
 const group = process.env.GROUP || 'dance';
 require('node:fs').mkdirSync(out, { recursive: true });
@@ -47,7 +48,7 @@ require('node:fs').mkdirSync(out, { recursive: true });
   await p.goto('http://127.0.0.1:8093');
   await p.waitForTimeout(2500);
   if (group === 'finish') await shot('signin');
-  await text('Continue with development sign-in').click();
+  await createAccountViaPin(p);
   await p.getByLabel('What should we call you?').fill('Sam');
   await p.getByLabel('Date of birth (YYYY-MM-DD)').fill('1990-05-05');
   await p.getByLabel('Country or region').fill('Jam');

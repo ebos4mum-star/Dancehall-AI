@@ -1,3 +1,4 @@
+import { withAccount } from '@/account/gate';
 import { Ionicons } from '@expo/vector-icons';
 import { IconBadge, SectionTitle } from '@/ui/kit';
 import { EmptyState } from '@/ui/EmptyState';
@@ -16,7 +17,7 @@ import { Reveal } from '@/ui/motion';
 import { Screen } from '@/ui/Screen';
 import { haptics } from '@/ui/haptics';
 
-export default function WeeklyReview() {
+function WeeklyReview() {
   const { store } = useApp();
   const { data: reviews } = useLoad(async (s) =>
     s.listWeeklyReviews ? s.listWeeklyReviews() : [],
@@ -102,3 +103,6 @@ export default function WeeklyReview() {
     </Screen>
   );
 }
+
+/** Needs an account: a guest is sent to create one and then brought back here. */
+export default withAccount(WeeklyReview, 'coach');

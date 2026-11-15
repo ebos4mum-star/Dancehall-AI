@@ -1,3 +1,4 @@
+import { withAccount } from '@/account/gate';
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,7 +39,7 @@ import { usePlayer } from '@/player/usePlayer';
 import { INSTRUCTION_LICENCES, INSTRUCTION_TRACKS, stageRendererFor } from '@/player/catalog';
 import { AudioPanel, MovementPreview, PresentationPicker } from '@/player/ui';
 
-export default function Session() {
+function Session() {
   const { id, low, sessionId, seated } = useLocalSearchParams<{
     id: string;
     low?: string;
@@ -737,3 +738,6 @@ export default function Session() {
     </Screen>
   );
 }
+
+/** Needs an account: a guest is sent to create one and then brought back here. */
+export default withAccount(Session, 'start_workout');

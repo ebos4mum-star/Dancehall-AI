@@ -1,3 +1,4 @@
+import { GuestToday } from '@/account/guest';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
@@ -45,7 +46,7 @@ import { Screen } from '@/ui/Screen';
 import { SkeletonList } from '@/ui/Skeleton';
 import { TextField } from '@/ui/TextField';
 
-export default function Today() {
+function TodayAccount() {
   const { store, profile } = useApp();
   const { spacing, colors } = useTheme();
   const units: UnitSystem = profile?.unitSystem ?? 'metric';
@@ -427,4 +428,10 @@ export default function Today() {
       </Card>
     </Screen>
   );
+}
+
+/** A guest sees the public version of this tab; a person with an account sees their own. */
+export default function Today() {
+  const { session } = useApp();
+  return session ? <TodayAccount /> : <GuestToday />;
 }

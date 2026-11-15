@@ -47,3 +47,5 @@ export * from './review-requirements';
 export * from './trainer-rig';
 export * from './trainer-motions';
 export * from './trainer-clips';
+export * from './pin';
+export * from './account-gate';
