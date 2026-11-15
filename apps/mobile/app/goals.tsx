@@ -21,6 +21,7 @@ import { errorMessage, useLoad } from '@/data/hooks';
 import type { Goal } from '@/data/types';
 import { FocusCard, TargetsCard } from '@/wellness/ui';
 import { ApproachCard } from '@/wellness/approach';
+import { MaintenanceCard } from '@/progress/MaintenanceCard';
 import { useShowWeight } from '@/wellness/hooks';
 import { t, type StringKey } from '@/i18n';
 import { formatDate, formatWeight, parseDecimal, todayIso } from '@/lib/format';
@@ -110,6 +111,7 @@ function Goals() {
     >
       <FocusCard part="goals" />
       <TargetsCard compact />
+      <MaintenanceCard />
       <ApproachCard />
       <FocusCard part="rest" />
       {error ? <Notice tone="warning">{error}</Notice> : null}

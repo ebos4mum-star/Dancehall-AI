@@ -32,6 +32,7 @@ export * from './barcode-samples';
 export * from './plate-guidance';
 export * from './habits';
 export * from './daily-progress';
+export * from './maintenance';
 export * from './strength';
 export * from './celebrations';
 export * from './evidence';

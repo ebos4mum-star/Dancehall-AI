@@ -622,6 +622,13 @@ export const en = {
   'cam.consentBody':
     'Photo analysis is optional and separate from logging food by hand. You can turn it off any time in Privacy and settings.',
   'cam.allow': 'Allow photo analysis',
+  'maint.band': 'Your steady range: {low} to {high}',
+  'maint.switch': 'Keep my weight steady',
+  'maint.switchNote':
+    'This only changes your main goal. Your weights, goals and history stay exactly as they are, and you can change it back any time.',
+  'maint.about': 'About keeping steady',
+  'maint.provisional':
+    'General guidance, not medical advice. Provisional and not reviewed by a dietitian or clinician.',
   'day.title': 'Your day',
   'habits.hint': 'Your logs show this today. Tap to mark it done.',
   'habits.ideas': 'Simple ideas to start with',
