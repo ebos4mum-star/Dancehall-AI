@@ -73,7 +73,7 @@ describe('security answers', () => {
   });
 });
 
-import { coolingOffMsFromEnv, safeEqual } from './account-core';
+import { coolingOffMsFromEnv, networkIdentity, safeEqual } from './account-core';
 
 describe('operational guards', () => {
   const H = 3600_000;
@@ -96,5 +96,30 @@ describe('operational guards', () => {
     expect(safeEqual('abc', 'abd')).toBe(false);
     expect(safeEqual('abc', 'abcd')).toBe(false);
     expect(safeEqual('', '')).toBe(true);
+  });
+  it('network identity: IPv4 as is, IPv6 grouped by /64, mapped addresses unwrapped, anything unreadable shares one bucket', () => {
+    expect(networkIdentity('203.0.113.7')).toBe('v4:203.0.113.7');
+    expect(networkIdentity(' 203.0.113.007 ')).toBe('v4:203.0.113.7');
+    expect(networkIdentity('::ffff:203.0.113.7')).toBe('v4:203.0.113.7');
+    const a = networkIdentity('2001:db8:1:2:aaaa:bbbb:cccc:dddd');
+    expect(a).toBe('v6:2001:0db8:0001:0002');
+    expect(networkIdentity('2001:DB8:1:2::1')).toBe(a);
+    expect(networkIdentity('[2001:db8:1:2:ffff:ffff:ffff:ffff]')).toBe(a);
+    expect(networkIdentity('2001:db8:1:3::1')).not.toBe(a);
+    expect(networkIdentity('::1')).toBe('v6:0000:0000:0000:0000');
+    for (const bad of [
+      null,
+      undefined,
+      '',
+      ' ',
+      'unknown',
+      '999.1.1.1',
+      '1.2.3',
+      '2001:db8::1::2',
+      '2001:db8:zz::1',
+      'a'.repeat(80),
+      '1.2.3.4, 5.6.7.8',
+    ])
+      expect(networkIdentity(bad as string | null), String(bad)).toBe('no-identity');
   });
 });
