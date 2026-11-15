@@ -31,8 +31,12 @@ export const PROVISIONAL_LIMITS = {
   maxSurplusFraction: 0.1,
   /** Gentle default pace when a person chooses Gain Weight without a target: a quarter of a percent of body weight per week (half the hard cap). */
   suggestedWeeklyGainFraction: 0.0025,
-  /** A calorie surplus is not offered at or above this BMI (an individualized check; a professional can advise instead). */
-  maxBmiForSurplus: 25,
+  /**
+   * Gain Weight: at or above this BMI (for the person or for their target) the estimate still appears, with the same surplus ceiling, but it carries a plain note and a
+   * suggestion to ask a professional. BMI is a rough screening number that cannot see muscle, frame size or body composition, so it NEVER decides on its own whether
+   * someone gets calorie guidance. Not a clinical threshold.
+   */
+  bmiNoteForGain: 25,
 } as const;
 
 export type SafetyStatus = 'allow' | 'adjust' | 'block';

@@ -36,7 +36,7 @@ export interface NutritionTargets {
   seeProfessional: boolean;
 }
 
-export type MissingInput = 'weight' | 'height' | 'age' | 'sex' | 'activity';
+export type MissingInput = 'weight' | 'height' | 'age' | 'sex' | 'activity' | 'safety';
 
 export interface TargetInput {
   intent: GoalIntent;
@@ -153,21 +153,8 @@ export function nutritionTargets(i: TargetInput): NutritionTargets {
     reasons.push(...ev.reasons.filter((r) => !r.startsWith('Progress is not guaranteed')));
   } else if (i.intent === 'gain') {
     const L = PROVISIONAL_LIMITS;
-    const currentBmi = bmi(weightKg, heightCm);
     const target = i.targetKg && i.targetKg > weightKg ? i.targetKg : null;
-    if (currentBmi >= L.maxBmiForSurplus) {
-      withholdGuide = true;
-      seeProfessional = true;
-      reasons.push(
-        'Based on your height and weight, we do not suggest adding calories to gain weight. Your estimated maintenance is shown, and a doctor or registered dietitian can give advice that fits you.',
-      );
-    } else if (target !== null && bmi(target, heightCm) >= L.maxBmiForSurplus) {
-      withholdGuide = true;
-      seeProfessional = true;
-      reasons.push(
-        'That target weight is above the range we can suggest a calorie surplus for. Try a lower target, or ask a doctor or registered dietitian. Your estimated maintenance is shown.',
-      );
-    } else if (i.readinessCautious) {
+    if (i.readinessCautious) {
       withholdGuide = true;
       seeProfessional = true;
       reasons.push(
@@ -175,6 +162,7 @@ export function nutritionTargets(i: TargetInput): NutritionTargets {
       );
     } else if (i.readinessUnknown) {
       withholdGuide = true;
+      missing = ['safety'];
       reasons.push(
         'Finish the quick safety questions to see a gain estimate. Your estimated maintenance is shown for now.',
       );
@@ -193,6 +181,16 @@ export function nutritionTargets(i: TargetInput): NutritionTargets {
       reasons.push(
         'Gaining weight: a small daily surplus above your estimated maintenance, at a gentle pace, never more than 10% of maintenance. This ceiling is a conservative provisional choice. It is not clinically validated and has not been reviewed by a dietitian.',
       );
+      // BMI never withholds guidance on its own. It only adds a note, because it cannot see muscle, frame size or body composition.
+      if (
+        bmi(weightKg, heightCm) >= L.bmiNoteForGain ||
+        (target !== null && bmi(target, heightCm) >= L.bmiNoteForGain)
+      ) {
+        seeProfessional = true;
+        reasons.push(
+          'Body mass index (BMI) is only a rough screening number. It cannot see muscle, frame size or body composition, so it does not decide whether this estimate is right for you. Because the best amount and pace can differ from person to person, a doctor or registered dietitian can tailor it. The same 10% ceiling applies.',
+        );
+      }
     }
   } else if (i.intent === 'maintain') {
     reasons.push(
@@ -266,6 +264,6 @@ export function nutritionTargets(i: TargetInput): NutritionTargets {
     proteinG: { low: Math.round(weightKg * 0.8), high: Math.round(weightKg * 1.2) },
     reasons,
     seeProfessional,
-    missing: [],
+    missing,
   };
 }

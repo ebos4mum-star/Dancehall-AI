@@ -992,6 +992,7 @@ export const en = {
   'wl.missing.age': 'age',
   'wl.missing.sex': 'sex',
   'wl.missing.activity': 'usual activity',
+  'wl.missing.safety': 'quick safety answers',
   'wl.targetsProvisional':
     'Provisional estimates only. They are not clinically validated and have not been reviewed by a dietitian or clinician.',
   'wl.kcalValue': 'about {kcal} kcal',

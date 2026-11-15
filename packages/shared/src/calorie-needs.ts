@@ -77,10 +77,13 @@ export function calorieNeeds(input: CalorieNeedsInput): NutritionTargets {
   let out: NutritionTargets;
   if (readiness === 'unknown' && intent === 'lose') {
     // No answers is not a finding: do not say the person's answers suggest anything, and do not flag professional support. Just withhold the estimate.
+    const base = nutritionTargets({ ...target, tracking: 'none' });
     out = {
-      ...nutritionTargets({ ...target, tracking: 'none' }),
+      ...base,
       reasons: ['Finish the quick safety questions to see an estimate.'],
       seeProfessional: false,
+      // Only when the other facts are all there: a missing weight, height and so on is still reported first.
+      missing: base.missing.length > 0 ? base.missing : ['safety'],
     };
   } else {
     out = nutritionTargets({

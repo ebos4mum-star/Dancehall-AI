@@ -2,6 +2,14 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  ACTIVITY_PREFS,
+  CUISINE_PREFS,
+  DIET_PREFS,
+  EQUIPMENT_PREFS,
+  HOME_ITEM_IDS,
+  MOBILITY_PREFS,
+  PATHWAY_IDS,
+  STYLE_PREFS,
   GOAL_INTENTS,
   PROVISIONAL_LIMITS,
   SELECTABLE_GOAL_INTENTS,
@@ -111,9 +119,9 @@ describe('Gain Weight: a conservative provisional surplus', () => {
           body: { ...BODY, weightKg: w, heightCm: 180, sex },
           activeGoal: { type: 'gain', targetKg: w + 6, plannedWeeklyChangeKg: 1.5 },
         });
-        if (!t.kcal?.guide) continue; // BMI 25 and over gets no surplus at all (tested below)
-        expect(t.kcal.guide).toBeLessThanOrEqual(Math.floor(t.kcal.maintenance * 1.1));
-        expect(t.kcal.weeklyChangeKg).toBeLessThanOrEqual(
+        expect(t.kcal?.guide, `${w} kg ${sex}`).toBeTruthy(); // BMI alone never withholds guidance
+        expect(t.kcal!.guide).toBeLessThanOrEqual(Math.floor(t.kcal!.maintenance * 1.1));
+        expect(t.kcal!.weeklyChangeKg).toBeLessThanOrEqual(
           w * PROVISIONAL_LIMITS.maxWeeklyGainFraction + 0.01,
         );
       }
@@ -133,18 +141,37 @@ describe('Gain Weight: a conservative provisional surplus', () => {
     expect(text).toMatch(/not been reviewed by a dietitian/);
     expect(text).toMatch(/10% of maintenance/);
   });
-  it('withholds the surplus (maintenance still shown) for an individualized reason: BMI 25 or over, a target that high, a cautious or unanswered safety check', () => {
-    const heavy = needs('gain', { body: { ...BODY, weightKg: 85 } });
-    expect(heavy.kcal!.guide).toBeNull();
-    expect(heavy.kcal!.maintenance).toBeGreaterThan(0);
-    expect(heavy.seeProfessional).toBe(true);
-    expect(heavy.reasons.join(' ')).toMatch(/do not suggest adding calories/);
-
+  it('BMI is not a gate: guidance is given across the whole BMI range, with the same ceiling, and BMI 25 or over only adds a note and a soft suggestion', () => {
+    for (const heightCm of [155, 170, 185]) {
+      for (const weightKg of [42, 55, 70, 85, 100, 130]) {
+        const t = needs('gain', { body: { ...BODY, weightKg, heightCm } });
+        const label = `${weightKg} kg at ${heightCm} cm`;
+        const bmiNow = weightKg / (heightCm / 100) ** 2;
+        expect(t.kcal!.guide, label).not.toBeNull();
+        expect(t.kcal!.guide!, label).toBeGreaterThan(t.kcal!.maintenance);
+        expect(t.kcal!.guide!, label).toBeLessThanOrEqual(Math.floor(t.kcal!.maintenance * 1.1));
+        const text = t.reasons.join(' ');
+        expect(text, label).not.toMatch(/do not suggest adding calories/);
+        if (bmiNow >= PROVISIONAL_LIMITS.bmiNoteForGain) {
+          expect(text, label).toMatch(/BMI\) is only a rough screening number/);
+          expect(text, label).toMatch(/cannot see muscle, frame size or body composition/);
+          expect(text, label).toMatch(/does not decide whether this estimate is right for you/);
+          expect(t.seeProfessional, label).toBe(true);
+        } else {
+          expect(text, label).not.toMatch(/screening number/);
+          expect(t.seeProfessional, label).toBe(false);
+        }
+      }
+    }
+    // A target in that range gets the same treatment: a note, never a refusal.
     const highTarget = needs('gain', {
       activeGoal: { type: 'gain', targetKg: 80, plannedWeeklyChangeKg: 0.2 },
     });
-    expect(highTarget.kcal!.guide).toBeNull();
-
+    expect(highTarget.kcal!.guide).not.toBeNull();
+    expect(highTarget.reasons.join(' ')).toMatch(/screening number/);
+    expect(highTarget.seeProfessional).toBe(true);
+  });
+  it('individualized caution is unchanged where it matters: a cautious or unanswered safety check withholds the surplus (maintenance still shown), whatever the BMI', () => {
     const cautious = needs('gain', { readiness: 'cautious' });
     expect(cautious.kcal!.guide).toBeNull();
     expect(cautious.kcal!.maintenance).toBeGreaterThan(0);
@@ -153,6 +180,7 @@ describe('Gain Weight: a conservative provisional surplus', () => {
     const unknown = needs('gain', { readiness: 'unknown' });
     expect(unknown.kcal!.guide).toBeNull();
     expect(unknown.seeProfessional).toBe(false);
+    expect(unknown.missing).toEqual(['safety']);
     expect(unknown.reasons.join(' ')).toMatch(/Finish the quick safety questions/);
   });
   it('is not forced into weight tracking: selecting it neither turns tracking on nor asks for weight, and an explicit choice is honoured', () => {
@@ -234,6 +262,7 @@ describe('safety restrictions apply to every goal, on every screen', () => {
     const t = needs('lose', { readiness: 'unknown' });
     expect(t.kcal).toBeNull();
     expect(t.seeProfessional).toBe(false);
+    expect(t.missing).toEqual(['safety']); // the card tells the person what to do
   });
   it('a loss estimate that would be unsafe (below a healthy BMI) is withheld, not softened', () => {
     const t = needs('lose', { body: { ...BODY, weightKg: 48, heightCm: 170 } });
@@ -402,5 +431,59 @@ describe('changing goals keeps accounts working and loses nothing', () => {
     const first = needs('maintain').kcal;
     for (const intent of GOAL_INTENTS) expect(needs(intent).intent).toBe(intent);
     expect(needs('maintain').kcal).toEqual(first);
+  });
+});
+
+describe('stored preferences stay compatible', () => {
+  it('goalChosen defaults to false for everyone who never had it, and never changes the rest of what was stored', () => {
+    const legacy = {
+      goalIntent: 'maintain',
+      tracking: 'detailed',
+      cuisines: ['caribbean'],
+      weightTracking: false,
+    };
+    const p = parsePrefs(legacy);
+    expect(p).toMatchObject({
+      goalIntent: 'maintain',
+      tracking: 'detailed',
+      cuisines: ['caribbean'],
+      weightTracking: false,
+      goalChosen: false,
+    });
+    // Re-saving is stable: reading what we wrote gives the same preferences.
+    expect(parsePrefs(JSON.parse(JSON.stringify(p)))).toEqual(p);
+    expect(parsePrefs(null).goalChosen).toBe(false);
+    expect(parsePrefs({ goalChosen: 'yes' }).goalChosen).toBe(false);
+  });
+  it('the worst-case stored preferences stay far below the database size limit (2,048 bytes) with the new fields', () => {
+    // Every list at its full length, using the real allowed values (anything else would be dropped by the parser and understate the size).
+    const worst = parsePrefs({
+      goalIntent: 'strength',
+      goalChosen: true,
+      exerciseMinutesPerWeek: 1000,
+      activities: [...ACTIVITY_PREFS],
+      equipment: [...EQUIPMENT_PREFS],
+      homeItems: [...HOME_ITEM_IDS],
+      diet: [...DIET_PREFS],
+      tracking: 'detailed',
+      waterGoalMl: 6000,
+      bedtimeRoutine: 'é'.repeat(80),
+      dailyMovementMinutes: 600,
+      monthlyGoalWeeks: 5,
+      yearlyGoalWeeks: 53,
+      celebrations: 'full',
+      pathways: [...PATHWAY_IDS],
+      danceStyles: [...STYLE_PREFS],
+      cuisines: [...CUISINE_PREFS],
+      mobility: [...MOBILITY_PREFS],
+      experience: 'regular',
+      schedule: 'evening',
+      secondaryGoals: ['fitness', 'gain'],
+      weightTracking: true,
+    });
+    expect(worst.homeItems.length).toBe(HOME_ITEM_IDS.length);
+    expect(worst.cuisines.length).toBe(CUISINE_PREFS.length);
+    const bytes = new TextEncoder().encode(JSON.stringify(worst)).length;
+    expect(bytes).toBeLessThan(1500);
   });
 });

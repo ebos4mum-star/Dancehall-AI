@@ -192,3 +192,75 @@ describe('every consumer follows the same safety rules', () => {
     }
   });
 });
+
+describe('existing accounts keep every stored preference', () => {
+  // A preferences object exactly as an older app version stored it: no `goalChosen`, an older goal, many choices made.
+  const LEGACY = {
+    goalIntent: 'lose',
+    exerciseMinutesPerWeek: 150,
+    activities: ['dance', 'walking'],
+    equipment: ['bands'],
+    homeItems: [],
+    diet: ['vegetarian'],
+    tracking: 'detailed',
+    waterGoalMl: 2250,
+    bedtimeRoutine: 'Stretch and read',
+    dailyMovementMinutes: 30,
+    monthlyGoalWeeks: 3,
+    yearlyGoalWeeks: 40,
+    celebrations: 'gentle',
+    pregnantOrPostpartum: false,
+    eatingConcern: false,
+    pathways: ['dance_aerobic'],
+    danceStyles: ['dancehall'],
+    cuisines: ['caribbean'],
+    mobility: [],
+    experience: 'some',
+    schedule: 'evening',
+    secondaryGoals: ['strength'],
+    weightTracking: true,
+  };
+  async function legacyStore() {
+    const kv = memory();
+    const s = new MockStore(kv, NOW);
+    await s.signInDev();
+    await s.setConsent('health_data_processing', true);
+    const state = JSON.parse((await kv.get('dh.mock.v1'))!);
+    state.wellnessPrefs = LEGACY;
+    await kv.set('dh.mock.v1', JSON.stringify(state));
+    return { kv, s: new MockStore(kv, NOW) };
+  }
+
+  it('reading old preferences changes nothing and records no choice that was never made', async () => {
+    const { s } = await legacyStore();
+    const prefs = await s.getWellnessPrefs!();
+    expect(prefs).toMatchObject({ ...LEGACY, goalChosen: false });
+  });
+  it('saving an unrelated preference keeps every other value, and does not mark a goal as chosen', async () => {
+    const { s } = await legacyStore();
+    const before = await s.getWellnessPrefs!();
+    await s.setWellnessPrefs!({ waterGoalMl: 2500 });
+    const after = await s.getWellnessPrefs!();
+    expect(after).toEqual({ ...before, waterGoalMl: 2500 });
+    expect(after.goalChosen).toBe(false);
+  });
+  it('picking a goal records the choice and keeps the rest; the stored value survives a restart', async () => {
+    const { s, kv } = await legacyStore();
+    const before = await s.getWellnessPrefs!();
+    await s.setWellnessPrefs!({ goalIntent: 'gain', goalChosen: true });
+    const again = await new MockStore(kv, NOW).getWellnessPrefs!();
+    expect(again).toEqual({
+      ...before,
+      goalIntent: 'gain',
+      goalChosen: true,
+      secondaryGoals: ['strength'],
+    });
+  });
+  it('a goal value this app does not know (from a newer version) falls back to the default, never to gain', async () => {
+    const { kv } = await legacyStore();
+    const state = JSON.parse((await kv.get('dh.mock.v1'))!);
+    state.wellnessPrefs = { ...LEGACY, goalIntent: 'something-newer' };
+    await kv.set('dh.mock.v1', JSON.stringify(state));
+    expect((await new MockStore(kv, NOW).getWellnessPrefs!()).goalIntent).toBe('fitness');
+  });
+});
