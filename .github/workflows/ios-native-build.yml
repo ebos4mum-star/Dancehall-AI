@@ -97,3 +97,15 @@ jobs:
           path: ${{ runner.temp }}/xcodebuild.log
           retention-days: 3
           if-no-files-found: ignore
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "RESULT_XCODE: $(xcodebuild -version | tr '\n' ' ')"
+            echo "RESULT_RUNNER: $(sw_vers -productVersion)"
+            grep -hE '^\s+(PRODUCT_BUNDLE_IDENTIFIER|IPHONEOS_DEPLOYMENT_TARGET|SWIFT_VERSION) =' "$RUNNER_TEMP/settings.txt" | sort -u | sed 's/^ */RESULT_/'
+            echo "RESULT_BUILD: $(grep -c '\*\* BUILD SUCCEEDED \*\*' "$RUNNER_TEMP/xcodebuild.log" || true) succeeded marker(s)"
+            echo "RESULT_APP: $(ls "$RUNNER_TEMP/dd/Build/Products/Release-iphoneos" 2>/dev/null | tr '\n' ' ')"
+            echo "RESULT_SIGNED: $(codesign -dv "$RUNNER_TEMP"/dd/Build/Products/Release-iphoneos/*.app 2>&1 | grep -c 'Signature' || true) signature lines (0 expected: unsigned)"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
