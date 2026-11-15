@@ -26,12 +26,19 @@ import { DepthCard } from '@/ui/Depth';
 import { formatDate } from '@/lib/format';
 import { foodEmoji } from './emoji';
 import { IconAction } from '@/ui/kit';
+import { useApp } from '@/data/AppProvider';
+import { isSimulatedRecognition } from './simulated';
 import { portionText } from './portion';
 import type { NutritionWeek } from './summary';
 
 /** Says how far to trust a value. Words carry the meaning; color only reinforces it. */
 export function EstimateTag({ status }: { status: EstimateStatus }) {
   const { colors, radius, spacing } = useTheme();
+  const { config } = useApp();
+  const label =
+    status === 'estimate' && isSimulatedRecognition(config)
+      ? t('food.tag.simulated')
+      : t(`food.tag.${status}` as StringKey);
   const tone =
     status === 'estimate'
       ? { bg: colors.warningBg, fg: colors.warningText, mark: '≈' }
@@ -53,7 +60,7 @@ export function EstimateTag({ status }: { status: EstimateStatus }) {
       <AppText
         variant="caption"
         style={{ color: tone.fg }}
-      >{`${tone.mark ? `${tone.mark} ` : ''}${t(`food.tag.${status}` as StringKey)}`}</AppText>
+      >{`${tone.mark ? `${tone.mark} ` : ''}${label}`}</AppText>
     </View>
   );
 }

@@ -249,6 +249,42 @@ describe('Open Food Facts adapter (fake network only; never called live)', () =>
       reason: 'network',
     });
   });
+  it('answers a repeat lookup from memory, spaces real requests apart, and never remembers a failure', async () => {
+    let t = 1_000;
+    const waits: number[] = [];
+    let calls = 0;
+    const f = (async () => {
+      calls++;
+      return new Response(JSON.stringify(body));
+    }) as unknown as typeof fetch;
+    const p = make(f, {
+      now: () => t,
+      sleep: async (ms: number) => void (waits.push(ms), (t += ms)),
+    });
+    expect((await p.lookup('4006381333931')).status).toBe('found');
+    expect((await p.lookup('4006381333931')).status).toBe('found');
+    expect(calls).toBe(1); // the second answer came from memory
+    t += 10;
+    expect((await p.lookup('036000291452')).status).toBe('found');
+    expect(calls).toBe(2);
+    expect(waits.length).toBe(1);
+    expect(waits[0]).toBeGreaterThan(0); // the second real request waited
+    t += 11 * 60_000;
+    await p.lookup('4006381333931');
+    expect(calls).toBe(3); // the memory expires
+    let down = true;
+    let n = 0;
+    const flaky = (async () => {
+      n++;
+      if (down) throw new Error('offline');
+      return new Response(JSON.stringify(body));
+    }) as unknown as typeof fetch;
+    const q = make(flaky, { now: () => (t += 5000), sleep: async () => undefined });
+    expect((await q.lookup('4006381333931')).status).toBe('unavailable');
+    down = false;
+    expect((await q.lookup('4006381333931')).status).toBe('found');
+    expect(n).toBe(2); // the failure was not remembered
+  });
   it('carries the Open Food Facts credit', () => {
     expect(make(ok({})).attribution).toMatch(/Open Food Facts/);
   });

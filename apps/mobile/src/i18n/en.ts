@@ -345,6 +345,7 @@ export const en = {
   'food.meal.dinner': 'Dinner',
   'food.meal.snack': 'Snacks',
   'food.tag.estimate': 'Estimate',
+  'food.tag.simulated': 'Simulated estimate, not real AI',
   'food.tag.edited': 'Reviewed by you',
   'food.tag.entered': 'Entered by you',
   'food.tag.reference': 'From reference data',

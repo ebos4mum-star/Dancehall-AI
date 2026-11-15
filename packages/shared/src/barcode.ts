@@ -166,7 +166,7 @@ export const OFF_ATTRIBUTION = 'Product data from Open Food Facts (open database
 
 /**
  * Open Food Facts adapter (https://world.openfoodfacts.org). OFF BY DEFAULT: it is created only when the owner enables it, after approving the licence terms and the
- * privacy note (the request reveals the barcode and the phone's IP address to a third party). Read-only, no account, no key. Not exercised against the live service.
+ * privacy note (the request reveals the barcode and the phone's IP address to a third party). Read-only, no account, no key. Not exercised against the live service. Its terms and rate limits have NOT been verified from the live documentation (see docs/OPEN_FOOD_FACTS_CHECKLIST.md): the throttle and cache below are conservative courtesy limits, not a statement of the real limits.
  */
 export function createOpenFoodFactsProvider(opts: {
   fetchImpl: typeof fetch;
@@ -174,7 +174,19 @@ export function createOpenFoodFactsProvider(opts: {
   userAgent: string;
   baseUrl?: string;
   timeoutMs?: number;
+  /** Courtesy limits, kept well under any published rate limit: at least this long between requests (default 700 ms), results remembered for this long (default 10 min). */
+  minIntervalMs?: number;
+  cacheMs?: number;
+  /** Injectable clock and delay, for tests. */
+  now?: () => number;
+  sleep?: (ms: number) => Promise<void>;
 }): ProductProvider {
+  const now = opts.now ?? Date.now;
+  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  const minGap = opts.minIntervalMs ?? 700;
+  const ttl = opts.cacheMs ?? 10 * 60_000;
+  const cache = new Map<string, { at: number; value: ProductLookup }>();
+  let last = 0;
   const base = (opts.baseUrl ?? 'https://world.openfoodfacts.org').replace(/\/+$/, '');
   return {
     id: 'open_food_facts',
@@ -182,6 +194,20 @@ export function createOpenFoodFactsProvider(opts: {
     async lookup(code) {
       const parsed = parseBarcode(code);
       if (!parsed) return { status: 'not_found' };
+      // A product already looked up recently is answered from memory: the same barcode is never requested twice in a row.
+      const hit = cache.get(parsed.code);
+      if (hit && now() - hit.at < ttl) return hit.value;
+      const wait = last + minGap - now();
+      if (wait > 0) await sleep(wait);
+      last = now();
+      const remember = (value: ProductLookup): ProductLookup => {
+        // Only definite answers are remembered; a network or server failure is retried next time.
+        if (value.status !== 'unavailable') {
+          if (cache.size >= 50) cache.delete(cache.keys().next().value as string);
+          cache.set(parsed.code, { at: now(), value });
+        }
+        return value;
+      };
       const ctl = new AbortController();
       const timer = setTimeout(() => ctl.abort(), opts.timeoutMs ?? 8000);
       try {
@@ -190,14 +216,14 @@ export function createOpenFoodFactsProvider(opts: {
           headers: { 'User-Agent': opts.userAgent, Accept: 'application/json' },
           signal: ctl.signal,
         });
-        if (res.status === 404) return { status: 'not_found' };
+        if (res.status === 404) return remember({ status: 'not_found' });
         if (!res.ok) return { status: 'unavailable', reason: 'error' };
         const body = (await res.json()) as {
           status?: unknown;
           product?: Record<string, unknown>;
         };
-        if (body.status !== 1 || !body.product) return { status: 'not_found' };
-        return classifyProduct(productFromOff(parsed.code, body.product));
+        if (body.status !== 1 || !body.product) return remember({ status: 'not_found' });
+        return remember(classifyProduct(productFromOff(parsed.code, body.product)));
       } catch {
         return { status: 'unavailable', reason: 'network' };
       } finally {
