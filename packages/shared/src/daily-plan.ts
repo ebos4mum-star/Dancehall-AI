@@ -1,6 +1,7 @@
 import { localDateKey } from './food';
 import type { SessionLike } from './activity';
-import { addDaysIso, suggestQuickFit, type QuickFitMinutes } from './workouts';
+import { addDaysIso, suggestQuickFit, type Intensity, type QuickFitMinutes } from './workouts';
+import type { PlanBias } from './pathways';
 
 export const PLAN_MODES = ['normal', 'busy', 'travel', 'comeback'] as const;
 export type PlanMode = (typeof PLAN_MODES)[number];
@@ -44,7 +45,7 @@ export interface DailyPlanInput {
   recentActiveDays?: number;
   /** Optional wellness context. When absent the plan is exactly the original dance, food, habit and goal plan. */
   wellness?: {
-    intent: 'lose' | 'maintain' | 'fitness';
+    intent: 'lose' | 'maintain' | 'fitness' | 'strength';
     tracking: 'detailed' | 'light' | 'none';
     activities: ReadonlyArray<'dance' | 'walking' | 'strength'>;
     hydrationMl: number;
@@ -62,8 +63,19 @@ export interface DailyPlanInput {
     /** When true, no food-awareness prompts are offered. */
     eatingConcern?: boolean;
   };
+  /**
+   * Optional engine output (see pathways.ts). When absent the plan is exactly the one it always was. When present it only adds safety limits (low impact,
+   * an intensity ceiling), prefers the person's chosen styles, and explains itself; it never removes a safety rule that already applies.
+   */
+  bias?: PlanBias;
   seed?: number;
 }
+
+const INTENSITIES_UP_TO: Record<Intensity, readonly Intensity[] | undefined> = {
+  low: ['low'],
+  moderate: ['low', 'moderate'],
+  high: undefined,
+};
 
 const HABITS = [
   'Drink a glass of water',
@@ -93,7 +105,13 @@ export function generateDailyPlan(i: DailyPlanInput): {
     i.doneToday.length === 0 &&
     i.plannedToday.length === 0;
   const sore = i.wellness?.recovery === 'sore' || i.wellness?.recovery === 'worn';
-  const lowOnly = i.lowImpact || i.mode === 'comeback' || i.mode === 'travel' || recovery || sore;
+  const lowOnly =
+    i.lowImpact ||
+    i.bias?.impact === 'low' ||
+    i.mode === 'comeback' ||
+    i.mode === 'travel' ||
+    recovery ||
+    sore;
 
   // Move
   if (i.doneToday.length > 0) {
@@ -119,7 +137,15 @@ export function generateDailyPlan(i: DailyPlanInput): {
       },
     });
   } else {
-    const w = suggestQuickFit({ minutes: MINUTES[i.mode], lowImpactOnly: lowOnly, seed });
+    const w = suggestQuickFit({
+      minutes: MINUTES[i.mode],
+      lowImpactOnly: lowOnly,
+      style: i.bias?.styles[0],
+      intensities: i.bias?.intensityCeiling
+        ? INTENSITIES_UP_TO[i.bias.intensityCeiling]
+        : undefined,
+      seed,
+    });
     if (w) {
       const why = {
         normal: recovery
@@ -133,10 +159,14 @@ export function generateDailyPlan(i: DailyPlanInput): {
         kind: 'workout',
         title: `${w.title} (${w.minutes} min)`,
         detail: w.summary,
-        why:
+        why: [
           i.lowImpact && i.mode === 'normal'
             ? `${why} Low-impact options come first, based on your answers.`
             : why,
+          i.bias?.workoutWhy,
+        ]
+          .filter(Boolean)
+          .join(' '),
         ref: { workoutId: w.id, minutes: w.minutes, lowImpact: lowOnly },
       });
     }
@@ -184,7 +214,7 @@ export function generateDailyPlan(i: DailyPlanInput): {
       kind: 'meal',
       title: 'Aim for protein, veg and carbs at your next meal',
       detail: 'A guide, not a rule.',
-      why: 'A balanced plate is a gentle default.',
+      why: ['A balanced plate is a gentle default.', i.bias?.mealWhy].filter(Boolean).join(' '),
     });
 
   // Habits
@@ -243,7 +273,7 @@ export function generateDailyPlan(i: DailyPlanInput): {
         done: true,
       });
     else if (
-      w.activities.includes('strength') &&
+      (w.activities.includes('strength') || i.bias?.includeStrengthPrompt === true) &&
       !sore &&
       i.mode !== 'travel' &&
       (w.strengthSessionsWeek ?? 0) < 2 &&
@@ -290,7 +320,9 @@ export function generateDailyPlan(i: DailyPlanInput): {
   }
 
   // Goals (optional, never pressure). With wellness preferences, weigh-ins are offered only to people who chose weight numbers.
-  const wantsWeight = w ? w.tracking !== 'none' && w.intent !== 'fitness' : true;
+  const wantsWeight =
+    (w ? w.tracking !== 'none' && w.intent !== 'fitness' && w.intent !== 'strength' : true) &&
+    i.bias?.showWeightPrompts !== false;
   if (
     i.mode === 'normal' &&
     wantsWeight &&

@@ -127,3 +127,41 @@ describe('mock wellness preferences', () => {
     expect(await s.listWellness()).toEqual([]);
   });
 });
+
+describe('weight-management engine preferences (storage compatibility)', () => {
+  it('saves and reloads the new preferences without dropping them, and an unrelated save keeps them', async () => {
+    const s = await setup();
+    await s.setWellnessPrefs({
+      goalIntent: 'strength',
+      pathways: ['strength_training', 'cultural_eating'],
+      danceStyles: ['dancehall', 'afrobeats'],
+      cuisines: ['caribbean'],
+      mobility: ['seated'],
+      experience: 'some',
+      schedule: 'evening',
+    });
+    await s.setWellnessPrefs({ waterGoalMl: 2000 });
+    expect(await s.getWellnessPrefs()).toMatchObject({
+      goalIntent: 'strength',
+      pathways: ['strength_training', 'cultural_eating'],
+      danceStyles: ['dancehall', 'afrobeats'],
+      cuisines: ['caribbean'],
+      mobility: ['seated'],
+      experience: 'some',
+      schedule: 'evening',
+      waterGoalMl: 2000,
+    });
+  });
+  it('an existing person’s goal is never reset by saving other preferences', async () => {
+    const s = await setup();
+    await s.setWellnessPrefs({ goalIntent: 'maintain', tracking: 'detailed' });
+    await s.setWellnessPrefs({ cuisines: ['west_african'] });
+    await s.setWellnessPrefs({ experience: 'new' });
+    expect(await s.getWellnessPrefs()).toMatchObject({
+      goalIntent: 'maintain',
+      tracking: 'detailed',
+      cuisines: ['west_african'],
+      experience: 'new',
+    });
+  });
+});

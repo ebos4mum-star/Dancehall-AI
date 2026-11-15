@@ -42,7 +42,7 @@ export interface CoachContext {
     sleepAvgHours: number | null;
     recoveryToday: 'fresh' | 'ok' | 'sore' | 'worn' | null;
     hungerCheckinsWeek: number;
-    intent: 'lose' | 'maintain' | 'fitness' | null;
+    intent: 'lose' | 'maintain' | 'fitness' | 'strength' | null;
     /** True when the person said food or weight numbers are hard or switched numbers off: the coach then shares none. */
     numbersHidden: boolean;
   };
