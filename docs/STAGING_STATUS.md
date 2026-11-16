@@ -136,3 +136,43 @@ Community must stay off in the App Store build (it is). Still open from `docs/AP
 ## Decisions needed
 1. Approve switching staging to stored mode `open` AND setting `COMMUNITY_FLOOR_MODE` to a non-restricting value (you would enter it in the dashboard), with video and comments still disabled, only for the photo tests, restored to `read_only` immediately afterwards and re-verified over HTTP? Staging is not public.
 2. Approve deleting the synthetic test accounts and data, and removing the staging host from Default, once testing ends?
+
+---
+
+# Phase 4: photo security tests (2026-11-16)
+
+Project `bxhnrjulksganzydgrgm` only (reference verified before opening). Synthetic accounts and generated test images only. Development and production untouched.
+
+**Settings recorded before change:** database mode `read_only`, video off, comments off, `COMMUNITY_FLOOR_MODE` = `read_only` (owner-entered; not readable by me).
+**Accepted value that allows photos:** `open`. The function treats only `text_only` and `read_only` as restrictions; anything else is `open` (index.ts lines 120-122). `text_only` does not allow photos (server refuses all upload routes and photo posts with `media_paused` unless the floor is `open`).
+**Sequence:** owner set `COMMUNITY_FLOOR_MODE=open`; database mode set to `open` (the status route then reported `open`, proving both layers were open); tests run; **database mode restored to `read_only` immediately afterwards** (read back: `read_only`, video false, comments false).
+
+## Results (`scripts/staging/photo-checks.mjs`, real HTTPS API)
+The first run failed 8 checks; 7 were because the moderator's second factor could not be enrolled (an earlier test factor already existed), one test-design issue. After removing that synthetic moderator's old factor (staging test data) the full run was repeated: 41 of 42 passed. The remaining failure is analysed below.
+
+| Area | Result |
+| --- | --- |
+| Effective mode open, video and comments still disabled over HTTP | PASS |
+| Authorized member gets an upload ticket; path is random and carries no account id | PASS |
+| Upload to the signed upload link works | PASS |
+| Private bucket: public URL, the uploader's own token and another member's token cannot read the object directly; another member cannot list it | PASS |
+| Another member cannot commit or attach someone else's upload; an unverified upload cannot be attached | PASS |
+| Photo post is HELD; invisible to guests and other members; visible to the author only, with a signed link; no account id or email in any feed | PASS |
+| Signed link serves the image; the hidden metadata marker (fake GPS EXIF) was stripped from the stored copy | PASS |
+| Signed link lifetime exactly 600 s; tampered link refused; link does not open any other file | PASS |
+| Moderation: member cannot use the queue, cannot approve their own post; moderator with password only (no second factor) cannot approve; post stays hidden after those attempts | PASS (no moderation bypass, no MFA bypass) |
+| Moderator at aal2 sees the held photo with a signed link and no account id, approves; guests then see it with a working link | PASS |
+| Deletion: another member cannot delete someone's post; owner can; it leaves the feed; the photo object is gone from storage (bucket holds only the files of the remaining posts) | PASS |
+| Text file renamed `.jpg` refused at commit (`wrong_type`); file over 8 MB refused (the bucket's own size limit rejects the upload, so commit finds nothing) | PASS |
+| Video upload ticket refused (`video_disabled`); comments refused (403) | PASS |
+| Signed-link expiry after 600 s (an actual expired fetch) | see "Pending" below |
+| **P10e: after deletion, the old signed link no longer serves the deleted photo** | **FAIL as written; see finding 1** |
+
+## Findings
+1. **A deleted photo's earlier signed link kept serving for a short time.** The storage object was confirmed deleted (SQL: the bucket holds only the 2 files of the 2 remaining posts), yet the signed link that had been fetched moments earlier still returned 200. This is almost certainly CDN caching (the test upload and the server's re-upload use the default 3600 s cache control), so it is bounded by the link's 600 s lifetime plus cache. It only affects someone who already holds a valid link. Recommendation: before any real use, upload with `cacheControl: 'no-store'` or a short `max-age` in the server's `upload(...)` call, and re-test. Not changed in this phase.
+2. In this phase no unauthorized access, private-data exposure, moderation bypass or MFA bypass was observed.
+
+## Restore status
+- Database mode: **restored to `read_only`** and verified.
+- Effective mode over HTTP now: **`read_only`** (`check-access.mjs function` C1b PASS; member text posts and photo tickets return 503).
+- `COMMUNITY_FLOOR_MODE`: still `open` until the owner sets it back to `read_only` (evidence: guest writes currently return 401 rather than 503, which is the floor-open behaviour). Cleanup has NOT been done and waits for this.
