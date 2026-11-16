@@ -176,3 +176,45 @@ The first run failed 8 checks; 7 were because the moderator's second factor coul
 - Database mode: **restored to `read_only`** and verified.
 - Effective mode over HTTP now: **`read_only`** (`check-access.mjs function` C1b PASS; member text posts and photo tickets return 503).
 - `COMMUNITY_FLOOR_MODE`: still `open` until the owner sets it back to `read_only` (evidence: guest writes currently return 401 rather than 503, which is the floor-open behaviour). Cleanup has NOT been done and waits for this.
+
+---
+
+# Phase 5: final verification and cleanup (2026-11-16)
+
+## Final verification
+| Check | Result | Evidence |
+| --- | --- | --- |
+| `COMMUNITY_FLOOR_MODE` back to `read_only` | **PASS (non-mutating evidence; no database flip needed)** | With the floor `open`, a guest `post` returned 401; after the owner's restore it returns 503 "paused" (the floor is checked before sign-in). `check-access.mjs function` 15 of 15 |
+| Effective mode over HTTP | **PASS** | status route: `mode read_only`, `commentsEnabled false`, `videoEnabled false` (C1b to C1d) |
+| Database | **PASS** | `mode=read_only, video_enabled=false, comments_enabled=false` |
+| `check-access.mjs db` | **PASS** | all checks passed after cleanup |
+| Signed link after its 600 s lifetime | **PASS** | the link saved at approval time (age 624 s, token `exp` passed) returned **400** with a JSON error, not the image, including with a changed query string |
+
+## Signed-link caching finding: investigated, NOT resolved
+- A published photo's signed link returns `cf-cache-status: MISS` on the first fetch and `HIT` on the second, with no `Cache-Control` header: the CDN keeps a copy keyed by the exact link.
+- The server's re-upload (`supabase/functions/community/index.ts` line 74) passes no `cacheControl`, so the storage default (3600 s) applies. The earlier test uploads set 3600 s explicitly.
+- After a post is deleted and its file removed, a link that was already fetched can still be served from that cache while its token is valid (up to 600 s after it was issued). Once the token has expired the cache no longer serves it (400 above), so the exposure is bounded by the token lifetime, and only for someone who already holds a link.
+- Proposed fix, **not applied and not tested** (changing the function was not authorized in this phase): upload the cleaned photo with a short or no-store cache control (`cacheControl: '0'` / `no-store`) and, if needed, a shorter view lifetime; then re-test delete-then-fetch on staging. Status: **OPEN**.
+
+## Cleanup performed (synthetic data only, staging only)
+- Deleted through the API: the owner deleted their two photo posts, which removed their files (bucket now holds 0 objects).
+- Deleted in SQL after a guard that every user was synthetic: all posts, reports, report resolutions, upload and orphan records, rate-limit counters, deletion requests, and the synthetic accounts (`m1`, `m3`, moderator, seed member) with their identities, sessions, second-factor enrolments, community profiles, usernames, blocks and staff role.
+- Read-back counts: users 0, community members 0, posts 0, uploads 0, reports 0, staff 0, storage objects 0, deletion requests 0.
+- **Preserved:** all 19 migrations, structure, functions, the deployed `community` function, secrets and settings (mode `read_only`, video and comments off).
+- **Kept on purpose:** 4 rows in `audit_log` (the tamper-evident record of the synthetic moderator's test actions). They hold no personal data. Deleting them would break the audit chain.
+- Local scratch credentials and test images were shredded.
+
+## Environment cleanup
+- Staging host `bxhnrjulksganzydgrgm.supabase.co` **removed from the Default environment** (allowed hosts are back to the original four).
+- The unused environment `dancehall-ai-staging-http` could **not** be deleted by me: no tool for deleting environments is available here. Delete it in Settings, Environments.
+
+## Final staging security status
+Staging holds no test data, is in Read-only mode (database and floor), with comments and video disabled at database and API level. No unauthorized access, private-data exposure, moderation bypass or MFA bypass was observed in any phase.
+
+## Remaining issues
+1. **Signed-link cache after deletion** (above): open until a fix is tested.
+2. Guest rate limit not demonstrated (rotating egress address in this sandbox); run a guest burst from one machine.
+3. Expired member access token (one hour) not exercised; revoked and forged tokens were.
+4. `COMMUNITY_FLOOR_MODE` and secret values cannot be read back by me; the floor was confirmed by behaviour only.
+5. Account-deletion executor has no HTTP route or schedule yet; the 30-day wait is provisional.
+6. App Store blockers unchanged (see `docs/APP_STORE_READINESS.md`): privacy and support URLs, legal review, production accounts, cleared V1 video, App Privacy answers.
