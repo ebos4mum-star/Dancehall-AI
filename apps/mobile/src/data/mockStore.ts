@@ -226,7 +226,11 @@ function checkSession(i: NewSession, now: Date): void {
     (i.perceivedExertion != null && !(i.perceivedExertion >= 1 && i.perceivedExertion <= 10)) ||
     ((i.status ?? 'planned') === 'planned' && !i.plannedFor) ||
     (i.plannedFor != null && !/^\d{4}-\d{2}-\d{2}$/.test(i.plannedFor)) ||
-    (i.completedAt != null && Date.parse(i.completedAt) > now.getTime() + DAY_MS);
+    (i.completedAt != null && Date.parse(i.completedAt) > now.getTime() + DAY_MS) ||
+    // Same rule as the database: an imported workout carries its source id, and nothing else does.
+    (i.source === 'apple_health') !==
+      (typeof i.externalId === 'string' && i.externalId.length > 0) ||
+    (i.externalId != null && i.externalId.length > 128);
   if (bad) throw new StoreError('invalid_input', 'session');
 }
 
@@ -1041,6 +1045,7 @@ export class MockStore implements DataStore {
       perceivedExertion: i.perceivedExertion ?? null,
       lowImpact: i.lowImpact ?? false,
       source: i.source ?? 'manual',
+      externalId: i.externalId ?? null,
       createdAt: this.now().toISOString(),
     };
   }
@@ -1048,6 +1053,8 @@ export class MockStore implements DataStore {
     const s = await this.authed();
     this.requireConsent(s);
     checkSession(input, this.now());
+    if (input.externalId && s.sessions.some((x) => x.externalId === input.externalId))
+      throw new StoreError('invalid_input', 'duplicate_import');
     const rec = this.buildSession(input);
     s.sessions.push(rec);
     await this.commit();
@@ -1057,6 +1064,12 @@ export class MockStore implements DataStore {
     const s = await this.authed();
     this.requireConsent(s);
     inputs.forEach((i) => checkSession(i, this.now()));
+    const ids = inputs.map((i) => i.externalId).filter((x): x is string => !!x);
+    if (
+      new Set(ids).size !== ids.length ||
+      ids.some((id) => s.sessions.some((x) => x.externalId === id))
+    )
+      throw new StoreError('invalid_input', 'duplicate_import');
     const recs = inputs.map((i) => this.buildSession(i));
     s.sessions.push(...recs);
     await this.commit();

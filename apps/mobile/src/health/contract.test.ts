@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  HEALTH_SYNC_ENABLED,
-  disabledHealthProvider,
-  importableWorkouts,
-  type ExternalWorkout,
-} from './contract';
+import { disabledHealthProvider, importableWorkouts, type ExternalWorkout } from './contract';
 
 const ext = (id: string, start: string): ExternalWorkout => ({
   source: 'apple_health',
@@ -14,10 +9,10 @@ const ext = (id: string, start: string): ExternalWorkout => ({
   activity: 'dance',
 });
 
-describe('health sync contract (inactive)', () => {
-  it('is disabled and reads nothing', async () => {
-    expect(HEALTH_SYNC_ENABLED).toBe(false);
-    expect(disabledHealthProvider.status()).toBe('disabled');
+describe('health sync contract', () => {
+  it('the disabled provider asks nothing, reads nothing and says unavailable', async () => {
+    expect(await disabledHealthProvider.status()).toBe('unavailable');
+    expect(await disabledHealthProvider.authorize()).toBe(false);
     expect(await disabledHealthProvider.readWorkouts('2026-01-01T00:00:00Z')).toEqual([]);
   });
   it('does not import workouts already known by id, repeated in the feed, or overlapping a recorded session', () => {

@@ -458,7 +458,8 @@ export interface NewMealPlan {
 
 // ---------- Dance sessions ----------
 export type SessionStatus = 'planned' | 'completed' | 'skipped';
-export type SessionSource = 'manual' | 'quick_fit' | 'program' | 'plan';
+/** 'apple_health' rows are imported workouts (proposed supabase/proposed/health_sync.up.sql; the mock store accepts them today). */
+export type SessionSource = 'manual' | 'quick_fit' | 'program' | 'plan' | 'apple_health';
 export interface Habit {
   id: string;
   name: string;
@@ -520,6 +521,8 @@ export interface WorkoutSession {
   perceivedExertion: number | null;
   lowImpact: boolean;
   source: SessionSource;
+  /** The source system's id for an imported workout (Apple Health); null for everything recorded in the app. */
+  externalId: string | null;
   createdAt: string;
 }
 export interface NewSession {
@@ -535,6 +538,7 @@ export interface NewSession {
   perceivedExertion?: number | null;
   lowImpact?: boolean;
   source?: SessionSource;
+  externalId?: string | null;
 }
 export interface SessionPatch {
   plannedFor?: string | null;

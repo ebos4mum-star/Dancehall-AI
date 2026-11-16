@@ -69,7 +69,10 @@ describe('enum contract: the app can only send values the database accepts', () 
     [
       'workout_sessions',
       'source',
-      all<SessionSource>()(['manual', 'quick_fit', 'program', 'plan']),
+      // 'apple_health' comes from the PROPOSED health_sync.up.sql (checked below); the applied migrations do not have it yet.
+      all<SessionSource>()(['manual', 'quick_fit', 'program', 'plan', 'apple_health']).filter(
+        (x) => x !== 'apple_health',
+      ),
     ],
     [
       'food_log_items',
@@ -100,6 +103,15 @@ describe('enum contract: the app can only send values the database accepts', () 
   ];
   it.each(cases)('%s.%s matches the app', (table, column, app) => {
     expect(dbEnum(table, column)).toEqual(sorted(app));
+  });
+  it('the proposed health_sync migration adds exactly the apple_health source and its id column, with an insert grant', () => {
+    const h = readFileSync(
+      join(__dirname, '..', '..', '..', '..', 'supabase', 'proposed', 'health_sync.up.sql'),
+      'utf8',
+    );
+    expect(h).toMatch(/source in \('manual', 'quick_fit', 'program', 'plan', 'apple_health'\)/);
+    expect(h).toMatch(/add column external_id text/);
+    expect(h).toMatch(/grant insert \(external_id\) on public\.workout_sessions to authenticated/);
   });
   it('workout session status is a superset of what the app writes (planned, completed)', () => {
     const db = dbEnum('workout_sessions', 'status');

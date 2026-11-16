@@ -1,7 +1,6 @@
 /**
- * Platform-neutral contract for FUTURE optional health-app workout sync (for example Apple Health). Nothing here reads, requests or
- * sends any health data: the only provider is the disabled one below. Turning sync on needs the owner's approval, a native module,
- * Apple entitlements and a development build, none of which exist yet.
+ * Platform-neutral contract for optional health-app workout import (Apple Health). Read-only: only the workout's type, start, end and id cross this
+ * boundary. No calories, heart rate, route or other health sample is ever read, stored or sent. Nothing is asked until the person turns it on in Settings.
  */
 export type HealthSource = 'apple_health';
 
@@ -17,16 +16,18 @@ export interface ExternalWorkout {
 
 export interface HealthProvider {
   readonly source: HealthSource;
-  /** 'disabled' until approved. A provider must never prompt for permission while disabled. */
-  status(): 'disabled' | 'available' | 'unauthorized' | 'authorized';
+  /** 'unavailable' on devices or builds without Apple Health (the web, an iPad without Health, a build without the entitlement). Never prompts. */
+  status(): Promise<'unavailable' | 'ready'>;
+  /** Shows the system permission sheet for READING workouts only. Resolves false if the sheet could not be shown. Apple never tells an app whether read access was granted. */
+  authorize(): Promise<boolean>;
   readWorkouts(sinceIso: string): Promise<ExternalWorkout[]>;
 }
 
-export const HEALTH_SYNC_ENABLED = false as const;
-
+/** What the screens use when no real provider exists (web, tests, builds with the flag off): nothing is read and nothing is asked. */
 export const disabledHealthProvider: HealthProvider = {
   source: 'apple_health',
-  status: () => 'disabled',
+  status: async () => 'unavailable',
+  authorize: async () => false,
   readWorkouts: async () => [],
 };
 

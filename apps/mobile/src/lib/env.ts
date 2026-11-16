@@ -20,6 +20,12 @@ export interface AppConfig {
    * A production build refuses to start with it on: it needs the social schema applied to a reviewed backend first (supabase/proposed/social.up.sql, not applied).
    */
   social: boolean;
+  /**
+   * Whether this build offers optional Apple Health workout import (read-only: workout type, start and duration; no calories or other health samples). OFF everywhere
+   * unless EXPO_PUBLIC_APPLE_HEALTH=1 (the staging preview profile). A production build refuses to start with it on until the owner enables it with a code change. In the
+   * development mock the provider is a clearly labelled simulation.
+   */
+  appleHealth: boolean;
   /** Public support address shown for appeals and questions. Not a secret. Absent until the owner sets one. */
   supportEmail?: string;
   /** Public https address of the published privacy policy and support page. Not secrets. Absent until the owner publishes them; the app shows a link only when set. */
@@ -79,6 +85,10 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
     throw new ConfigError(
       'Friends and group goals are not allowed in a production build yet. Remove EXPO_PUBLIC_SOCIAL.',
     );
+  if (appEnv === 'production' && env.EXPO_PUBLIC_APPLE_HEALTH === '1')
+    throw new ConfigError(
+      'Apple Health import is not allowed in a production build yet. Remove EXPO_PUBLIC_APPLE_HEALTH.',
+    );
   const rawSupport = env.EXPO_PUBLIC_SUPPORT_EMAIL?.trim();
   if (rawSupport && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawSupport))
     throw new ConfigError('EXPO_PUBLIC_SUPPORT_EMAIL must be an email address.');
@@ -125,6 +135,7 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
       barcodeProvider,
       community: env.EXPO_PUBLIC_COMMUNITY !== '0',
       social: env.EXPO_PUBLIC_SOCIAL !== '0',
+      appleHealth: env.EXPO_PUBLIC_APPLE_HEALTH !== '0',
       supportEmail,
       privacyPolicyUrl,
       supportUrl,
@@ -168,6 +179,7 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
     barcodeProvider,
     community: env.EXPO_PUBLIC_COMMUNITY === '1',
     social: env.EXPO_PUBLIC_SOCIAL === '1',
+    appleHealth: env.EXPO_PUBLIC_APPLE_HEALTH === '1',
     supportEmail,
     privacyPolicyUrl,
     supportUrl,

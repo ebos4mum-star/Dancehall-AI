@@ -31,7 +31,8 @@
         "EXPO_PUBLIC_AUTH_MODE": "supabase",
         "EXPO_PUBLIC_CLOUD_ACCOUNTS": "1",
         "EXPO_PUBLIC_SOCIAL": "1",
-        "EXPO_PUBLIC_COMMUNITY": "1"
+        "EXPO_PUBLIC_COMMUNITY": "1",
+        "EXPO_PUBLIC_APPLE_HEALTH": "1"
       }
     },
     "production": {

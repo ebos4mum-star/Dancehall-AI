@@ -172,6 +172,7 @@ const fromSessionRow = (r: Row): WorkoutSession => ({
   perceivedExertion: r.perceived_exertion == null ? null : Number(r.perceived_exertion),
   lowImpact: r.low_impact as boolean,
   source: r.source as WorkoutSession['source'],
+  externalId: (r.external_id as string | null | undefined) ?? null,
   createdAt: r.created_at as string,
 });
 const toSessionRow = (i: NewSession): Row => ({
@@ -187,6 +188,8 @@ const toSessionRow = (i: NewSession): Row => ({
   perceived_exertion: i.perceivedExertion ?? null,
   low_impact: i.lowImpact ?? false,
   source: i.source ?? 'manual',
+  // Only sent for an imported workout, so ordinary sessions keep working before the import columns exist.
+  ...(i.externalId ? { external_id: i.externalId } : {}),
 });
 
 export function createSupabaseStore(cfg: SupabaseStoreConfig): DataStore {

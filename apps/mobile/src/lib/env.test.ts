@@ -14,6 +14,7 @@ describe('resolveConfig', () => {
       barcodeProvider: 'local',
       community: true,
       social: true,
+      appleHealth: true,
     });
   });
   it('carries an optional public support address and refuses anything that is not an email address', () => {

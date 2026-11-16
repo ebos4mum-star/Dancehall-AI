@@ -118,6 +118,7 @@ describe('isolation from unrelated credentials', () => {
     expect(Object.keys(c).sort()).toEqual(
       [
         'aiApiUrl',
+        'appleHealth',
         'appEnv',
         'authMode',
         'barcodeProvider',
@@ -159,9 +160,22 @@ describe('Friends is never switched on by a shared build profile', () => {
       const staging = name === 'staging-preview';
       expect(p.env?.EXPO_PUBLIC_SOCIAL, name).toBe(staging ? '1' : undefined);
       expect(p.env?.EXPO_PUBLIC_COMMUNITY, name).toBe(staging ? '1' : undefined);
+      expect(p.env?.EXPO_PUBLIC_APPLE_HEALTH, name).toBe(staging ? '1' : undefined);
     }
     expect(eas.build.production!.env ?? {}).not.toHaveProperty('EXPO_PUBLIC_SOCIAL');
     expect(eas.build.production!.env ?? {}).not.toHaveProperty('EXPO_PUBLIC_COMMUNITY');
+    expect(eas.build.production!.env ?? {}).not.toHaveProperty('EXPO_PUBLIC_APPLE_HEALTH');
+  });
+  it('a production build that is handed the Apple Health flag refuses to start', () => {
+    expect(() =>
+      resolveConfig({
+        EXPO_PUBLIC_APP_ENV: 'production',
+        EXPO_PUBLIC_AUTH_MODE: 'supabase',
+        EXPO_PUBLIC_SUPABASE_URL: 'https://x.example.test',
+        EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_placeholder',
+        EXPO_PUBLIC_APPLE_HEALTH: '1',
+      }),
+    ).toThrow(/Apple Health/);
   });
   it('a production build that is handed the flag refuses to start', () => {
     expect(() =>
