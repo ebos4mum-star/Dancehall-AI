@@ -81,3 +81,58 @@ Moderator MFA over HTTP (manual): add a second throwaway member as a moderator (
 ## Remaining decisions
 1. Permission to switch staging to `text_only` temporarily to test photo privacy and signed links, then back to Read only.
 2. Whether to allow `*.supabase.co` for this sandbox session so I can run the HTTP tests myself (network setting you control).
+
+---
+
+# Phase 3: staging HTTP and security tests (2026-11-16)
+
+This phase supersedes the BLOCKED entries in the Phase 2 table where it gives a result. Everything below ran against `bxhnrjulksganzydgrgm` only, through the real HTTPS API, with synthetic accounts (`*@staging-test.example`, passwords random, kept only in a local scratch file, never printed or committed). Development and production were not touched. No PR, no merge, no `main` change.
+
+**Network access:** the owner approved it. The host `bxhnrjulksganzydgrgm.supabase.co` (nothing else) was added to the owner's Default environment (an extra, unused environment named `dancehall-ai-staging-http` also exists and can be deleted). Remove the host from Default when testing is finished.
+
+**Baseline recorded before any change:** database mode `read_only`, video off, comments off. `COMMUNITY_FLOOR_MODE` was set by the owner in the dashboard; its effective value was confirmed over HTTP as `read_only` (C1b). **I changed neither the mode nor the floor in this phase.**
+
+## Mode question for the photo tests
+**`text_only` does NOT permit the photo tests.** In `packages/shared/src/community-server.ts` (lines 826-838) any upload route or photo post is refused with `media_paused` whenever the floor is not `open`, and the stored mode is combined with the floor using the stricter of the two. Photo privacy, signed links and unauthorized-access tests therefore need **both** the stored mode `open` and the floor secret set to a non-restricting value (for example `open`), with video and comments still off. I have not done this and am asking first (see the decisions below). Restoring requires the owner to re-enter `COMMUNITY_FLOOR_MODE=read_only` in the dashboard.
+
+## Results (PASS = ran over HTTP and behaved correctly)
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Effective mode Read only, comments and video off, over HTTP | **PASS** | `check-access.mjs function` C1, C1b, C1c, C1d |
+| Database door and tables closed to the publishable key; app schema hidden; purge not callable; bucket private; public sign-up off | **PASS** | `check-access.mjs db`, 12 of 12 |
+| Guests refused on every member and staff route; wrong method 405; maintenance needs its key; no key or id in responses | **PASS** | `check-access.mjs function`, 15 of 15 (guest writes return 503 "paused" before sign-in in Read only, so the test was corrected to accept it; nothing is written either way) |
+| Guest browses approved content | **PASS** | D1 (synthetic post visible); D1b no account id or email in the feed |
+| Guest cannot post | **PASS** | D2 (503) |
+| Signed-in member cannot post, comment, or request photo or video uploads in Read only | **PASS** | E1 to E4 |
+| JWT: garbage token, forged signature refused; valid token accepted; revoked (signed-out) session refused | **PASS** | F1, F2, F4, F5 |
+| Expired token | **BLOCKED** | cannot be forced; needs a saved token tried after its one-hour expiry (F6). Same verification path as F1/F5 |
+| Member cannot reach moderator routes or change the mode | **PASS** | F3, F3b (403) |
+| Moderator MFA through the API | **PASS** | `mfa-checks.mjs`, 12 of 12: password-only (aal1) moderator refused on `mod/queue` and `mod/mode`; after enrolling TOTP (aal2) the queue returns 200 with no account ids; the old aal1 token is still refused; a non-staff member is refused even at aal2 |
+| Reporting, repeat report indistinguishable | **PASS** | G1, G1b |
+| Blocking and unblocking | **PASS** | G2, G2b |
+| Errors: bad JSON 400, oversize 413, unknown route 404, never 500 | **PASS** | H1 to H3 |
+| Rate limits and concurrency (members) | **PASS** | I2 (150 member reads in parallel: 429s, no 5xx), I3 (30 parallel writes all refused), I4 (25 reports: limited to the 10 a minute, no errors) |
+| Rate limit for guests | **BLOCKED / INCONCLUSIVE here** | this environment's egress rotates its network address, so guest requests were spread over many buckets (observed in `community_burst`: many distinct hashed keys, each far under 90). Run a guest burst from one machine |
+| Account deletion through the real API | **PASS** | `request_account_deletion` returned 200 for synthetic members; each was scheduled 30 days ahead (nothing deleted early). Then one synthetic account was made due and the server-only executor ran: exactly 1 purged, the other synthetic accounts and the seed intact, and the purged account could no longer sign in (400). The executor is not wired to an HTTP route, so that step ran in SQL as the server role |
+| Private photo access, signed URLs, unauthorized photo access | **BLOCKED** | needs mode `open` (see above); awaiting your approval |
+| Unauthorized write, private-data exposure, MFA bypass | **None observed** | stop conditions never triggered |
+
+## Findings and notes
+1. Guest rate limiting is per hashed network address and fails closed to a single shared bucket when the address header is missing. Behind a rotating proxy it cannot be demonstrated; confirm from a single machine.
+2. In Read only a guest write returns 503 "paused" rather than 401, because the pause is checked before sign-in. Safe, but the status differs from the 401 the earlier test expected.
+3. Test data left in staging: synthetic members `stg_member_one`, `staging_seed`, a moderator account with an enrolled TOTP factor, one synthetic post, a few synthetic reports and a 30-day deletion request on one account. Remove when finished.
+
+## Reproduce on your Mac
+```bash
+export STAGING_REF=bxhnrjulksganzydgrgm STAGING_CONFIRM=I-AM-USING-THE-STAGING-PROJECT STAGING_PUBLISHABLE_KEY=<staging publishable key>
+node scripts/staging/check-access.mjs db && node scripts/staging/check-access.mjs function
+STAGING_MEMBER_EMAIL=<throwaway> STAGING_MEMBER_PASSWORD=<throwaway> node scripts/staging/member-checks.mjs
+STAGING_MOD_EMAIL=<moderator> STAGING_MOD_PASSWORD=<pw> STAGING_MEMBER_EMAIL=<non-staff> STAGING_MEMBER_PASSWORD=<pw> node scripts/staging/mfa-checks.mjs
+```
+
+## Remaining App Store blockers (unchanged by these tests)
+Community must stay off in the App Store build (it is). Still open from `docs/APP_STORE_READINESS.md`: published privacy and support URLs, reviewed legal text, a working production account backend, V1 dance video content (none cleared), App Privacy answers, and the exact review notes. This phase adds no new blocker; the unverified items are the guest rate limit, the expired-token check and the photo tests above.
+
+## Decisions needed
+1. Approve switching staging to stored mode `open` AND setting `COMMUNITY_FLOOR_MODE` to a non-restricting value (you would enter it in the dashboard), with video and comments still disabled, only for the photo tests, restored to `read_only` immediately afterwards and re-verified over HTTP? Staging is not public.
+2. Approve deleting the synthetic test accounts and data, and removing the staging host from Default, once testing ends?
