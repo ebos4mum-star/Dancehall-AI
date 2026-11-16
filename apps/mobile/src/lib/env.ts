@@ -15,6 +15,8 @@ export interface AppConfig {
    * docs/COMMUNITY.md first, and lifting this needs a deliberate code change and its own review.
    */
   community: boolean;
+  /** Public support address shown for appeals and questions. Not a secret. Absent until the owner sets one. */
+  supportEmail?: string;
   appEnv: AppEnv;
   authMode: 'mock' | 'supabase';
   supabaseUrl?: string;
@@ -62,6 +64,10 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
     throw new ConfigError(
       'Community is not allowed in a production build yet. Remove EXPO_PUBLIC_COMMUNITY.',
     );
+  const rawSupport = env.EXPO_PUBLIC_SUPPORT_EMAIL?.trim();
+  if (rawSupport && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawSupport))
+    throw new ConfigError('EXPO_PUBLIC_SUPPORT_EMAIL must be an email address.');
+  const supportEmail = rawSupport || undefined;
   const rawBarcode = env.EXPO_PUBLIC_BARCODE_PROVIDER?.trim();
   if (rawBarcode && !['off', 'local', 'open_food_facts'].includes(rawBarcode))
     throw new ConfigError(`Unknown EXPO_PUBLIC_BARCODE_PROVIDER "${rawBarcode}"`);
@@ -92,6 +98,7 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
       cloudAccounts: true,
       barcodeProvider,
       community: env.EXPO_PUBLIC_COMMUNITY !== '0',
+      supportEmail,
     };
   }
   if (!url || !key)
@@ -124,5 +131,6 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
     cloudAccounts: env.EXPO_PUBLIC_CLOUD_ACCOUNTS === '1',
     barcodeProvider,
     community: env.EXPO_PUBLIC_COMMUNITY === '1',
+    supportEmail,
   };
 }

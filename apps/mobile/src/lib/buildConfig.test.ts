@@ -114,6 +114,7 @@ describe('isolation from unrelated credentials', () => {
         'community',
         'contentFixtures',
         'supabasePublishableKey',
+        'supportEmail',
         'supabaseUrl',
       ].sort(),
     );

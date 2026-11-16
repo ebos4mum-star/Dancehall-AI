@@ -54,12 +54,17 @@ export function Composer({ onPosted, onClose }: { onPosted: () => void; onClose:
   const [recent, setRecent] = useState<WorkoutSession[]>([]);
   const [shareFrom, setShareFrom] = useState<WorkoutSession | null>(null);
   const [mode, setMode] = useState<'open' | 'text_only' | 'read_only'>('open');
+  const [videoEnabled, setVideoEnabled] = useState(true);
 
   useEffect(() => {
     let live = true;
     void store.communityProfile?.().then((p) => live && setUsername(p?.username ?? null));
     void store.communityStatus?.().then(
-      (m) => live && setMode(m),
+      (m) => {
+        if (!live) return;
+        setMode(m.mode);
+        setVideoEnabled(m.videoEnabled);
+      },
       () => undefined,
     );
     void store
@@ -180,28 +185,33 @@ export function Composer({ onPosted, onClose }: { onPosted: () => void; onClose:
         <UsernameClaim onClaimed={setUsername} />
       ) : (
         <>
+          {mode === 'open' && !videoEnabled ? (
+            <Notice tone="info">{t('community.paused.video')}</Notice>
+          ) : null}
           {mode !== 'open' ? (
             <Notice tone="info">
               {t(mode === 'read_only' ? 'community.paused.all' : 'community.paused.media')}
             </Notice>
           ) : null}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-            {KINDS.filter((o) => mode === 'open' || (o.k !== 'photo' && o.k !== 'video')).map(
-              (o) => (
-                <View key={o.k} style={{ flexBasis: '30%', flexGrow: 1 }}>
-                  <IconChoice
-                    icon={o.icon}
-                    label={t(`community.kind.${o.k}` as StringKey)}
-                    selected={kind === o.k}
-                    tint={brand.lime}
-                    onPress={() => {
-                      setKind(o.k);
-                      setProblems([]);
-                    }}
-                  />
-                </View>
-              ),
-            )}
+            {KINDS.filter(
+              (o) =>
+                (mode === 'open' || (o.k !== 'photo' && o.k !== 'video')) &&
+                (o.k !== 'video' || videoEnabled),
+            ).map((o) => (
+              <View key={o.k} style={{ flexBasis: '30%', flexGrow: 1 }}>
+                <IconChoice
+                  icon={o.icon}
+                  label={t(`community.kind.${o.k}` as StringKey)}
+                  selected={kind === o.k}
+                  tint={brand.lime}
+                  onPress={() => {
+                    setKind(o.k);
+                    setProblems([]);
+                  }}
+                />
+              </View>
+            ))}
           </View>
 
           {kind === 'milestone' ? (

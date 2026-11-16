@@ -153,6 +153,12 @@ describe('Community over the Edge Function', () => {
     const r = await s.a.communityPost!({ type: 'text', body: 'hi' }, { confirmed: true });
     expect(r.ok && r.post.author).toBe('ama_moves');
   });
+  it('reads the status, and fails open for reading but closed for video', async () => {
+    const s = setup({ status: { ok: true, mode: 'text_only', videoEnabled: false } });
+    expect(await s.a.communityStatus!()).toEqual({ mode: 'text_only', videoEnabled: false });
+    const down = setup({ status: { ok: false, code: 'server_error' } });
+    expect(await down.a.communityStatus!()).toEqual({ mode: 'open', videoEnabled: false });
+  });
   it('leaves Community through the server', async () => {
     const s = setup({ leave: { ok: true } });
     expect(await s.a.communityLeave!()).toEqual({ ok: true });

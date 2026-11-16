@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { Alerter } from './community-alerts';
 import {
   createCommunityServer,
   type CommunityDeps,
@@ -38,7 +39,13 @@ const jpeg = cat(
 
 function setup(
   handlers: Record<string, (a: Record<string, unknown>) => unknown> = {},
-  opts: { burstOk?: boolean; files?: Record<string, Uint8Array> } = {},
+  opts: {
+    burstOk?: boolean;
+    files?: Record<string, Uint8Array>;
+    alerts?: Alerter;
+    floorMode?: 'open' | 'text_only' | 'read_only';
+    burst?: () => boolean;
+  } = {},
 ) {
   const calls: Array<{ fn: string; args: Record<string, unknown> }> = [];
   const uploaded: Array<{ path: string; bytes: Uint8Array }> = [];
@@ -47,7 +54,7 @@ function setup(
     rpc: {
       async call(fn, args) {
         calls.push({ fn, args });
-        if (fn === 'community_burst') return opts.burstOk ?? true;
+        if (fn === 'community_burst') return opts.burst ? opts.burst() : (opts.burstOk ?? true);
         const h = handlers[fn];
         if (!h) throw new Error(`unexpected rpc ${fn}`);
         return h(args);
@@ -79,6 +86,8 @@ function setup(
       },
     },
     maintenanceKeyOk: (k) => k === 'secret-key',
+    alerts: opts.alerts,
+    floorMode: opts.floorMode,
   };
   const server = createCommunityServer(deps);
   const send = (
@@ -508,6 +517,160 @@ describe('modes', () => {
       (await t.send('mod/mode', { mode: 'read_only', note: 'flood' }, 'staff2')).body,
     ).toMatchObject({ ok: true, mode: 'read_only' });
     expect(dbCalls(t.calls)[0]!.args).toMatchObject({ p_actor: STAFF, p_aal2: true });
+  });
+});
+
+describe('urgent alerts', () => {
+  const alerter = () => {
+    const sent: Array<{ kind: string; summary: unknown }> = [];
+    const a: Alerter = {
+      enabled: true,
+      reason: 'on',
+      notify: async (kind, summary) => {
+        sent.push({ kind, summary });
+        return true;
+      },
+    };
+    return { a, sent };
+  };
+  const summary = {
+    community_alert_summary: () => ({ open: 3, urgent: 1, urgentOverTarget: 0, overTarget: 0 }),
+  };
+  const report = { type: 'post', targetId: POST, reason: 'self_harm' };
+  it('alerts the moderator when an urgent report is made, with counts only', async () => {
+    const { a, sent } = alerter();
+    const t = setup({ community_report: () => ({ urgent: true }), ...summary }, { alerts: a });
+    expect((await t.send('report', report)).status).toBe(200);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]!.kind).toBe('new_urgent_report');
+    expect(JSON.stringify(sent[0])).not.toMatch(new RegExp(`${POST}|${ME}`));
+  });
+  it('does not alert for an ordinary report', async () => {
+    const { a, sent } = alerter();
+    const t = setup({ community_report: () => ({ urgent: false }), ...summary }, { alerts: a });
+    await t.send('report', { ...report, reason: 'spam' });
+    expect(sent).toHaveLength(0);
+    expect(dbCalls(t.calls).some((c) => c.fn === 'community_alert_summary')).toBe(false);
+  });
+  it('sends nothing, and asks nothing extra of the database, while alerts are disabled', async () => {
+    const t = setup(
+      { community_report: () => ({ urgent: true }), ...summary },
+      { alerts: { enabled: false, reason: 'off', notify: async () => true } },
+    );
+    expect((await t.send('report', report)).status).toBe(200);
+    expect(dbCalls(t.calls).map((c) => c.fn)).toEqual(['community_report']);
+    const none = setup({ community_report: () => ({ urgent: true }) });
+    expect((await none.send('report', report)).status).toBe(200);
+  });
+  it('throttles: a second urgent report in the window sends no second email', async () => {
+    const { a, sent } = alerter();
+    let n = 0;
+    const t = setup(
+      { community_report: () => ({ urgent: true }), ...summary },
+      { alerts: a, burst: () => n++ !== 1 },
+    );
+    await t.send('report', report); // burst call 0 is the request limit, call 1 is the alert throttle
+    await t.send('report', report);
+    expect(sent.length).toBeLessThanOrEqual(1);
+  });
+  it('a failing alert never changes what the reporter sees', async () => {
+    const a: Alerter = {
+      enabled: true,
+      reason: 'on',
+      notify: async () => {
+        throw new Error('provider down');
+      },
+    };
+    const t = setup({ community_report: () => ({ urgent: true }), ...summary }, { alerts: a });
+    const r = await t.send('report', report);
+    expect(r).toEqual({ status: 200, body: { ok: true } });
+  });
+  it('the scheduled reminder needs the maintenance key and only mails while urgent items remain', async () => {
+    const { a, sent } = alerter();
+    const t = setup(summary, { alerts: a });
+    expect((await t.send('maintenance/alerts', {}, null)).status).toBe(403);
+    const r = await t.send('maintenance/alerts', {}, null, { maintenanceKey: 'secret-key' });
+    expect(r.body).toMatchObject({ ok: true, alertsEnabled: true, urgent: 1, sent: true });
+    expect(sent[0]!.kind).toBe('urgent_reminder');
+    const quiet = setup(
+      { community_alert_summary: () => ({ open: 2, urgent: 0 }) },
+      { alerts: alerter().a },
+    );
+    expect(
+      (await quiet.send('maintenance/alerts', {}, null, { maintenanceKey: 'secret-key' })).body,
+    ).toMatchObject({ sent: false });
+  });
+  it('reports plainly that alerts are off, without any secret', async () => {
+    const t = setup(summary, {
+      alerts: {
+        enabled: false,
+        reason: 'no approved email provider is configured',
+        notify: async () => false,
+      },
+    });
+    const r = await t.send('maintenance/alerts', {}, null, { maintenanceKey: 'secret-key' });
+    expect(r.body).toMatchObject({
+      alertsEnabled: false,
+      alertsStatus: 'no approved email provider is configured',
+      sent: false,
+    });
+  });
+});
+
+describe('Community-only Read only floor', () => {
+  it('refuses new posts, comments and uploads with no database at all, but leaves reading, reporting, blocking and deleting alone', async () => {
+    const t = setup(
+      {
+        community_feed: () => [],
+        community_report: () => ({ urgent: false }),
+        community_delete_post: () => [],
+        community_block: () => undefined,
+        community_blocked: () => [],
+      },
+      { floorMode: 'read_only' },
+    );
+    for (const [route, body] of [
+      ['post', { type: 'text', body: 'x', confirmed: true }],
+      ['comment', { postId: POST, body: 'x' }],
+      ['upload/ticket', { kind: 'photo', mime: 'image/jpeg' }],
+    ] as const) {
+      const r = await t.send(route, body);
+      expect(r.status, route).toBe(503);
+    }
+    expect(t.calls).toHaveLength(0);
+    expect((await t.send('feed', {}, null)).status).toBe(200);
+    expect((await t.send('report', { type: 'post', targetId: POST, reason: 'spam' })).status).toBe(
+      200,
+    );
+    expect((await t.send('block', { username: 'ama_dances' })).status).toBe(200);
+    expect((await t.send('post/delete', { postId: POST })).status).toBe(200);
+  });
+  it('text only pauses media but not text', async () => {
+    const t = setup(
+      { community_create_post: () => ({ id: POST, status: 'published' }) },
+      { floorMode: 'text_only' },
+    );
+    expect((await t.send('post', { type: 'photo', body: 'x', confirmed: true })).status).toBe(503);
+    expect((await t.send('upload/ticket', { kind: 'photo', mime: 'image/jpeg' })).status).toBe(503);
+    expect((await t.send('post', { type: 'text', body: 'x', confirmed: true })).status).toBe(200);
+  });
+  it('can only make Community stricter than the database setting, and the status says so', async () => {
+    const t = setup(
+      { community_status: () => ({ mode: 'text_only', videoEnabled: false }) },
+      { floorMode: 'read_only' },
+    );
+    expect((await t.send('status', {}, null)).body).toMatchObject({
+      mode: 'read_only',
+      videoEnabled: false,
+    });
+    const loose = setup(
+      { community_status: () => ({ mode: 'read_only', videoEnabled: true }) },
+      { floorMode: 'open' },
+    );
+    expect((await loose.send('status', {}, null)).body).toMatchObject({
+      mode: 'read_only',
+      videoEnabled: true,
+    });
   });
 });
 

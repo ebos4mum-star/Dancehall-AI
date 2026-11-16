@@ -693,6 +693,11 @@ export const en = {
   'community.me.left': 'You have left Community. Your posts and username were removed.',
   'community.paused.media':
     'Photos and videos are paused for a short while so everything can be checked. You can still share text.',
+  'community.paused.video': 'Video sharing is not available yet. You can share text and photos.',
+  'community.me.appeals': 'Questions or appeals',
+  'community.me.appealsBody':
+    'If you think a decision about your post or account was wrong, email {email} from the address you prefer. Tell us your Community username and what happened. Please do not include health details. A person will look at it.',
+  'community.me.appealsNone': 'Appeals are not set up in this build yet.',
   'community.paused.all':
     'Sharing and commenting are paused for a short while. You can still read, and report anything that worries you.',
   'community.encourage': 'Encourage',

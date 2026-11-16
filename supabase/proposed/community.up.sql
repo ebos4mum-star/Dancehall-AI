@@ -45,6 +45,8 @@ create index community_retired_names_idx on public.community_retired_names (skel
 create table public.community_settings (
   id boolean primary key default true check (id),
   mode text not null default 'open' check (mode in ('open', 'text_only', 'read_only')),
+  -- Video uploads stay OFF until metadata removal, safe processing and review requirements are met. There is deliberately no API to turn this on: it is changed by an approved migration.
+  video_enabled boolean not null default false,
   changed_by uuid references auth.users (id) on delete set null,
   changed_at timestamptz not null default now()
 );
@@ -64,6 +66,12 @@ create table public.community_uploads (
   constraint community_uploads_kind_mime check ((kind = 'photo') = (mime like 'image/%'))
 );
 create index community_uploads_user_idx on public.community_uploads (user_id, created_at desc);
+
+-- Files whose database record is gone (a post deleted, a member left, an account deleted by cascade). The server deletes them from storage during maintenance.
+create table public.community_orphaned_files (
+  storage_path text primary key,
+  at timestamptz not null default now()
+);
 
 -- Short-window request counters (burst limits). Rows are pruned by community_prune.
 create table public.community_burst (
@@ -163,7 +171,7 @@ create table public.community_blocks (
 create index community_blocks_blocked_idx on public.community_blocks (blocked_id);
 
 do $$ declare t text; begin
-  foreach t in array array['community_members', 'community_posts', 'community_media', 'community_comments', 'community_reactions', 'community_reports', 'community_blocks', 'community_retired_names', 'community_uploads', 'community_burst', 'community_report_resolutions', 'community_settings'] loop
+  foreach t in array array['community_members', 'community_posts', 'community_media', 'community_comments', 'community_reactions', 'community_reports', 'community_blocks', 'community_retired_names', 'community_uploads', 'community_burst', 'community_report_resolutions', 'community_settings', 'community_orphaned_files'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('revoke all on public.%I from anon, authenticated', t);
     -- A deny-all policy (the structural RLS tests require every table to carry one). Only the server (service role, which bypasses RLS) reads or writes.
@@ -261,7 +269,7 @@ create or replace function app.community_effective_mode() returns text language 
     else 'open' end
 $$;
 create or replace function app.community_status() returns jsonb language sql stable security definer set search_path = '' as $$
-  select jsonb_build_object('mode', app.community_effective_mode())
+  select jsonb_build_object('mode', app.community_effective_mode(), 'videoEnabled', (select video_enabled from public.community_settings))
 $$;
 
 -- Why a name cannot be used by this member: null when it can. Checks other members, look-alikes and recently released names.
@@ -332,6 +340,7 @@ begin
   select count(*) filter (where e ->> 'kind' = 'photo'), count(*) filter (where e ->> 'kind' = 'video') into photos, videos from jsonb_array_elements(media) e;
   if (photos > 0 and videos > 0) or videos > 1 or photos > 2 then raise exception 'invalid_media'; end if;
   if photos + videos > 0 and app.community_effective_mode() <> 'open' then raise exception 'media_paused'; end if;
+  if videos > 0 and not (select video_enabled from public.community_settings) then raise exception 'video_disabled'; end if;
   if (p_type = 'photo') <> (photos > 0) or (p_type = 'video') <> (videos > 0) then raise exception 'invalid_media'; end if;
   if photos = 2 then
     select array_agg(e ->> 'role' order by e ->> 'role') into roles from jsonb_array_elements(media) e;
@@ -455,7 +464,7 @@ begin
   return p_on;
 end $$;
 
-create or replace function app.community_report(p_user uuid, p_type text, p_target uuid, p_reason text, p_note text) returns void language plpgsql security definer set search_path = '' as $$
+create or replace function app.community_report(p_user uuid, p_type text, p_target uuid, p_reason text, p_note text) returns jsonb language plpgsql security definer set search_path = '' as $$
 declare post_row public.community_posts; cmt public.community_comments; author uuid; n int; reasons text[];
 begin
   if p_type = 'post' then
@@ -470,7 +479,7 @@ begin
     author := cmt.author_id;
   end if;
   if author = p_user then raise exception 'own_content'; end if;
-  if exists (select 1 from public.community_reports where reporter_id = p_user and target_id = p_target) then return; end if; -- quiet
+  if exists (select 1 from public.community_reports where reporter_id = p_user and target_id = p_target) then return jsonb_build_object('urgent', false); end if; -- quiet
   if app.community_used(p_user, 'report') >= app.community_limit('report') then raise exception 'rate_limited'; end if;
   insert into public.community_reports (target_type, target_id, reporter_id, reason, note) values (p_type, p_target, p_user, p_reason, left(btrim(p_note), 200));
   select count(distinct reporter_id)::int, array_agg(reason) into n, reasons from public.community_reports where target_id = p_target and resolved_at is null;
@@ -482,6 +491,8 @@ begin
       update public.community_comments set status = 'hidden' where id = p_target and status = 'published';
     end if;
   end if;
+  -- Tells the server whether an urgent-category report was just recorded (so it can alert the moderator). Never shown to the reporter.
+  return jsonb_build_object('urgent', p_reason in ('private_information', 'child_safety', 'self_harm'));
 end $$;
 
 create or replace function app.community_block(p_user uuid, p_username text) returns void language plpgsql security definer set search_path = '' as $$
@@ -501,11 +512,10 @@ create or replace function app.community_blocked(p_user uuid) returns setof text
 $$;
 
 -- ========== Moderation (a verified moderator with a second factor; sees usernames, content and flags only) ==========
-create or replace function app.community_moderation_queue(p_actor uuid, p_aal2 boolean)
+create or replace function app.community_queue_all()
 returns table (id uuid, target_type text, author text, body text, status text, flags text[], reasons text[], report_count int, urgent boolean, media jsonb, age_hours numeric, created_at timestamptz)
 language plpgsql stable security definer set search_path = '' as $$
 begin
-  if not app.community_is_moderator(p_actor, p_aal2) then raise exception 'forbidden'; end if;
   return query
     select q.id, q.target_type, q.author, q.body, q.status, q.flags, q.reasons, q.report_count,
            (q.flags && array['self_harm', 'child_safety', 'private_information'] or q.reasons && array['self_harm', 'child_safety', 'private_information']),
@@ -524,6 +534,14 @@ begin
         from public.community_comments c join public.community_members m on m.user_id = c.author_id
        where c.status = 'hidden' or (c.status = 'published' and exists (select 1 from public.community_reports r where r.target_id = c.id and r.resolved_at is null))) q
     order by case when q.flags && array['self_harm', 'child_safety', 'private_information'] or q.reasons && array['self_harm', 'child_safety', 'private_information'] then 0 when q.report_count > 0 then 1 else 2 end, q.created_at, q.id;
+end $$;
+
+create or replace function app.community_moderation_queue(p_actor uuid, p_aal2 boolean)
+returns table (id uuid, target_type text, author text, body text, status text, flags text[], reasons text[], report_count int, urgent boolean, media jsonb, age_hours numeric, created_at timestamptz)
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not app.community_is_moderator(p_actor, p_aal2) then raise exception 'forbidden'; end if;
+  return query select * from app.community_queue_all();
 end $$;
 
 -- Tamper-evident record in the shared audit log. The acting moderator is passed in (the server verified them). Never records content or health data.
@@ -600,9 +618,20 @@ begin
     'overTarget', count(*) filter (where not urgent and age_hours > normal_target),
     'urgentTargetHours', urgent_target, 'targetHours', normal_target,
     'mode', (select mode from public.community_settings), 'effectiveMode', app.community_effective_mode()) into j
-  from app.community_moderation_queue(p_actor, p_aal2);
+  from app.community_queue_all();
   return j;
 end $$;
+
+-- Counts only, for the server's email alerts. No content, no usernames. Same targets as the backlog.
+create or replace function app.community_alert_summary() returns jsonb language sql stable security definer set search_path = '' as $$
+  select jsonb_build_object(
+    'open', count(*),
+    'urgent', count(*) filter (where urgent),
+    'urgentOverTarget', count(*) filter (where urgent and age_hours > 4),
+    'overTarget', count(*) filter (where not urgent and age_hours > 48),
+    'effectiveMode', app.community_effective_mode())
+  from app.community_queue_all()
+$$;
 
 -- ========== Uploads: private storage, verified by the server before a post can use them ==========
 create or replace function app.community_issue_upload(p_user uuid, p_kind text, p_mime text) returns jsonb language plpgsql security definer set search_path = '' as $$
@@ -612,6 +641,7 @@ begin
   if not found then raise exception 'needs_username'; end if;
   if app.community_restriction(m) is not null then raise exception '%', app.community_restriction(m); end if;
   if app.community_effective_mode() <> 'open' then raise exception 'media_paused'; end if;
+  if p_kind = 'video' and not (select video_enabled from public.community_settings) then raise exception 'video_disabled'; end if;
   if p_kind not in ('photo', 'video') or (p_kind = 'photo') <> (p_mime like 'image/%') then raise exception 'invalid_media'; end if;
   ext := case p_mime when 'image/jpeg' then 'jpg' when 'image/png' then 'png' when 'image/webp' then 'webp' when 'video/mp4' then 'mp4' when 'video/quicktime' then 'mov' when 'video/webm' then 'webm' end;
   if ext is null then raise exception 'invalid_media'; end if;
@@ -680,6 +710,13 @@ begin
 end $$;
 
 -- Scheduled by the server. Returns stale upload files to delete.
+create or replace function app.community_remember_orphan() returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  insert into public.community_orphaned_files (storage_path) values (old.storage_path) on conflict do nothing;
+  return old;
+end $$;
+create trigger community_uploads_orphan after delete on public.community_uploads for each row execute function app.community_remember_orphan();
+
 create or replace function app.community_prune() returns text[] language plpgsql security definer set search_path = '' as $$
 declare paths text[];
 begin
@@ -687,6 +724,9 @@ begin
   delete from public.community_retired_names where until < now();
   select coalesce(array_agg(storage_path), '{}') into paths from public.community_uploads where state <> 'attached' and created_at < now() - interval '1 day';
   delete from public.community_uploads where state <> 'attached' and created_at < now() - interval '1 day';
+  -- Everything whose record is gone, however it was deleted (including an account deleted by cascade): the server removes the files, then the list is cleared.
+  select coalesce(array_agg(distinct x), '{}') into paths from unnest(paths || coalesce((select array_agg(storage_path) from public.community_orphaned_files), '{}')) x;
+  delete from public.community_orphaned_files where storage_path = any (paths);
   return paths;
 end $$;
 
@@ -698,7 +738,7 @@ declare
   allowed text[] := array['community_feed', 'community_comments', 'community_profile', 'community_claim_username', 'community_change_username', 'community_issue_upload', 'community_upload_ticket',
     'community_verify_upload', 'community_reject_upload', 'community_create_post', 'community_delete_post', 'community_add_comment', 'community_delete_comment', 'community_set_encourage',
     'community_report', 'community_block', 'community_unblock', 'community_blocked', 'community_leave', 'community_moderation_queue', 'community_moderate', 'community_restrict',
-    'community_backlog', 'community_burst', 'community_prune', 'community_user_media', 'community_status', 'community_set_mode'];
+    'community_backlog', 'community_burst', 'community_prune', 'community_user_media', 'community_status', 'community_set_mode', 'community_alert_summary'];
   f record; call_args text := ''; i int; k text; t text; result jsonb;
 begin
   if fn is null or not (fn = any (allowed)) then raise exception 'not_found'; end if;

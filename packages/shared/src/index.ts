@@ -37,6 +37,7 @@ export * from './community';
 export * from './community-engine';
 export * from './community-media';
 export * from './community-server';
+export * from './community-alerts';
 export * from './community-samples';
 export * from './strength';
 export * from './celebrations';

@@ -4,14 +4,20 @@
 //   Guests:  feed · comments · status            Members: profile · username/claim · username/change · upload/ticket · upload/commit · post · post/delete · comment · comment/delete
 //                                                 encourage · report · block · unblock · blocked · leave
 //   Staff (verified JWT with a second factor + moderation.review): mod/queue · mod/act · mod/restrict · mod/mode · mod/backlog
-//   Scheduled: maintenance/prune (header x-maintenance-key)
+//   Scheduled: maintenance/prune · maintenance/alerts (header x-maintenance-key)
 // Secrets (set with `supabase secrets set`, never in the app or the repo):
 //   COMMUNITY_PEPPER           >= 32 random bytes, base64. Keys the hash of a guest's network address (we never store the address itself).
-//   COMMUNITY_MAINTENANCE_KEY  random string that authorises maintenance/prune.
+//   COMMUNITY_MAINTENANCE_KEY  random string that authorises maintenance/prune and maintenance/alerts.
+// Optional configuration (all off by default):
+//   COMMUNITY_FLOOR_MODE       "read_only" or "text_only": a Community-only kill switch that needs no database and never loosens the moderator's setting.
+//   COMMUNITY_ALERTS=1         turns on urgent-report emails. Also needs ALL of: COMMUNITY_ALERT_RECIPIENTS (comma-separated: moderator and backup),
+//                              COMMUNITY_ALERT_FROM (a verified sender), COMMUNITY_ALERT_API_URL (https) and COMMUNITY_ALERT_API_KEY (a secret), from an APPROVED provider.
+//                              Without all of them nothing is sent. COMMUNITY_CONSOLE_URL optionally adds a link to the console.
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by the platform to the function and never reach a client.
 // Needs: supabase/proposed/community.up.sql and community.storage.sql applied (separate approval). Public activation also needs EXPO_PUBLIC_COMMUNITY=1 in a reviewed build.
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { networkIdentity, safeEqual } from '../_shared/generated/account-core.ts';
+import { createAlerter } from '../_shared/generated/community-alerts.ts';
 import { createCommunityServer } from '../_shared/generated/community-server.ts';
 
 declare const Deno: {
@@ -84,6 +90,17 @@ const server = createCommunityServer({
     },
   },
   maintenanceKeyOk: (key) => !!key && safeEqual(key, maintenanceKey),
+  alerts: createAlerter({
+    enabled: Deno.env.get('COMMUNITY_ALERTS'),
+    recipients: Deno.env.get('COMMUNITY_ALERT_RECIPIENTS'),
+    from: Deno.env.get('COMMUNITY_ALERT_FROM'),
+    apiUrl: Deno.env.get('COMMUNITY_ALERT_API_URL'),
+    apiKey: Deno.env.get('COMMUNITY_ALERT_API_KEY'),
+    consoleUrl: Deno.env.get('COMMUNITY_CONSOLE_URL'),
+  }),
+  floorMode: ['text_only', 'read_only'].includes(Deno.env.get('COMMUNITY_FLOOR_MODE') ?? '')
+    ? (Deno.env.get('COMMUNITY_FLOOR_MODE') as 'text_only' | 'read_only')
+    : 'open',
 });
 
 const json = (status: number, body: unknown, extra: Record<string, string> = {}): Response =>

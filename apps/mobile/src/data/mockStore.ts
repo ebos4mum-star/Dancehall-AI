@@ -317,6 +317,10 @@ export class MockStore implements DataStore {
       ? { username: u, canChangeAt: e.usernameChangeAvailableAt(DEV_USER), restriction: null }
       : null;
   }
+  async communityStatus() {
+    // The local simulation has no moderators and no uploads server: everything is open.
+    return { mode: 'open' as const, videoEnabled: true };
+  }
   async communityChangeUsername(raw: string) {
     const uid = await this.member();
     const e = await this.engine();

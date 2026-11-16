@@ -29,6 +29,7 @@ test('the community function bundles flat with only the files it reaches', () =>
     .sort();
   assert.deepEqual(names, [
     'account-core.ts',
+    'community-alerts.ts',
     'community-media.ts',
     'community-server.ts',
     'community.ts',

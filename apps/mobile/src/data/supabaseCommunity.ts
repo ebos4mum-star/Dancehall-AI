@@ -124,7 +124,11 @@ export function createCommunityAdapter(d: CommunityAdapterDeps): Partial<DataSto
   return {
     async communityStatus() {
       const r = await call('status', {});
-      return !isFail(r) && (r.mode === 'text_only' || r.mode === 'read_only') ? r.mode : 'open';
+      if (isFail(r)) return { mode: 'open' as const, videoEnabled: false };
+      return {
+        mode: r.mode === 'text_only' || r.mode === 'read_only' ? r.mode : ('open' as const),
+        videoEnabled: r.videoEnabled === true,
+      };
     },
     async communityProfile() {
       const r = await call('profile');

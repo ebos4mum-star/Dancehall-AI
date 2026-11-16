@@ -25,7 +25,7 @@ do $$
 declare t text; f record;
 begin
   perform test.as_admin();
-  foreach t in array array['community_members', 'community_posts', 'community_media', 'community_comments', 'community_reactions', 'community_reports', 'community_blocks', 'community_retired_names', 'community_uploads', 'community_burst', 'community_report_resolutions', 'community_settings'] loop
+  foreach t in array array['community_members', 'community_posts', 'community_media', 'community_comments', 'community_reactions', 'community_reports', 'community_blocks', 'community_retired_names', 'community_uploads', 'community_burst', 'community_report_resolutions', 'community_settings', 'community_orphaned_files'] loop
     perform test.assert((select relrowsecurity from pg_class where oid = ('public.' || t)::regclass), t || ' has RLS enabled');
     perform test.assert(exists (select 1 from pg_policies where schemaname = 'public' and tablename = t), t || ' carries a policy');
     perform test.assert(not has_table_privilege('anon', 'public.' || t, 'select'), 'anon cannot read ' || t);
@@ -82,11 +82,25 @@ begin
   perform test.assert(n > 60, 'ran the shared cases');
 end $$;
 
+-- 3b. Video uploads are OFF by default and there is no way to switch them on through the API.
+do $$
+declare a uuid;
+begin
+  perform test.as_admin(); a := test.make_user('c-video@example.test'); perform set_config('role', 'service_role', false);
+  perform app.community_claim_username(a, 'video_tester');
+  perform test.assert((app.community_status() ->> 'videoEnabled')::boolean = false, 'video uploads are disabled by default and the status says so');
+  perform test.throws(format($q$select app.community_issue_upload(%L, 'video', 'video/mp4')$q$, a), 'video_disabled');
+  perform test.throws(format($q$select app.community_create_post(%L, 'video', 'x', null, '[{"kind":"video","role":"single","path":"m/x.mp4"}]'::jsonb, true)$q$, a), 'video_disabled');
+  perform test.assert(app.community_issue_upload(a, 'photo', 'image/jpeg') is not null, 'photos still work');
+  perform test.assert(not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname in ('app', 'public') and p.proname like 'community%' and pg_get_functiondef(p.oid) ilike '%set video_enabled%'), 'no function can change the video setting');
+end $$;
+
 -- 4. Behaviour.
 do $$
 declare a uuid; b uuid; c uuid; d uuid; m uuid; r jsonb; pa uuid; pb uuid; pm uuid; n int; cols text[]; p1 text; p2 text; p3 text; paths text[];
 begin
   perform test.as_admin();
+  update public.community_settings set video_enabled = true; -- as an approved migration would, for the behaviour tests below
   a := test.make_user('c-a@example.test'); b := test.make_user('c-b@example.test'); c := test.make_user('c-c@example.test'); d := test.make_user('c-d@example.test'); m := test.make_user('c-mod@example.test');
   insert into public.staff_roles (user_id, role) values (m, 'moderator');
   perform set_config('role', 'service_role', false);
@@ -443,4 +457,49 @@ begin
   perform app.community_report(b, 'post', pid, 'child_safety', null);
   perform test.assert((select status = 'hidden' and flags @> array['child_safety'] from public.community_posts where id = pid), 'one child-safety report hides the post and flags it');
   perform test.assert((select urgent from app.community_moderation_queue(m, true) q where q.id = pid), 'and it is urgent in the queue');
+end $$;
+
+-- 14. Urgent reports are signalled to the server; the alert summary holds counts only; two moderators work independently.
+do $$
+declare a uuid; b uuid; m1 uuid; m2 uuid; pid uuid; r jsonb; sm jsonb;
+begin
+  perform test.as_admin(); a := test.make_user('c-al-a@example.test'); b := test.make_user('c-al-b@example.test'); m1 := test.make_user('c-al-m1@example.test'); m2 := test.make_user('c-al-m2@example.test');
+  insert into public.staff_roles (user_id, role) values (m1, 'moderator'), (m2, 'moderator');
+  perform set_config('role', 'service_role', false);
+  perform app.community_claim_username(a, 'alert_author'); perform app.community_claim_username(b, 'alert_reporter');
+  pid := (app.community_create_post(a, 'text', 'a normal post', null, null, true) ->> 'id')::uuid;
+  r := app.community_report(b, 'post', pid, 'spam', null);
+  perform test.assert((r ->> 'urgent')::boolean = false, 'an ordinary report is not urgent');
+  perform test.assert((app.community_report(b, 'post', pid, 'spam', null) ->> 'urgent')::boolean = false, 'a repeat report is quiet');
+  pid := (app.community_create_post(a, 'text', 'another normal post', null, null, true) ->> 'id')::uuid;
+  perform test.assert((app.community_report(b, 'post', pid, 'self_harm', null) ->> 'urgent')::boolean, 'a self-harm report is signalled as urgent');
+  sm := app.community_alert_summary();
+  perform test.assert((sm ->> 'urgent')::int >= 1 and sm ? 'urgentOverTarget' and sm ? 'effectiveMode', 'the summary counts urgent items');
+  perform test.assert(sm::text !~* '(alert_author|another normal|user_id|email|@)', 'the summary carries no names or content');
+  update public.community_posts set created_at = now() - interval '5 hours' where id = pid;
+  perform test.assert((app.community_alert_summary() ->> 'urgentOverTarget')::int >= 1, 'urgent items past four hours are counted as overdue');
+  -- primary and backup moderators both act, and the audit log tells them apart
+  perform app.community_moderate(m1, true, 'post', pid, 'remove', 'primary');
+  perform app.community_moderate(m2, true, 'post', (select id from public.community_posts where status = 'published' and author_id = a limit 1), 'approve', 'backup');
+  perform test.assert(exists (select 1 from public.audit_log where actor = m1 and action = 'community.remove') and exists (select 1 from public.audit_log where actor = m2 and action = 'community.approve'), 'each moderator is recorded by name');
+  perform test.throws(format($q$select app.community_moderate(%L, false, 'post', %L, 'approve')$q$, m2, pid), 'forbidden');
+end $$;
+
+-- 15. Files left behind by any kind of deletion (including a deleted account) are swept.
+do $$
+declare a uuid; p text; paths text[];
+begin
+  perform test.as_admin(); delete from public.community_posts where status = 'held'; update public.community_settings set video_enabled = true; a := test.make_user('c-orph@example.test'); perform set_config('role', 'service_role', false);
+  perform app.community_claim_username(a, 'orphan_tester');
+  p := test.upload(a, 'photo', 'image/jpeg', 100);
+  perform app.community_create_post(a, 'photo', 'x', null, jsonb_build_array(jsonb_build_object('kind','photo','role','single','path',p)), true);
+  perform set_config('role', 'none', false);
+  delete from auth.users where id = a; -- as the account-deletion job would
+  perform set_config('role', 'service_role', false);
+  perform test.assert(not exists (select 1 from public.community_uploads where storage_path = p), 'the record is gone with the account');
+  paths := app.community_prune();
+  perform test.assert(p = any (paths), 'maintenance returns the file so the server can delete it from storage');
+  perform test.assert(not (p = any (app.community_prune())), 'and it is not returned twice');
+  perform set_config('role', 'none', false);
+  update public.community_settings set video_enabled = false;
 end $$;

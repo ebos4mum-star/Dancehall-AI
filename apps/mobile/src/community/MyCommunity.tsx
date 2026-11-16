@@ -17,7 +17,7 @@ type Me = {
 
 /** The member's own Community settings: their name (changeable, with a cooldown), any pause on the account, and leaving Community. Nothing else about them is shown. */
 export function MyCommunity({ onChanged }: { onChanged: () => void }) {
-  const { store } = useApp();
+  const { store, config } = useApp();
   const [me, setMe] = useState<Me | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -72,6 +72,13 @@ export function MyCommunity({ onChanged }: { onChanged: () => void }) {
           )}
         </Disclosure>
       ) : null}
+      <Disclosure title={t('community.me.appeals')}>
+        <AppText variant="caption" muted>
+          {config.supportEmail
+            ? t('community.me.appealsBody', { email: config.supportEmail })
+            : t('community.me.appealsNone')}
+        </AppText>
+      </Disclosure>
       {store.communityLeave ? (
         <Disclosure title={t('community.me.leave')}>
           <AppText variant="caption" muted>

@@ -19,6 +19,7 @@ import {
   type PublicPost,
 } from './community.ts';
 import { checkUpload, mimeForPath } from './community-media.ts';
+import type { Alerter } from './community-alerts.ts';
 
 export interface CommunityRpc {
   /** Calls `app.<fn>` as the server. Throws an Error whose message is the database's exception text. */
@@ -41,7 +42,17 @@ export interface CommunityDeps {
   auth: CommunityAuth;
   /** Constant-time comparison of the scheduled-maintenance key. */
   maintenanceKeyOk: (key: string | null) => boolean;
+  /** Email alerts for urgent reports. Omitted or disabled: nothing is sent. */
+  alerts?: Alerter;
+  /**
+   * A floor for the Community mode that needs no database: "read_only" (or "text_only") set in the function's own configuration applies even if the database is
+   * unreachable. It can only make Community stricter than the moderator's setting, never looser. Nothing outside Community is affected.
+   */
+  floorMode?: 'open' | 'text_only' | 'read_only';
 }
+export type Mode = 'open' | 'text_only' | 'read_only';
+const MODE_RANK: Record<Mode, number> = { open: 0, text_only: 1, read_only: 2 };
+const stricter = (a: Mode, b: Mode): Mode => (MODE_RANK[a] >= MODE_RANK[b] ? a : b);
 export interface CommunityRequest {
   route: string;
   token: string | null;
@@ -114,6 +125,7 @@ const STATUS: Record<string, number> = {
   payload_too_large: 413,
   paused: 503,
   media_paused: 503,
+  video_disabled: 503,
   too_large: 422,
   too_long: 422,
   wrong_type: 422,
@@ -151,6 +163,7 @@ const MESSAGES: Record<string, string> = {
   payload_too_large: 'That request is too large.',
   paused: 'Community is paused for new posts and comments for a short while. You can still read.',
   media_paused: 'Photos and videos are paused for a short while. You can still share text.',
+  video_disabled: 'Video sharing is not available yet. You can share text and photos.',
   not_confirmed: 'Please confirm you want this to be public.',
   blocked: 'That cannot be posted. Please change it and try again.',
   invalid_media: 'That photo or video could not be used.',
@@ -257,6 +270,36 @@ async function removeFiles(c: Ctx, paths: unknown) {
   if (list.length) await c.deps.storage.remove(list).catch(() => undefined); // best effort; stale files are swept by maintenance
 }
 
+/** At most one email per window for a kind of alert. Never throws. */
+async function alertUrgent(
+  c: Ctx,
+  kind: 'new_urgent_report' | 'urgent_reminder',
+  bucket: string,
+  seconds: number,
+): Promise<boolean> {
+  const alerter = c.deps.alerts;
+  if (!alerter?.enabled) return false;
+  try {
+    const first = await rpc(c, 'community_burst', {
+      p_key: 'global',
+      p_bucket: bucket,
+      p_max: 1,
+      p_seconds: seconds,
+    });
+    if (first !== true) return false;
+    const sm = (await rpc(c, 'community_alert_summary', {})) as Record<string, unknown> | null;
+    const n = (k: string) => (typeof sm?.[k] === 'number' ? (sm[k] as number) : 0);
+    return await alerter.notify(kind, {
+      open: n('open'),
+      urgent: n('urgent'),
+      urgentOverTarget: n('urgentOverTarget'),
+      overTarget: n('overTarget'),
+    });
+  } catch {
+    return false;
+  }
+}
+
 const ROUTES: Record<string, Route> = {
   feed: {
     auth: 'guest',
@@ -310,8 +353,15 @@ const ROUTES: Record<string, Route> = {
     auth: 'guest',
     limit: READ,
     async run(c) {
-      const s = (await rpc(c, 'community_status', {})) as { mode?: string } | null;
-      return done({ mode: s?.mode === 'text_only' || s?.mode === 'read_only' ? s.mode : 'open' });
+      const s = (await rpc(c, 'community_status', {})) as {
+        mode?: string;
+        videoEnabled?: boolean;
+      } | null;
+      const db: Mode = s?.mode === 'text_only' || s?.mode === 'read_only' ? s.mode : 'open';
+      return done({
+        mode: stricter(db, c.deps.floorMode ?? 'open'),
+        videoEnabled: s?.videoEnabled === true,
+      });
     },
   },
   profile: {
@@ -531,13 +581,15 @@ const ROUTES: Record<string, Route> = {
     auth: 'member',
     limit: ['report', 10, 60],
     async run(c) {
-      await rpc(c, 'community_report', {
+      const result = (await rpc(c, 'community_report', {
         p_user: c.user,
         p_type: oneOf(c.body, 'type', ['post', 'comment'] as const),
         p_target: uuid(c.body, 'targetId'),
         p_reason: oneOf(c.body, 'reason', REPORT_REASONS),
         p_note: str(c.body, 'note', COMMUNITY_LIMITS.noteChars, true) || null,
-      });
+      })) as { urgent?: boolean } | null;
+      // Tell the moderator by email (if alerts are approved and configured). Best effort: it can never change what the reporter sees.
+      if (result?.urgent === true) await alertUrgent(c, 'new_urgent_report', 'alert-urgent', 900);
       return done(); // identical whether or not it was new, so reports cannot be probed
     },
   },
@@ -677,6 +729,25 @@ const ROUTES: Record<string, Route> = {
       return done();
     },
   },
+  'maintenance/alerts': {
+    auth: 'guest', // authorised by the maintenance key instead; see handle()
+    limit: ['maintenance', 10, 60],
+    async run(c) {
+      const sm = (await rpc(c, 'community_alert_summary', {})) as { urgent?: number } | null;
+      const alerter = c.deps.alerts;
+      // A reminder only while urgent items remain open, at most once an hour.
+      const sent =
+        (sm?.urgent ?? 0) > 0
+          ? await alertUrgent(c, 'urgent_reminder', 'alert-reminder', 3600)
+          : false;
+      return done({
+        alertsEnabled: alerter?.enabled === true,
+        alertsStatus: alerter?.reason ?? 'not configured',
+        urgent: sm?.urgent ?? 0,
+        sent,
+      });
+    },
+  },
   'maintenance/prune': {
     auth: 'guest', // authorised by the maintenance key instead; see handle()
     limit: ['maintenance', 10, 60],
@@ -700,7 +771,22 @@ export function createCommunityServer(deps: CommunityDeps) {
           return fail('invalid_input');
         const body = (req.body ?? {}) as Record<string, unknown>;
 
-        if (req.route === 'maintenance/prune') {
+        // Community-only kill switch from the function's own configuration: works even if the database is down, and touches nothing outside Community.
+        const floor = deps.floorMode ?? 'open';
+        const hasMedia =
+          req.route.startsWith('upload/') ||
+          (req.route === 'post' &&
+            (body.type === 'photo' ||
+              body.type === 'video' ||
+              (Array.isArray(body.media) && body.media.length > 0)));
+        if (
+          floor === 'read_only' &&
+          ['post', 'comment', 'upload/ticket', 'upload/commit'].includes(req.route)
+        )
+          return fail('paused');
+        if (floor !== 'open' && hasMedia) return fail('media_paused');
+
+        if (req.route.startsWith('maintenance/')) {
           if (!deps.maintenanceKeyOk(req.maintenanceKey ?? null)) return fail('forbidden');
           return await route.run({ deps, user: null, aal2: false, body });
         }

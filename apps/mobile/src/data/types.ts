@@ -214,7 +214,11 @@ export interface DataStore {
     restriction?: 'muted' | 'suspended' | null;
   } | null>;
   /** Whether photos and videos (or all new posts) are paused right now. */
-  communityStatus?(): Promise<'open' | 'text_only' | 'read_only'>;
+  communityStatus?(): Promise<{
+    mode: 'open' | 'text_only' | 'read_only';
+    /** Video uploads stay off until processing and review requirements are met. */
+    videoEnabled: boolean;
+  }>;
   communityChangeUsername?(raw: string): Promise<{ ok: true; username: string } | CommunityFail>;
   /** Leave Community: removes the username, posts, comments, reactions and files. The account itself stays. */
   communityLeave?(): Promise<{ ok: true } | CommunityFail>;
