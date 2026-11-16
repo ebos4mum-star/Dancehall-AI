@@ -578,7 +578,7 @@ begin
   ext := case p_mime when 'image/jpeg' then 'jpg' when 'image/png' then 'png' when 'image/webp' then 'webp' when 'video/mp4' then 'mp4' when 'video/quicktime' then 'mov' when 'video/webm' then 'webm' end;
   if ext is null then raise exception 'invalid_media'; end if;
   if (select count(*) from public.community_uploads where user_id = p_user and created_at > now() - interval '1 day') >= 10 then raise exception 'rate_limited'; end if;
-  v_path := 'u/' || p_user::text || '/' || v_id::text || '.' || ext;
+  v_path := 'm/' || v_id::text || '.' || ext; -- no account identifier in the path: signed links to published media must not reveal one
   insert into public.community_uploads (id, user_id, storage_path, kind, mime) values (v_id, p_user, v_path, p_kind, p_mime);
   return jsonb_build_object('id', v_id, 'path', v_path);
 end $$;
@@ -596,6 +596,15 @@ begin
     update public.community_uploads set state = 'rejected' where id = u.id; raise exception 'too_long';
   end if;
   update public.community_uploads set state = 'verified', bytes = p_bytes, duration_s = case when u.kind = 'video' then p_duration end where id = u.id;
+end $$;
+
+-- The server calls this before touching a file: it must be the caller's own, still waiting to be checked. Returns the type promised when the ticket was issued.
+create or replace function app.community_upload_ticket(p_user uuid, p_path text) returns text language plpgsql security definer set search_path = '' as $$
+declare m text;
+begin
+  select mime into m from public.community_uploads where user_id = p_user and storage_path = p_path and state = 'issued';
+  if m is null then raise exception 'not_found'; end if;
+  return m;
 end $$;
 
 create or replace function app.community_reject_upload(p_user uuid, p_path text) returns void language sql security definer set search_path = '' as $$

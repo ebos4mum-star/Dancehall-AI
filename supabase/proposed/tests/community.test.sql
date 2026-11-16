@@ -117,7 +117,9 @@ begin
   perform test.throws(format($q$select app.community_issue_upload(%L, 'video', 'image/jpeg')$q$, b), 'invalid_media');
   perform test.throws(format($q$select app.community_issue_upload(%L, 'photo', 'image/jpeg')$q$, d), 'needs_username');
   p1 := test.upload(b, 'photo', 'image/jpeg', 1000); p2 := test.upload(b, 'photo', 'image/png', 2000);
-  perform test.assert(p1 ~ ('^u/' || b::text || '/[0-9a-f-]{36}\.jpg$'), 'the path is server-chosen and private to the owner');
+  perform test.assert(p1 ~ '^m/[0-9a-f-]{36}\.jpg$' and p1 not like '%' || b::text || '%', 'the path is server-chosen and carries no account identifier');
+  perform test.assert(app.community_upload_ticket(b, (app.community_issue_upload(b, 'photo', 'image/jpeg') ->> 'path')) = 'image/jpeg', 'the owner can look up their pending upload');
+  perform test.throws(format($q$select app.community_upload_ticket(%L, %L)$q$, a, (select storage_path from public.community_uploads where user_id = b and state = 'issued' limit 1)), 'not_found'); -- somebody else's pending file
   perform test.throws(format($q$select app.community_create_post(%L, 'photo', 'x', null, jsonb_build_array(jsonb_build_object('kind','photo','role','single','path',%L)), true)$q$, a, p1), 'invalid_media'); -- somebody else's file
   perform test.throws(format($q$select app.community_create_post(%L, 'photo', 'x', null, jsonb_build_array(jsonb_build_object('kind','photo','role','before','path',%L)), true)$q$, b, p1), 'invalid_media'); -- one photo cannot be a before
   perform test.throws(format($q$select app.community_create_post(%L, 'video', 'x', null, jsonb_build_array(jsonb_build_object('kind','video','role','single','path',%L)), true)$q$, b, p1), 'invalid_media'); -- wrong kind
