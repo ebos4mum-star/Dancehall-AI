@@ -84,6 +84,17 @@ const SELF_HARM = [
   'self-harm',
   'cut myself',
   'want to die',
+  "don't want to be here",
+  'do not want to be here',
+  "don't want to live",
+  'do not want to live',
+  'no reason to live',
+  'wish i were dead',
+  'wish i was dead',
+  'better off dead',
+  'better off without me',
+  'end it all',
+  'take my own life',
 ];
 
 /** Days a member must wait between username changes. Their first change is free. */
@@ -174,7 +185,7 @@ export function screenText(raw: string, opts: { maxChars: number }): ScreenResul
   if (text.length === 0) return out('block', ['Write something first.'], ['empty']);
   if (text.length > opts.maxChars)
     return out('block', [`Keep it to ${opts.maxChars} characters.`], ['too_long']);
-  const lower = text.toLowerCase();
+  const lower = text.toLowerCase().replace(/[’‘]/g, "'");
   if (SELF_HARM.some((w) => lower.includes(w)))
     return out(
       'block',

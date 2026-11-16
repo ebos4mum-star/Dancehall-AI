@@ -69,6 +69,14 @@ export function ProgressionCard() {
       void p.setPrefs({ levelSeen: lvl });
     } else if (lvl < p.prefs.levelSeen) void p.setPrefs({ levelSeen: lvl });
   }, [p, session]);
+  // A quest finishing while you are looking at the screen gets a small haptic (never on first load, so opening the app is quiet).
+  const doneCount = p ? p.state.dailyQuests.filter((q) => q.done).length : null;
+  const lastDone = useRef<number | null>(null);
+  useEffect(() => {
+    if (doneCount === null) return;
+    if (lastDone.current !== null && doneCount > lastDone.current) haptics.success();
+    lastDone.current = doneCount;
+  }, [doneCount]);
   if (!p) return null;
   const { level, streak, dailyQuests, restNudge } = p.state;
   const next = Math.min(GM.MAX_LEVEL, level.level + 1);

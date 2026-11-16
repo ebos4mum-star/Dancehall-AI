@@ -68,6 +68,7 @@ function fakeClient(w: FakeWorld) {
     acct_status: (p) => d.status(p.userId, p.now),
     acct_revoke_sessions: (p) => d.revokeSessions(p.userId),
     acct_prune: () => ({ tx: 0, hits: 0 }),
+    purge_due_account_deletions: () => 3,
   };
   let n = 0;
   return {
@@ -233,6 +234,13 @@ describe('account Edge Function wrapper (verify_jwt=false: each action guards it
         )
       ).status,
     ).toBe(200);
+    const done = await call(
+      handler,
+      'maintenance/reap',
+      {},
+      { 'x-maintenance-key': BASE_ENV.MAINTENANCE_KEY },
+    );
+    expect(((await done.json()) as { purged: number }).purged).toBe(3); // due account deletions are carried out by the same scheduled call
     const open = await load({ ...BASE_ENV, MAINTENANCE_KEY: undefined });
     expect(
       (await call(open.handler, 'maintenance/reap', {}, { 'x-maintenance-key': '' })).status,

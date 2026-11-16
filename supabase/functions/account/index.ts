@@ -3,7 +3,7 @@
 // Routes (POST, JSON):  provision · recover/start · recover/verify · recover/complete · recover/cancel · rotate · status · maintenance/reap
 // Secrets (set with `supabase secrets set`, never in the app or the repo):
 //   ACCOUNT_PEPPER       base64, >= 32 random bytes. Keys the HMACs stored in the database. Losing it makes every stored recovery verifier unusable.
-//   MAINTENANCE_KEY      random string that authorises the scheduled `maintenance/reap` call.
+//   MAINTENANCE_KEY      random string that authorises the scheduled `maintenance/reap` call (which also runs due account deletions).
 //   ACCOUNT_COOLING_OFF_HOURS  optional, default 24; values under 1 are ignored unless ACCOUNT_ALLOW_SHORT_COOLING_OFF=1 (live test only).
 //   ACCOUNT_IDENTIFIER_DOMAIN  optional, default accounts.dancehall.invalid (see docs/CLOUD_ACCOUNTS_ACTIVATION.md gate 2).
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by the platform to the function and never reach a client.
@@ -115,7 +115,15 @@ Deno.serve(async (req) => {
         return json(401, { ok: false, error: 'unauthenticated' });
       const reaped = await core.reap();
       const pruned = await admin.rpc('acct_prune', { p: { now: Date.now() } });
-      return json(200, { ok: true, reaped, pruned: pruned.data });
+      // The same scheduled call also carries out account deletions whose waiting period has ended (public.purge_due_account_deletions, supabase/proposed/account_deletion_purge.up.sql).
+      // A project that has not applied that function reports `purged: null` rather than failing the rest of the maintenance. Nothing about the people is returned, only a count.
+      const purged = await admin.rpc('purge_due_account_deletions', { p_limit: 50 });
+      return json(200, {
+        ok: true,
+        reaped,
+        pruned: pruned.data,
+        purged: purged.error ? null : purged.data,
+      });
     }
     if (Number(req.headers.get('content-length') ?? '0') > 8192)
       return json(413, { ok: false, error: 'too_large' });

@@ -204,14 +204,14 @@ end $$;
 create or replace function app.community_screen(p_text text, p_max int) returns jsonb language plpgsql immutable set search_path = '' as $$
 declare
   t text := btrim(coalesce(p_text, ''));
-  l text := lower(btrim(coalesce(p_text, '')));
+  l text := replace(replace(lower(btrim(coalesce(p_text, ''))), '’', ''''), '‘', '''');
   squashed text := regexp_replace(lower(btrim(coalesce(p_text, ''))), '[[:space:]_-]', '', 'g');
   f text[] := '{}';
   w text;
 begin
   if char_length(t) = 0 then return jsonb_build_object('decision', 'block', 'flags', jsonb_build_array('empty')); end if;
   if char_length(t) > p_max then return jsonb_build_object('decision', 'block', 'flags', jsonb_build_array('too_long')); end if;
-  foreach w in array array['kill myself', 'suicide', 'end my life', 'self harm', 'self-harm', 'cut myself', 'want to die'] loop
+  foreach w in array array['kill myself', 'suicide', 'end my life', 'self harm', 'self-harm', 'cut myself', 'want to die', 'don''t want to be here', 'do not want to be here', 'don''t want to live', 'do not want to live', 'no reason to live', 'wish i were dead', 'wish i was dead', 'better off dead', 'better off without me', 'end it all', 'take my own life'] loop
     if position(w in l) > 0 then return jsonb_build_object('decision', 'block', 'flags', jsonb_build_array('self_harm')); end if;
   end loop;
   foreach w in array array['thinspo', 'proana', 'pro_ana', 'promia', 'pro_mia', 'bonespo', 'meanspo', 'edtwt', 'anorexia tips', 'purge tips'] loop

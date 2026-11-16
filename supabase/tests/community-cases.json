@@ -22,19 +22,25 @@
       "text": "",
       "max": 500,
       "decision": "block",
-      "flags": ["empty"]
+      "flags": [
+        "empty"
+      ]
     },
     {
       "text": "   ",
       "max": 500,
       "decision": "block",
-      "flags": ["empty"]
+      "flags": [
+        "empty"
+      ]
     },
     {
       "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
       "max": 500,
       "decision": "block",
-      "flags": ["too_long"]
+      "flags": [
+        "too_long"
+      ]
     },
     {
       "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
@@ -46,109 +52,146 @@
       "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
       "max": 300,
       "decision": "block",
-      "flags": ["too_long"]
+      "flags": [
+        "too_long"
+      ]
     },
     {
       "text": "write to me at ama@example.com",
       "max": 500,
       "decision": "block",
-      "flags": ["email", "link"]
+      "flags": [
+        "email",
+        "link"
+      ]
     },
     {
       "text": "call me on +233 24 123 4567",
       "max": 500,
       "decision": "block",
-      "flags": ["phone"]
+      "flags": [
+        "phone"
+      ]
     },
     {
       "text": "call me 0201234567 now",
       "max": 500,
       "decision": "block",
-      "flags": ["phone"]
+      "flags": [
+        "phone"
+      ]
     },
     {
       "text": "visit www.myshop.com for more",
       "max": 500,
       "decision": "block",
-      "flags": ["link"]
+      "flags": [
+        "link"
+      ]
     },
     {
       "text": "see https://x.example/abc",
       "max": 500,
       "decision": "block",
-      "flags": ["link"]
+      "flags": [
+        "link"
+      ]
     },
     {
       "text": "shop at myshop.shop",
       "max": 500,
       "decision": "block",
-      "flags": ["link"]
+      "flags": [
+        "link"
+      ]
     },
     {
       "text": "thanks @kofi for the tips",
       "max": 500,
       "decision": "block",
-      "flags": ["mention"]
+      "flags": [
+        "mention"
+      ]
     },
     {
       "text": "DM me for the plan",
       "max": 500,
       "decision": "block",
-      "flags": ["contact_solicit"]
+      "flags": [
+        "contact_solicit"
+      ]
     },
     {
       "text": "add me on whatsapp",
       "max": 500,
       "decision": "block",
-      "flags": ["contact_solicit"]
+      "flags": [
+        "contact_solicit"
+      ]
     },
     {
       "text": "follow me everywhere",
       "max": 500,
       "decision": "block",
-      "flags": ["contact_solicit"]
+      "flags": [
+        "contact_solicit"
+      ]
     },
     {
       "text": "my cash app is great",
       "max": 500,
       "decision": "block",
-      "flags": ["contact_solicit"]
+      "flags": [
+        "contact_solicit"
+      ]
     },
     {
       "text": "I want to die",
       "max": 500,
       "decision": "block",
-      "flags": ["self_harm"]
+      "flags": [
+        "self_harm"
+      ]
     },
     {
       "text": "i want to Kill Myself",
       "max": 500,
       "decision": "block",
-      "flags": ["self_harm"]
+      "flags": [
+        "self_harm"
+      ]
     },
     {
       "text": "thinking about self-harm",
       "max": 500,
       "decision": "block",
-      "flags": ["self_harm"]
+      "flags": [
+        "self_harm"
+      ]
     },
     {
       "text": "Best thinspo tips",
       "max": 500,
       "decision": "block",
-      "flags": ["ed_content"]
+      "flags": [
+        "ed_content"
+      ]
     },
     {
       "text": "t h i n s p o",
       "max": 500,
       "decision": "block",
-      "flags": ["ed_content"]
+      "flags": [
+        "ed_content"
+      ]
     },
     {
       "text": "pro_ana forever",
       "max": 500,
       "decision": "block",
-      "flags": ["ed_content"]
+      "flags": [
+        "ed_content"
+      ]
     },
     {
       "text": "I lost 10 kg in a month",
@@ -196,19 +239,25 @@
       "text": "this detox is a miracle",
       "max": 500,
       "decision": "block",
-      "flags": ["health_claim"]
+      "flags": [
+        "health_claim"
+      ]
     },
     {
       "text": "semaglutide changed everything",
       "max": 500,
       "decision": "block",
-      "flags": ["health_claim"]
+      "flags": [
+        "health_claim"
+      ]
     },
     {
       "text": "guaranteed results",
       "max": 500,
       "decision": "block",
-      "flags": ["health_claim"]
+      "flags": [
+        "health_claim"
+      ]
     },
     {
       "text": "AMAZINGAMAZINGAMAZING",
@@ -250,7 +299,11 @@
       "text": "email me a@b.com and call 020 123 4567",
       "max": 500,
       "decision": "block",
-      "flags": ["email", "link", "phone"]
+      "flags": [
+        "email",
+        "link",
+        "phone"
+      ]
     },
     {
       "text": "I lost 12 kg in 3 weeks",
@@ -280,13 +333,17 @@
       "text": "you're so fat",
       "max": 500,
       "decision": "block",
-      "flags": ["harassment"]
+      "flags": [
+        "harassment"
+      ]
     },
     {
       "text": "kys",
       "max": 500,
       "decision": "block",
-      "flags": ["harassment"]
+      "flags": [
+        "harassment"
+      ]
     },
     {
       "text": "Dance cardio today, burned about 300 calories",
@@ -296,6 +353,72 @@
     },
     {
       "text": "I weigh 64 kg and I feel great",
+      "max": 500,
+      "decision": "allow",
+      "flags": []
+    },
+    {
+      "text": "I don't want to be here anymore",
+      "max": 500,
+      "decision": "block",
+      "flags": [
+        "self_harm"
+      ]
+    },
+    {
+      "text": "I do not want to live like this",
+      "max": 500,
+      "decision": "block",
+      "flags": [
+        "self_harm"
+      ]
+    },
+    {
+      "text": "there is no reason to live",
+      "max": 500,
+      "decision": "block",
+      "flags": [
+        "self_harm"
+      ]
+    },
+    {
+      "text": "everyone would be better off without me",
+      "max": 500,
+      "decision": "block",
+      "flags": [
+        "self_harm"
+      ]
+    },
+    {
+      "text": "I just want to end it all",
+      "max": 500,
+      "decision": "block",
+      "flags": [
+        "self_harm"
+      ]
+    },
+    {
+      "text": "I don’t want to be here anymore",
+      "max": 500,
+      "decision": "block",
+      "flags": [
+        "self_harm"
+      ]
+    },
+    {
+      "text": "I don't want to be late for class",
+      "max": 500,
+      "decision": "allow",
+      "flags": []
+    },
+    {
+      "text": "I want to end the week strong",
+      "max": 500,
+      "decision": "allow",
+      "flags": []
+    },
+    {
+      "text": "Do not want to skip leg day",
       "max": 500,
       "decision": "allow",
       "flags": []
