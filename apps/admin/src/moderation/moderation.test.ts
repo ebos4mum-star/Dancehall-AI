@@ -290,6 +290,31 @@ describe('staff sign-in', () => {
     });
     expect(await down.signIn('a@b.c', 'x')).toEqual({ step: 'failed' });
   });
+  it('lets a staff account with no authenticator set one up, then signs in at the second-factor level', async () => {
+    const t = flow({
+      '/token?grant_type=password': { json: { access_token: 'aal1-token', user: { factors: [] } } },
+      '/factors': {
+        json: {
+          id: 'f9',
+          totp: { secret: 'JBSWY3DPEHPK3PXP', uri: 'otpauth://totp/x?secret=JBSWY3DPEHPK3PXP' },
+        },
+      },
+      '/factors/f9/challenge': { json: { id: 'c9' } },
+      '/factors/f9/verify': { json: { access_token: 'aal2-token' } },
+    });
+    const e = await t.auth.startEnrollment('s@example.test', 'pw');
+    expect(e).toMatchObject({ ok: true, factorId: 'f9', secret: 'JBSWY3DPEHPK3PXP' });
+    expect(await t.auth.getToken()).toBeNull(); // not usable until the code is verified
+    expect(await t.auth.verifyCode('f9', '123456')).toEqual({ step: 'ready' });
+    expect(await t.auth.getToken()).toBe('aal2-token');
+  });
+  it('refuses to add a second authenticator with only a password', async () => {
+    const t = flow({
+      '/token?grant_type=password': { json: { access_token: 'aal1-token', ...factors } },
+    });
+    expect(await t.auth.startEnrollment('s@example.test', 'pw')).toEqual({ ok: false });
+    expect(t.calls).not.toContain('/factors');
+  });
   it('never keeps the aal1 token as a usable session', async () => {
     const t = flow({
       '/token?grant_type=password': { json: { access_token: 'aal1-token', ...factors } },

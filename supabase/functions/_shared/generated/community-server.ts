@@ -27,6 +27,8 @@ export interface CommunityRpc {
 }
 export interface CommunityStorage {
   signedUploadUrl(path: string): Promise<{ url: string; token: string } | null>;
+  /** Stored size in bytes without reading the file, or null if it is not there. Checked BEFORE download so an oversized file never enters memory. */
+  size(path: string): Promise<number | null>;
   download(path: string): Promise<Uint8Array | null>;
   upload(path: string, bytes: Uint8Array, mime: string): Promise<void>;
   remove(paths: string[]): Promise<void>;
@@ -51,6 +53,8 @@ export interface CommunityDeps {
   floorMode?: 'open' | 'text_only' | 'read_only';
   /** Called with an unexpected error (never with request content). Off in production; used by local diagnosis only. */
   onError?: (e: unknown) => void;
+  /** How many photo checks may hold a file in memory at once in this function instance (default 2). Keeps worst-case memory bounded. */
+  maxConcurrentMedia?: number;
 }
 export type Mode = 'open' | 'text_only' | 'read_only';
 const MODE_RANK: Record<Mode, number> = { open: 0, text_only: 1, read_only: 2 };
@@ -126,6 +130,7 @@ const STATUS: Record<string, number> = {
   needs_username: 409,
   payload_too_large: 413,
   paused: 503,
+  busy: 503,
   media_paused: 503,
   video_disabled: 503,
   too_large: 422,
@@ -163,6 +168,7 @@ const MESSAGES: Record<string, string> = {
   already_set: 'You already have a username.',
   needs_username: 'Choose a username first.',
   payload_too_large: 'That request is too large.',
+  busy: 'That is busy right now. Please try again in a moment.',
   paused: 'Community is paused for new posts and comments for a short while. You can still read.',
   media_paused: 'Photos and videos are paused for a short while. You can still share text.',
   video_disabled: 'Video sharing is not available yet. You can share text and photos.',
@@ -199,6 +205,9 @@ interface Route {
   limit: [string, number, number];
   run(ctx: Ctx): Promise<CommunityResponse>;
 }
+/** Photo checks currently holding a file in memory, per function instance. */
+const mediaInFlight = new WeakMap<object, number>();
+
 interface Ctx {
   deps: CommunityDeps;
   /** Verified user id; null for a guest. */
@@ -300,6 +309,40 @@ async function alertUrgent(
   } catch {
     return false;
   }
+}
+
+/** Download, check, clean and record one stored upload. Only ever called inside the per-instance concurrency cap. */
+async function processStoredUpload(
+  c: Ctx,
+  path: string,
+  expected: string,
+): Promise<CommunityResponse> {
+  const bytes = await c.deps.storage.download(path);
+  if (!bytes) return fail('not_found');
+  const verdict = checkUpload(expected, bytes);
+  if (!verdict.ok) {
+    await rpc(c, 'community_reject_upload', { p_user: c.user, p_path: path });
+    await c.deps.storage.remove([path]).catch(() => undefined);
+    return fail(verdict.code, { message: verdict.reason });
+  }
+  if (verdict.kind === 'photo') await c.deps.storage.upload(path, verdict.bytes, verdict.mime); // replaced by the metadata-free copy
+  try {
+    await rpc(c, 'community_verify_upload', {
+      p_user: c.user,
+      p_path: path,
+      p_bytes: verdict.bytes.length,
+      p_duration: verdict.durationS,
+    });
+  } catch (e) {
+    await c.deps.storage.remove([path]).catch(() => undefined);
+    throw e;
+  }
+  return done({
+    path,
+    kind: verdict.kind,
+    bytes: verdict.bytes.length,
+    durationS: verdict.durationS,
+  });
 }
 
 const ROUTES: Record<string, Route> = {
@@ -447,32 +490,28 @@ const ROUTES: Record<string, Route> = {
         p_path: path,
       })) as string;
       if (typeof expected !== 'string' || mimeForPath(path) !== expected) throw new Invalid('path');
-      const bytes = await c.deps.storage.download(path);
-      if (!bytes) return fail('not_found');
-      const verdict = checkUpload(expected, bytes);
-      if (!verdict.ok) {
+      const stored = await c.deps.storage.size(path);
+      if (stored === null) return fail('not_found');
+      const limit =
+        (expected.startsWith('video/') ? COMMUNITY_LIMITS.videoMB : COMMUNITY_LIMITS.photoMB) *
+        1048576;
+      if (stored > limit) {
+        // Refused without ever reading it into memory.
         await rpc(c, 'community_reject_upload', { p_user: c.user, p_path: path });
         await c.deps.storage.remove([path]).catch(() => undefined);
-        return fail(verdict.code, { message: verdict.reason });
-      }
-      if (verdict.kind === 'photo') await c.deps.storage.upload(path, verdict.bytes, verdict.mime); // replaced by the metadata-free copy
-      try {
-        await rpc(c, 'community_verify_upload', {
-          p_user: c.user,
-          p_path: path,
-          p_bytes: verdict.bytes.length,
-          p_duration: verdict.durationS,
+        return fail('too_large', {
+          message: `Photos can be up to ${COMMUNITY_LIMITS.photoMB} MB.`,
         });
-      } catch (e) {
-        await c.deps.storage.remove([path]).catch(() => undefined);
-        throw e;
       }
-      return done({
-        path,
-        kind: verdict.kind,
-        bytes: verdict.bytes.length,
-        durationS: verdict.durationS,
-      });
+      const cap = c.deps.maxConcurrentMedia ?? 2;
+      const inflight = mediaInFlight.get(c.deps) ?? 0;
+      if (inflight >= cap) return { ...fail('busy'), headers: { 'Retry-After': '5' } };
+      mediaInFlight.set(c.deps, inflight + 1);
+      try {
+        return await processStoredUpload(c, path, expected);
+      } finally {
+        mediaInFlight.set(c.deps, (mediaInFlight.get(c.deps) ?? 1) - 1);
+      }
     },
   },
   post: {

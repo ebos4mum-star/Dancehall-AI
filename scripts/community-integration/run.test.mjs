@@ -483,6 +483,17 @@ describe(
         );
         assert.equal(own.status, 200);
       });
+      it('refuses an oversized file from its stored size, without reading it into memory', async () => {
+        const dl = async () =>
+          (await (await fetch(`http://127.0.0.1:${PLATFORM_PORT}/__test/downloads`)).json()).n;
+        const big = await upload('kofi', Buffer.alloc(9 * 1024 * 1024, 1));
+        const before = await dl();
+        const c = await big.commit();
+        assert.equal(c.status, 422);
+        assert.equal(c.body.code, 'too_large');
+        assert.equal(await dl(), before, 'the function never downloaded it');
+        assert.ok(!(await files()).includes(`community-media/${big.path}`), 'and it was deleted');
+      });
       it('keeps video off', async () => {
         const t = await call('upload/ticket', { kind: 'video', mime: 'video/mp4' }, tok('ama'));
         assert.equal(t.status, 503);

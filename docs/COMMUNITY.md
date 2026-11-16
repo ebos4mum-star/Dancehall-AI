@@ -82,7 +82,7 @@ What the stand-in is **not**: real Supabase. Real PostgREST error formats, real 
 
 1. **Real Auth behaviour.** The function trusts `aal` from a token the Auth service has just validated; confirm on staging that a password-only staff session carries `aal1` and a TOTP-verified one `aal2`, and that the Auth `getUser` call rejects revoked sessions.
 2. **Real Storage.** Confirm on staging that the bucket is private with no policy, that signed upload/view links behave as in the stand-in, and that file-size limits are enforced by the platform as well as by the server.
-3. **Edge limits.** Large files are downloaded into function memory to be checked and cleaned (photos up to 8 MB; videos are disabled). Confirm memory and time limits; consider checking size before download.
+3. **Edge limits.** Photos (8 MB cap, image types only at the bucket) are checked after a size pre-check, at most 2 at a time per instance; measured peak about 139 MB for an 8 MB photo. Confirm on the real runtime. See `COMMUNITY_STAGING_READINESS.md` section 7.
 4. **Rate limits** are database-backed fixed windows keyed by a hashed network address (guests) or account. A distributed attack across many addresses is only slowed by the daily per-account limits and the automatic pause. Consider a platform-level limit as well.
 5. **Video** stays disabled (there is no API to enable it; it needs an approved migration). Needed first: metadata removal, safe processing and moderation requirements.
 6. **Image safety scanning** is a launch dependency to evaluate, not built. Every file is human-reviewed first.
@@ -101,3 +101,7 @@ What the stand-in is **not**: real Supabase. Real PostgREST error formats, real 
 5. Confirm the provisional **4-hour / 48-hour** targets are what you want to measure against (they are not promises).
 6. Counsel's answers on the **United States** questions in the minors, privacy and terms drafts, before any real members are invited.
 7. Whether the controlled test is invite-only, text and photos only (video stays off).
+
+## Staging
+
+The hosted-test preparation package is `docs/COMMUNITY_STAGING_READINESS.md` (project requirements, migration order and rollback, deployment, secrets by name, Auth/MFA/storage, moderator setup, alerts, costs, real-Supabase tests, stop criteria, approvals needed).

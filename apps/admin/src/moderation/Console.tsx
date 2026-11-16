@@ -41,6 +41,7 @@ export function Console({ cfg }: { cfg: Cfg }) {
   const [factor, setFactor] = useState('');
   const [code, setCode] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
+  const [setup, setSetup] = useState<{ secret: string; uri: string } | null>(null);
 
   const begin = (a: ModerationApi) => setApi(a);
 
@@ -108,6 +109,24 @@ export function Console({ cfg }: { cfg: Cfg }) {
           <button style={btn} type="submit">
             Continue
           </button>
+          <button
+            style={btn}
+            type="button"
+            onClick={async () => {
+              const r = await auth!.startEnrollment(email, password);
+              if (r.ok) {
+                setFactor(r.factorId);
+                setSetup({ secret: r.secret, uri: r.uri });
+                setStep('code');
+                setMsg(null);
+              } else
+                setMsg(
+                  'Set-up is only for accounts with no authenticator yet. Check your details.',
+                );
+            }}
+          >
+            First time? Set up my authenticator
+          </button>
         </form>
       ) : (
         <form
@@ -126,6 +145,12 @@ export function Console({ cfg }: { cfg: Cfg }) {
           }}
           style={{ display: 'grid', gap: 8 }}
         >
+          {setup ? (
+            <p>
+              Add this key to your authenticator app (choose &quot;enter a setup key&quot;), then
+              type the 6-digit code it shows. Key: <code>{setup.secret}</code>
+            </p>
+          ) : null}
           <label>
             6-digit code from your authenticator app{' '}
             <input

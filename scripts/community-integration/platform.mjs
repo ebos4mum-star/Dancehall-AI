@@ -42,7 +42,7 @@ export function verifyJwt(token, secret, nowS) {
 export async function startPlatform({ port, database, jwtSecret, serviceKey }) {
   const pool = new pg.Pool({ ...pgOptions(database), max: 4 });
   const files = new Map(); // "bucket/path" -> { bytes, type }
-  const state = { clockOffsetS: 0, rpcDown: false, mail: [], rpcLog: [] };
+  const state = { clockOffsetS: 0, rpcDown: false, mail: [], rpcLog: [], downloads: 0 };
   const now = () => Math.floor(Date.now() / 1000) + state.clockOffsetS;
   const send = (res, status, body, type = 'application/json') => {
     if (process.env.E2E_DEBUG && status >= 400 && status !== 404)
@@ -91,6 +91,7 @@ export async function startPlatform({ port, database, jwtSecret, serviceKey }) {
         return f ? send(res, 200, f.bytes, f.type) : send(res, 404, { message: 'no such file' });
       }
       if (path === '/__test/rpclog') return send(res, 200, state.rpcLog);
+      if (path === '/__test/downloads') return send(res, 200, { n: state.downloads });
 
       // ---- email provider stand-in ----
       if (path === '/mail/send' && req.method === 'POST') {
@@ -176,10 +177,14 @@ export async function startPlatform({ port, database, jwtSecret, serviceKey }) {
               signedURL: `/object/sign/${key}?token=${objToken('view', key, expiresIn)}`,
             });
           }
-          if (req.method === 'GET') {
+          if (req.method === 'GET' || req.method === 'HEAD') {
             if (!checkObjToken(url.searchParams.get('token'), 'view', key))
               return send(res, 400, { message: 'invalid or expired signature' });
             const f = files.get(key);
+            if (f && req.method === 'HEAD') {
+              res.writeHead(200, { 'content-type': f.type, 'content-length': f.bytes.length });
+              return res.end();
+            }
             return f
               ? send(res, 200, f.bytes, f.type)
               : send(res, 404, { message: 'Object not found' });
@@ -198,6 +203,7 @@ export async function startPlatform({ port, database, jwtSecret, serviceKey }) {
               message: 'private bucket: anonymous and signed-in access is refused',
             }); // no public or per-user policy exists
           if (req.method === 'GET') {
+            state.downloads++;
             const f = files.get(key);
             return f
               ? send(res, 200, f.bytes, f.type)

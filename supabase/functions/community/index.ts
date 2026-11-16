@@ -56,6 +56,14 @@ const server = createCommunityServer({
       const { data, error } = await admin.storage.from(BUCKET).createSignedUploadUrl(path);
       return error || !data ? null : { url: data.signedUrl, token: data.token };
     },
+    async size(path) {
+      // A HEAD request on a short-lived signed link returns the stored size without reading the file into memory.
+      const { data, error } = await admin.storage.from(BUCKET).createSignedUrl(path, 30);
+      if (error || !data) return null;
+      const r = await fetch(data.signedUrl, { method: 'HEAD' });
+      const n = Number(r.headers.get('content-length'));
+      return r.ok && Number.isFinite(n) ? n : null;
+    },
     async download(path) {
       const { data, error } = await admin.storage.from(BUCKET).download(path);
       return error || !data ? null : new Uint8Array(await data.arrayBuffer());

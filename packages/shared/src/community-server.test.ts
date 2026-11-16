@@ -37,6 +37,40 @@ const jpeg = cat(
   Uint8Array.of(0, 0, 1, 2, 3, 4, 0xff, 0xd9),
 );
 
+function slowSetup(max: number) {
+  const gates: Array<() => void> = [];
+  let active = 0;
+  let peak = 0;
+  const deps: CommunityDeps = {
+    rpc: {
+      call: async (fn) =>
+        fn === 'community_burst'
+          ? true
+          : fn === 'community_upload_ticket'
+            ? 'image/jpeg'
+            : undefined,
+    },
+    storage: {
+      signedUploadUrl: async () => null,
+      size: async () => 100,
+      download: async () => {
+        active++;
+        peak = Math.max(peak, active);
+        await new Promise<void>((r) => gates.push(r));
+        active--;
+        return new Uint8Array([1, 2, 3]); // not an image: rejected after the hold, which is all this test needs
+      },
+      upload: async () => undefined,
+      remove: async () => undefined,
+      signedUrl: async () => null,
+    },
+    auth: { verify: async () => ({ userId: ME, aal: 'aal1' }) },
+    maintenanceKeyOk: () => false,
+    maxConcurrentMedia: max,
+  };
+  return { server: createCommunityServer(deps), gates, peak: () => peak };
+}
+
 function setup(
   handlers: Record<string, (a: Record<string, unknown>) => unknown> = {},
   opts: {
@@ -50,6 +84,7 @@ function setup(
   const calls: Array<{ fn: string; args: Record<string, unknown> }> = [];
   const uploaded: Array<{ path: string; bytes: Uint8Array }> = [];
   const removed: string[] = [];
+  let downloads = 0;
   const deps: CommunityDeps = {
     rpc: {
       async call(fn, args) {
@@ -64,7 +99,12 @@ function setup(
       async signedUploadUrl(path) {
         return { url: `https://storage.test/upload/${path}`, token: 'tok' };
       },
+      async size(path) {
+        const f = opts.files?.[path];
+        return f ? f.length : null;
+      },
       async download(path) {
+        downloads++;
         return opts.files?.[path] ?? null;
       },
       async upload(path, bytes) {
@@ -96,7 +136,7 @@ function setup(
     token: string | null = 'member',
     extra: Partial<CommunityRequest> = {},
   ) => server.handle({ route, token, networkKey: 'net-hash', body, ...extra });
-  return { send, calls, uploaded, removed };
+  return { send, calls, uploaded, removed, downloads: () => downloads };
 }
 const dbCalls = <T extends { fn: string }>(calls: T[]) =>
   calls.filter((c) => c.fn !== 'community_burst');
@@ -463,6 +503,19 @@ describe('uploads', () => {
     const v = dbCalls(t.calls).find((c) => c.fn === 'community_verify_upload')!;
     expect(v.args.p_bytes).toBe(t.uploaded[0]!.bytes.length);
   });
+  it('refuses an oversized file from its stored size, without downloading it', async () => {
+    const big = { length: 9 * 1024 * 1024 } as unknown as Uint8Array;
+    const t = setup(
+      { community_upload_ticket: () => 'image/jpeg', community_reject_upload: () => undefined },
+      { files: { [path]: big } },
+    );
+    const r = await t.send('upload/commit', { path });
+    expect(r.status).toBe(422);
+    expect(r.body.code).toBe('too_large');
+    expect(t.removed).toEqual([path]);
+    expect(t.downloads()).toBe(0);
+    expect(dbCalls(t.calls).some((c) => c.fn === 'community_reject_upload')).toBe(true);
+  });
   it('rejects a file that is not what it claims, and deletes it', async () => {
     const t = setup(
       { community_upload_ticket: () => 'image/jpeg', community_reject_upload: () => undefined },
@@ -671,6 +724,29 @@ describe('Community-only Read only floor', () => {
       mode: 'read_only',
       videoEnabled: true,
     });
+  });
+});
+
+describe('memory safety for photo checks', () => {
+  const p = 'm/55555555-5555-4555-8555-555555555555.jpg';
+  it('never holds more than the allowed number of files in memory at once, and asks others to retry', async () => {
+    const t = slowSetup(2);
+    const req = () =>
+      t.server.handle({ route: 'upload/commit', token: 't', networkKey: 'n', body: { path: p } });
+    const a = req();
+    const b = req();
+    await new Promise((r) => setTimeout(r, 5));
+    const c = await req();
+    expect(c.status).toBe(503);
+    expect(c.body.code).toBe('busy');
+    expect(c.headers?.['Retry-After']).toBe('5');
+    t.gates.forEach((g) => g());
+    await Promise.all([a, b]);
+    expect(t.peak()).toBe(2);
+    const d = req();
+    await new Promise((r) => setTimeout(r, 5));
+    t.gates.forEach((g) => g());
+    expect((await d).status).not.toBe(503); // the slot was released
   });
 });
 

@@ -47,12 +47,36 @@ export function createStaffAuth(cfg: {
       const totp = r.user?.factors?.find(
         (x) => x.factor_type === 'totp' && x.status === 'verified',
       );
-      // No verified second factor: the console stays locked. Enrolling is done once, by the account owner, in the Auth dashboard.
+      // No verified second factor: the console stays locked until the person completes the one-time authenticator set-up (startEnrollment).
       if (!totp) {
         pending = null;
         return { step: 'failed' };
       }
       return { step: 'second_factor', factorId: totp.id };
+    },
+    /**
+     * One-time set-up of the authenticator app for a staff account that has none yet. Refused if the account already has a verified factor (nobody can add a
+     * second one with only a password). Returns the secret and otpauth address to add to an authenticator app; nothing is stored here.
+     */
+    async startEnrollment(
+      email: string,
+      password: string,
+    ): Promise<{ ok: true; factorId: string; secret: string; uri: string } | { ok: false }> {
+      const r = (await post('/token?grant_type=password', { email, password })) as Tokens | null;
+      if (!r?.access_token) return { ok: false };
+      if (r.user?.factors?.some((x) => x.factor_type === 'totp' && x.status === 'verified'))
+        return { ok: false };
+      const f = (await post(
+        '/factors',
+        { factor_type: 'totp', friendly_name: 'moderation-console' },
+        r.access_token,
+      )) as {
+        id?: string;
+        totp?: { secret?: string; uri?: string };
+      } | null;
+      if (!f?.id || !f.totp?.secret || !f.totp.uri) return { ok: false };
+      pending = r.access_token;
+      return { ok: true, factorId: f.id, secret: f.totp.secret, uri: f.totp.uri };
     },
     async verifyCode(factorId: string, code: string): Promise<StaffStep | { step: 'failed' }> {
       if (!pending || !/^\d{6}$/.test(code)) return { step: 'failed' };
