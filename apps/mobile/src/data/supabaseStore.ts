@@ -24,6 +24,7 @@ import {
 import { bindAuthLifecycle, type AppStateSource } from './authLifecycle';
 import { createCoachAdapter } from './supabaseCoach';
 import { createPhotoAdapter } from './supabasePhoto';
+import { createCommunityAdapter } from './supabaseCommunity';
 import {
   CURRENT_POLICY_VERSION,
   StoreError,
@@ -1032,5 +1033,6 @@ function withCoach(
     ...store,
     ...createCoachAdapter({ db: __db, base: store, aiApiUrl: cfg.aiApiUrl, emit: __emit }),
     ...createPhotoAdapter({ db: __db, base: store, aiApiUrl: cfg.aiApiUrl, emit: __emit }),
+    ...createCommunityAdapter({ db: __db, url: cfg.url, publishableKey: cfg.publishableKey }),
   };
 }

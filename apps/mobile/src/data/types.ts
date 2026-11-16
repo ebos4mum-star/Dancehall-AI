@@ -206,7 +206,16 @@ export interface DataStore {
 
   // Community (optional). Reading the feed is public: it works signed out. Every other call needs an account, and posting and commenting also need a public username.
   // Nothing returned carries an internal id, an email or a health record. Absent in adapters without a Community backend (the feature is then not offered).
-  communityProfile?(): Promise<{ username: string } | null>;
+  communityProfile?(): Promise<{
+    username: string;
+    /** When the next username change is allowed (ISO), or null if one is allowed now. */
+    canChangeAt?: string | null;
+    /** A staff restriction currently on the account, if any. */
+    restriction?: 'muted' | 'suspended' | null;
+  } | null>;
+  communityChangeUsername?(raw: string): Promise<{ ok: true; username: string } | CommunityFail>;
+  /** Leave Community: removes the username, posts, comments, reactions and files. The account itself stays. */
+  communityLeave?(): Promise<{ ok: true } | CommunityFail>;
   communityClaimUsername?(raw: string): Promise<{ ok: true; username: string } | CommunityFail>;
   communityFeed?(opts?: {
     cursor?: string | null;

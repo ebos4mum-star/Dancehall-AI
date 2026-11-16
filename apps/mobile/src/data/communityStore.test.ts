@@ -62,7 +62,7 @@ describe('Community in the local store', () => {
     const again = new MockStore(kv, NOW);
     const feed = await again.communityFeed!();
     expect(feed.posts.some((p) => p.author === 'dev_dancer' && p.isMine)).toBe(true);
-    expect(await again.communityProfile!()).toEqual({ username: 'dev_dancer' });
+    expect(await again.communityProfile!()).toMatchObject({ username: 'dev_dancer' });
   });
   it('nothing public contains the internal member id or any private field', async () => {
     const { s } = await member();
@@ -138,5 +138,37 @@ describe('Community in the local store', () => {
       code: 'needs_username',
     });
     expect(await s.communityEncourage!(post.id, true)).toMatchObject({ ok: true });
+  });
+
+  it('changes a username, shows the cooldown, and posts follow the new name', async () => {
+    const { s } = await member();
+    await s.communityPost!({ type: 'text', body: 'hello there' }, { confirmed: true });
+    expect((await s.communityProfile!())?.canChangeAt).toBeNull();
+    expect(await s.communityChangeUsername!('dev_mover')).toMatchObject({
+      ok: true,
+      username: 'dev_mover',
+    });
+    const p = await s.communityProfile!();
+    expect(p?.username).toBe('dev_mover');
+    expect(p?.canChangeAt).toBeTruthy();
+    expect(await s.communityChangeUsername!('dev_again')).toMatchObject({
+      ok: false,
+      code: 'cooldown',
+    });
+    const mine = (await s.communityFeed!()).posts.filter((x) => x.isMine);
+    expect(mine.every((x) => x.author === 'dev_mover')).toBe(true);
+  });
+  it('refuses look-alike names of staff and members', async () => {
+    const { s } = await member();
+    for (const n of ['adm1n', 'sample_arna', 'sample_k0fi'])
+      expect((await s.communityChangeUsername!(n)).ok).toBe(false);
+  });
+  it('leaving Community removes the member’s posts and name but not the account', async () => {
+    const { s } = await member();
+    await s.communityPost!({ type: 'text', body: 'bye soon' }, { confirmed: true });
+    expect(await s.communityLeave!()).toEqual({ ok: true });
+    expect(await s.communityProfile!()).toBeNull();
+    expect((await s.communityFeed!()).posts.some((x) => x.isMine)).toBe(false);
+    expect((await s.communityClaimUsername!('dev_return')).ok).toBe(true);
   });
 });

@@ -6,6 +6,7 @@ import { useApp } from '@/data/AppProvider';
 import { useAccountGate } from '@/account/gate';
 import { errorMessage } from '@/data/hooks';
 import { Composer } from '@/community/Composer';
+import { MyCommunity } from '@/community/MyCommunity';
 import { PostCard } from '@/community/PostCard';
 import { useCommunityAvailable } from '@/community/useCommunity';
 import { t } from '@/i18n';
@@ -109,6 +110,7 @@ export default function CommunityScreen() {
       {next ? (
         <Button variant="secondary" label={t('community.loadMore')} onPress={() => void more()} />
       ) : null}
+      {session ? <MyCommunity onChanged={() => void load()} /> : null}
       {session ? (
         <Card>
           <Disclosure title={t('community.blockedTitle', { n: blocked.length })}>

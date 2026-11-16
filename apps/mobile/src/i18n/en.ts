@@ -672,9 +672,25 @@ export const en = {
   'community.milestoneNone': 'Finish a workout to share it here.',
   'community.username.title': 'Choose a public username',
   'community.username.body':
-    'This is the only name people will see. Pick something that is not your real name. It cannot be changed later.',
+    'This is the only name people will see. Pick something that is not your real name. You can change it later (once every 30 days).',
   'community.username.label': 'Username (3 to 20 letters, numbers or underscores)',
   'community.username.claim': 'Use this username',
+  'community.me.title': 'Your Community name',
+  'community.me.restrictedMuted':
+    'Posting and commenting are paused on your account for now. You can still read and encourage.',
+  'community.me.restrictedSuspended':
+    'Community is paused on your account for now. You can still read.',
+  'community.me.change': 'Change username',
+  'community.me.changeBody':
+    'Your posts and comments will show the new name. Your old name is kept free for 90 days so nobody can take it over. You can change it again after 30 days.',
+  'community.me.changeWait': 'You can change your username again after {date}.',
+  'community.me.changed': 'Username changed.',
+  'community.me.use': 'Use this name',
+  'community.me.leave': 'Leave Community',
+  'community.me.leaveBody':
+    'This removes your username, posts, comments, photos and videos from Community. Your account and everything else in the app stay. You cannot undo it.',
+  'community.me.leaveConfirm': 'Yes, remove my Community posts',
+  'community.me.left': 'You have left Community. Your posts and username were removed.',
   'community.encourage': 'Encourage',
   'community.encouraged': 'Encouraged',
   'community.comments': 'Comments ({n})',

@@ -313,7 +313,23 @@ export class MockStore implements DataStore {
   async communityProfile() {
     const e = await this.engine();
     const u = this.memberId() ? e.usernameOf(DEV_USER) : null;
-    return u ? { username: u } : null;
+    return u
+      ? { username: u, canChangeAt: e.usernameChangeAvailableAt(DEV_USER), restriction: null }
+      : null;
+  }
+  async communityChangeUsername(raw: string) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.changeUsername(uid, raw);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async communityLeave() {
+    const uid = await this.member();
+    const e = await this.engine();
+    e.deleteMember(uid);
+    await this.commit();
+    return { ok: true as const };
   }
   async communityClaimUsername(raw: string) {
     const uid = await this.member();
