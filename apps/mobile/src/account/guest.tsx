@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { router } from 'expo-router';
 import { searchFoods, suggestQuickFit, type QuickFitMinutes } from '@dancehall/shared';
 import { useAccountGate } from '@/account/gate';
+import { useApp } from '@/data/AppProvider';
 import { t } from '@/i18n';
 import { spacing } from '@/theme/tokens';
 import { AppText } from '@/ui/AppText';
@@ -120,12 +121,23 @@ export function GuestFood() {
 }
 
 export function GuestMe() {
+  const { config } = useApp();
   return (
     <Screen title={t('guest.meTitle')}>
       <Card>
         <AppText>{t('guest.meBody')}</AppText>
         <Button label={t('guest.createAccount')} onPress={() => router.push('/account/start')} />
       </Card>
+      {config.community ? (
+        <Card>
+          <AppText muted>{t('community.entrySub')}</AppText>
+          <Button
+            variant="secondary"
+            label={t('community.entry')}
+            onPress={() => router.push('/community')}
+          />
+        </Card>
+      ) : null}
       <Card>
         <AppText variant="heading" accessibilityRole="header">
           {t('guest.privacyTitle')}
