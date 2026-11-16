@@ -104,3 +104,27 @@ describe('risk signal screen', () => {
     expect(screenMessageForRiskSignals('Give me a 10 minute low impact workout')).toBeNull();
   });
 });
+
+describe('risk screen catches common indirect phrasings and leaves ordinary talk alone', () => {
+  it.each([
+    "I don't want to be here anymore",
+    'I do not want to live',
+    'there is no reason to live',
+    'I wish I were dead',
+    'everyone would be better off without me',
+    'I want to end it all',
+    "I don't want to go on anymore",
+    'I keep wanting to self harm',
+  ])('flags %j as self harm', (t) => expect(screenMessageForRiskSignals(t)).toBe('self_harm'));
+  it.each(['I want some thinspo', 'looking for pro ana tips'])(
+    'flags %j as disordered eating',
+    (t) => expect(screenMessageForRiskSignals(t)).toBe('disordered_eating'),
+  );
+  it.each([
+    "I don't want to be late for class",
+    'I want to end the week strong',
+    'Give me a plan to wake up early',
+    'I do not want to go on a run today',
+    'what is a good protein snack',
+  ])('does not flag %j', (t) => expect(screenMessageForRiskSignals(t)).toBeNull());
+});

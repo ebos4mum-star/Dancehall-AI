@@ -407,3 +407,27 @@ describe('week facts', () => {
     ).toBeNull();
   });
 });
+
+describe('minor detection is about a stated age, not any number after "I am"', () => {
+  it.each([
+    "I'm 16",
+    'I am 15 years old',
+    'im 17yo',
+    "I'm sixteen",
+    "I'm 14 and want to lose weight",
+    'I am only 13.',
+    "I'm 15 can you plan my diet",
+  ])('treats %j as a minor', (t) => expect(screenCoachInput(t).kind).toBe('minor'));
+  it.each([
+    "I'm 5 minutes from the gym",
+    'I am 12 weeks pregnant',
+    "I'm 10 days into a plan",
+    "I'm 7 months postpartum",
+    "I'm 12 reps in",
+    "I'm 5 kg down",
+    "I'm 6 foot 2",
+    'I am 8 stone',
+    "I'm 45",
+    'I am 30 minutes into my run',
+  ])('does not call %j a minor', (t) => expect(screenCoachInput(t).kind).toBe('ok'));
+});

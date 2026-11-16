@@ -221,10 +221,13 @@ export function evaluateReadiness(
 export type RiskSignalCategory = 'self_harm' | 'disordered_eating';
 
 const RISK_PATTERNS: ReadonlyArray<{ category: RiskSignalCategory; re: RegExp }> = [
-  { category: 'self_harm', re: /\b(kill myself|end my life|want to die|hurt myself|suicid)/i },
+  {
+    category: 'self_harm',
+    re: /\b(kill myself|end my life|want to die|hurt myself|suicid|self[- ]?harm|cut myself|take my own life|end it all|no reason to (live|go on)|wish i (was|were) dead|better off (dead|without me)|(don'?t|do not) want to (be here|live|wake up)|(don'?t|do not) want to go on(\s*$|\s*[.,;!?]|\s+(anymore|any more)))/i,
+  },
   {
     category: 'disordered_eating',
-    re: /\b(starv(e|ing) myself|purg(e|ing)|make myself (throw up|vomit)|haven'?t eaten (in|for) (days|\d+ days)|eat nothing|laxatives to lose)/i,
+    re: /\b(starv(e|ing) myself|thinspo|pro[- ]?(ana|mia)\b|purg(e|ing)|make myself (throw up|vomit)|haven'?t eaten (in|for) (days|\d+ days)|eat nothing|laxatives to lose)/i,
   },
 ];
 

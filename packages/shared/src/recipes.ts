@@ -414,7 +414,8 @@ export function recipeItems(
   portions = 1,
   opts: { withOptional?: boolean } = {},
 ): FoodItemValues[] {
-  const k = portions / Math.max(1, recipe.servings);
+  const k =
+    (Number.isFinite(portions) && portions > 0 ? portions : 1) / Math.max(1, recipe.servings);
   return recipe.ingredients
     .filter((i) => !i.optional || opts.withOptional)
     .map((i) => itemFromFood(food(i.foodId), round5(i.grams * k), { confidence: 'medium' }));
@@ -677,8 +678,8 @@ export function planWeekFromRecipes(args: {
   seed?: number;
   recipes?: readonly Recipe[];
 }): RecipePlan {
-  const target = Math.max(args.targetKcal, args.floorKcal);
-  const n = Math.max(1, Math.min(14, args.days ?? 7));
+  const target = Math.max(Number.isFinite(args.targetKcal) ? args.targetKcal : 0, args.floorKcal);
+  const n = Math.max(1, Math.min(14, Number.isFinite(args.days ?? 7) ? (args.days ?? 7) : 7));
   const regions = new Set(args.regions ?? []);
   const pool = (args.recipes ?? RECIPES).filter((x) => {
     const tags = dietTags(x);

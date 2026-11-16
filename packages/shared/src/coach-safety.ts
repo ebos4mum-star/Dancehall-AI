@@ -20,7 +20,16 @@ const LOW_KCAL_REQUEST =
   /\b(?:eat|have|consume|live on|diet of|plan(?: for)?)\s+(?:only\s+|just\s+)?(?:under\s+|below\s+|less than\s+)?(\d{3,4})\s*(?:kcal|calories|cals)\b/i;
 const MEDICAL =
   /\b(?:chest pain|chest pressure|can'?t breathe|trouble breathing|fainted|passed out|severe pain|coughing blood|blood in (?:my )?(?:stool|urine)|heart attack|stroke)\b/i;
-const MINOR = /\b(?:i am|i'm|im)\s+(?:only\s+)?(1[0-7]|[0-9])\b(?:\s*(?:years?|yrs?|y\/?o)\b)?/i;
+// A stated age under 18: "I'm 16", "I am 15 years old", "im 17yo", "I'm 15 can you plan my diet", "I'm sixteen". A number followed by a unit is not an age
+// ("I'm 12 weeks pregnant", "I'm 5 kg down", "I'm 6 foot 2", "I'm 12 reps in") and must not tell an adult they are a child.
+const AGE_WORDS =
+  'one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen';
+const NOT_AN_AGE =
+  'seconds?|minutes?|mins?|hours?|hrs?|days?|nights?|weeks?|wks?|months?|kgs?|kilos?|kilograms?|lbs?|pounds?|stones?|st|foot|feet|ft|inch(?:es)?|cm|m|metres?|meters?|reps?|sets?|miles?|kms?|steps?|percent|times?|cups?|glasses|litres?|liters?|kcal|calories|cals';
+const MINOR = new RegExp(
+  String.raw`\b(?:i am|i'm|im)\s+(?:only\s+|just\s+)?(?:(?:1[0-7]|[0-9])|(?:${AGE_WORDS}))(?:\s*(?:years?|yrs?|y\/?o)\b|\s*[.,;!?]|\s*$|\s+(?!(?:${NOT_AN_AGE})\b)[a-z])`,
+  'i',
+);
 
 /** Classifies what a person typed BEFORE any billable call. Anything other than `ok` gets a safe, fixed response and costs nothing. */
 export function screenCoachInput(text: string): CoachInputScreen {
