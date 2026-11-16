@@ -56,7 +56,8 @@ const as = (n) => (route, body) => call(route, body, tokens[n]);
 const code = (r) => r.j?.code;
 const ov = async (n) => (await as(n)('overview')).j.overview;
 
-for (const n of Object.keys(users)) tokens[n] = await signIn(n);
+for (const n of Object.keys(users))
+  tokens[n] = phase === 'after-delete' && n === 'kwame' ? 'deleted' : await signIn(n);
 if (Object.values(tokens).some((t) => !t)) {
   console.log('Could not sign in a synthetic account.');
   process.exit(2);
@@ -532,8 +533,9 @@ if (phase === 'main') {
     'R2 request spam is limited',
     ask.some((r) => r.status === 429) && ask.every((r) => r.status === 404 || r.status === 429),
   );
+  // efua is not kofi's friend: a body that names other accounts must change nothing, and ama's friendship with kofi must survive.
   const spoof = await as('efua')('friend/remove', {
-    username: 'ama_dances',
+    username: 'kofi_moves',
     user: users.ama.id,
     p_user: users.kofi.id,
     actor: users.kofi.id,
@@ -579,25 +581,34 @@ if (phase === 'main') {
 }
 
 if (phase === 'after-delete') {
-  const k = await as('kofi')('overview');
+  // kwame requested deletion in the main phase; the server-side executor has since removed the account.
+  const a = await as('ama')('overview');
   record(
-    "A1 after ama's account was deleted her friendship is gone",
-    k.status === 200 && !k.j.overview.friends.includes('ama_dances'),
+    "A1 after kwame's account was deleted the friendship is gone",
+    a.status === 200 && !a.j.overview.friends.includes('kwame_flow'),
   );
   record(
-    'A2 she is gone from every group',
-    k.j.overview.groups.every(
+    'A2 kwame is gone from the family goal and its totals',
+    a.j.overview.groups.every(
       (x) =>
-        !x.members.includes('ama_dances') && x.byMember.every((m) => m.username !== 'ama_dances'),
+        !x.members.includes('kwame_flow') && x.byMember.every((m) => m.username !== 'kwame_flow'),
     ),
   );
   record(
-    'A3 nobody can still view her',
-    code(await as('kofi')('friend/view', { username: 'ama_dances' })) === 'not_friends',
+    'A3 nobody can still view kwame',
+    code(await as('ama')('friend/view', { username: 'kwame_flow' })) === 'not_friends',
   );
   record(
-    'A4 her name cannot be found',
-    code(await as('efua')('friend/request', { username: 'ama_dances' })) === 'not_found',
+    'A4 the name cannot be found',
+    code(await as('efua')('friend/request', { username: 'kwame_flow' })) === 'not_found',
+  );
+  record(
+    'A5 the deleted account cannot sign in',
+    (
+      await http('/auth/v1/token?grant_type=password', {
+        body: { email: users.kwame.email, password: users.kwame.password },
+      })
+    ).status >= 400,
   );
 }
 const failed = results.filter((x) => !x).length;
