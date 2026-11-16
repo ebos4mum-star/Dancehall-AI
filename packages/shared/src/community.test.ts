@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  MODERATION_TARGETS,
   COMMUNITY_LIMITS,
   GUEST,
   PRIVATE_BY_DEFAULT,
@@ -467,5 +468,18 @@ describe('shared cases: the TypeScript rules and the database proposal must agre
   });
   it('usernames are accepted or refused exactly as recorded', () => {
     for (const c of doc.usernames) expect(validateUsername(c.name).ok, c.name).toBe(c.ok);
+  });
+});
+
+describe('moderation targets', () => {
+  it('match the database backlog function', async () => {
+    const { readFileSync } = await import('node:fs');
+    const sql = readFileSync(
+      new URL('../../../supabase/proposed/community.up.sql', import.meta.url),
+      'utf8',
+    );
+    expect(sql).toContain(
+      `urgent_target numeric := ${MODERATION_TARGETS.urgentHours}; normal_target numeric := ${MODERATION_TARGETS.normalHours};`,
+    );
   });
 });
