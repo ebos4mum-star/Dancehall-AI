@@ -181,42 +181,45 @@ export function generateDailyPlan(i: DailyPlanInput): {
       why: 'Easy days and rest days help movement stay enjoyable. Nothing is lost by resting.',
     });
 
-  // Food
-  if (i.mode === 'busy')
-    items.push({
-      kind: 'meal',
-      title: 'Log one meal today',
-      detail: 'One entry is plenty on a busy day.',
-      why: 'Keeping logging light on busy days makes it easier to keep up.',
-    });
-  else if (i.mode === 'travel')
-    items.push({
-      kind: 'meal',
-      title: 'Eating out? Enjoy it and check portions',
-      detail: 'Swap ideas can show comparable options if you want them.',
-      why: 'Travel changes routine; flexible is fine.',
-    });
-  else if (i.mode === 'comeback')
-    items.push({
-      kind: 'meal',
-      title: 'Eat regular meals',
-      detail: 'No need to make up for anything.',
-      why: 'Steady meals support gentle movement.',
-    });
-  else if (i.mealsLoggedToday === 0 && i.localHour >= 11)
-    items.push({
-      kind: 'meal',
-      title: 'Log what you have eaten so far',
-      detail: 'A photo or a quick search is enough.',
-      why: 'No meals are logged yet today.',
-    });
-  else
-    items.push({
-      kind: 'meal',
-      title: 'Aim for protein, veg and carbs at your next meal',
-      detail: 'A guide, not a rule.',
-      why: ['A balanced plate is a gentle default.', i.bias?.mealWhy].filter(Boolean).join(' '),
-    });
+  // Food. With an eating concern the plan offers NO food prompts at all (no logging nudge, no portion or "regular meals" advice, no plate guide): the person
+  // can still open every food feature themselves, but nothing here points them at it. Everything else in the plan is unchanged.
+  if (!i.wellness?.eatingConcern) {
+    if (i.mode === 'busy')
+      items.push({
+        kind: 'meal',
+        title: 'Log one meal today',
+        detail: 'One entry is plenty on a busy day.',
+        why: 'Keeping logging light on busy days makes it easier to keep up.',
+      });
+    else if (i.mode === 'travel')
+      items.push({
+        kind: 'meal',
+        title: 'Eating out? Enjoy it and check portions',
+        detail: 'Swap ideas can show comparable options if you want them.',
+        why: 'Travel changes routine; flexible is fine.',
+      });
+    else if (i.mode === 'comeback')
+      items.push({
+        kind: 'meal',
+        title: 'Eat regular meals',
+        detail: 'No need to make up for anything.',
+        why: 'Steady meals support gentle movement.',
+      });
+    else if (i.mealsLoggedToday === 0 && i.localHour >= 11)
+      items.push({
+        kind: 'meal',
+        title: 'Log what you have eaten so far',
+        detail: 'A photo or a quick search is enough.',
+        why: 'No meals are logged yet today.',
+      });
+    else
+      items.push({
+        kind: 'meal',
+        title: 'Aim for protein, veg and carbs at your next meal',
+        detail: 'A guide, not a rule.',
+        why: ['A balanced plate is a gentle default.', i.bias?.mealWhy].filter(Boolean).join(' '),
+      });
+  }
 
   // Habits
   const nHabits = i.mode === 'normal' ? 2 : 1;
