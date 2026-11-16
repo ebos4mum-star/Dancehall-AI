@@ -12,6 +12,14 @@ end $$;
 grant usage on schema test to service_role;
 grant execute on function test.upload(uuid, text, text, bigint, numeric) to service_role;
 
+-- 0. The one door.
+do $$ begin
+  perform test.as_admin();
+  perform test.assert(not has_function_privilege('anon', 'public.community_rpc(text, jsonb)', 'execute') and not has_function_privilege('authenticated', 'public.community_rpc(text, jsonb)', 'execute'), 'clients cannot use the community door');
+  perform test.assert(has_function_privilege('service_role', 'public.community_rpc(text, jsonb)', 'execute'), 'the server can');
+  perform test.assert(not (select prosecdef from pg_proc where oid = 'public.community_rpc(text, jsonb)'::regprocedure), 'the door runs as its caller, not as its owner');
+end $$;
+
 -- 1. Structure and privileges.
 do $$
 declare t text; f record;
@@ -35,7 +43,7 @@ begin
     if f.prosecdef then perform test.assert(f.proconfig is not null and 'search_path=""' = any (f.proconfig), 'app.' || f.proname || ' pins an empty search_path'); end if;
   end loop;
   -- Nothing exposed in public: no community function lives there.
-  perform test.assert(not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname like 'community%'), 'no community function in the exposed schema');
+  perform test.assert(not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname like 'community%' and p.proname <> 'community_rpc'), 'the only community function in the exposed schema is the service-role door');
 end $$;
 
 -- 2. Signed-in and anonymous clients really are refused.
@@ -358,4 +366,24 @@ begin
   perform set_config('role', 'service_role', false);
   perform test.assert(exists (select 1 from public.community_posts where id = q), 'other members are untouched');
   perform test.assert(app.community_claim_username(a, 'leaver_two') = 'leaver_two', 'they can come back with a new name');
+end $$;
+
+-- 11. The door: allow-list, typed arguments, shapes.
+do $$
+declare a uuid; r jsonb; b uuid;
+begin
+  perform test.as_admin(); a := test.make_user('c-door-a@example.test'); b := test.make_user('c-door-b@example.test'); perform set_config('role', 'service_role', false);
+  perform test.throws($q$select public.community_rpc('community_audit', '{}'::jsonb)$q$, 'not_found');
+  perform test.throws($q$select public.community_rpc('community_screen', '{"p_text":"x","p_max":5}'::jsonb)$q$, 'not_found');
+  perform test.throws($q$select public.community_rpc('pg_sleep', '{}'::jsonb)$q$, 'not_found');
+  perform test.throws($q$select public.community_rpc('community_feed; drop table x', '{}'::jsonb)$q$, 'not_found');
+  perform test.throws($q$select public.community_rpc('community_feed', '[]'::jsonb)$q$, 'invalid_input');
+  perform test.assert(public.community_rpc('community_claim_username', jsonb_build_object('p_user', a, 'p_name', 'door_tester')) = '"door_tester"'::jsonb, 'a scalar comes back as JSON');
+  r := public.community_rpc('community_create_post', jsonb_build_object('p_user', a, 'p_type', 'text', 'p_body', 'via the door', 'p_milestone', null, 'p_media', null, 'p_confirmed', true));
+  perform test.assert(r ->> 'status' = 'published', 'jsonb results pass through');
+  r := public.community_rpc('community_feed', jsonb_build_object('p_viewer', null, 'p_cursor_at', null, 'p_cursor_id', null, 'p_limit', 5));
+  perform test.assert(jsonb_typeof(r) = 'array' and r -> 0 ->> 'author' is not null, 'table results come back as an array of rows');
+  perform test.assert(public.community_rpc('community_burst', '{"p_key":"k","p_bucket":"b","p_max":1,"p_seconds":60}'::jsonb) = 'true'::jsonb, 'booleans work');
+  perform test.assert(public.community_rpc('community_burst', '{"p_key":"k","p_bucket":"b","p_max":1,"p_seconds":60}'::jsonb) = 'false'::jsonb, 'and refuse over the limit');
+  perform test.throws(format($q$select public.community_rpc('community_block', jsonb_build_object('p_user', %L::uuid, 'p_username', 'nobody_here_x'))$q$, a), 'not_found');
 end $$;

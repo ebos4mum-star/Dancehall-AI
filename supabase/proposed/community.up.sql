@@ -652,6 +652,43 @@ begin
   return paths;
 end $$;
 
+-- ========== The one door the server uses ==========
+-- The `app` schema is deliberately not exposed over the API. The Edge Function calls this single function instead; it only runs the named functions below,
+-- with named arguments cast to their declared types. Not security definer: it runs as the caller (service_role), which alone may execute it.
+create or replace function public.community_rpc(fn text, args jsonb default '{}'::jsonb) returns jsonb language plpgsql set search_path = '' as $$
+declare
+  allowed text[] := array['community_feed', 'community_comments', 'community_profile', 'community_claim_username', 'community_change_username', 'community_issue_upload', 'community_upload_ticket',
+    'community_verify_upload', 'community_reject_upload', 'community_create_post', 'community_delete_post', 'community_add_comment', 'community_delete_comment', 'community_set_encourage',
+    'community_report', 'community_block', 'community_unblock', 'community_blocked', 'community_leave', 'community_moderation_queue', 'community_moderate', 'community_restrict',
+    'community_backlog', 'community_burst', 'community_prune', 'community_user_media'];
+  f record; call_args text := ''; i int; k text; t text; result jsonb;
+begin
+  if fn is null or not (fn = any (allowed)) then raise exception 'not_found'; end if;
+  if args is null or jsonb_typeof(args) <> 'object' then raise exception 'invalid_input'; end if;
+  select p.oid, p.proname, p.proargnames, string_to_array(p.proargtypes::text, ' ')::oid[] as types, p.proretset, p.prorettype into f
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'app' and p.proname = fn;
+  if not found then raise exception 'not_found'; end if;
+  for i in 1 .. coalesce(array_length(f.types, 1), 0) loop
+    k := f.proargnames[i];
+    if args ? k then
+      t := format_type(f.types[i], null);
+      call_args := call_args || case when call_args = '' then '' else ', ' end || format('%I := %s', k,
+        case when t = 'jsonb' then format('nullif(%L::jsonb -> %L, ''null''::jsonb)', args::text, k) else format('(%L::jsonb ->> %L)::%s', args::text, k, t) end);
+    end if;
+  end loop;
+  if f.proretset then
+    execute format('select coalesce(jsonb_agg(to_jsonb(x)), ''[]''::jsonb) from app.%I(%s) x', fn, call_args) into result;
+  elsif f.prorettype = 'void'::regtype then
+    execute format('select app.%I(%s)', fn, call_args);
+    result := null;
+  else
+    execute format('select to_jsonb(app.%I(%s))', fn, call_args) into result;
+  end if;
+  return result;
+end $$;
+revoke all on function public.community_rpc(text, jsonb) from public, anon, authenticated;
+grant execute on function public.community_rpc(text, jsonb) to service_role;
+
 -- ========== Privileges: the server (service role) only ==========
 do $$ declare f record; begin
   for f in select p.oid::regprocedure as sig from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'app' and p.proname like 'community\_%' loop
