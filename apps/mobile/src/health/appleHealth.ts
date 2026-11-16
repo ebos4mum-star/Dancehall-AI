@@ -7,7 +7,9 @@ import { prettyActivity } from './activityName';
  * it cannot be exercised on Linux, the web or Expo Go: there it reports 'unavailable'. It requests READ access to workouts only (never write, never calories, heart
  * rate or routes) and returns only a workout's id, type, start and end.
  */
-type Lib = typeof import('@kingstinct/react-native-healthkit');
+import type * as HealthKit from '@kingstinct/react-native-healthkit';
+
+type Lib = typeof HealthKit;
 
 const loadLib = async (): Promise<Lib | null> => {
   if (Platform.OS !== 'ios') return null;

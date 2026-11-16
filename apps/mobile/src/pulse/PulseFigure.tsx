@@ -9,6 +9,7 @@ import Svg, {
   RadialGradient,
   Stop,
 } from 'react-native-svg';
+import { usePulseCosmetics } from './cosmetics';
 import { brand } from '@/theme/tokens';
 import type { PulseState } from './machine';
 
@@ -52,6 +53,7 @@ export function PulseFigure({
 }) {
   // SVG ids are document-global: every instance needs its own, or hidden tabs' gradients shadow the visible figure.
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
+  const worn = new Set(usePulseCosmetics());
   const pose = state === 'dance' && beat === 1 ? DANCE_ALT : POSES[state];
   const celebrate = state === 'celebrate';
   const encourage = state === 'encourage';
@@ -110,6 +112,9 @@ export function PulseFigure({
           <Ellipse cx="100" cy="120" rx="92" ry="112" fill={brand.coral} opacity={0.1} />
           <Ellipse cx="100" cy="120" rx="76" ry="96" fill={brand.coral} opacity={0.14} />
         </>
+      ) : null}
+      {worn.has('cosmetic_cape') ? (
+        <Path d="M56 112 Q100 236 144 112 Q100 150 56 112 Z" fill={brand.coral} opacity={0.9} />
       ) : null}
       <Path d={BODY} fill={`url(#${uid}-body)`} />
       <Path d={BODY} fill={`url(#${uid}-shade)`} />
@@ -189,6 +194,69 @@ export function PulseFigure({
         strokeLinejoin="round"
         fill="none"
       />
+      {/* cosmetics: drawn last, purely decorative */}
+      {worn.has('cosmetic_headband') ? (
+        <Path
+          d="M62 52 Q100 36 138 52"
+          stroke={brand.lime}
+          strokeWidth={7}
+          strokeLinecap="round"
+          fill="none"
+        />
+      ) : null}
+      {worn.has('cosmetic_beanie') ? (
+        <>
+          <Path d="M64 54 Q100 -2 136 54 Z" fill={brand.coral} />
+          <Path d="M62 54 H138" stroke={brand.ivory} strokeWidth={7} strokeLinecap="round" />
+          <Circle cx="100" cy="14" r="7" fill={brand.ivory} />
+        </>
+      ) : null}
+      {worn.has('cosmetic_flower') ? (
+        <>
+          <Circle cx="138" cy="44" r="6" fill={brand.coral} />
+          <Circle cx="146" cy="40" r="6" fill={brand.coral} />
+          <Circle cx="144" cy="50" r="6" fill={brand.coral} />
+          <Circle cx="142" cy="44" r="4" fill={brand.lime} />
+        </>
+      ) : null}
+      {worn.has('cosmetic_sunglasses') ? (
+        <>
+          <Path
+            d="M68 74 H132 V92 Q132 98 124 98 H108 Q100 98 100 90 Q100 98 92 98 H76 Q68 98 68 92 Z"
+            fill={brand.plum}
+            opacity={0.92}
+          />
+          <Path
+            d="M72 78 L84 78"
+            stroke={brand.ivory}
+            strokeWidth={2}
+            strokeLinecap="round"
+            opacity={0.6}
+          />
+        </>
+      ) : null}
+      {worn.has('cosmetic_scarf') ? (
+        <>
+          <Path
+            d="M58 150 Q100 170 142 150"
+            stroke={brand.coral}
+            strokeWidth={10}
+            strokeLinecap="round"
+            fill="none"
+          />
+          <Path d="M124 156 L130 184" stroke={brand.coral} strokeWidth={9} strokeLinecap="round" />
+        </>
+      ) : null}
+      {worn.has('cosmetic_wristbands') ? (
+        <>
+          <G transform={`translate(48 116) rotate(${pose.l})`}>
+            <Path d="M-8 70 H8" stroke={brand.lime} strokeWidth={6} strokeLinecap="round" />
+          </G>
+          <G transform={`translate(152 116) rotate(${pose.r})`}>
+            <Path d="M-8 70 H8" stroke={brand.lime} strokeWidth={6} strokeLinecap="round" />
+          </G>
+        </>
+      ) : null}
     </Svg>
   );
 }

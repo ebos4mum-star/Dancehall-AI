@@ -1,3 +1,4 @@
+import type { GmState } from '@dancehall/shared';
 import type {
   CommunityFail,
   ActivityWeek,
@@ -292,6 +293,26 @@ export interface DataStore {
   socialRespondGroup?(id: string, accept: boolean): Promise<SocialAck>;
   socialLeaveGroup?(id: string): Promise<SocialAck>;
   socialSyncGroup?(id: string): Promise<SocialAck>;
+
+  // Gamification (optional). The server runs the shared engine over the person's own records and records XP in a ledger; the app only sends preferences.
+  /** Records and returns the person's progression. `null` when the server is not available (the app then shows what it computes from the same records). */
+  gmSync?(prefs: {
+    targetDaysPerWeek: number;
+    restWeekdays: number[];
+  }): Promise<GmServerState | null>;
+  /** Weekly league among opted-in friends: a username and one number each. Empty until the person (and a friend) opts in. */
+  gmLeague?(): Promise<GmLeagueRow[]>;
+  gmSetLeague?(on: boolean): Promise<SocialAck>;
+
+  // Gamification (optional). The server runs the shared engine over the person's own records and records XP in a ledger; the app only sends preferences.
+  /** Records and returns the person's progression. `null` when the server is not available (the app then shows what it computes from the same records). */
+  gmSync?(prefs: {
+    targetDaysPerWeek: number;
+    restWeekdays: number[];
+  }): Promise<GmServerState | null>;
+  /** Weekly league among opted-in friends: a username and one number each. Empty until the person (and a friend) opts in. */
+  gmLeague?(): Promise<GmLeagueRow[]>;
+  gmSetLeague?(on: boolean): Promise<SocialAck>;
 
   // Wellness (optional logs and preferences). Optional: not every adapter provides them.
   /** Entries on or after `sinceDay` (YYYY-MM-DD), newest first. */
@@ -652,4 +673,19 @@ export interface SocialOverview {
   outgoing: string[];
   blocked: string[];
   groups: GroupView[];
+}
+
+/** What the server returns after recording progression (all of it is derived from the person's own records by the shared engine). */
+export type GmServerState = Pick<
+  GmState,
+  'level' | 'streak' | 'restNudge' | 'dailyQuests' | 'weeklyQuests' | 'badges' | 'cosmetics'
+> & {
+  totalXp: number;
+  weekXp: number;
+  seasonal: { id: string; activeDays: number; goalDays: number; done: boolean };
+};
+export interface GmLeagueRow {
+  username: string;
+  weekXp: number;
+  isMe: boolean;
 }

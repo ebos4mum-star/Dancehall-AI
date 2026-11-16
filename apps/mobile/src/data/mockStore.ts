@@ -53,6 +53,9 @@ import {
   resolvePathways,
   recentActiveDayCount,
   localDateKey,
+  computeGamification,
+  normalizePrefs,
+  leagueStandings,
   monthlyAllowance,
   proposeGoal,
   summarizeWeights,
@@ -143,6 +146,8 @@ interface State {
   challenges: FitChallenge[];
   habits: Array<Habit & { archivedAt: string | null }>;
   habitCheckins: HabitCheckin[];
+  /** Development mock of the server's league opt-in (the real one lives in the database). */
+  gm?: { leagueOptIn: boolean };
   wellness?: Array<WellnessEntry & { clientKey: string | null }>;
   wellnessPrefs?: unknown;
   /** Celebrations already handled (first write wins), mirroring the `celebrations` table. */
@@ -485,6 +490,76 @@ export class MockStore implements DataStore {
   }
   async socialClaimUsername(username: string) {
     return await this.communityClaimUsername(username);
+  }
+  // ---- gamification (development mock: runs the same shared engine the server runs, over this account's own records) ----
+  private gmInput(prefs: { targetDaysPerWeek: number; restWeekdays: number[] }) {
+    const s = this.state;
+    const tz = s.profile.timeZone;
+    return {
+      today: localDateKey(this.now(), tz),
+      timeZone: tz,
+      sessions: s.sessions.map((x) => ({
+        id: x.id,
+        status: x.status,
+        completedAt: x.completedAt,
+        durationS: x.durationS,
+        minutes: x.minutes,
+        source: x.source,
+        style: x.style,
+        lowImpact: x.lowImpact,
+      })),
+      mealLogDays: [...new Set(s.foodLogs.map((l) => localDateKey(l.loggedAt, tz)))],
+      habitDays: (s.habitCheckins ?? []).map((c) => ({ day: c.day, habitId: c.habitId })),
+      activeHabitCount: s.habits.filter((h) => !h.archivedAt).length,
+      prefs: normalizePrefs({ ...prefs, enabled: true }),
+    };
+  }
+  async gmSync(prefs: { targetDaysPerWeek: number; restWeekdays: number[] }) {
+    await this.authed();
+    const g = computeGamification(this.gmInput(prefs));
+    return {
+      totalXp: g.totalXp,
+      weekXp: g.weekXp,
+      level: g.level,
+      streak: g.streak,
+      restNudge: g.restNudge,
+      dailyQuests: g.dailyQuests,
+      weeklyQuests: g.weeklyQuests,
+      badges: g.badges,
+      cosmetics: g.cosmetics,
+      seasonal: {
+        id: g.seasonal.season.id,
+        activeDays: g.seasonal.activeDays,
+        goalDays: g.seasonal.season.goalDays,
+        done: g.seasonal.done,
+      },
+    };
+  }
+  async gmSetLeague(on: boolean) {
+    const { myName } = await this.socialEngine();
+    if (!myName) return { ok: false as const, code: 'needs_username' as const };
+    this.state.gm = { leagueOptIn: on };
+    await this.commit();
+    return { ok: true as const };
+  }
+  async gmLeague() {
+    const { social, me, myName } = await this.socialEngine();
+    if (!this.state.gm?.leagueOptIn || !myName) return [];
+    const mine = (await this.gmSync({ targetDaysPerWeek: 3, restWeekdays: [0] })).weekXp;
+    // Sample friends are synthetic: a steady, modest number derived from the name, so the screen can be tried alone.
+    const synthetic = (name: string) =>
+      [...name].reduce((n, c) => (n * 31 + c.charCodeAt(0)) % 90, 7) + 10;
+    const rows = [
+      { username: myName, weekXp: mine, isMe: true },
+      ...social
+        .lists(me)
+        .friends.map((f: string) => ({ username: f, weekXp: synthetic(f), isMe: false })),
+    ];
+    return leagueStandings(rows).map(({ username, weekXp, isMe }) => ({
+      username,
+      weekXp,
+      isMe: isMe === true,
+    }));
   }
   async socialRevokeAll() {
     const { social, me } = await this.socialEngine();

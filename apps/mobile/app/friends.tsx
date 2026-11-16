@@ -1,4 +1,5 @@
 import { withAccount } from '@/account/gate';
+import { GroupCoopNote, LeagueCard } from '@/gamification/ui';
 import { useState } from 'react';
 import { Pressable, Switch, View } from 'react-native';
 import { MIN_TOUCH_TARGET } from '@/theme/tokens';
@@ -302,9 +303,12 @@ function Friends() {
             </DepthCard>
           ))}
 
+          <LeagueCard />
+
           <AppText variant="heading" accessibilityRole="header">
             {t('social.groups')}
           </AppText>
+          <GroupCoopNote />
           {data.groups.map((g) => (
             <DepthCard key={g.id}>
               <AppText variant="heading">{g.title}</AppText>

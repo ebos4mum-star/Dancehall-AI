@@ -1,4 +1,6 @@
 import { useAccount } from '@/account/AccountProvider';
+import { GmSettingsCard } from '@/gamification/ui';
+import { HealthSettingsCard } from '@/health/ui';
 import { withAccount } from '@/account/gate';
 import { Linking, Share, View } from 'react-native';
 import { IconChoice, type IconName } from '@/ui/kit';
@@ -111,6 +113,9 @@ function Privacy() {
       />
       {error ? <Notice tone="warning">{`${error} ${t('privacy.loadFailed')}`}</Notice> : null}
       {msg ? <Notice tone="warning">{msg}</Notice> : null}
+
+      <GmSettingsCard />
+      <HealthSettingsCard />
 
       <AppText variant="heading" accessibilityRole="header">
         {t('privacy.profileTitle')}

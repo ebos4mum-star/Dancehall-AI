@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { DataStore, SocialAck, SocialOverview } from './types';
+import type { DataStore, GmLeagueRow, GmServerState, SocialAck, SocialOverview } from './types';
 
 /**
  * Friends and Group Goals over the `social` Edge Function. The app never reads or writes a social table: every call is a POST to the function, which verifies the
@@ -108,6 +108,24 @@ export function createSocialAdapter(d: SocialAdapterDeps): Partial<DataStore> {
     async socialSharesWith(username: string) {
       const r = await call('share/get', named(username));
       return r.ok && Array.isArray(r.shares) ? (r.shares as string[]) : [];
+    },
+    async gmSync(prefs) {
+      const r = await call('gm/sync', { prefs });
+      if (!r.ok) return null;
+      const { ok: _ok, ...rest } = r as Record<string, unknown>;
+      return rest as unknown as GmServerState;
+    },
+    async gmLeague() {
+      const r = await call('gm/league');
+      if (!r.ok || !Array.isArray(r.league)) return [];
+      return (r.league as GmLeagueRow[]).map((x) => ({
+        username: String(x.username),
+        weekXp: Number(x.weekXp) || 0,
+        isMe: x.isMe === true,
+      }));
+    },
+    async gmSetLeague(on: boolean) {
+      return ack(await call('gm/league/optin', { on }));
     },
     async socialRevokeAll() {
       return ack(await call('share/revoke-all'));
