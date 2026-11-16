@@ -74,7 +74,7 @@ begin
   perform test.throws(format($q$select app.social_set_share(%L, 'kofi_social', 'food_diary', true)$q$, a), 'invalid_category');
   perform test.throws(format($q$select app.social_set_share(%L, 'kofi_social', 'weight', true)$q$, a), 'invalid_category');
   perform test.throws(format($q$select app.social_set_share(%L, 'esi_social', 'activity_summary', true)$q$, a), 'not_friends');
-  insert into public.workout_sessions (user_id, title, minutes, status, completed_at, duration_s) values (a, 'Dancehall Basics', 30, 'completed', now() - interval '1 day', 1800);
+  insert into public.workout_sessions (user_id, title, minutes, status, completed_at, duration_s) values (a, 'Dancehall Basics', 30, 'completed', now() - interval '1 day', 1800), (a, 'Dancehall Basics', 30, 'completed', now() - interval '1 day' + interval '4 minutes', 1800);   -- the second is a repeat of the first and counts once
   insert into public.weight_entries (user_id, weight_kg) values (a, 70) on conflict do nothing;
   perform test.assert(app.social_view_friend(b, 'ama_social') -> 'activity' = 'null'::jsonb, 'nothing is visible until the owner turns it on');
   perform app.social_set_share(a, 'kofi_social', 'activity_summary', true);
