@@ -153,68 +153,68 @@
     {
       "text": "I lost 10 kg in a month",
       "max": 500,
-      "decision": "hold",
+      "decision": "block",
       "flags": ["weight_claim"]
     },
     {
       "text": "dropped 3 dress sizes",
       "max": 500,
-      "decision": "hold",
-      "flags": ["weight_claim"]
+      "decision": "allow",
+      "flags": []
     },
     {
       "text": "I lost 5 kg",
       "max": 500,
-      "decision": "hold",
-      "flags": ["weight_claim"]
+      "decision": "allow",
+      "flags": []
     },
     {
       "text": "shed 12 lbs fast",
       "max": 500,
-      "decision": "hold",
-      "flags": ["weight_claim"]
+      "decision": "allow",
+      "flags": []
     },
     {
       "text": "I now weigh 62 kg",
       "max": 500,
-      "decision": "hold",
-      "flags": ["health_numbers"]
+      "decision": "allow",
+      "flags": []
     },
     {
       "text": "my weight is 80",
       "max": 500,
-      "decision": "hold",
-      "flags": ["health_numbers"]
+      "decision": "allow",
+      "flags": []
     },
     {
       "text": "eating 1200 calories a day",
       "max": 500,
-      "decision": "hold",
-      "flags": ["health_numbers"]
+      "decision": "allow",
+      "flags": []
     },
     {
       "text": "this detox is a miracle",
       "max": 500,
-      "decision": "hold",
+      "decision": "block",
       "flags": ["health_claim"]
     },
     {
       "text": "semaglutide changed everything",
       "max": 500,
-      "decision": "hold",
+      "decision": "block",
       "flags": ["health_claim"]
     },
     {
       "text": "guaranteed results",
       "max": 500,
-      "decision": "hold",
+      "decision": "block",
       "flags": ["health_claim"]
     },
     {
       "text": "AMAZINGAMAZINGAMAZING",
       "max": 500,
-      "decision": "hold",
-      "flags": ["shouting"]
+      "decision": "allow",
+      "flags": []
     },
     {
       "text": "I am so happy with my progress",
@@ -251,6 +251,54 @@
       "max": 500,
       "decision": "block",
       "flags": ["email", "link", "phone"]
+    },
+    {
+      "text": "I lost 12 kg in 3 weeks",
+      "max": 500,
+      "decision": "block",
+      "flags": ["weight_claim"]
+    },
+    {
+      "text": "I lost 5 lbs in a week",
+      "max": 500,
+      "decision": "block",
+      "flags": ["weight_claim"]
+    },
+    {
+      "text": "Lost 2 kg in 4 weeks, feeling strong",
+      "max": 500,
+      "decision": "allow",
+      "flags": []
+    },
+    {
+      "text": "Lost 1 kg this month",
+      "max": 500,
+      "decision": "allow",
+      "flags": []
+    },
+    {
+      "text": "you're so fat",
+      "max": 500,
+      "decision": "block",
+      "flags": ["harassment"]
+    },
+    {
+      "text": "kys",
+      "max": 500,
+      "decision": "block",
+      "flags": ["harassment"]
+    },
+    {
+      "text": "Dance cardio today, burned about 300 calories",
+      "max": 500,
+      "decision": "allow",
+      "flags": []
+    },
+    {
+      "text": "I weigh 64 kg and I feel great",
+      "max": 500,
+      "decision": "allow",
+      "flags": []
     }
   ],
   "usernames": [

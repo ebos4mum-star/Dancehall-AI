@@ -134,8 +134,9 @@ begin
   perform test.assert(r ->> 'status' = 'published', 'a milestone publishes');
 
   -- risky text is held; photos publish at once (V1 decision, no staff pre-approval)
-  r := app.community_create_post(b, 'text', 'I lost 12 kg in 3 weeks', null, null, true);
-  perform test.assert(r ->> 'status' = 'held', 'a weight-loss claim is held for review');
+  perform test.throws(format($q$select app.community_create_post(%L, 'text', 'I lost 12 kg in 3 weeks', null, null, true)$q$, b), 'blocked'); -- a dangerous claim is rejected, never held
+  r := app.community_create_post(b, 'text', 'I lost 5 kg and I weigh 62 kg, eating 1800 calories', null, null, true);
+  perform test.assert(r ->> 'status' = 'published', 'ordinary weight and calorie talk publishes');
   -- uploads: only a file the server received and verified can be attached, once, and only by its owner
   perform test.throws(format($q$select app.community_create_post(%L, 'photo', 'x', null, '[{"kind":"photo","role":"single","path":"u/forged.jpg"}]'::jsonb, true)$q$, b), 'invalid_media');
   perform test.throws(format($q$select app.community_issue_upload(%L, 'photo', 'application/x-msdownload')$q$, b), 'invalid_media');
@@ -162,36 +163,35 @@ begin
 
   -- the feed: guests see published only; the author sees held; nothing identifies a person except the username
   select count(*) into n from app.community_feed(null, null, null, 30);
-  perform test.assert(n = 5, format('a guest sees the 5 published posts (got %s)', n));
+  perform test.assert(n = 6, format('a guest sees the 6 published posts (got %s)', n));
   select count(*) into n from app.community_feed(b, null, null, 30);
-  perform test.assert(n = 6, format('the author sees their own posts, held ones included (got %s)', n));
+  perform test.assert(n = 6, format('the author sees their own posts (got %s)', n));
   perform test.assert(not exists (select 1 from jsonb_each(to_jsonb((select f from app.community_feed(null, null, null, 1) f))) e where e.key ~* '(user|author_id|email)'), 'the feed row has no user id or email column');
   perform test.assert((select bool_and(author ~ '^[a-z][a-z0-9_]{2,19}$') from app.community_feed(null, null, null, 30)), 'authors are public usernames');
-  perform test.assert(not exists (select 1 from app.community_feed(null, null, null, 30) f where f.encouraged_count is not null), 'readers never get a count');
+  perform test.assert(not exists (select 1 from app.community_feed(null, null, null, 30) f where f.encouraged_count is null), 'every reader gets a like count (a number, never who)');
   perform test.assert((select bool_and(created_at <= prev) from (select created_at, lag(created_at) over (order by rn) as prev0, coalesce(lag(created_at) over (order by rn), 'infinity'::timestamptz) as prev from (select f.*, row_number() over () rn from app.community_feed(null, null, null, 30) f) x) y), 'the feed is newest first');
-  perform test.assert((select count(*) = 2 from app.community_feed(null, null, null, 2)) and (select count(*) = 3 from app.community_feed(null, (select created_at from app.community_feed(null, null, null, 2) offset 1), (select id from app.community_feed(null, null, null, 2) offset 1), 30)), 'the cursor pages without gaps');
+  perform test.assert((select count(*) = 2 from app.community_feed(null, null, null, 2)) and (select count(*) = 4 from app.community_feed(null, (select created_at from app.community_feed(null, null, null, 2) offset 1), (select id from app.community_feed(null, null, null, 2) offset 1), 30)), 'the cursor pages without gaps');
 
   -- comments
   r := app.community_add_comment(b, pa, 'Well done!');
   perform test.assert(r ->> 'status' = 'published', 'a kind comment publishes');
   perform test.throws(format($q$select app.community_add_comment(%L, %L, 'mail me a@b.com')$q$, b, pa), 'blocked');
-  r := app.community_add_comment(c, pa, 'I lost 9 kg with this');
-  perform test.assert(r ->> 'status' = 'hidden', 'a risky comment is hidden for review');
+  perform test.throws(format($q$select app.community_add_comment(%L, %L, 'I lost 9 kg in 2 weeks with this')$q$, c, pa), 'blocked');
   perform test.assert((select count(*) = 1 from app.community_comments(null, pa)), 'a guest sees only the published comment');
-  perform test.assert((select count(*) = 2 from app.community_comments(c, pa)), 'the commenter also sees their own hidden one');
   perform test.throws(format($q$select app.community_add_comment(%L, %L, 'hi')$q$, d, pa), 'needs_username');
   perform test.throws(format($q$select app.community_delete_comment(%L, (select id from public.community_comments where author_id = %L limit 1))$q$, c, b), 'not_found');
   perform app.community_delete_comment(a, (select id from public.community_comments where author_id = b limit 1)); -- the post's author may delete it
   perform test.assert((select count(*) = 0 from public.community_comments where author_id = b), 'the post author deleted the comment');
 
-  -- one Encourage: idempotent, not on your own post, a count only for the author
+  -- one Encourage: idempotent, not on your own post, a public count (a number, never who)
   perform test.assert(app.community_set_encourage(b, pa, true), 'encourage on');
   perform test.assert(app.community_set_encourage(b, pa, true), 'encourage is idempotent');
   perform test.assert((select count(*) = 1 from public.community_reactions where post_id = pa), 'one reaction row');
   perform test.throws(format($q$select app.community_set_encourage(%L, %L, true)$q$, a, pa), 'own_post');
   perform test.assert(app.community_set_encourage(d, pa, true), 'a member without a username may encourage');
   perform test.assert((select encouraged_count = 2 from app.community_feed(a, null, null, 30) where id = pa), 'the author sees how many');
-  perform test.assert((select encouraged_count is null from app.community_feed(b, null, null, 30) where id = pa), 'others do not');
+  perform test.assert((select encouraged_count = 2 from app.community_feed(b, null, null, 30) where id = pa), 'other members see the same public count');
+  perform test.assert((select encouraged_count = 2 from app.community_feed(null, null, null, 30) where id = pa), 'guests see it too');
   perform test.assert((select encouraged_by_me from app.community_feed(b, null, null, 30) where id = pa), 'a reader knows they encouraged');
 
   -- blocking: mutual and silent
@@ -226,11 +226,11 @@ begin
   perform test.throws(format($q$select app.community_restrict(%L, false, 'ama_dances', 'muted', 24, 'spam')$q$, m), 'forbidden');
   perform test.throws(format($q$select app.community_backlog(%L, true)$q$, a), 'forbidden');
   select count(*) into n from app.community_moderation_queue(m, true);
-  perform test.assert(n >= 4, format('the queue lists held and hidden items (got %s)', n));
+  perform test.assert(n >= 2, format('the queue lists reported and hidden items (got %s)', n));
   perform test.assert((select (q.flags && array['self_harm']) from app.community_moderation_queue(m, true) q limit 1), 'urgent items come first');
   perform test.assert(not exists (select 1 from jsonb_each(to_jsonb((select q from app.community_moderation_queue(m, true) q limit 1))) e where e.key ~* '(user|author_id|email|account)'), 'the queue shows no user id or email');
   -- backlog and urgency
-  perform test.assert((select (app.community_backlog(m, true) ->> 'urgent')::int >= 1 and (app.community_backlog(m, true) ->> 'open')::int >= 4), 'the backlog counts open and urgent items');
+  perform test.assert((select (app.community_backlog(m, true) ->> 'urgent')::int >= 1 and (app.community_backlog(m, true) ->> 'open')::int >= 2), 'the backlog counts open and urgent items');
   perform test.assert(not (app.community_backlog(m, true)::text ~* '(body|email|user_id)'), 'the backlog carries counts only');
   perform test.assert((select urgent and report_count >= 1 and 'self_harm' = any (reasons) from app.community_moderation_queue(m, true) q where q.id = pb), 'a self-harm report is urgent and shows its reason');
   -- a published photo is not queued until someone reports it; then it is acted on after publication

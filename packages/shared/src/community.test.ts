@@ -142,21 +142,32 @@ describe('text screening', () => {
     expect(r.support).toBe(true);
     expect(screen('t h i n s p o').decision).toBe('block');
   });
-  it('holds for a person to review: rapid-loss claims, body-weight or calorie numbers, health claims, shouting', () => {
-    const holds: Array<[string, string]> = [
+  it('never holds: ordinary weight, calorie and health-number talk and capitals are simply allowed', () => {
+    for (const t of [
+      'I lost 5 kg',
+      'dropped 3 dress sizes',
+      'I now weigh 62 kg',
+      'eating 1200 calories a day',
+      'AMAZINGAMAZINGAMAZING',
+      'Lost 2 kg in 4 weeks, feeling strong',
+    ])
+      expect(screen(t), t).toMatchObject({ decision: 'allow', flags: [] });
+  });
+  it('rejects, never holds: dangerous health claims, very fast loss claims and harassment', () => {
+    const rejected: Array<[string, string]> = [
       ['I lost 10 kg in a month', 'weight_claim'],
-      ['dropped 3 dress sizes', 'weight_claim'],
-      ['I now weigh 62 kg', 'health_numbers'],
-      ['eating 1200 calories a day', 'health_numbers'],
+      ['I lost 12 kg in 3 weeks', 'weight_claim'],
       ['this detox is a miracle', 'health_claim'],
       ['semaglutide changed everything', 'health_claim'],
-      ['AMAZINGAMAZINGAMAZING', 'shouting'],
+      ["you're so fat", 'harassment'],
     ];
-    for (const [t, flag] of holds) {
+    for (const [t, flag] of rejected) {
       const r = screen(t);
-      expect(r.decision, t).toBe('hold');
+      expect(r.decision, t).toBe('block');
       expect(r.flags, t).toContain(flag);
+      expect(r.reasons.join(' '), t).not.toContain(t);
     }
+    for (const t of ['x', 'y']) expect(screen(t).decision).not.toBe('hold');
   });
   it('is deterministic', () => {
     expect(screen('I lost 5 kg')).toEqual(screen('I lost 5 kg'));
@@ -274,14 +285,14 @@ describe('public projection: privacy', () => {
     };
     expect(JSON.stringify(toPublicComment(c, GUEST))).not.toContain('secret-id-9');
   });
-  it('only the author sees how many people encouraged a post, and nobody sees who', () => {
+  it('everyone sees how many people liked a post, and nobody sees who', () => {
     const enc = new Set(['u1', 'u2', 'u3']);
     expect(
       toPublicPost(post(), viewer('u9'), { commentCount: 0, encouragedBy: enc }).encouragedCount,
-    ).toBeNull();
-    expect(
-      toPublicPost(post(), GUEST, { commentCount: 0, encouragedBy: enc }).encouragedCount,
-    ).toBeNull();
+    ).toBe(3);
+    const guest = toPublicPost(post(), GUEST, { commentCount: 0, encouragedBy: enc });
+    expect(guest.encouragedCount).toBe(3);
+    expect(JSON.stringify(guest)).not.toMatch(/u1|u2|u3/);
     const mine = toPublicPost(post(), viewer('internal-user-AAA'), {
       commentCount: 0,
       encouragedBy: enc,

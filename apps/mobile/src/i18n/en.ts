@@ -730,7 +730,7 @@ export const en = {
   'community.status.held': 'Held for a quick check because of its wording. Only you can see this.',
   'community.status.hidden':
     'Hidden while we review it. Only you can see this. If you are going through something hard, please reach out to a doctor, someone you trust, or a local crisis line.',
-  'community.encouragedCount': '{n} people liked this',
+  'community.encouragedCount': '{n} likes',
   'community.blockedTitle': 'Blocked members ({n})',
   'community.blockedNone': 'You have not blocked anyone.',
   'community.unblock': 'Unblock',

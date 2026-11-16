@@ -258,6 +258,24 @@ describe(
           401,
         );
       });
+      it('refuses a token that expired a moment ago on every member route, accepts one that has not, and reads as a guest', async () => {
+        const justExpired = tok('ama', { exp: Math.floor(Date.now() / 1000) - 5 });
+        const validFor = tok('ama', { exp: Math.floor(Date.now() / 1000) + 600 });
+        for (const route of ['post', 'upload/ticket', 'report', 'block', 'encourage', 'profile'])
+          assert.equal(
+            (await call(route, { confirmed: true, kind: 'photo', mime: 'image/jpeg' }, justExpired))
+              .status,
+            401,
+            `${route} refuses an expired token`,
+          );
+        assert.notEqual((await call('profile', {}, validFor)).status, 401, 'a live token works');
+        const asGuest = await call('feed', {}, justExpired);
+        assert.equal(asGuest.status, 200, 'reading still works');
+        assert.ok(
+          asGuest.body.posts.every((x) => x.isMine === false && x.encouragedByMe === false),
+          'and carries no member identity',
+        );
+      });
     });
 
     describe('usernames, posting and the public feed', () => {
@@ -330,22 +348,33 @@ describe(
         );
         assert.equal(blocked.body.code, 'blocked');
         assert.ok(!blocked.text.includes('0201234567'));
-        const held = await call(
+        const danger = await call(
           'post',
           { type: 'text', body: 'I lost 12 kg in 3 weeks', confirmed: true },
           tok('ama'),
         );
-        assert.equal(held.body.status, 'held');
+        assert.equal(danger.body.code, 'blocked', 'a dangerous claim is rejected, not held');
+        assert.ok(!danger.text.includes('12 kg'), 'and not echoed back');
         assert.ok(
-          !(await call('feed', {}, null)).text.includes('lost 12 kg'),
-          'a held post is not public',
+          !(await call('feed', {}, tok('ama'))).text.includes('lost 12 kg'),
+          'never stored',
         );
+        const ordinary = await call(
+          'post',
+          {
+            type: 'text',
+            body: 'I lost 5 kg and I weigh 62 kg, eating 1800 calories',
+            confirmed: true,
+          },
+          tok('ama'),
+        );
+        assert.equal(ordinary.body.status, 'published', 'ordinary weight talk is not held');
         assert.ok(
-          (await call('feed', {}, tok('ama'))).text.includes('lost 12 kg'),
-          'its author still sees it',
+          (await call('feed', {}, null)).text.includes('I lost 5 kg'),
+          'and is public at once',
         );
       });
-      it('shows an author their own Encourage count and nobody else', async () => {
+      it('shows the like count to everyone, and never who liked', async () => {
         const post = (await call('feed', {}, null)).body.posts.find(
           (x) => x.body === 'First class done!',
         );
@@ -367,8 +396,9 @@ describe(
         );
         const guest = (await call('feed', {}, null)).body.posts.find((x) => x.id === post.id);
         assert.equal(mine.encouragedCount, 2);
-        assert.equal(theirs.encouragedCount, null);
-        assert.equal(guest.encouragedCount, null);
+        assert.equal(theirs.encouragedCount, 2);
+        assert.equal(guest.encouragedCount, 2);
+        assert.ok(!JSON.stringify(guest).includes(users.kofi), 'no one is named');
       });
     });
 

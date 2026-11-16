@@ -26,7 +26,7 @@ Be kind and encouraging. Share your own progress, not numbers about your body. L
 
 **Your name.** You choose a public username, not your real name. You can change it once every 30 days. Names that copy staff, the app, or another member are not allowed.
 
-**Reviews and removals.** Photos appear straight away, so please check before you post. Posts that mention weight loss, health numbers or health claims are also checked first. Anyone can report a post; reports hide it for review and a person looks at it. We may remove content that breaks these guidelines, and mute or suspend accounts that keep doing so. We explain what to change when we can.
+**Reviews and removals.** Photos appear straight away, so please check before you post. Posts with dangerous health claims, diet-drug promotion, very fast weight-loss claims or harassment are not accepted. Anyone can report a post; reports hide it for review and a person looks at it. We may remove content that breaks these guidelines, and mute or suspend accounts that keep doing so. We explain what to change when we can.
 
 **Your control.** Delete your posts any time. Block anyone: you will not see each other, and they are not told. Leave Community at any time: your username, posts, comments, photos and videos are removed, and your account stays.
 

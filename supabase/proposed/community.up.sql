@@ -6,7 +6,7 @@
 --    (an Edge Function using the service role), which verifies the caller's JWT and passes the verified user id. Guests browse through the same server, so a
 --    guest never holds a database privilege. This follows the account Edge Function pattern.
 --  * People are shown only by public username. Feeds return usernames and opaque content ids, never user ids, emails or health records.
---  * Photos publish at once (V1 decision: no staff pre-approval); risky text is held; unsafe text is refused. Video stays off. Reports hide content. Blocking is mutual. Every action is rate limited.
+--  * Photos publish at once (V1 decision: no staff pre-approval); dangerous claims, harassment and unsafe text are refused (never held); like counts are public. Video stays off. Reports hide content. Blocking is mutual. Every action is rate limited.
 --  * Deleting an account (auth.users) removes everything the person made or did, by cascade.
 
 -- ========== Tables (RLS on, no client access) ==========
@@ -207,7 +207,7 @@ declare
   l text := lower(btrim(coalesce(p_text, '')));
   squashed text := regexp_replace(lower(btrim(coalesce(p_text, ''))), '[[:space:]_-]', '', 'g');
   f text[] := '{}';
-  w text;
+  w text; mm text[]; kg numeric; n numeric; wk numeric;
 begin
   if char_length(t) = 0 then return jsonb_build_object('decision', 'block', 'flags', jsonb_build_array('empty')); end if;
   if char_length(t) > p_max then return jsonb_build_object('decision', 'block', 'flags', jsonb_build_array('too_long')); end if;
@@ -223,11 +223,17 @@ begin
   if t ~* '(^|[[:space:]])@[a-z0-9_]+' then f := f || array['mention']; end if;
   if t ~* '\y(dm me|message me|text me|whats ?app|telegram|snap ?chat|insta(gram)?|cash ?app|venmo|paypal|onlyfans|link in bio|follow me)\y' then f := f || array['contact_solicit']; end if;
   if cardinality(f) > 0 then return jsonb_build_object('decision', 'block', 'flags', to_jsonb(f)); end if;
-  if t ~* '\y(lost|lose|dropped|shed|down)[[:space:]]+[0-9]+([.][0-9]+)?[[:space:]]*(kg|kilos?|lbs?|pounds?|stone|dress sizes?|sizes?)\y' then f := f || array['weight_claim']; end if;
-  if t ~* '\y(i[[:space:]]*(now[[:space:]]*)?weigh|weighing|my weight is|bmi (is|of))[[:space:]]*[0-9]' or t ~* '\y[0-9]{3,4}[[:space:]]*(calories|kcal|cals)\y' then f := f || array['health_numbers']; end if;
+  -- V1 decision: ordinary weight, calorie and health-number talk is allowed and never held. Dangerous claims and harassment are rejected, never held. Mirrors screenText in TypeScript.
+  if t ~* '\y(kill yourself|kys|go die|hope you die|fat (pig|cow|slob)|ugly (cow|pig)|you(''| a)?re (so )?(fat|disgusting|ugly)|nobody likes you)\y' then f := f || array['harassment']; end if;
   if t ~* '\y(cure[sd]?|detox|miracle|guaranteed|burn(s|ed)? fat fast|fat[- ]burner|diet pills?|weight loss (drug|jab|injection)|ozempic|wegovy|semaglutide|mounjaro|tirzepatide|laxatives?|starv[a-z]*|fasting for [0-9]+)\y' then f := f || array['health_claim']; end if;
-  if t ~ '[A-Z]{12,}' then f := f || array['shouting']; end if;
-  if cardinality(f) > 0 then return jsonb_build_object('decision', 'hold', 'flags', to_jsonb(f)); end if;
+  mm := regexp_match(t, '\y(?:lost|lose|dropped|shed)[[:space:]]+([0-9]+(?:[.][0-9]+)?)[[:space:]]*(kg|kilos?|lbs?|pounds?|stone)\y[^.!?' || chr(10) || ']{0,30}?\y(?:in|within|over)[[:space:]]+(?:the[[:space:]]+(?:last|past)[[:space:]]+)?([0-9]+|a|one|an)[[:space:]]*(day|week|month)s?\y', 'i');
+  if mm is not null then
+    kg := mm[1]::numeric * case when lower(mm[2]) ~ '^(lb|pound)' then 0.4536 when lower(mm[2]) = 'stone' then 6.35 else 1 end;
+    n := case when mm[3] ~ '^[0-9]+$' then mm[3]::numeric else 1 end;
+    wk := n * case lower(mm[4]) when 'day' then 1.0 / 7 when 'week' then 1 else 4.345 end;
+    if wk > 0 and kg / wk > 1.5 then f := f || array['weight_claim']; end if;
+  end if;
+  if cardinality(f) > 0 then return jsonb_build_object('decision', 'block', 'flags', to_jsonb(f)); end if;
   return jsonb_build_object('decision', 'allow', 'flags', '[]'::jsonb);
 end $$;
 
@@ -393,7 +399,7 @@ language sql stable security definer set search_path = '' as $$
          p.created_at, p.author_id = p_viewer, p.status,
          (select count(*)::int from public.community_comments c where c.post_id = p.id and ((c.status = 'published' and not app.community_blocked_between(p_viewer, c.author_id)) or (c.author_id = p_viewer and c.status <> 'removed'))),
          exists (select 1 from public.community_reactions r where r.post_id = p.id and r.user_id = p_viewer),
-         case when p.author_id = p_viewer then (select count(*)::int from public.community_reactions r where r.post_id = p.id) end
+         (select count(*)::int from public.community_reactions r where r.post_id = p.id)
     from public.community_posts p join public.community_members m on m.user_id = p.author_id
    where app.community_visible_post(p, p_viewer)
      and (p_cursor_at is null or (p.created_at, p.id) < (p_cursor_at, coalesce(p_cursor_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid)))

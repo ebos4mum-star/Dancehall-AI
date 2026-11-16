@@ -179,14 +179,26 @@ describe('post types', () => {
       true,
     );
   });
-  it('a photo caption that screening holds is still held; an ordinary caption is not', () => {
+  it('a photo caption is screened: ordinary weight talk publishes, dangerous claims are rejected, nothing is held', () => {
     tick();
-    const risky = e.createPost(
+    const ok = e.createPost(
+      'A',
+      {
+        type: 'photo',
+        body: 'I lost 5 kg and weigh 62 kg now, 1800 calories a day',
+        media: [photo()],
+      },
+      { confirmed: true },
+    );
+    expect(ok).toMatchObject({ ok: true, status: 'published' });
+    tick();
+    const bad = e.createPost(
       'A',
       { type: 'photo', body: 'I lost 12 kg in 3 weeks', media: [photo()] },
       { confirmed: true },
     );
-    expect(risky).toMatchObject({ ok: true, status: 'held' });
+    expect(bad).toMatchObject({ ok: false, code: 'blocked' });
+    expect(e.state.posts).toHaveLength(1);
   });
   it('rejects media that does not match the post type, and bad media', () => {
     tick();
@@ -212,7 +224,7 @@ describe('post types', () => {
       ),
     ).toMatchObject({ ok: false, code: 'invalid_media' });
   });
-  it('screened text: blocked content is never stored; risky content is held; self-harm gets support, not a post', () => {
+  it('screened text: unsafe content is rejected and never stored; ordinary content is published; self-harm gets support, not a post', () => {
     tick();
     expect(
       e.createPost('A', { type: 'text', body: 'call me 0201234567 now' }, { confirmed: true }),
@@ -223,8 +235,17 @@ describe('post types', () => {
     tick();
     expect(
       e.createPost('A', { type: 'text', body: 'I lost 12 kg in 3 weeks' }, { confirmed: true }),
-    ).toMatchObject({ ok: true, status: 'held' });
-    expect(e.feed(null).posts).toEqual([]);
+    ).toMatchObject({ ok: false, code: 'blocked' });
+    expect(e.state.posts).toHaveLength(0);
+    tick();
+    expect(
+      e.createPost(
+        'A',
+        { type: 'text', body: 'I weigh 62 kg and ate 1800 calories' },
+        { confirmed: true },
+      ),
+    ).toMatchObject({ ok: true, status: 'published' });
+    expect(e.feed(null).posts).toHaveLength(1);
   });
 });
 
@@ -243,13 +264,14 @@ describe('comments', () => {
     });
     expect(e.addComment('B', p.id, 'x'.repeat(301))).toMatchObject({ ok: false, code: 'blocked' });
   });
-  it('a risky comment is hidden for review: only its author sees it', () => {
+  it('a comment with a dangerous claim is rejected, not held', () => {
     const p = say('A', 'Hello');
     tick();
-    const r = e.addComment('B', p.id, 'I lost 9 kg with this');
-    expect(r).toMatchObject({ ok: true, status: 'hidden' });
-    expect(e.comments(null, p.id)).toEqual([]);
-    expect(e.comments('B', p.id)).toHaveLength(1);
+    expect(e.addComment('B', p.id, 'I lost 9 kg in 2 weeks with this')).toMatchObject({
+      ok: false,
+      code: 'blocked',
+    });
+    expect(e.comments('B', p.id)).toEqual([]);
   });
   it('the comment’s author or the post’s author can delete it; nobody else', () => {
     const p = say('A', 'Hello');
@@ -280,13 +302,14 @@ describe('Encourage: one reaction, no popularity', () => {
     expect(e.setEncourage('B', p.id, false)).toMatchObject({ ok: true, encouraged: false });
     expect(e.setEncourage('A', p.id, true)).toMatchObject({ ok: false, code: 'own_post' });
   });
-  it('only the author learns how many; readers get no count and no list of who', () => {
+  it('everyone sees how many likes a post has, and nobody sees who', () => {
     const p = say('A', 'Hello');
     e.setEncourage('B', p.id, true);
     e.setEncourage('C', p.id, true);
     expect(e.feed('A').posts[0]!.encouragedCount).toBe(2);
-    expect(e.feed('B').posts[0]!.encouragedCount).toBeNull();
-    expect(e.feed(null).posts[0]!.encouragedCount).toBeNull();
+    expect(e.feed('B').posts[0]!.encouragedCount).toBe(2);
+    expect(e.feed(null).posts[0]!.encouragedCount).toBe(2);
+    expect(JSON.stringify(e.feed(null))).not.toMatch(/"B"|"C"|kofi|efua/);
     expect(JSON.stringify(e.feed('A'))).not.toMatch(/"B"|"C"|kofi|efua/);
     expect(e.feed('B').posts[0]!.encouragedByMe).toBe(true);
   });
@@ -408,7 +431,8 @@ describe('reporting', () => {
 
 describe('moderation is for staff with a second factor only', () => {
   it('everyone else is refused, and moderators see content and flags but no identity beyond the public username', () => {
-    const p = say('A', 'I lost 8 kg in a month');
+    const p = say('A', 'Questionable');
+    e.report('B', { targetType: 'post', targetId: p.id, reason: 'private_information' });
     for (const actor of [
       { role: null, mfaVerified: true },
       { role: 'moderator', mfaVerified: false },
@@ -427,12 +451,13 @@ describe('moderation is for staff with a second factor only', () => {
     const q = e.moderationQueue(MOD);
     expect(q.ok).toBe(true);
     if (!q.ok) return;
-    expect(q.items[0]).toMatchObject({ author: 'ama_dances', flags: ['weight_claim'] });
+    expect(q.items[0]).toMatchObject({ author: 'ama_dances', reportCount: 1 });
     const json = JSON.stringify(q);
     expect(json).not.toMatch(/"A"|authorId|userId|email|accounts\.dancehall/);
   });
   it('approve publishes, remove takes it down for good, and a suspended member cannot post, comment or react', () => {
-    const p = say('A', 'I lost 8 kg in a month');
+    const p = say('A', 'Questionable');
+    e.report('B', { targetType: 'post', targetId: p.id, reason: 'private_information' });
     expect(e.feed(null).posts).toEqual([]);
     expect(e.moderate(MOD, { targetType: 'post', targetId: p.id, action: 'approve' }).ok).toBe(
       true,

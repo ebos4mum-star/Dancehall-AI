@@ -257,8 +257,7 @@ async function toPost(c: Ctx, r: Record<string, unknown>): Promise<PublicPost> {
     commentCount: Number(r.comment_count ?? 0),
     encouragedByMe: r.encouraged_by_me === true,
     // Only the author's own row carries a number; the database returns null for everyone else.
-    encouragedCount:
-      r.is_mine === true && typeof r.encouraged_count === 'number' ? r.encouraged_count : null,
+    encouragedCount: typeof r.encouraged_count === 'number' ? r.encouraged_count : 0,
   };
 }
 

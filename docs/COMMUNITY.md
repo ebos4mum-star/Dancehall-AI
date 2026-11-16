@@ -17,10 +17,10 @@ Comments are disabled for V1 and the code is preserved for later. Enforcement is
 
 ## Safeguards (shared rules in `packages/shared/src/community.ts`, mirrored in SQL)
 
-- Text screening: blocks self-harm, eating-disorder content, emails, links, phone numbers, mentions, contact solicitation; holds weight-loss claims, health numbers, health claims, shouting. Self-harm text shows support information.
-- Photos publish at once with no staff pre-approval (V1 decision); video uploads are off in code and in the database. Only captions the screen holds (weight-loss claims, health numbers) wait for a check. Reports: 3 distinct reporters, or one report for private information / self-harm, hide content at once.
+- Text screening: blocks self-harm, eating-disorder content, emails, links, phone numbers, mentions, contact solicitation; also rejects (never holds) dangerous health claims and diet-drug promotion, weight-loss claims faster than 1.5 kg a week, and harassment. Ordinary talk about weight, calories or health numbers, and capitals, publish normally. Self-harm text shows support information.
+- Photos publish at once with no staff pre-approval (V1 decision); video uploads are off in code and in the database. Nothing is held for staff: text is either published or rejected with a reason. Reports: 3 distinct reporters, or one report for private information / self-harm, hide content at once.
 - Daily limits for posts, comments, reactions, reports. Suspension by staff.
-- Encourage counts are visible to the author only (no popularity signal).
+- Like counts are public (a number on each post, never who liked it). V1 decision; there are still no rankings, trending or follower counts.
 - Public projections never contain account ids or synthetic auth emails.
 
 ## Server design (all local, NOT DEPLOYED, NOT APPLIED)
@@ -63,7 +63,7 @@ Comments are disabled for V1 and the code is preserved for later. Enforcement is
 
 ## Decisions needed
 
-See `COMMUNITY_MODERATION.md` ("Decisions needed") and the checklist above. Product decisions already made: usernames are changeable; authors see their own Encourage counts and there are no public rankings; text, photos, before/after and short videos are in V1, all media reviewed before publication; one moderator with MFA.
+See `COMMUNITY_MODERATION.md` ("Decisions needed") and the checklist above. Product decisions already made: usernames are changeable; like counts are public and there are no rankings; text, photos, before/after and short videos are in V1, all media reviewed before publication; one moderator with MFA.
 
 ## Integration testing (local, no hosted project)
 
@@ -71,7 +71,7 @@ See `COMMUNITY_MODERATION.md` ("Decisions needed") and the checklist above. Prod
 
 - guest browsing, bad/forged/expired tokens, body limits;
 - username claim and change, look-alikes, the held old name, cooldown;
-- unsafe text refused without echo, held text, explicit confirmation, author-only Encourage counts;
+- unsafe text refused without echo, nothing held, explicit confirmation, public like counts without names;
 - uploads: one-time signed link, real-type check, metadata removed from the stored file, no account id in any path, held posts invisible to others, signed links that tamper-fail and expire, a disguised HTML file rejected and deleted, nobody else's upload can be committed or attached, video refused while disabled;
 - moderation: ordinary member, staff without a second factor, non-staff with one, forged and expired tokens all refused; moderator and backup both act; approved media becomes public; removed media is deleted from storage; the audit log names each moderator and holds no notes or content;
 - abuse: mute, suspend, release; daily post limit; per-network request limit; quiet repeat reports; mutual silent blocks;

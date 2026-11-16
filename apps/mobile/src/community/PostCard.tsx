@@ -149,7 +149,7 @@ export function PostCard({
           <PostVideo key={`${m.uri}-${i}`} uri={m.uri} />
         ),
       )}
-      {post.isMine && post.encouragedCount !== null && post.encouragedCount > 0 ? (
+      {post.encouragedCount !== null && post.encouragedCount > 0 ? (
         <AppText variant="caption" muted>
           {t('community.encouragedCount', { n: post.encouragedCount })}
         </AppText>

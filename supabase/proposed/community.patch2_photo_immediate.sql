@@ -1,7 +1,46 @@
--- Community patch 2 (V1 decision): photos publish immediately, with no staff pre-approval. NOT APPLIED anywhere by this change; needs explicit migration approval.
--- Replaces only app.community_create_post (same signature and grants). Risky text is still held; unsafe text is still refused; video stays off (video_enabled=false).
--- Apply after community.up.sql (staging already has the earlier version). Safe to run twice.
+-- Community patch 2 (V1 final decisions). NOT APPLIED anywhere by this change; needs explicit migration approval.
+-- Replaces exactly three functions, with unchanged signatures, return types and grants (create or replace keeps them):
+--   app.community_screen       dangerous claims, very fast loss claims and harassment are rejected; ordinary weight/calorie/health-number talk and capitals are allowed; nothing is held
+--   app.community_create_post  photos publish at once (no media hold)
+--   app.community_feed         like counts are public (a number, never who)
+-- No tables, columns, policies, settings, storage or data are touched. Depends on community.up.sql (any earlier version) only. Safe to run twice.
 begin;
+create or replace function app.community_screen(p_text text, p_max int) returns jsonb language plpgsql immutable set search_path = '' as $$
+declare
+  t text := btrim(coalesce(p_text, ''));
+  l text := lower(btrim(coalesce(p_text, '')));
+  squashed text := regexp_replace(lower(btrim(coalesce(p_text, ''))), '[[:space:]_-]', '', 'g');
+  f text[] := '{}';
+  w text; mm text[]; kg numeric; n numeric; wk numeric;
+begin
+  if char_length(t) = 0 then return jsonb_build_object('decision', 'block', 'flags', jsonb_build_array('empty')); end if;
+  if char_length(t) > p_max then return jsonb_build_object('decision', 'block', 'flags', jsonb_build_array('too_long')); end if;
+  foreach w in array array['kill myself', 'suicide', 'end my life', 'self harm', 'self-harm', 'cut myself', 'want to die'] loop
+    if position(w in l) > 0 then return jsonb_build_object('decision', 'block', 'flags', jsonb_build_array('self_harm')); end if;
+  end loop;
+  foreach w in array array['thinspo', 'proana', 'pro_ana', 'promia', 'pro_mia', 'bonespo', 'meanspo', 'edtwt', 'anorexia tips', 'purge tips'] loop
+    if position(regexp_replace(w, '[[:space:]_-]', '', 'g') in squashed) > 0 then return jsonb_build_object('decision', 'block', 'flags', jsonb_build_array('ed_content')); end if;
+  end loop;
+  if t ~* '[a-z0-9._%+-]+@[a-z0-9-]+\.[a-z]{2,}' then f := f || array['email']; end if;
+  if t ~* '(https?://|www\.)[^[:space:]]+|\y[a-z0-9-]+\.(com|net|org|io|co|me|app|link|ly|gg|xyz|info|biz|shop)\y' then f := f || array['link']; end if;
+  if t ~* '([+]?[0-9][[:space:]().-]?){7,}' then f := f || array['phone']; end if;
+  if t ~* '(^|[[:space:]])@[a-z0-9_]+' then f := f || array['mention']; end if;
+  if t ~* '\y(dm me|message me|text me|whats ?app|telegram|snap ?chat|insta(gram)?|cash ?app|venmo|paypal|onlyfans|link in bio|follow me)\y' then f := f || array['contact_solicit']; end if;
+  if cardinality(f) > 0 then return jsonb_build_object('decision', 'block', 'flags', to_jsonb(f)); end if;
+  -- V1 decision: ordinary weight, calorie and health-number talk is allowed and never held. Dangerous claims and harassment are rejected, never held. Mirrors screenText in TypeScript.
+  if t ~* '\y(kill yourself|kys|go die|hope you die|fat (pig|cow|slob)|ugly (cow|pig)|you(''| a)?re (so )?(fat|disgusting|ugly)|nobody likes you)\y' then f := f || array['harassment']; end if;
+  if t ~* '\y(cure[sd]?|detox|miracle|guaranteed|burn(s|ed)? fat fast|fat[- ]burner|diet pills?|weight loss (drug|jab|injection)|ozempic|wegovy|semaglutide|mounjaro|tirzepatide|laxatives?|starv[a-z]*|fasting for [0-9]+)\y' then f := f || array['health_claim']; end if;
+  mm := regexp_match(t, '\y(?:lost|lose|dropped|shed)[[:space:]]+([0-9]+(?:[.][0-9]+)?)[[:space:]]*(kg|kilos?|lbs?|pounds?|stone)\y[^.!?' || chr(10) || ']{0,30}?\y(?:in|within|over)[[:space:]]+(?:the[[:space:]]+(?:last|past)[[:space:]]+)?([0-9]+|a|one|an)[[:space:]]*(day|week|month)s?\y', 'i');
+  if mm is not null then
+    kg := mm[1]::numeric * case when lower(mm[2]) ~ '^(lb|pound)' then 0.4536 when lower(mm[2]) = 'stone' then 6.35 else 1 end;
+    n := case when mm[3] ~ '^[0-9]+$' then mm[3]::numeric else 1 end;
+    wk := n * case lower(mm[4]) when 'day' then 1.0 / 7 when 'week' then 1 else 4.345 end;
+    if wk > 0 and kg / wk > 1.5 then f := f || array['weight_claim']; end if;
+  end if;
+  if cardinality(f) > 0 then return jsonb_build_object('decision', 'block', 'flags', to_jsonb(f)); end if;
+  return jsonb_build_object('decision', 'allow', 'flags', '[]'::jsonb);
+end $$;
+
 create or replace function app.community_create_post(p_user uuid, p_type text, p_body text, p_milestone jsonb, p_media jsonb, p_confirmed boolean)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
@@ -55,4 +94,20 @@ begin
   end loop;
   return jsonb_build_object('id', v_id, 'status', v_status);
 end $$;
+
+create or replace function app.community_feed(p_viewer uuid, p_cursor_at timestamptz, p_cursor_id uuid, p_limit int)
+returns table (id uuid, author text, type text, body text, milestone jsonb, media jsonb, created_at timestamptz, is_mine boolean, status text, comment_count int, encouraged_by_me boolean, encouraged_count int)
+language sql stable security definer set search_path = '' as $$
+  select p.id, m.username, p.type, p.body, p.milestone,
+         coalesce((select jsonb_agg(jsonb_build_object('kind', x.kind, 'role', x.role, 'path', x.storage_path, 'durationS', x.duration_s) order by x.role) from public.community_media x where x.post_id = p.id), '[]'::jsonb),
+         p.created_at, p.author_id = p_viewer, p.status,
+         (select count(*)::int from public.community_comments c where c.post_id = p.id and ((c.status = 'published' and not app.community_blocked_between(p_viewer, c.author_id)) or (c.author_id = p_viewer and c.status <> 'removed'))),
+         exists (select 1 from public.community_reactions r where r.post_id = p.id and r.user_id = p_viewer),
+         (select count(*)::int from public.community_reactions r where r.post_id = p.id)
+    from public.community_posts p join public.community_members m on m.user_id = p.author_id
+   where app.community_visible_post(p, p_viewer)
+     and (p_cursor_at is null or (p.created_at, p.id) < (p_cursor_at, coalesce(p_cursor_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid)))
+   order by p.created_at desc, p.id desc
+   limit greatest(1, least(coalesce(p_limit, 20), 30))
+$$;
 commit;

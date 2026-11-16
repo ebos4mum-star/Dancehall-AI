@@ -192,7 +192,7 @@ describe('identity and access', () => {
 });
 
 describe('feed output', () => {
-  it('returns usernames and signed links only, and counts only for the author', async () => {
+  it('returns usernames and signed links only, and public like counts', async () => {
     const row = (id: string, mine: boolean) => ({
       id,
       author: 'ama_dances',
@@ -204,7 +204,7 @@ describe('feed output', () => {
       status: 'published',
       comment_count: 2,
       encouraged_by_me: false,
-      encouraged_count: mine ? 7 : null,
+      encouraged_count: 7,
       media: [
         {
           kind: 'photo',
@@ -226,7 +226,7 @@ describe('feed output', () => {
       media: Array<{ uri: string }>;
     }>;
     expect(posts[0]!.encouragedCount).toBe(7);
-    expect(posts[1]!.encouragedCount).toBeNull();
+    expect(posts[1]!.encouragedCount).toBe(7);
     expect(posts[0]!.media[0]!.uri).toMatch(/^https:\/\/storage\.test\/sign\//);
     expect(r.body.nextCursor).toMatch(/^2026-12-01T10:00:00.000Z\|/);
   });
