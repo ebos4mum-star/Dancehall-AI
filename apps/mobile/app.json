@@ -22,7 +22,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "DanceHall Fit can use a photo you choose from your library to estimate a meal. It is resized on your device and removed from it right after analysis.",
+          "photosPermission": "DanceHall Fit can use a photo you choose from your library to estimate a meal, or to share in Community if you choose to. Photos are resized on your device and stripped of location data. A meal photo is removed from your device right after analysis. A Community photo is reviewed by a person before anyone else sees it.",
           "cameraPermission": false,
           "microphonePermission": false
         }

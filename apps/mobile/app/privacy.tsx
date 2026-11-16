@@ -182,6 +182,13 @@ function Privacy() {
         <AppText variant="caption" muted>
           {t('privacy.exportNote')}
         </AppText>
+        {store.requestAccountDeletion ? (
+          <Button
+            variant="secondary"
+            label={t('coachset.deleteAccount')}
+            onPress={() => router.push('/coach/settings')}
+          />
+        ) : null}
       </Card>
 
       <AppText variant="heading" accessibilityRole="header">

@@ -20,7 +20,7 @@ import { useTheme } from '@/theme/useTheme';
 
 /** One chronological feed. Public: a guest can read everything that is published. Sharing, encouraging, commenting, reporting and blocking need an account. */
 export default function CommunityScreen() {
-  const { store, session } = useApp();
+  const { store, session, config } = useApp();
   const available = useCommunityAvailable();
   const gate = useAccountGate();
   const { spacing } = useTheme();
@@ -82,6 +82,11 @@ export default function CommunityScreen() {
         <Disclosure title={t('community.guidelinesTitle')}>
           <AppText variant="caption" muted>
             {t('community.guidelines')}
+          </AppText>
+          <AppText variant="caption" muted>
+            {config.supportEmail
+              ? t('community.contact', { email: config.supportEmail })
+              : t('community.contactNone')}
           </AppText>
         </Disclosure>
         {composing && session ? (

@@ -261,7 +261,7 @@ export const en = {
   'privacy.exportReady': 'Your export is ready. Share it, or select and copy the text below.',
   'privacy.exportText': 'Export (JSON)',
   'privacy.exportNote':
-    'Nothing leaves your device unless you share it. To delete your account, open Coach, then Privacy and history.',
+    'Nothing leaves your device unless you share it. To delete your account, use Delete my account below (it opens the deletion page).',
 
   'me.title': 'Me',
   'me.progress': 'Weight progress',
@@ -640,7 +640,10 @@ export const en = {
   'community.sample': 'Sample',
   'community.guidelinesTitle': 'Community guidelines',
   'community.guidelines':
-    'Be kind and encouraging. Share your own progress, not numbers about your body: please leave out weight, calories, links, contact details and anything private. No advice about fast weight loss, no medical claims, no comparing bodies. Photos and videos are checked by a person before they appear. You can delete your posts any time, and you can report or block anyone. If something here is hard for you, you can skip it: your goals work without it.',
+    'Be kind and encouraging. Share your own progress, not numbers about your body: please leave out weight, calories, links, contact details and anything private. No advice about fast weight loss, no medical claims, no comparing bodies. Photos are checked by a person before they appear. You can delete your posts any time, and you can report or block anyone. If something here is hard for you, you can skip it: your goals work without it.',
+  'community.contact':
+    'Questions, concerns or appeals: email {email}. Use Report on any post, and Block on any member.',
+  'community.contactNone': 'Contact details for this community are not set up in this build yet.',
   'community.share': 'Share progress',
   'community.signInHint':
     'Browsing is open to everyone. Sharing, encouraging and commenting need an account.',
@@ -663,7 +666,7 @@ export const en = {
   'community.pickVideo': 'Choose a video (up to 30 seconds)',
   'community.removeMedia': 'Remove',
   'community.mediaNote':
-    'Photos and videos can show your body and your surroundings. Only share what you are happy for everyone to see. Photos are resized and stripped of location data. A person reviews every photo and video before it appears.',
+    'Photos can show your body and your surroundings. Only share what you are happy for everyone to see. Photos are resized and stripped of location data. A person reviews every photo before it appears.',
   'community.public': 'I understand everyone can see this',
   'community.publicBody': 'This post will be public under your username.',
   'community.post': 'Post',
@@ -688,11 +691,11 @@ export const en = {
   'community.me.use': 'Use this name',
   'community.me.leave': 'Leave Community',
   'community.me.leaveBody':
-    'This removes your username, posts, comments, photos and videos from Community. Your account and everything else in the app stay. You cannot undo it.',
+    'This removes your username, posts and photos from Community. Your account and everything else in the app stay. You cannot undo it.',
   'community.me.leaveConfirm': 'Yes, remove my Community posts',
   'community.me.left': 'You have left Community. Your posts and username were removed.',
   'community.paused.media':
-    'Photos and videos are paused for a short while so everything can be checked. You can still share text.',
+    'Photos are paused for a short while so everything can be checked. You can still share text.',
   'community.paused.video': 'Video sharing is not available yet. You can share text and photos.',
   'community.me.appeals': 'Questions or appeals',
   'community.me.appealsBody':
