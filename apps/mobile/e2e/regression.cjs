@@ -469,7 +469,7 @@ async function step(name, fn) {
     },
   );
   await step(
-    'J: a custom habit can be added, ticked, and removed, with no streak language',
+    'J: a custom habit can be added, ticked, and removed, with no streak-pressure language',
     async () => {
       await tab('Today');
       await p.getByLabel('New habit').last().fill('Stretch two minutes');
@@ -480,7 +480,15 @@ async function step(name, fn) {
         .last()
         .click();
       await seen('1 of 7 days this week');
-      assert.equal(await p.getByText('streak', { exact: false }).count(), 0);
+      // Streaks are now an approved feature (planned rest days and forgiveness), but never as pressure or loss.
+      for (const bad of [
+        'lose your streak',
+        'streak broken',
+        'streak ended',
+        "don't break",
+        'streak lost',
+      ])
+        assert.equal(await p.getByText(bad, { exact: false }).count(), 0, bad);
       await btn('Add habit').isDisabled();
     },
   );

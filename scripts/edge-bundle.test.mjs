@@ -49,12 +49,13 @@ test('the social function bundles flat: only its own server layer, no Community 
   const names = buildBundle(out, 'social')
     .map((r) => r.name)
     .sort();
-  assert.deepEqual(names, ['index.ts', 'social-server.ts']);
+  assert.deepEqual(names, ['gamification.ts', 'index.ts', 'social-server.ts']);
   const idx = readFileSync(join(out, 'index.ts'), 'utf8');
   assert.match(idx, /from '\.\/social-server\.ts'/);
   assert.doesNotMatch(idx, /_shared|community-server/);
   assert.match(idx, /Deno\.serve/);
-  // It talks to the database only through its own allow-listed door.
-  assert.match(idx, /admin\.rpc\('social_rpc'/);
+  // It talks to the database only through its own allow-listed doors (Friends and progression).
+  assert.match(idx, /'social_rpc'/);
+  assert.match(idx, /'gm_rpc'/);
   assert.doesNotMatch(idx, /community_rpc/);
 });

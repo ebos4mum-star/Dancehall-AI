@@ -9,6 +9,8 @@ Status: **provisional.** No certified fitness professional or clinician has revi
 - The result is stored privately (health data, owner-only).
 - The screening is repeated when circumstances may change (after a long break, after reported pain) and can be updated by the person at any time.
 
+> **Update (owner decision, progression phase):** achievements stay permanent, and the earlier "no streaks" rule is replaced by streaks that are safe by design: planned rest days never break them, one miss a week is forgiven, XP and league numbers are capped, nothing is rewarded for food amounts or weight, and a rest note replaces further reward after a very long day. See `docs/GAMIFICATION_ARCHITECTURE.md`.
+
 ## 2. Programming rules
 
 - Every workout has a warm-up and a cool-down/recovery section; Quick Fit sessions (5, 10, 15 minutes) include a short warm-up.

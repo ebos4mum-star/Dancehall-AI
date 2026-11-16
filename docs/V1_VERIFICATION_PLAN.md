@@ -38,19 +38,18 @@ Use `docs/NATIVE_IOS_TEST.md` section 2 as the checklist (Keychain, Face ID/PIN 
 
 **Community on a phone:** `bash scripts/friends-staging-ios.sh --community` (add `--device` for an iPhone) now switches Community on for that local run only; it needs staging in open mode (inside the section 2 window), otherwise the feed shows as paused. Production flags are untouched (a production build still refuses Community and Friends). Photo-only items worth checking: picker permission wording, upload, immediate publish and Like.
 
-## 4. First native iPhone build: staging-only EAS profile (prepared, not started)
+## 4. The single consolidated staging iPhone build (prepared, not started)
 
-Profile `staging-preview` in `apps/mobile/eas.json`: internal distribution, `EXPO_PUBLIC_APP_ENV=preview`, `AUTH_MODE=supabase`, `CLOUD_ACCOUNTS=1`, `SOCIAL=1` (Friends), `COMMUNITY=1`, and `environment: "staging"`. It has no credentials and no URLs; the staging URL and publishable key come from an EAS environment named `staging`. No other profile enables Friends or Community, a production build refuses both flags (`resolveConfig`), and tests lock all of this (`buildConfig.test.ts`, `cloudBoundary.test.ts`). Bundle ID `com.dancehallfit.app`, slug `dancehall-fit-ai`, scheme `dancehallfit` and signing are unchanged.
+One profile, `staging-preview` in `apps/mobile/eas.json`, contains everything: Friends (`EXPO_PUBLIC_SOCIAL=1`), Community (`EXPO_PUBLIC_COMMUNITY=1`), Apple Health import (`EXPO_PUBLIC_APPLE_HEALTH=1`), cloud accounts, and progression (XP, streaks with rest days, quests, badges, optional league, Pulse cosmetics, seasons; always on, switchable off in Settings). Internal distribution, `environment: "staging"`, no credentials in git. No other profile enables Friends, Community or Apple Health, and a production build refuses all three flags. HealthKit (plugin, usage text, entitlement) is added by `apps/mobile/app.config.js` only when `EXPO_PUBLIC_APPLE_HEALTH=1`; every other build is exactly `app.json`. Bundle ID, slug, scheme and signing are unchanged. Architecture, safety rules, residual risks and native-only items: `docs/GAMIFICATION_ARCHITECTURE.md`.
 
-Remaining requirements before the first build (all owner actions, none started):
+Requirements before the build (owner actions; none started):
 
-1. Expo account with `eas-cli` logged in on a machine you control; run `eas init` in `apps/mobile` (adds `extra.eas.projectId` and `owner` to `app.json`; no EAS project exists yet).
-2. EAS environment `staging` (expo.dev, project, Environment variables) with `EXPO_PUBLIC_SUPABASE_URL=https://bxhnrjulksganzydgrgm.supabase.co` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<staging publishable key>` (Supabase dashboard, Settings, API). Never a secret key, never the development or production project.
-3. Apple Developer team, with EAS-managed or your own signing, and your iPhone registered for internal distribution (`eas device:create`). Claude makes no signing changes.
-4. Your explicit go-ahead for `eas build --profile staging-preview --platform ios`. Never `--auto-submit`; `submit` stays production-only and unused.
-5. Community on the phone only posts while staging is open (approved window, floor secret and stored mode both `open`). While `read_only` the feed reads but posting shows as paused.
-
-Optional, not required for staging: `EXPO_PUBLIC_SUPPORT_EMAIL`, privacy and support URLs. Open Food Facts stays off.
+1. Expo account, `eas-cli` login, `eas init` in `apps/mobile` (no EAS project exists yet).
+2. EAS environment `staging` with `EXPO_PUBLIC_SUPABASE_URL=https://bxhnrjulksganzydgrgm.supabase.co` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (publishable key only).
+3. Apple Developer team, your iPhone registered (`eas device:create`). **New for Apple Health:** the HealthKit capability must be enabled on the app's App ID (EAS can do this when you log in to Apple during credentials setup). That is a signing/identity step, so it is yours to approve; Claude changed nothing.
+4. Staging backend, so progression is recorded server-side and the league works. Needs your approval (hosted changes): apply `health_sync.up.sql`, `gamification.up.sql` (and `community.patch3_safety_phrases.sql`) to staging, redeploy `social`, `community` and `account`. Without them the build still runs: Apple Health import in a Supabase build needs `health_sync.up.sql` (the database refuses `source = apple_health` until then, and the import counts that as a failure), and progression falls back to the on-device engine.
+5. Community posting only inside an approved open window; otherwise the feed reads and posting shows as paused.
+6. Your explicit go-ahead for `eas build --profile staging-preview --platform ios` (never `--auto-submit`).
 
 ## 5. Remaining launch checklist (one list)
 
