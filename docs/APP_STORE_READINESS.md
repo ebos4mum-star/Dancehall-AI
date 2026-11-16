@@ -95,6 +95,10 @@ Status date: 2026-11-16. Scope: Community staging and V1 launch preparation. No 
 5. **Account deletion:** approve applying the purge job (to staging first) and confirm the waiting period.
 6. **Legal:** counsel review of the Community and privacy documents.
 
+## V1 content direction (updated 2026-11-16: FREE instructor-led video)
+
+The paid-production plan was replaced by a free-video direction. Research: `docs/V1_FREE_VIDEO_RESEARCH.md`. **No cleared free video was found**; the candidate leads are all unverified. If YouTube embedding is used, loading the player shares device and network data with Google, so the privacy policy, App Privacy answers and an in-app notice must disclose it (Guideline 5.1.2(i)); this changes the earlier "no third-party data sharing" finding (5.1.5) from PASS to "PASS today, must be revisited if embedding is adopted".
+
 ## V1 content direction (approved 2026-11-16)
 
 Instructor-led, human-presented dance workout videos, **streamed** (not bundled), eight classes: warm-up, cool-down, Dancehall, Afrobeats, Amapiano, low-impact, plus longer Dancehall and Afrobeats sessions. No AI-generated instructors, no unlicensed commercial music. Nothing has been produced, licensed, hosted or built. Plan, hosting options, rights and safety requirements and cost ranges: `docs/V1_VIDEO_PLAN.md`.

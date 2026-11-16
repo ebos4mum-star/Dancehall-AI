@@ -1,3 +1,5 @@
+> **Superseded in part (2026-11-16):** the owner changed direction to FREE instructor-led video. The paid production route, budgets and paid hosting in sections 3 and 5 are **not being pursued**. See `docs/V1_FREE_VIDEO_RESEARCH.md`. The player audit (section 1), the rights and safety checklists (section 4) and the implementation seam (section 2) still apply.
+
 # V1 instructor-led video classes: audit, implementation plan, hosting, rights and production plan
 
 Date: 2026-11-16. **Status: plan for the owner's approval. Nothing has been built, bought, hosted, shot, licensed or published, and no video exists.** Direction approved by the owner: **Option A, real instructor-led dance workout videos for the first App Store release.** No AI-generated instructors, no unlicensed commercial music or video.
