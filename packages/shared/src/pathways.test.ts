@@ -49,9 +49,15 @@ const everyText = (o: EngineOutput): string[] => [
 ];
 
 describe('each goal intent', () => {
-  it('knows four intents, all selectable; the first three are unchanged and in their original order', () => {
-    expect([...GOAL_INTENTS]).toEqual(['lose', 'maintain', 'fitness', 'strength']);
-    expect([...SELECTABLE_GOAL_INTENTS]).toEqual(['lose', 'maintain', 'fitness', 'strength']);
+  it('knows five intents, all selectable; the stored four are unchanged and in their original order, and Gain Weight is its own goal', () => {
+    expect([...GOAL_INTENTS]).toEqual(['lose', 'maintain', 'fitness', 'strength', 'gain']);
+    expect([...SELECTABLE_GOAL_INTENTS]).toEqual([
+      'lose',
+      'maintain',
+      'gain',
+      'fitness',
+      'strength',
+    ]);
   });
   it('lose: a gentle weight-loss focus with a dance-led plan', () => {
     const o = run({ goalIntent: 'lose' });
@@ -357,9 +363,9 @@ describe('safety exclusions', () => {
   );
   it('a clear lose goal keeps the existing safety limits (deficit capped, never below resting energy)', () => {
     const k = run({ goalIntent: 'lose' }, { body: BODY }).nutrition!.kcal!;
-    expect(k.guide).toBeLessThan(k.maintenance);
-    expect(k.maintenance - k.guide).toBeLessThanOrEqual(Math.round(k.maintenance * 0.2) + 1);
-    expect(k.guide).toBeGreaterThanOrEqual(k.floor);
+    expect(k.guide!).toBeLessThan(k.maintenance);
+    expect(k.maintenance - k.guide!).toBeLessThanOrEqual(Math.round(k.maintenance * 0.2) + 1);
+    expect(k.guide!).toBeGreaterThanOrEqual(k.floor);
   });
   it('missing safety answers are never treated as a finding: no "your answers suggest" and no professional-support flag', () => {
     const o = resolvePathways({

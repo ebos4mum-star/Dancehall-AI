@@ -13,6 +13,11 @@ import {
   type AiProvider,
 } from '@dancehall/ai';
 import {
+  CommunityEngine,
+  sampleCommunity,
+  type CommunityState,
+  type NewPostInput,
+  type ReportReason,
   AppError,
   FREE_ENTITLEMENT,
   MEAL_TYPES,
@@ -33,7 +38,8 @@ import {
   buildWeekFacts,
   contextSummaryLines,
   detectComeback,
-  energyGuideFor,
+  calorieNeedsFromRecords,
+  energyGuideFromTargets,
   generateDailyPlan,
   readinessState,
   resolvePathways,
@@ -144,6 +150,8 @@ interface State {
   weeklyReviews: WeeklyReviewRecord[];
   aiControls: { killAll: boolean; userPaused?: boolean };
   deletionRequest?: { id: string; scheduledFor: string; status: 'requested' } | null;
+  /** Development Community: synthetic sample members and posts plus the one real local member. Mirrors the rules in `CommunityEngine`. */
+  community?: CommunityState;
 }
 
 const KEY = 'dh.mock.v1';
@@ -280,6 +288,134 @@ export class MockStore implements DataStore {
   }
   private requireConsent(s: State) {
     if (!this.consented(s)) throw new StoreError('consent_required');
+  }
+
+  // ---------- Community (development mock) ----------
+  /** The Community engine over local state. Sample members are created once and labelled as samples; they are not real people. */
+  private async engine(): Promise<CommunityEngine> {
+    await this.load();
+    let seeded = false;
+    if (!this.state.community) {
+      this.state.community = sampleCommunity(this.now().toISOString());
+      seeded = true;
+    }
+    if (seeded) await this.commit();
+    return new CommunityEngine(this.state.community, this.now);
+  }
+  private memberId(): string | null {
+    return this.state.signedIn ? DEV_USER : null;
+  }
+  private async member(): Promise<string> {
+    await this.load();
+    if (!this.state.signedIn) throw new StoreError('not_authenticated');
+    return DEV_USER;
+  }
+  async communityProfile() {
+    const e = await this.engine();
+    const u = this.memberId() ? e.usernameOf(DEV_USER) : null;
+    return u
+      ? { username: u, canChangeAt: e.usernameChangeAvailableAt(DEV_USER), restriction: null }
+      : null;
+  }
+  async communityStatus() {
+    // The local simulation has no moderators and no uploads server: everything is open.
+    return { mode: 'open' as const, videoEnabled: true, commentsEnabled: false }; // comments are off for V1
+  }
+  async communityChangeUsername(raw: string) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.changeUsername(uid, raw);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async communityLeave() {
+    const uid = await this.member();
+    const e = await this.engine();
+    e.deleteMember(uid);
+    await this.commit();
+    return { ok: true as const };
+  }
+  async communityClaimUsername(raw: string) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.claimUsername(uid, raw);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  /** Public: works for a guest. */
+  async communityFeed(opts: { cursor?: string | null; limit?: number } = {}) {
+    const e = await this.engine();
+    return e.feed(this.memberId(), opts);
+  }
+  /** Public: works for a guest. */
+  async communityComments(postId: string) {
+    const e = await this.engine();
+    return e.comments(this.memberId(), postId);
+  }
+  async communityPost(input: NewPostInput, opts: { confirmed: boolean }) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.createPost(uid, input, opts);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async communityDeletePost(postId: string) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.deletePost(uid, postId);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async communityComment(postId: string, text: string) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.addComment(uid, postId, text);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async communityDeleteComment(commentId: string) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.deleteComment(uid, commentId);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async communityEncourage(postId: string, on: boolean) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.setEncourage(uid, postId, on);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async communityReport(input: {
+    targetType: 'post' | 'comment';
+    targetId: string;
+    reason: ReportReason;
+    note?: string;
+  }) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.report(uid, input);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async communityBlock(username: string) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.block(uid, username);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async communityUnblock(username: string) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.unblock(uid, username);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async communityBlocked() {
+    const uid = await this.member();
+    return (await this.engine()).blockedUsernames(uid);
   }
 
   async getSession(): Promise<Session | null> {
@@ -1231,21 +1367,23 @@ export class MockStore implements DataStore {
       .pop();
     const todaysLogs = s.foodLogs.filter((l) => localDateKey(l.loggedAt, tz) === today);
     const latest = [...s.weights].sort((a, b) => b.measuredAt.localeCompare(a.measuredAt))[0];
-    let guide: number | undefined;
-    if (s.private && latest) {
-      const age = Math.floor(
-        (this.now().getTime() - Date.parse(`${s.private.birthDate}T00:00:00Z`)) /
-          (365.25 * 86_400_000),
-      );
-      guide = energyGuideFor({
-        weightKg: latest.weightKg,
-        heightCm: s.private.heightCm,
-        ageYears: age,
-        sex: s.private.sex,
-        activity: s.private.activityLevel,
-        weeklyChangeKg: s.goals.find((g) => g.status === 'active')?.plannedWeeklyChangeKg ?? 0,
-      }).guideKcal;
-    }
+    // The same engine and safety rules as every other screen (calorieNeeds); numbers are withheld exactly when they are withheld elsewhere.
+    const guideTargets =
+      s.private && latest
+        ? energyGuideFromTargets(
+            calorieNeedsFromRecords({
+              prefs: parsePrefs(s.wellnessPrefs),
+              readinessOutcome: s.readiness[s.readiness.length - 1]?.outcome ?? null,
+              priv: s.private,
+              latestWeightKg: latest.weightKg,
+              latestWeightAt: latest.measuredAt,
+              goals: s.goals,
+              now: this.now(),
+            }),
+          )
+        : null;
+    const guide: number | undefined = guideTargets?.guideKcal;
+    const guideWeightDaysOld: number | undefined = guideTargets?.staleWeightDays;
     const lastItems = [...todaysLogs]
       .sort((a, b) => b.loggedAt.localeCompare(a.loggedAt))[0]
       ?.items.map((i) => ({ name: i.name, foodId: i.foodId, grams: i.grams, kcal: i.kcal }));
@@ -1302,6 +1440,7 @@ export class MockStore implements DataStore {
       wellness: this.coachWellness(s, today),
       comeback: detectComeback(s.sessions, { now: this.now(), timeZone: tz }),
       guideKcal: guide,
+      guideWeightDaysOld,
     });
   }
   /** Only what the person recorded. Returns undefined when nothing was logged and no preferences were set, so the coach says nothing about it. */

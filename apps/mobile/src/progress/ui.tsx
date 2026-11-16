@@ -1,9 +1,13 @@
+import { ShareAchievement } from '@/community/ShareAchievement';
+import { useCommunityAvailable } from '@/community/useCommunity';
+import { useState } from 'react';
 import { View } from 'react-native';
 import { formatDate } from '@/lib/format';
 import { IconBadge, SectionTitle } from '@/ui/kit';
 import { t, type StringKey } from '@/i18n';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from '@/ui/AppText';
+import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { FadeIn } from '@/ui/FadeIn';
 import type { Achievement, AchievementId, WeeklyHabits } from './achievements';
@@ -69,6 +73,8 @@ export function Celebration({ ids }: { ids: AchievementId[] }) {
 
 export function AchievementList({ items }: { items: Achievement[] }) {
   const { spacing, colors } = useTheme();
+  const communityOn = useCommunityAvailable();
+  const [sharing, setSharing] = useState<Achievement | null>(null);
   return (
     <Card>
       <SectionTitle icon="ribbon" title={t('ach.title')} />
@@ -87,8 +93,21 @@ export function AchievementList({ items }: { items: Achievement[] }) {
               muted
             >{`${body(a.id)} ${t('ach.earnedOn', { date: formatDate(a.earnedOn) })}`}</AppText>
           </View>
+          {communityOn ? (
+            <Button
+              variant="secondary"
+              label={`${t('share.button')}: ${title(a.id)}`}
+              onPress={() => setSharing(a)}
+            />
+          ) : null}
         </View>
       ))}
+      {sharing ? (
+        <ShareAchievement
+          source={{ kind: 'achievement', title: title(sharing.id), achievementId: sharing.id }}
+          onClose={() => setSharing(null)}
+        />
+      ) : null}
       <AppText variant="caption" muted>
         {t('ach.note')}
       </AppText>

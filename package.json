@@ -21,7 +21,8 @@
     "db:test": "bash supabase/tests/run.sh && bash supabase/tests/account-pg.sh",
     "check:seed": "node scripts/gen-seed.mjs --check",
     "check:edge": "node scripts/sync-edge-core.mjs --check",
-    "e2e:web": "EXPO_PUBLIC_AUTH_MODE=mock EXPO_PUBLIC_SUPABASE_URL= EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY= pnpm --filter @dancehall/mobile export:web && node apps/mobile/e2e/regression.cjs"
+    "e2e:web": "EXPO_PUBLIC_AUTH_MODE=mock EXPO_PUBLIC_SUPABASE_URL= EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY= pnpm --filter @dancehall/mobile export:web && node apps/mobile/e2e/regression.cjs",
+    "test:community-integration": "node --test --test-concurrency=1 scripts/community-integration/run.test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
@@ -31,5 +32,9 @@
     "prettier": "^3.6.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.0"
-  }
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
 }

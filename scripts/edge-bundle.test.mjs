@@ -21,3 +21,25 @@ test('the account function bundles flat: every relative import resolves, npm imp
   assert.doesNotMatch(idx, /_shared/);
   assert.match(idx, /npm:@supabase\/supabase-js@\d+\.\d+\.\d+/);
 });
+
+test('the community function bundles flat with only the files it reaches', () => {
+  const out = join(mkdtempSync(join(tmpdir(), 'edge-')), 'b');
+  const names = buildBundle(out, 'community')
+    .map((r) => r.name)
+    .sort();
+  assert.deepEqual(names, [
+    'account-core.ts',
+    'community-alerts.ts',
+    'community-media.ts',
+    'community-server.ts',
+    'community.ts',
+    'index.ts',
+    'security-questions.ts',
+  ]);
+  const idx = readFileSync(join(out, 'index.ts'), 'utf8');
+  assert.match(idx, /from '\.\/community-server\.ts'/);
+  assert.doesNotMatch(idx, /_shared/);
+  assert.match(idx, /Deno\.serve/);
+  // Nothing from the account's recovery database layer is shipped with Community.
+  assert.ok(!names.includes('account-rpc-db.ts'));
+});

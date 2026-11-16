@@ -38,11 +38,13 @@ export const SECTIONS: readonly AdminSection[] = [
     slug: 'moderation',
     title: 'Moderation',
     permission: 'moderation.review',
-    purpose: 'Review reports and user-shared clips before wider sharing exists.',
+    purpose: 'Review held and reported Community posts, comments, photos and clips.',
     plannedPhase: 'Phase 8',
     rules: [
       'No public user content before reporting, blocking and review exist.',
       'Moderators never see private health records.',
+      'Queue shows usernames only: never account ids or emails.',
+      'Acting requires the moderation.review permission and a second factor.',
     ],
   },
   {

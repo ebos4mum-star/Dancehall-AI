@@ -242,7 +242,7 @@ describe('meal planner', () => {
   });
 });
 
-import { defaultMealType, energyGuideFor } from './index';
+import { calorieNeeds, defaultMealType, energyGuideFromTargets } from './index';
 describe('meal slot and energy guide', () => {
   it('picks a default meal by local time', () => {
     expect(defaultMealType(new Date(2026, 0, 1, 8))).toBe('breakfast');
@@ -251,16 +251,33 @@ describe('meal slot and energy guide', () => {
     expect(defaultMealType(new Date(2026, 0, 1, 22))).toBe('snack');
   });
   it("never goes below the person's own resting energy, even for an aggressive pace", () => {
-    const base = {
+    const body = {
       weightKg: 80,
       heightCm: 170,
       ageYears: 35,
       sex: 'female' as const,
       activity: 'light' as const,
+      targetKg: null,
     };
-    const g = energyGuideFor({ ...base, weeklyChangeKg: -2 });
-    expect(g.guideKcal).toBeGreaterThanOrEqual(g.floorKcal);
-    expect(energyGuideFor(base).guideKcal).toBe(energyGuideFor(base).maintenanceKcal);
-    expect(g.guideKcal).toBeGreaterThanOrEqual(Math.round(g.maintenanceKcal * 0.8) - 1);
+    const prefs = {
+      goalIntent: 'lose' as const,
+      tracking: 'light' as const,
+      pregnantOrPostpartum: false,
+      eatingConcern: false,
+    };
+    const fast = energyGuideFromTargets(
+      calorieNeeds({
+        prefs,
+        readiness: 'clear',
+        body,
+        activeGoal: { type: 'lose', targetKg: 60, plannedWeeklyChangeKg: -2 },
+      }),
+    )!;
+    expect(fast.guideKcal).toBeGreaterThanOrEqual(fast.floorKcal);
+    expect(fast.guideKcal).toBeGreaterThanOrEqual(Math.round(fast.maintenanceKcal * 0.8) - 1);
+    const steady = energyGuideFromTargets(
+      calorieNeeds({ prefs: { ...prefs, goalIntent: 'maintain' }, readiness: 'clear', body }),
+    )!;
+    expect(steady.guideKcal).toBe(steady.maintenanceKcal);
   });
 });

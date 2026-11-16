@@ -23,6 +23,7 @@ import { haptics } from '@/ui/haptics';
 import { Reveal } from '@/ui/motion';
 import { Screen } from '@/ui/Screen';
 import { StatTile } from '@/ui/StatTile';
+import { useCommunityAvailable } from '@/community/useCommunity';
 
 const MENU: Array<{ icon: IconName; title: StringKey; sub: StringKey; to: string }> = [
   { icon: 'trending-up', title: 'me.progress', sub: 'me.progressSub', to: '/progress' },
@@ -42,6 +43,18 @@ function MeScreenAccount() {
     m.to === '/progress' && !showW ? 'me.progressNoScale' : m.title;
   const rowSub = (m: (typeof MENU)[number]): StringKey =>
     m.to === '/progress' && !showW ? 'me.progressNoScaleSub' : m.sub;
+  const communityOn = useCommunityAvailable();
+  const menu = communityOn
+    ? [
+        ...MENU,
+        {
+          icon: 'people' as IconName,
+          title: 'community.entry' as StringKey,
+          sub: 'community.entrySub' as StringKey,
+          to: '/community',
+        },
+      ]
+    : MENU;
   const recent = insights.achievements.slice(0, 6);
   const name = profile?.displayName ?? null;
   return (
@@ -133,7 +146,7 @@ function MeScreenAccount() {
       )}
 
       <Card>
-        {MENU.map((m, i) => (
+        {menu.map((m, i) => (
           <Pressable
             key={m.to}
             accessibilityRole="button"

@@ -616,3 +616,70 @@ describe('hidden numbers reach neither the coach context nor its replies', () =>
     );
   });
 });
+
+describe('nutrition and maintenance coaching (rule-based, no paid AI)', () => {
+  const guide = (over: Partial<Parameters<typeof buildCoachContext>[0]> = {}) =>
+    personal({ guideKcal: 2210, ...over });
+  const say = (t: string, c: ReturnType<typeof personal>) => composeCoachReply(t, c);
+
+  it('quotes only the estimate it was given, rounded, labelled provisional, and says workout calories are not added', () => {
+    const r = say('How many calories do I need?', guide());
+    expect(r.message).toMatch(/about 2200 kcal/);
+    expect(r.message).toMatch(/provisional/);
+    expect(r.message).toMatch(/not a target/);
+    expect(r.message).toMatch(/do not add workout calories on top/);
+    expect(r.message).not.toMatch(/old|days ago/);
+  });
+  it('says the estimate rests on an older weight when it does, and never calls it current', () => {
+    const r = say('How many calories do I need?', guide({ guideWeightDaysOld: 120 }));
+    expect(r.message).toMatch(/about 120 days ago, not a current measurement/);
+  });
+  it('never invents a number: without an estimate it says what is needed, and with hidden numbers it shares none', () => {
+    const none = say('How many calories do I need?', personal({ guideKcal: undefined }));
+    expect(none.message).toMatch(/do not have a calorie estimate/);
+    expect(none.message).not.toMatch(/\d{3,}\s*kcal/);
+    const hidden = say(
+      'How many calories do I need?',
+      guide({ wellness: { numbersHidden: true } as never }),
+    );
+    expect(hidden.message).toMatch(/will not share calorie numbers/);
+    expect(hidden.message).not.toMatch(/\d{3,}/);
+  });
+  it('with personalization off it says so, instead of claiming there is no estimate', () => {
+    const r = composeCoachReply(
+      'How many calories do I need?',
+      buildCoachContext({ personalized: false, unitSystem: 'metric', now: NOW }),
+    );
+    expect(r.message).toMatch(/Personalization is off/);
+    expect(r.message).toMatch(/Goals and Food screens/);
+    expect(r.message).not.toMatch(/\d{3,}/);
+  });
+  it('plate guidance is the general plate picture, provisional, with no numbers or judgement', () => {
+    const r = say('What does a balanced plate look like?', personal());
+    expect(r.message).toMatch(/about half vegetables and fruit/);
+    expect(r.message).toMatch(/not medical advice/);
+    expect(r.message).not.toMatch(/kcal|should not|bad|cheat/i);
+  });
+  it('maintenance coaching is gentle and goal-aware, and with hidden numbers is habits only', () => {
+    const r = say('I reached my goal, what now?', personal());
+    expect(r.message).toMatch(/Maintain weight on the Goals screen/);
+    expect(r.message).toMatch(/history stays as it is/);
+    const hidden = say(
+      'I reached my goal, what now?',
+      personal({ wellness: { numbersHidden: true } as never }),
+    );
+    expect(hidden.message).toMatch(/without any numbers/);
+    expect(hidden.message).not.toMatch(/weight|kilo/i);
+  });
+  it('every new reply explains itself and proposes no change to the person’s data', () => {
+    for (const q of [
+      'How many calories do I need?',
+      'What does a balanced plate look like?',
+      'I reached my goal, what now?',
+    ]) {
+      const r = say(q, guide());
+      expect(r.because.length).toBeGreaterThan(0);
+      expect(r.proposedChanges).toEqual([]);
+    }
+  });
+});

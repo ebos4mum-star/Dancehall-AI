@@ -150,6 +150,17 @@ describe('intents', () => {
       intent: 'workout_request',
       minutes: 15,
     });
+    expect(classifyIntent('How many calories do I need?').intent).toBe('calorie_needs');
+    expect(classifyIntent('what is my maintenance calories').intent).toBe('calorie_needs');
+    expect(classifyIntent('How much protein should I have?').intent).toBe('nutrition_balance');
+    expect(classifyIntent('What does a balanced plate look like?').intent).toBe(
+      'nutrition_balance',
+    );
+    expect(classifyIntent('I reached my goal, what now?').intent).toBe('maintenance');
+    expect(classifyIntent('How do I keep my weight steady?').intent).toBe('maintenance');
+    // The older routes keep working.
+    expect(classifyIntent('Any swap for fried chicken?').intent).toBe('food_swap');
+    expect(classifyIntent('my weight has plateaued').intent).toBe('plateau');
     expect(classifyIntent('hello there').intent).toBe('general');
   });
 });

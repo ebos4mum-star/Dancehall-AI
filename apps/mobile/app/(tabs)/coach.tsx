@@ -39,8 +39,14 @@ const PROMPTS = [
   'why',
   'plateau',
   'recover',
+  'calories',
+  'plate',
+  'steady',
 ] as const;
 const PROMPT_ICON = {
+  calories: 'flame',
+  plate: 'restaurant',
+  steady: 'shield-checkmark',
   plan: 'sunny',
   busy: 'timer',
   travel: 'airplane',

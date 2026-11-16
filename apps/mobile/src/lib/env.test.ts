@@ -11,7 +11,16 @@ describe('resolveConfig', () => {
       authMode: 'mock',
       contentFixtures: false,
       cloudAccounts: true,
+      barcodeProvider: 'local',
+      community: true,
     });
+  });
+  it('carries an optional public support address and refuses anything that is not an email address', () => {
+    expect(resolveConfig({ EXPO_PUBLIC_SUPPORT_EMAIL: ' help@example.test ' }).supportEmail).toBe(
+      'help@example.test',
+    );
+    expect(resolveConfig({}).supportEmail).toBeUndefined();
+    expect(() => resolveConfig({ EXPO_PUBLIC_SUPPORT_EMAIL: 'not an email' })).toThrow(/email/);
   });
   it('offers cloud accounts in a Supabase build only when explicitly enabled', () => {
     const base = {

@@ -11,23 +11,25 @@ import type { CoachContext } from './coach-context';
  * One source of truth for the app and for the database checks (supabase/migrations/20261209000100_wellness.sql mirrors these ranges).
  */
 /**
- * Goal intents. `strength` (build strength, weight-neutral) was added after the first three: stored values are unchanged, and an older app version that does not
- * know `strength` reads it as the default (`fitness`) rather than failing. `strength` never creates a calorie deficit or a weight target.
+ * Goal intents. `strength` (build strength, weight-neutral) and `gain` (gain weight, with a small provisional surplus) were added after the first three: stored values
+ * are unchanged, and an older app version that does not know them reads them as the default (`fitness`) rather than failing. `strength` never creates a calorie
+ * deficit or a weight target. `gain` is its own goal: it is never stored or shown as `fitness`.
  */
-export const GOAL_INTENTS = ['lose', 'maintain', 'fitness', 'strength'] as const;
+export const GOAL_INTENTS = ['lose', 'maintain', 'fitness', 'strength', 'gain'] as const;
 export type GoalIntent = (typeof GOAL_INTENTS)[number];
-/** The primary goals the Goals screen offers: all four. */
-export const SELECTABLE_GOAL_INTENTS = GOAL_INTENTS;
+/** The primary goals the Goals screen offers, in display order: Lose, Maintain, Gain, Improve Fitness, Build Strength. */
+export const SELECTABLE_GOAL_INTENTS = ['lose', 'maintain', 'gain', 'fitness', 'strength'] as const;
 
 /**
- * Which goals can sit alongside a primary goal. Losing and maintaining weight pull in opposite directions, so they are never combined; every other pairing is fine.
+ * Which goals can sit alongside a primary goal. Losing, maintaining and gaining weight pull in different directions, so they are never combined; every other pairing is fine.
  * A secondary goal adds its pathways to the plan. It never changes the weight-loss safety rules, which follow the primary goal only.
  */
 export const GOAL_COMPATIBILITY: Record<GoalIntent, readonly GoalIntent[]> = {
   lose: ['fitness', 'strength'],
   maintain: ['fitness', 'strength'],
-  fitness: ['lose', 'maintain', 'strength'],
-  strength: ['lose', 'maintain', 'fitness'],
+  gain: ['fitness', 'strength'],
+  fitness: ['lose', 'maintain', 'strength', 'gain'],
+  strength: ['lose', 'maintain', 'fitness', 'gain'],
 };
 /** The secondary goals a person may choose next to this primary goal. */
 export const compatibleSecondaryGoals = (primary: GoalIntent): readonly GoalIntent[] =>
@@ -100,6 +102,11 @@ export type TrackingStyle = (typeof TRACKING_STYLES)[number];
 
 export interface WellnessPrefs {
   goalIntent: GoalIntent;
+  /**
+   * True once the person has picked a goal themselves. Older accounts never recorded this: for them the default goal (`fitness`) may just mean "never chose", so a stored weight
+   * goal can still decide the calorie estimate (see `effectiveGoalIntent`). An explicit choice always wins.
+   */
+  goalChosen: boolean;
   /** Minutes per week the person would like to move. Optional. */
   exerciseMinutesPerWeek: number | null;
   activities: ActivityPref[];
@@ -142,6 +149,7 @@ export interface WellnessPrefs {
 }
 export const DEFAULT_PREFS: WellnessPrefs = {
   goalIntent: 'fitness',
+  goalChosen: false,
   exerciseMinutesPerWeek: null,
   activities: ['dance'],
   equipment: ['none'],
@@ -183,6 +191,7 @@ export function parsePrefs(raw: unknown): WellnessPrefs {
       : null;
   return {
     goalIntent: intent,
+    goalChosen: r.goalChosen === true,
     exerciseMinutesPerWeek: num(r.exerciseMinutesPerWeek, 0, 1000),
     activities: acts.length > 0 ? acts : DEFAULT_PREFS.activities,
     equipment: equip.length > 0 ? equip : DEFAULT_PREFS.equipment,
@@ -211,14 +220,16 @@ export function parsePrefs(raw: unknown): WellnessPrefs {
 
 /**
  * Is weight tracking on for this person? Explicit choice wins. With no choice, behaviour is what it always was: on for the lose and maintain goals, and while an active
- * weight goal exists; off for fitness and strength. Weight surfaces use `showWeight`, which also honours hidden numbers.
+ * weight goal exists; off for fitness and strength. Gain Weight does NOT switch tracking on by itself: it is optional, and an estimate needs only one recorded weight. Weight surfaces use `showWeight`, which also honours hidden numbers.
  */
 export const weightTrackingOn = (
   p: Pick<WellnessPrefs, 'weightTracking' | 'goalIntent'>,
   hasActiveWeightGoal = false,
 ): boolean =>
   p.weightTracking ??
-  (p.goalIntent === 'lose' || p.goalIntent === 'maintain' || hasActiveWeightGoal);
+  (p.goalIntent === 'lose' ||
+    p.goalIntent === 'maintain' ||
+    (hasActiveWeightGoal && p.goalIntent !== 'gain'));
 
 /** The single rule every screen uses before showing or asking for weight: the person tracks weight AND their numbers are not hidden. */
 export const showWeight = (

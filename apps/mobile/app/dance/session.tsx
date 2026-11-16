@@ -1,3 +1,5 @@
+import { ShareAchievement } from '@/community/ShareAchievement';
+import { useCommunityAvailable } from '@/community/useCommunity';
 import { withAccount } from '@/account/gate';
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -63,6 +65,8 @@ function Session() {
   const [effort, setEffort] = useState<string>('moderate');
   const [err, setErr] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const communityOn = useCommunityAvailable();
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [requested, setRequested] = useState<Presentation>('guided_text');
   const s = r.session;
@@ -239,6 +243,25 @@ function Session() {
             </>
           )}
           {err ? <Notice tone="warning">{err}</Notice> : null}
+          {saved && communityOn && summary.recordable ? (
+            sharing ? (
+              <ShareAchievement
+                source={{
+                  kind: 'workout',
+                  title: workout.title,
+                  style: workout.style ?? null,
+                  minutes: Math.max(1, Math.round(s.elapsedS / 60)),
+                }}
+                onClose={() => setSharing(false)}
+              />
+            ) : (
+              <Button
+                variant="secondary"
+                label={t('share.button')}
+                onPress={() => setSharing(true)}
+              />
+            )
+          ) : null}
           <Button
             variant="secondary"
             label={saved ? t('common.continue') : t('ses.discard')}

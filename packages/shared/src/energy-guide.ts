@@ -1,4 +1,4 @@
-import { dailyCalorieGuidance, type ActivityLevel, type Sex } from './safety';
+import type { NutritionTargets } from './nutrition-plan';
 
 export interface EnergyGuide {
   /** A rough daily energy guide in kcal. It is an estimate from general formulas, not a target the person must hit. */
@@ -6,20 +6,22 @@ export interface EnergyGuide {
   maintenanceKcal: number;
   /** The person's own estimated resting energy: the guide is never lower than this. */
   floorKcal: number;
+  /** Days old when the weight behind the guide is older than 60 days; otherwise undefined. */
+  staleWeightDays?: number;
 }
 
 /**
- * Daily energy guide used on the Food and Today screens. Uses the individualized safety rules (deficit capped relative to the
- * person's own maintenance, never below their own resting energy). PROVISIONAL: not reviewed by a dietitian or clinician.
+ * The compact daily energy guide used on the Food and Today screens, the meal planner and the coach. It is ONLY a view of the canonical result
+ * (`calorieNeeds` -> `nutritionTargets`): there is no second calculator. When the goal-based number is withheld for safety (for example a Gain Weight surplus that is
+ * not suggested), the guide is the person's estimated maintenance. When no estimate is given (numbers hidden, professional advice needed, inputs missing) there is no guide.
+ * PROVISIONAL: not reviewed by a dietitian or clinician.
  */
-export function energyGuideFor(args: {
-  weightKg: number;
-  heightCm: number;
-  ageYears: number;
-  sex: Sex;
-  activity: ActivityLevel;
-  weeklyChangeKg?: number;
-}): EnergyGuide {
-  const g = dailyCalorieGuidance({ ...args, weeklyChangeKg: args.weeklyChangeKg ?? 0 });
-  return { guideKcal: g.targetKcal, maintenanceKcal: g.maintenanceKcal, floorKcal: g.floorKcal };
+export function energyGuideFromTargets(t: NutritionTargets): EnergyGuide | null {
+  if (!t.kcal) return null;
+  return {
+    guideKcal: t.kcal.guide ?? t.kcal.maintenance,
+    maintenanceKcal: t.kcal.maintenance,
+    floorKcal: t.kcal.floor,
+    staleWeightDays: t.weightStale && t.weightAgeDays !== null ? t.weightAgeDays : undefined,
+  };
 }

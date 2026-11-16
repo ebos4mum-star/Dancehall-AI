@@ -4,7 +4,15 @@
 //   node scripts/sync-edge-core.mjs --check  fail if a copy is stale (runs in `pnpm verify` and CI)
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 
-const FILES = ['account-core.ts', 'security-questions.ts', 'account-rpc-db.ts'];
+const FILES = [
+  'account-core.ts',
+  'security-questions.ts',
+  'account-rpc-db.ts',
+  'community.ts',
+  'community-media.ts',
+  'community-server.ts',
+  'community-alerts.ts',
+];
 const OUT = 'supabase/functions/_shared/generated';
 const noble = JSON.parse(readFileSync('node_modules/@noble/hashes/package.json', 'utf8')).version;
 

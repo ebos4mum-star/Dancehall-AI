@@ -168,8 +168,15 @@ export default function Onboarding() {
         'intent',
         () =>
           store.setWellnessPrefs?.({
+            goalChosen: goalType !== 'none',
             goalIntent:
-              goalType === 'lose' ? 'lose' : goalType === 'maintain' ? 'maintain' : 'fitness',
+              goalType === 'lose'
+                ? 'lose'
+                : goalType === 'maintain'
+                  ? 'maintain'
+                  : goalType === 'gain'
+                    ? 'gain'
+                    : 'fitness',
           }) ?? Promise.resolve(),
       );
       await once('profile', () =>
@@ -525,9 +532,7 @@ export default function Onboarding() {
               ))}
             </View>
             <AppText variant="caption" muted accessibilityLiveRegion="polite">
-              {t(
-                `wl.intentNote.${goalType === 'gain' ? 'fitness' : goalType === 'none' ? 'fitness' : goalType}` as StringKey,
-              )}
+              {t(`wl.intentNote.${goalType === 'none' ? 'fitness' : goalType}` as StringKey)}
             </AppText>
           </StepCard>
           {goalType !== 'none' && (

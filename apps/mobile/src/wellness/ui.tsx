@@ -32,10 +32,11 @@ const INTENT_ICON: Record<GoalIntent, IconName> = {
   strength: 'barbell',
   lose: 'trending-down',
   maintain: 'swap-horizontal',
+  gain: 'trending-up',
   fitness: 'fitness',
 };
 
-/** The three goals as big choices, with a one-line explanation of the selected one. Reused by onboarding and Goals. */
+/** The five goals as big choices, with a one-line explanation of the selected one. Reused by onboarding and Goals. */
 export function IntentChoice({
   value,
   onChange,
@@ -56,7 +57,7 @@ export function IntentChoice({
               tint={
                 g === 'lose'
                   ? brand.coral
-                  : g === 'maintain'
+                  : g === 'maintain' || g === 'gain'
                     ? brand.violet
                     : g === 'strength'
                       ? brand.violet
@@ -108,7 +109,10 @@ export function FocusCard({ part = 'all' }: { part?: 'all' | 'goals' | 'rest' })
       <AppText variant="caption" muted>
         {t('wl.focusIntro')}
       </AppText>
-      <IntentChoice value={prefs.goalIntent} onChange={(v) => void w.setPrefs({ goalIntent: v })} />
+      <IntentChoice
+        value={prefs.goalIntent}
+        onChange={(v) => void w.setPrefs({ goalIntent: v, goalChosen: true })}
+      />
       <Disclosure
         title={t('wl.secondary')}
         summary={
@@ -331,7 +335,7 @@ export function FocusCard({ part = 'all' }: { part?: 'all' | 'goals' | 'rest' })
 }
 
 /** Estimates with their reasons. When there is no number, it says why and, where it matters, points to a professional. */
-export function TargetsCard() {
+export function TargetsCard({ compact = false }: { compact?: boolean }) {
   const w = useWellness();
   const { colors } = useTheme();
   const g = w.targets;
@@ -351,37 +355,57 @@ export function TargetsCard() {
           {t('wl.targetsBadge')}
         </AppText>
       </View>
-      {g.kcal ? (
-        <View style={{ gap: spacing.sm }}>
-          <Row
-            icon="flame"
-            label={t('wl.kcal')}
-            value={t('wl.kcalValue', { kcal: g.kcal.guide })}
-          />
-          {g.proteinG ? (
+      <View style={{ gap: spacing.sm }}>
+        <Row icon="flag" label={t('wl.yourGoal')} value={t(`wl.intent.${g.intent}` as StringKey)} />
+        {g.kcal ? (
+          <>
             <Row
-              icon="barbell"
-              label={t('wl.protein')}
-              value={t('wl.proteinValue', { low: g.proteinG.low, high: g.proteinG.high })}
+              icon="flame"
+              label={t('wl.maintenanceKcal')}
+              value={t('wl.kcalValue', { kcal: g.kcal.maintenance })}
             />
-          ) : null}
-          <Row
-            icon="water"
-            label={t('wl.water')}
-            value={t('wl.waterValue', { ml: w.waterGoalMl })}
-          />
-        </View>
-      ) : (
-        <View style={{ gap: spacing.sm }}>
-          <Row
-            icon="water"
-            label={t('wl.water')}
-            value={t('wl.waterValue', { ml: w.waterGoalMl })}
-          />
+            <Row
+              icon="trending-up"
+              label={t('wl.goalKcal')}
+              value={
+                g.kcal.guide === null
+                  ? t('wl.kcalWithheld')
+                  : t('wl.kcalValue', { kcal: g.kcal.guide })
+              }
+            />
+            {g.proteinG && !compact ? (
+              <Row
+                icon="barbell"
+                label={t('wl.protein')}
+                value={t('wl.proteinValue', { low: g.proteinG.low, high: g.proteinG.high })}
+              />
+            ) : null}
+          </>
+        ) : (
           <AppText variant="label">{t('wl.noTargets')}</AppText>
-        </View>
-      )}
+        )}
+        {compact ? null : (
+          <Row
+            icon="water"
+            label={t('wl.water')}
+            value={t('wl.waterValue', { ml: w.waterGoalMl })}
+          />
+        )}
+      </View>
+      {g.kcal && g.weightStale && g.weightAgeDays !== null ? (
+        <Notice>{t('wl.weightOld', { days: g.weightAgeDays })}</Notice>
+      ) : null}
+      {g.missing.length > 0 ? (
+        <Notice>
+          {t('wl.missingInputs', {
+            list: g.missing.map((m) => t(`wl.missing.${m}` as StringKey)).join(', '),
+          })}
+        </Notice>
+      ) : null}
       {g.seeProfessional ? <Notice tone="warning">{t('wl.seeProfessional')}</Notice> : null}
+      <AppText variant="caption" muted>
+        {t('wl.targetsProvisional')}
+      </AppText>
       <Disclosure title={t('wl.how')}>
         {g.reasons.map((r) => (
           <AppText key={r} variant="caption" style={{ color: colors.text }}>

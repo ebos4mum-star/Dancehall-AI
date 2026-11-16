@@ -1,7 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  DEFAULT_PREFS,
   buildCoachContext,
   buildWeekFacts,
+  calorieNeedsFromRecords,
+  energyGuideFromTargets,
   addDaysIso,
   coachWellnessContext,
   parsePrefs,
@@ -118,6 +121,78 @@ export class SupabaseServerRepo implements ServerRepo {
     };
   }
 
+  /**
+   * The daily calorie guide the coach may mention, from the SAME engine as every screen in the app (`calorieNeedsFromRecords`), so the coach can never quote a number the
+   * person's own Goals screen would not show. Read-only; every query is scoped by the verified user id. Uses the latest weight however old it is. Fails closed: any
+   * read error, missing fact or withheld estimate (cautious readiness, hidden numbers, professional advice needed) gives NO guide. PROVISIONAL: not professionally reviewed.
+   */
+  private async calorieGuide(
+    userId: string,
+    prefs: WellnessPrefs | null,
+    now: Date,
+  ): Promise<{ kcal: number; weightDaysOld?: number } | undefined> {
+    try {
+      const first = (v: unknown): Row | null =>
+        (Array.isArray(v) ? (v[0] ?? null) : v) as Row | null;
+      const [priv, weights, goals, readiness] = await Promise.all([
+        this.db
+          .from('profile_private')
+          .select('birth_date, height_cm, sex, activity_level')
+          .eq('user_id', userId)
+          .maybeSingle(),
+        this.db
+          .from('weight_entries')
+          .select('weight_kg, measured_at')
+          .eq('user_id', userId)
+          .order('measured_at', { ascending: false })
+          .limit(1),
+        this.db
+          .from('goals')
+          .select('type, status, end_date, target_kg, planned_weekly_change_kg')
+          .eq('user_id', userId)
+          .eq('status', 'active'),
+        this.db
+          .from('readiness_screenings')
+          .select('outcome')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(1),
+      ]);
+      const p = first(ok(priv, 'profile_private'));
+      const w = first(ok(weights, 'weight_entries'));
+      const outcome = first(ok(readiness, 'readiness_screenings'))?.outcome;
+      const targets = calorieNeedsFromRecords({
+        prefs: prefs ?? DEFAULT_PREFS,
+        readinessOutcome:
+          outcome === 'clear' || outcome === 'low_impact_and_check_with_professional'
+            ? outcome
+            : null,
+        priv: p
+          ? ({
+              birthDate: String(p.birth_date),
+              heightCm: Number(p.height_cm),
+              sex: p.sex,
+              activityLevel: p.activity_level,
+            } as never)
+          : null,
+        latestWeightKg: w ? Number(w.weight_kg) : null,
+        latestWeightAt: w ? String(w.measured_at) : null,
+        goals: ((ok(goals, 'goals') ?? []) as Row[]).map((g) => ({
+          type: g.type,
+          status: String(g.status),
+          endDate: String(g.end_date),
+          targetKg: Number(g.target_kg),
+          plannedWeeklyChangeKg: Number(g.planned_weekly_change_kg),
+        })) as never,
+        now,
+      });
+      const g = energyGuideFromTargets(targets);
+      return g ? { kcal: g.guideKcal, weightDaysOld: g.staleWeightDays } : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   async coachContext(userId: string, personalized: boolean, now: Date) {
     const unitSystem = 'metric' as const;
     if (!personalized) return buildCoachContext({ personalized: false, unitSystem, now });
@@ -139,8 +214,11 @@ export class SupabaseServerRepo implements ServerRepo {
       .sort((a, b) => a.at.localeCompare(b.at));
     const change = w.length >= 2 ? w[w.length - 1]!.kg - w[0]!.kg : null;
     const wl = await this.wellness(userId, today);
+    const guide = wl.failed ? undefined : await this.calorieGuide(userId, wl.prefs, now);
     return buildCoachContext({
       personalized: true,
+      guideKcal: guide?.kcal,
+      guideWeightDaysOld: guide?.weightDaysOld,
       unitSystem: r.profile.unit_system === 'imperial' ? 'imperial' : unitSystem,
       now,
       timeZone: tz,

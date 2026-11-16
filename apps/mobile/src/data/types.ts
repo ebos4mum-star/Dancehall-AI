@@ -1,4 +1,9 @@
 import type {
+  CommunityFail,
+  NewPostInput,
+  PublicComment,
+  PublicPost,
+  ReportReason,
   BudgetLevel,
   PlanItemKind,
   PlanMode,
@@ -198,6 +203,61 @@ export interface DataStore {
   archiveHabit(id: string): Promise<void>;
   listHabitCheckins(sinceDay: string): Promise<HabitCheckin[]>;
   setHabitDone(habitId: string, day: string, done: boolean): Promise<void>;
+
+  // Community (optional). Reading the feed is public: it works signed out. Every other call needs an account, and posting and commenting also need a public username.
+  // Nothing returned carries an internal id, an email or a health record. Absent in adapters without a Community backend (the feature is then not offered).
+  communityProfile?(): Promise<{
+    username: string;
+    /** When the next username change is allowed (ISO), or null if one is allowed now. */
+    canChangeAt?: string | null;
+    /** A staff restriction currently on the account, if any. */
+    restriction?: 'muted' | 'suspended' | null;
+  } | null>;
+  /** Whether photos and videos (or all new posts) are paused right now. */
+  communityStatus?(): Promise<{
+    mode: 'open' | 'text_only' | 'read_only';
+    /** Video uploads stay off until processing and review requirements are met. */
+    videoEnabled: boolean;
+    /** Comments are off for V1; the code is kept for later. */
+    commentsEnabled: boolean;
+  }>;
+  communityChangeUsername?(raw: string): Promise<{ ok: true; username: string } | CommunityFail>;
+  /** Leave Community: removes the username, posts, comments, reactions and files. The account itself stays. */
+  communityLeave?(): Promise<{ ok: true } | CommunityFail>;
+  communityClaimUsername?(raw: string): Promise<{ ok: true; username: string } | CommunityFail>;
+  communityFeed?(opts?: {
+    cursor?: string | null;
+    limit?: number;
+  }): Promise<{ posts: PublicPost[]; next: string | null }>;
+  communityComments?(postId: string): Promise<PublicComment[]>;
+  communityPost?(
+    input: NewPostInput,
+    opts: { confirmed: boolean },
+  ): Promise<
+    { ok: true; post: PublicPost; status: 'published' | 'held'; message: string } | CommunityFail
+  >;
+  communityDeletePost?(postId: string): Promise<{ ok: true } | CommunityFail>;
+  communityComment?(
+    postId: string,
+    text: string,
+  ): Promise<
+    | { ok: true; comment: PublicComment; status: 'published' | 'hidden'; message: string }
+    | CommunityFail
+  >;
+  communityDeleteComment?(commentId: string): Promise<{ ok: true } | CommunityFail>;
+  communityEncourage?(
+    postId: string,
+    on: boolean,
+  ): Promise<{ ok: true; encouraged: boolean } | CommunityFail>;
+  communityReport?(input: {
+    targetType: 'post' | 'comment';
+    targetId: string;
+    reason: ReportReason;
+    note?: string;
+  }): Promise<{ ok: true } | CommunityFail>;
+  communityBlock?(username: string): Promise<{ ok: true } | CommunityFail>;
+  communityUnblock?(username: string): Promise<{ ok: true } | CommunityFail>;
+  communityBlocked?(): Promise<string[]>;
 
   // Wellness (optional logs and preferences). Optional: not every adapter provides them.
   /** Entries on or after `sinceDay` (YYYY-MM-DD), newest first. */

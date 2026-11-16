@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { lbToKg, summarizeWeights } from '@dancehall/shared';
 import { EmptyState } from '@/ui/EmptyState';
 import { InfoTile, SectionTitle } from '@/ui/kit';
+import { MaintenanceCard } from '@/progress/MaintenanceCard';
 import { RecapCard } from '@/progress/RecapCard';
 import { useApp } from '@/data/AppProvider';
 import { useWeightState } from '@/wellness/hooks';
@@ -80,6 +81,7 @@ function Progress() {
       }}
     >
       <RecapCard />
+      <MaintenanceCard />
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {loading && !data ? <SkeletonList label={t('common.loading')} cards={2} /> : null}
       {!showW ? (

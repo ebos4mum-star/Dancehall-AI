@@ -143,6 +143,7 @@ describe('browse first, account when it matters', () => {
       ['/food/add', 'log_food'],
       ['/food/review', 'log_food'],
       ['/food/camera', 'log_food'],
+      ['/food/barcode', 'log_food'],
       ['/food/plan', 'meal_plan'],
       ['/goals', 'goals'],
       ['/challenges', 'challenges'],

@@ -7,6 +7,13 @@ import {
   SupabaseUserAiPause,
 } from './supabase-ports';
 import { SupabaseServerRepo } from './server/supabase-repo';
+import {
+  DEFAULT_PREFS,
+  buildCoachContext,
+  calorieNeedsFromRecords,
+  type GoalIntent,
+} from '@dancehall/shared';
+import { buildCoachPrompt } from './prompts';
 
 type Call = { op: string; args: unknown[] };
 /** Recording fake of the supabase-js query builder: every chained call is logged and the final await yields `result`. */
@@ -278,6 +285,123 @@ describe('server coach wellness context (privacy, validity, isolation)', () => {
     const ctx = await new SupabaseServerRepo(f.db).coachContext('u', true, NOW);
     expect(ctx.wellness?.numbersHidden).toBe(true);
     expect(ctx.wellness?.walkMinutesWeek).toBe(0);
+  });
+  describe('calorie guide for the server coach (same engine as the app)', () => {
+    const calorieTables = (over: Tables = {}): Tables => ({
+      ...base,
+      wellness_entries: { data: [] },
+      profile_private: {
+        data: {
+          birth_date: '1990-01-01',
+          height_cm: 170,
+          sex: 'female',
+          activity_level: 'moderate',
+        },
+      },
+      weight_entries: { data: [{ weight_kg: 70, measured_at: '2025-01-01T08:00:00Z' }] },
+      goals: { data: [] },
+      readiness_screenings: { data: [{ outcome: 'clear' }] },
+      ...over,
+    });
+    const prefsOf = (data: Record<string, unknown>) => ({ wellness_prefs: { data: { data } } });
+    const guideFor = async (t: Tables) =>
+      (await new SupabaseServerRepo(tables(t).db).coachContext('user-A', true, NOW)).guideKcal;
+    const expected = (intent: GoalIntent) => {
+      const n = calorieNeedsFromRecords({
+        prefs: { ...DEFAULT_PREFS, goalIntent: intent, goalChosen: true },
+        readinessOutcome: 'clear',
+        priv: { birthDate: '1990-01-01', heightCm: 170, sex: 'female', activityLevel: 'moderate' },
+        latestWeightKg: 70,
+        goals: [],
+        now: NOW,
+      });
+      return Math.round((n.kcal!.guide ?? n.kcal!.maintenance) / 50) * 50;
+    };
+
+    it('quotes the same number the Goals screen would show (to the nearest 50), for all five goals, using the latest weight however old', async () => {
+      for (const intent of ['lose', 'maintain', 'gain', 'fitness', 'strength'] as const) {
+        const g = await guideFor(
+          calorieTables(prefsOf({ goalIntent: intent, goalChosen: true, tracking: 'light' })),
+        );
+        expect(g, intent).toBe(expected(intent));
+      }
+    });
+    it('quotes the Gain Weight surplus, never more than 10% above maintenance', async () => {
+      const gain = (await guideFor(calorieTables(prefsOf({ goalIntent: 'gain' }))))!;
+      const maintain = (await guideFor(calorieTables(prefsOf({ goalIntent: 'maintain' }))))!;
+      expect(gain).toBeGreaterThan(maintain);
+      expect(gain).toBeLessThanOrEqual(Math.round((maintain * 1.1) / 50) * 50 + 50);
+    });
+    it('gives no calorie guide when the engine withholds it: cautious or unanswered safety questions for loss, hidden numbers, missing facts', async () => {
+      const lose = prefsOf({ goalIntent: 'lose' });
+      expect(await guideFor(calorieTables(lose))).toBeDefined();
+      expect(
+        await guideFor(
+          calorieTables({
+            ...lose,
+            readiness_screenings: { data: [{ outcome: 'low_impact_and_check_with_professional' }] },
+          }),
+        ),
+      ).toBeUndefined();
+      expect(
+        await guideFor(calorieTables({ ...lose, readiness_screenings: { data: [] } })),
+      ).toBeUndefined();
+      for (const flag of [
+        { eatingConcern: true },
+        { pregnantOrPostpartum: true },
+        { tracking: 'none' },
+      ])
+        expect(
+          await guideFor(calorieTables(prefsOf({ goalIntent: 'maintain', ...flag }))),
+        ).toBeUndefined();
+      expect(await guideFor(calorieTables({ weight_entries: { data: [] } }))).toBeUndefined();
+      expect(await guideFor(calorieTables({ profile_private: { data: null } }))).toBeUndefined();
+    });
+    it('an old recorded weight is flagged to the coach as old (never as current); a recent one is not; hidden numbers send nothing', async () => {
+      const ctxOf = async (t: Tables) =>
+        new SupabaseServerRepo(tables(t).db).coachContext('user-A', true, NOW);
+      const old = await ctxOf(calorieTables(prefsOf({ goalIntent: 'gain' })));
+      expect(old.guideKcal).toBeDefined();
+      expect(old.guideWeightDaysOld).toBeGreaterThan(400); // the fixture weight is from 2025-01-01
+      const recent = await ctxOf(
+        calorieTables({
+          ...prefsOf({ goalIntent: 'gain' }),
+          weight_entries: { data: [{ weight_kg: 70, measured_at: '2026-05-30T08:00:00Z' }] },
+        }),
+      );
+      expect(recent.guideKcal).toBeDefined();
+      expect(recent.guideWeightDaysOld).toBeUndefined();
+      const hidden = await ctxOf(
+        calorieTables(prefsOf({ goalIntent: 'gain', eatingConcern: true })),
+      );
+      expect(hidden.guideKcal).toBeUndefined();
+      expect(hidden.guideWeightDaysOld).toBeUndefined();
+    });
+    it('tells the model how to treat the estimate: provisional, and an older weight is never called current', () => {
+      const text = buildCoachPrompt(
+        buildCoachContext({ personalized: false, unitSystem: 'metric', now: NOW }),
+        'hi',
+      );
+      expect(text).toMatch(/guideWeightDaysOld/);
+      expect(text).toMatch(/never call it the current weight/);
+    });
+    it('fails closed: a failed read gives no guide and does not break the rest of the context', async () => {
+      const t = calorieTables({ profile_private: { data: null, error: { message: 'down' } } });
+      const ctx = await new SupabaseServerRepo(tables(t).db).coachContext('user-A', true, NOW);
+      expect(ctx.guideKcal).toBeUndefined();
+      expect(ctx.personalized).toBe(true);
+    });
+    it('scopes every new read by the verified user and reads nothing when personalization is off', async () => {
+      const f = tables(calorieTables());
+      await new SupabaseServerRepo(f.db).coachContext('user-A', true, NOW);
+      for (const q of f.queries.filter((x) =>
+        ['profile_private', 'readiness_screenings', 'weight_entries', 'goals'].includes(x.table),
+      ))
+        expect(q.eq).toContainEqual(['user_id', 'user-A']);
+      const off = tables(calorieTables());
+      await new SupabaseServerRepo(off.db).coachContext('user-A', false, NOW);
+      expect(off.queries).toHaveLength(0);
+    });
   });
   it('reads no wellness data at all when personalization is off', async () => {
     const f = tables({ ...base });

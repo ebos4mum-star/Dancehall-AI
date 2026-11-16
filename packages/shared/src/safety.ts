@@ -24,6 +24,19 @@ export const PROVISIONAL_LIMITS = {
   maxWeeklyGainFraction: 0.005,
   /** Planned daily deficit never exceeds this fraction of estimated maintenance energy. */
   maxDeficitFraction: 0.2,
+  /**
+   * Gain Weight: the planned daily surplus never exceeds this fraction of estimated maintenance energy. A conservative PROVISIONAL ceiling chosen by the product owner:
+   * it is not clinically validated and has not been reviewed by a registered dietitian or clinician.
+   */
+  maxSurplusFraction: 0.1,
+  /** Gentle default pace when a person chooses Gain Weight without a target: a quarter of a percent of body weight per week (half the hard cap). */
+  suggestedWeeklyGainFraction: 0.0025,
+  /**
+   * Gain Weight: at or above this BMI (for the person or for their target) the estimate still appears, with the same surplus ceiling, but it carries a plain note and a
+   * suggestion to ask a professional. BMI is a rough screening number that cannot see muscle, frame size or body composition, so it NEVER decides on its own whether
+   * someone gets calorie guidance. Not a clinical threshold.
+   */
+  bmiNoteForGain: 25,
 } as const;
 
 export type SafetyStatus = 'allow' | 'adjust' | 'block';
