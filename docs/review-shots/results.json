@@ -1,0 +1,170 @@
+{
+  "ui-home-new": {
+    "ok": true,
+    "xp": 0,
+    "pulseHash": "5a43eda375",
+    "text": [
+      "Nothing is expected of you today. One small step toward your goal to improve your fitness is plenty.",
+      "○ No movement yet",
+      "Level 1",
+      "0 XP",
+      "100 XP to level 2",
+      "Move for 10 minutes or tick a habit to start a streak.",
+      "Today’s quests",
+      "Move for 10 minutes",
+      "Log a meal",
+      "Try a gentle or low-impact session",
+      "XP comes from moving and showing up. Food amounts, calories and weight never earn or cost XP.",
+      "My habits"
+    ]
+  },
+  "journeyB-habit-quest": {
+    "ok": true,
+    "staleCheck": {
+      "xpAt1s": 0,
+      "xpAt63s": 0,
+      "streakAt1s": "Move for 10 minutes or tick a habit to start a streak.",
+      "streakAt63s": "Move for 10 minutes or tick a habit to start a streak."
+    },
+    "hadHabitQuestToday": false,
+    "questsListed": [
+      "Move for 10 minutes",
+      "Move for 10 minutes",
+      "Log a meal",
+      "Try a gentle or low-impact session",
+      "Move for 10 minutes",
+      "Log a meal"
+    ],
+    "questLinesAfter": [
+      "Habits: 1 of 1 ticked",
+      "✓ Habits: 1 of 1 ticked",
+      "0 of 10",
+      "0 of 1",
+      "0 of 1",
+      "Done today"
+    ],
+    "xpAfter": 0
+  },
+  "journeyA-first-workout": {
+    "ok": true,
+    "xpBefore": 0,
+    "xpAfter": 5,
+    "completionScreenMentionsXp": false,
+    "completionText": [
+      "Guided session",
+      "Development mode: mock sign-in. Synthetic data on this device only.",
+      "Session ended",
+      "You moved for 0 min 4 s.",
+      "",
+      "0:04",
+      "Time moving",
+      "",
+      "0/8",
+      "Movements finished",
+      "You ended this one early. Save it only if you want what you did to count.",
+      "How did it feel?",
+      "",
+      "Easy"
+    ]
+  },
+  "journeyC-apple-health": {
+    "ok": true,
+    "xpBefore": 5,
+    "xpAfterImport": 95,
+    "xpAfterSecondImport": 95,
+    "firstMessage": "Imported 2 workouts",
+    "secondMessage": "No new workouts to import"
+  },
+  "journeyD-league": {
+    "ok": true,
+    "rows": ["1. sample_ama · 67 XP", "2. my_name (you) · 5 XP"],
+    "leftShowsRows": false,
+    "leagueText": [
+      "Friends league",
+      "Join the friends league",
+      "Weekly XP is capped, so doing more than the safe amount never wins."
+    ]
+  },
+  "journeyE-group-ui": {
+    "ok": true,
+    "text": [
+      "Your food diary, weight and health information are never shared. The only thing you can share is a weekly activity summary, with one friend at a time, and you can turn it off whenever you like.",
+      "Challenges and goals",
+      "Group goals are cooperative: everyone’s activity adds up to one shared total. Nobody is ranked.",
+      "Move together",
+      "Couple goal · 2026-11-16 – 2026-11-22",
+      "Everyone here can see each person's total for this goal, and nothing else.",
+      "Goal: 150 min a week",
+      "Start a challenge or goal"
+    ]
+  },
+  "ui-other-screens": {
+    "ok": true,
+    "settingsText": []
+  },
+  "part1PageErrors": [],
+  "seed-home-levelup-moment": {
+    "ok": true,
+    "signedInOnSeed": true,
+    "level": "11",
+    "xp": "6255",
+    "momentText": true
+  },
+  "seed-pulse-accessories": {
+    "ok": true,
+    "veteranPulseHash": "8693b51188",
+    "newUserPulseHash": "5a43eda375",
+    "differs": true
+  },
+  "seed-home-progress-card": {
+    "ok": true,
+    "lines": [
+      "Nothing is expected of you today. One small step toward your goal to improve your fitness is plenty.",
+      "Level 11",
+      "6255 XP",
+      "345 XP to level 12",
+      "74-day streak",
+      "Today is still open. 0 of 3 active days this week",
+      "Today’s quests",
+      "XP comes from moving and showing up. Food amounts, calories and weight never earn or cost XP.",
+      "6 of 7 days this week",
+      "This week"
+    ]
+  },
+  "seed-progress-badges-season": {
+    "ok": true,
+    "badgeLines": [
+      "Level 5",
+      "Level 10",
+      "Seven active days in a row",
+      "Thirty active days in a row",
+      "Ten quests done",
+      "Rested well and kept going",
+      "Season finisher"
+    ],
+    "seasonLines": [
+      "Season finisher",
+      "Season challenge",
+      "Season complete. Pulse has a new accessory.",
+      "Pulse’s wardrobe",
+      "Headband, Wristbands, Cape, Autumn scarf"
+    ]
+  },
+  "seed-friends-league-group": {
+    "ok": true,
+    "leagueRows": ["1. sample_ama · 67 XP", "2. my_name (you) · 0 XP"],
+    "groupLines": [
+      "Your food diary, weight and health information are never shared. The only thing you can share is a weekly activity summary, with one friend at a time, and you can turn it off whenever you like.",
+      "Group goals are cooperative: everyone’s activity adds up to one shared total. Nobody is ranked.",
+      "Move together",
+      "Couple goal · 2026-11-10 – 2026-11-16",
+      "Everyone here can see each person's total for this goal, and nothing else.",
+      "Couple goal"
+    ],
+    "celebrationOrRewardText": false
+  },
+  "seed-workouts-tab": {
+    "ok": true
+  },
+  "part2PageErrors": []
+}
