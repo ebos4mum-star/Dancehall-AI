@@ -1,5 +1,7 @@
 # Community staging: setup steps for the owner
 
+> **Decision (2026-11-16): the owner confirmed `bxhnrjulksganzydgrgm` is their unused DanceHall Fit AI project and designated it the isolated STAGING environment.** Development stays `vvwjhbsyxetnktimgaxg`. Production is not yet created or selected. The staging scripts (`scripts/staging/guard.mjs`) now allow **only** the designated staging reference and refuse the development project and every other reference. The separate-account instructions below remain as a fallback and are no longer the plan. Progress and results: `docs/STAGING_STATUS.md`.
+
 **Status:** instructions only. Nothing has been created, applied or deployed. Do **not** paste API keys, database passwords or service-role keys into chat: none of the steps below need them to leave your machine. The only value you send back is the staging project **reference** (20 letters).
 
 ## 0. Read-only identification of the existing Supabase projects (2026-11-16)

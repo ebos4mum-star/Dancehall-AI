@@ -3,14 +3,26 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { CONFIRM_PHRASE, FORBIDDEN_REFS, assertStagingRef } from './guard.mjs';
+import {
+  CONFIRM_PHRASE,
+  DESIGNATED_STAGING_REF,
+  DEVELOPMENT_REF,
+  FORBIDDEN_REFS,
+  assertStagingRef,
+} from './guard.mjs';
 import { buildBundle } from './prepare-bundle.mjs';
 
-const NEW_REF = 'abcdefghijklmnopqrst';
+const NEW_REF = DESIGNATED_STAGING_REF;
+const UNKNOWN_REF = 'abcdefghijklmnopqrst';
 
-test('the guard refuses both existing projects, malformed references and a missing confirmation', () => {
-  for (const r of FORBIDDEN_REFS)
-    assert.throws(() => assertStagingRef(r, CONFIRM_PHRASE), /existing DanceHall project/);
+test('the guard allows only the designated staging project, and refuses development, unknown and malformed references', () => {
+  assert.equal(DESIGNATED_STAGING_REF, 'bxhnrjulksganzydgrgm');
+  assert.ok(!FORBIDDEN_REFS.includes(DESIGNATED_STAGING_REF));
+  assert.throws(() => assertStagingRef(DEVELOPMENT_REF, CONFIRM_PHRASE), /DEVELOPMENT project/);
+  assert.throws(
+    () => assertStagingRef(UNKNOWN_REF, CONFIRM_PHRASE),
+    /not the designated staging project/,
+  );
   for (const r of [
     undefined,
     '',
@@ -25,15 +37,15 @@ test('the guard refuses both existing projects, malformed references and a missi
   assert.equal(assertStagingRef(NEW_REF, CONFIRM_PHRASE), NEW_REF);
 });
 
-test('the bundle refuses to build for an existing project', () => {
+test('the bundle refuses to build for the development project or any unknown reference', () => {
   const out = join(mkdtempSync(join(tmpdir(), 'stg-')), 'b');
   assert.throws(
-    () => buildBundle(out, { ref: FORBIDDEN_REFS[0], confirm: CONFIRM_PHRASE }),
-    /existing DanceHall project/,
+    () => buildBundle(out, { ref: DEVELOPMENT_REF, confirm: CONFIRM_PHRASE }),
+    /DEVELOPMENT project/,
   );
   assert.throws(
-    () => buildBundle(out, { ref: FORBIDDEN_REFS[1], confirm: CONFIRM_PHRASE }),
-    /existing DanceHall project/,
+    () => buildBundle(out, { ref: UNKNOWN_REF, confirm: CONFIRM_PHRASE }),
+    /not the designated/,
   );
 });
 
