@@ -31,6 +31,8 @@ q -d postgres -c "drop database if exists $DB" >/dev/null
 if bash supabase/proposed/dry-run.sh; then :; else fail=1; fi
 # The proposed Community schema, rehearsed the same way (also never a hosted project).
 if bash supabase/proposed/community-dry-run.sh; then :; else fail=1; fi
+# The proposed social schema (friends, sharing, group goals), rehearsed the same way.
+if bash supabase/proposed/social-dry-run.sh; then :; else fail=1; fi
 # The proposed account-deletion executor (App Review 5.1.1(v)), rehearsed the same way.
 if bash supabase/proposed/deletion-dry-run.sh; then :; else fail=1; fi
 [ "$fail" = 0 ] && echo "Database tests passed." || { echo "Database tests FAILED." >&2; exit 1; }
