@@ -99,6 +99,6 @@ All reuse existing screens and components; none adds a route or a migration. Eve
 
 **Open Food Facts** remains OFF. See `docs/OPEN_FOOD_FACTS_CHECKLIST.md` for what could and could not be verified.
 
-
 ## Community and Share My Achievement (local, off in production)
+
 Built on `claude/community`; see `docs/COMMUNITY.md`. Database proposal verified locally only, not applied. Server function, storage, admin UI and legal review are open; the public feed stays disabled until approved.
