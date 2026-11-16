@@ -350,13 +350,13 @@ describe(
         assert.ok(!blocked.text.includes('0201234567'));
         const danger = await call(
           'post',
-          { type: 'text', body: 'I lost 12 kg in 3 weeks', confirmed: true },
+          { type: 'text', body: 'these diet pills melt fat', confirmed: true },
           tok('ama'),
         );
         assert.equal(danger.body.code, 'blocked', 'a dangerous claim is rejected, not held');
-        assert.ok(!danger.text.includes('12 kg'), 'and not echoed back');
+        assert.ok(!danger.text.includes('diet pills'), 'and not echoed back');
         assert.ok(
-          !(await call('feed', {}, tok('ama'))).text.includes('lost 12 kg'),
+          !(await call('feed', {}, tok('ama'))).text.includes('diet pills'),
           'never stored',
         );
         const ordinary = await call(

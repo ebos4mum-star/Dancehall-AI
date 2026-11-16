@@ -150,13 +150,13 @@ describe('text screening', () => {
       'eating 1200 calories a day',
       'AMAZINGAMAZINGAMAZING',
       'Lost 2 kg in 4 weeks, feeling strong',
+      'I lost 10 kg in a month and I am proud',
+      'I lost 12 kg in 3 weeks',
     ])
       expect(screen(t), t).toMatchObject({ decision: 'allow', flags: [] });
   });
-  it('rejects, never holds: dangerous health claims, very fast loss claims and harassment', () => {
+  it('rejects, never holds: dangerous health claims, diet-drug promotion and harassment', () => {
     const rejected: Array<[string, string]> = [
-      ['I lost 10 kg in a month', 'weight_claim'],
-      ['I lost 12 kg in 3 weeks', 'weight_claim'],
       ['this detox is a miracle', 'health_claim'],
       ['semaglutide changed everything', 'health_claim'],
       ["you're so fat", 'harassment'],

@@ -153,8 +153,8 @@
     {
       "text": "I lost 10 kg in a month",
       "max": 500,
-      "decision": "block",
-      "flags": ["weight_claim"]
+      "decision": "allow",
+      "flags": []
     },
     {
       "text": "dropped 3 dress sizes",
@@ -255,14 +255,14 @@
     {
       "text": "I lost 12 kg in 3 weeks",
       "max": 500,
-      "decision": "block",
-      "flags": ["weight_claim"]
+      "decision": "allow",
+      "flags": []
     },
     {
       "text": "I lost 5 lbs in a week",
       "max": 500,
-      "decision": "block",
-      "flags": ["weight_claim"]
+      "decision": "allow",
+      "flags": []
     },
     {
       "text": "Lost 2 kg in 4 weeks, feeling strong",

@@ -17,7 +17,7 @@ Comments are disabled for V1 and the code is preserved for later. Enforcement is
 
 ## Safeguards (shared rules in `packages/shared/src/community.ts`, mirrored in SQL)
 
-- Text screening: blocks self-harm, eating-disorder content, emails, links, phone numbers, mentions, contact solicitation; also rejects (never holds) dangerous health claims and diet-drug promotion, weight-loss claims faster than 1.5 kg a week, and harassment. Ordinary talk about weight, calories or health numbers, and capitals, publish normally. Self-harm text shows support information.
+- Text screening: blocks self-harm, eating-disorder content, emails, links, phone numbers, mentions, contact solicitation; also rejects (never holds) dangerous health claims, diet-drug promotion and harassment. Ordinary talk about weight, calories, health numbers and personal weight-loss stories, and capitals, publish normally. Self-harm text shows support information.
 - Photos publish at once with no staff pre-approval (V1 decision); video uploads are off in code and in the database. Nothing is held for staff: text is either published or rejected with a reason. Reports: 3 distinct reporters, or one report for private information / self-harm, hide content at once.
 - Daily limits for posts, comments, reactions, reports. Suspension by staff.
 - Like counts are public (a number on each post, never who liked it). V1 decision; there are still no rankings, trending or follower counts.

@@ -6,11 +6,11 @@
 
 `supabase/proposed/community.patch2_photo_immediate.sql` replaces exactly three functions with `create or replace` (signatures, return types, grants and security-definer flags unchanged):
 
-| Function                    | Change                                                                                                                                                                                                                             |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `app.community_screen`      | Nothing is held. Ordinary weight/calorie/health-number talk and capitals publish. Rejected (with a reason, nothing stored): dangerous health claims and diet-drug promotion, claims of loss faster than 1.5 kg a week, harassment. |
-| `app.community_create_post` | No media hold: photos (and, if video were ever enabled, video) publish at once.                                                                                                                                                    |
-| `app.community_feed`        | Like count returned to every reader (a number, never who).                                                                                                                                                                         |
+| Function                    | Change                                                                                                                                                                                                                               |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `app.community_screen`      | Nothing is held. Ordinary weight, calorie and health-number talk and capitals publish. Rejected (with a reason, nothing stored): dangerous health claims, diet-drug promotion, harassment. Personal weight-loss stories are allowed. |
+| `app.community_create_post` | No media hold: photos (and, if video were ever enabled, video) publish at once.                                                                                                                                                      |
+| `app.community_feed`        | Like count returned to every reader (a number, never who).                                                                                                                                                                           |
 
 No tables, columns, policies, settings, storage buckets, secrets or data are touched. Checked on two local throwaway databases (staging's earlier `community.up.sql` plus the patch, versus a fresh current `community.up.sql`): function definitions, grants and definer flags identical; table columns identical; policy count identical (13); patch is safe to run twice; the rollback restores the earlier definitions exactly.
 

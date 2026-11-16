@@ -155,33 +155,12 @@ const PHONE = /(?:\+?\d[\s().-]?){7,}/;
 const MENTION = /(^|\s)@\w+/;
 const CONTACT_SOLICIT =
   /\b(dm me|message me|text me|whats ?app|telegram|snap ?chat|insta(?:gram)?|cash ?app|venmo|paypal|onlyfans|link in bio|follow me)\b/i;
-// V1 decision: ordinary talk about weight, calories or health numbers is allowed and never held. What is rejected (with a reason, never held) is dangerous: promoted drugs and
-// "miracle" claims, starvation talk, extreme weight-loss claims, and harassment.
+// V1 decision: ordinary talk about weight, calories, health numbers and personal weight-loss experiences is allowed and never held. What is rejected (with a reason, never held) is
+// dangerous: promoted diet drugs, "miracle" claims, starvation instructions, and harassment.
 const HEALTH_CLAIM =
   /\b(cure[sd]?|detox|miracle|guaranteed|burn(?:s|ed)? fat fast|fat[- ]burner|diet pills?|weight loss (?:drug|jab|injection)|ozempic|wegovy|semaglutide|mounjaro|tirzepatide|laxatives?|starv\w+|fasting for \d+)\b/i;
 const HARASSMENT =
   /\b(kill yourself|kys|go die|hope you die|fat (?:pig|cow|slob)|ugly (?:cow|pig)|you(?:'| a)?re (?:so )?(?:fat|disgusting|ugly)|nobody likes you)\b/i;
-const LOSS_IN_TIME =
-  /\b(?:lost|lose|dropped|shed)\s+(\d+(?:\.\d+)?)\s*(kg|kilos?|lbs?|pounds?|stone)\b[^.!?\n]{0,30}?\b(?:in|within|over)\s+(?:the\s+(?:last|past)\s+)?(\d+|a|one|an)\s*(day|week|month)s?\b/i;
-/** Kilograms lost per week implied by a claim like "lost 12 kg in 3 weeks", or null if there is no such claim. */
-export function claimedLossPerWeek(text: string): number | null {
-  const m = LOSS_IN_TIME.exec(text);
-  if (!m) return null;
-  const amount = Number(m[1]);
-  const unit = m[2]!.toLowerCase();
-  const kg =
-    unit.startsWith('lb') || unit.startsWith('pound')
-      ? amount * 0.4536
-      : unit === 'stone'
-        ? amount * 6.35
-        : amount;
-  const n = /^\d+$/.test(m[3]!) ? Number(m[3]) : 1;
-  const per = m[4]!.toLowerCase();
-  const weeks = per === 'day' ? n / 7 : per === 'week' ? n : n * 4.345;
-  return weeks > 0 ? kg / weeks : null;
-}
-/** More than this many kilograms a week, claimed, is treated as a dangerous claim and rejected. */
-export const MAX_CLAIMED_LOSS_KG_PER_WEEK = 1.5;
 
 export function screenText(raw: string, opts: { maxChars: number }): ScreenResult {
   const text = raw.trim();
@@ -244,13 +223,6 @@ export function screenText(raw: string, opts: { maxChars: number }): ScreenResul
   if (HEALTH_CLAIM.test(text)) {
     rejects.push('Please leave out health claims, diet drugs and extreme restriction.');
     flags.push('health_claim');
-  }
-  const perWeek = claimedLossPerWeek(text);
-  if (perWeek !== null && perWeek > MAX_CLAIMED_LOSS_KG_PER_WEEK) {
-    rejects.push(
-      'Please do not share very fast weight-loss claims; they can encourage unsafe dieting.',
-    );
-    flags.push('weight_claim');
   }
   if (rejects.length > 0) return out('block', rejects, flags);
   return out('allow', [], []);

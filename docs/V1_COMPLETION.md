@@ -41,7 +41,7 @@ Branch `feature/overnight-nutrition-fitness`. Verified on Linux only (unit, inte
 
 ## Community decision (photo-only V1)
 
-- Photos and captions publish immediately; no staff approval, no first-post review. Nothing is held for staff: text is published or rejected with a reason. Ordinary weight, calorie and health-number talk publishes; dangerous health claims, claims of weight loss faster than 1.5 kg a week, diet-drug promotion and harassment are rejected.
+- Photos and captions publish immediately; no staff approval, no first-post review. Nothing is held for staff: text is published or rejected with a reason. Ordinary weight, calorie and health-number talk publishes; dangerous health claims, diet-drug promotion and harassment are rejected; personal weight-loss stories are allowed.
 - Likes: the existing single positive reaction, now labelled Like. Like counts are public (a number, never who). No rankings.
 - Video uploads: off in code (server refuses `video` uploads and posts, status always reports video off) and in the database. **User-uploaded Community video is no longer a V1 launch blocker.**
 - Comments off; there is no private messaging.

@@ -19,7 +19,7 @@ The backend is live and monitored during review: [staging/production URL status 
 
 Community is one chronological feed where members share short text posts, milestones from their workouts and progress photos. There are no comments, no direct messages, no follows, no hashtags, no rankings and no video.
 
-- **Filtering:** text is screened automatically and unsafe text (self-harm, eating-disorder content, links, contact details) is refused; dangerous health claims, very fast weight-loss claims and harassment are refused. Nothing is held for staff. **Photos publish immediately (no pre-approval); every post can be reported, and a report hides serious content at once and queues it for the moderator.**
+- **Filtering:** text is screened automatically and unsafe text (self-harm, eating-disorder content, links, contact details) is refused; dangerous health claims, diet-drug promotion and harassment are refused. Nothing is held for staff. **Photos publish immediately (no pre-approval); every post can be reported, and a report hides serious content at once and queues it for the moderator.**
 - **Reporting:** every post has Report, with reasons including "someone may need help" and "a child may be involved". Urgent reports hide the post immediately and alert the moderators.
 - **Blocking:** any member can be blocked from the post menu; blocking is mutual and silent. Members can delete their own posts and leave Community at any time.
 - **Moderation:** a primary and a backup moderator review the queue with a second factor required. Internal review targets are 4 hours for urgent reports and 48 hours otherwise. Objectionable content and abusive users are removed; accounts can be muted or suspended.

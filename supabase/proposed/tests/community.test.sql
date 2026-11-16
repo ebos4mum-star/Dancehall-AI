@@ -134,7 +134,7 @@ begin
   perform test.assert(r ->> 'status' = 'published', 'a milestone publishes');
 
   -- risky text is held; photos publish at once (V1 decision, no staff pre-approval)
-  perform test.throws(format($q$select app.community_create_post(%L, 'text', 'I lost 12 kg in 3 weeks', null, null, true)$q$, b), 'blocked'); -- a dangerous claim is rejected, never held
+  perform test.throws(format($q$select app.community_create_post(%L, 'text', 'these diet pills melt fat', null, null, true)$q$, b), 'blocked'); -- a dangerous claim is rejected, never held
   r := app.community_create_post(b, 'text', 'I lost 5 kg and I weigh 62 kg, eating 1800 calories', null, null, true);
   perform test.assert(r ->> 'status' = 'published', 'ordinary weight and calorie talk publishes');
   -- uploads: only a file the server received and verified can be attached, once, and only by its owner
@@ -176,7 +176,7 @@ begin
   r := app.community_add_comment(b, pa, 'Well done!');
   perform test.assert(r ->> 'status' = 'published', 'a kind comment publishes');
   perform test.throws(format($q$select app.community_add_comment(%L, %L, 'mail me a@b.com')$q$, b, pa), 'blocked');
-  perform test.throws(format($q$select app.community_add_comment(%L, %L, 'I lost 9 kg in 2 weeks with this')$q$, c, pa), 'blocked');
+  perform test.throws(format($q$select app.community_add_comment(%L, %L, 'try these diet pills')$q$, c, pa), 'blocked');
   perform test.assert((select count(*) = 1 from app.community_comments(null, pa)), 'a guest sees only the published comment');
   perform test.throws(format($q$select app.community_add_comment(%L, %L, 'hi')$q$, d, pa), 'needs_username');
   perform test.throws(format($q$select app.community_delete_comment(%L, (select id from public.community_comments where author_id = %L limit 1))$q$, c, b), 'not_found');

@@ -194,7 +194,7 @@ describe('post types', () => {
     tick();
     const bad = e.createPost(
       'A',
-      { type: 'photo', body: 'I lost 12 kg in 3 weeks', media: [photo()] },
+      { type: 'photo', body: 'this detox is a miracle', media: [photo()] },
       { confirmed: true },
     );
     expect(bad).toMatchObject({ ok: false, code: 'blocked' });
@@ -234,7 +234,7 @@ describe('post types', () => {
     expect(e.state.posts).toHaveLength(0);
     tick();
     expect(
-      e.createPost('A', { type: 'text', body: 'I lost 12 kg in 3 weeks' }, { confirmed: true }),
+      e.createPost('A', { type: 'text', body: 'these diet pills melt fat' }, { confirmed: true }),
     ).toMatchObject({ ok: false, code: 'blocked' });
     expect(e.state.posts).toHaveLength(0);
     tick();
@@ -267,7 +267,7 @@ describe('comments', () => {
   it('a comment with a dangerous claim is rejected, not held', () => {
     const p = say('A', 'Hello');
     tick();
-    expect(e.addComment('B', p.id, 'I lost 9 kg in 2 weeks with this')).toMatchObject({
+    expect(e.addComment('B', p.id, 'try these diet pills')).toMatchObject({
       ok: false,
       code: 'blocked',
     });

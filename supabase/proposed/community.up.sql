@@ -207,7 +207,7 @@ declare
   l text := lower(btrim(coalesce(p_text, '')));
   squashed text := regexp_replace(lower(btrim(coalesce(p_text, ''))), '[[:space:]_-]', '', 'g');
   f text[] := '{}';
-  w text; mm text[]; kg numeric; n numeric; wk numeric;
+  w text;
 begin
   if char_length(t) = 0 then return jsonb_build_object('decision', 'block', 'flags', jsonb_build_array('empty')); end if;
   if char_length(t) > p_max then return jsonb_build_object('decision', 'block', 'flags', jsonb_build_array('too_long')); end if;
@@ -223,16 +223,9 @@ begin
   if t ~* '(^|[[:space:]])@[a-z0-9_]+' then f := f || array['mention']; end if;
   if t ~* '\y(dm me|message me|text me|whats ?app|telegram|snap ?chat|insta(gram)?|cash ?app|venmo|paypal|onlyfans|link in bio|follow me)\y' then f := f || array['contact_solicit']; end if;
   if cardinality(f) > 0 then return jsonb_build_object('decision', 'block', 'flags', to_jsonb(f)); end if;
-  -- V1 decision: ordinary weight, calorie and health-number talk is allowed and never held. Dangerous claims and harassment are rejected, never held. Mirrors screenText in TypeScript.
+  -- V1 decision: ordinary weight, calorie and health-number talk is allowed and never held. Dangerous health instructions, diet-drug promotion and harassment are rejected, never held; personal weight-loss stories are allowed. Mirrors screenText in TypeScript.
   if t ~* '\y(kill yourself|kys|go die|hope you die|fat (pig|cow|slob)|ugly (cow|pig)|you(''| a)?re (so )?(fat|disgusting|ugly)|nobody likes you)\y' then f := f || array['harassment']; end if;
   if t ~* '\y(cure[sd]?|detox|miracle|guaranteed|burn(s|ed)? fat fast|fat[- ]burner|diet pills?|weight loss (drug|jab|injection)|ozempic|wegovy|semaglutide|mounjaro|tirzepatide|laxatives?|starv[a-z]*|fasting for [0-9]+)\y' then f := f || array['health_claim']; end if;
-  mm := regexp_match(t, '\y(?:lost|lose|dropped|shed)[[:space:]]+([0-9]+(?:[.][0-9]+)?)[[:space:]]*(kg|kilos?|lbs?|pounds?|stone)\y[^.!?' || chr(10) || ']{0,30}?\y(?:in|within|over)[[:space:]]+(?:the[[:space:]]+(?:last|past)[[:space:]]+)?([0-9]+|a|one|an)[[:space:]]*(day|week|month)s?\y', 'i');
-  if mm is not null then
-    kg := mm[1]::numeric * case when lower(mm[2]) ~ '^(lb|pound)' then 0.4536 when lower(mm[2]) = 'stone' then 6.35 else 1 end;
-    n := case when mm[3] ~ '^[0-9]+$' then mm[3]::numeric else 1 end;
-    wk := n * case lower(mm[4]) when 'day' then 1.0 / 7 when 'week' then 1 else 4.345 end;
-    if wk > 0 and kg / wk > 1.5 then f := f || array['weight_claim']; end if;
-  end if;
   if cardinality(f) > 0 then return jsonb_build_object('decision', 'block', 'flags', to_jsonb(f)); end if;
   return jsonb_build_object('decision', 'allow', 'flags', '[]'::jsonb);
 end $$;
