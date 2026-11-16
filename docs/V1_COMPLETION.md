@@ -78,3 +78,19 @@ Staging (`bxhnrjulksganzydgrgm`) has `community` v6, `social` v1, `account` v1 a
 ## 6. Blockers before TestFlight
 
 Native iPhone verification pass; support email and policy URLs; legal review; hosted migration approval for production; owner decision on Friends/OFF activation; reviewer access plan (App Store 2.1.2).
+
+## Latest batch (rebranding paused)
+
+Product name is not final; slug, scheme, bundle ID, signing and visual identity are unchanged and out of scope. Some user-facing strings already read "Locked In Fitness" (commit `3706df7`); this is cosmetic and can be revisited.
+
+- Fixed: photo-library permission text no longer says Community photos are reviewed; the mock store now reports video off like the server.
+- Added `apps/mobile/src/data/nutritionFlow.test.ts`: Fridge-to-Meal match, diary log, recipe weekly plan, grocery list, workout, export and delete in one flow.
+- Verified locally: `pnpm db:test` and `pnpm test:community-integration` (26/26, real Deno + Postgres) pass.
+- No unfinished approved V1 feature and no demonstrated defect remain in code.
+
+### Shortest safe path to finish V1
+
+1. Owner sets `COMMUNITY_FLOOR_MODE=open` on staging; run the open-mode suite; restore `read_only`.
+2. Owner-approved native iPhone pass (`docs/NATIVE_IOS_TEST.md`, `docs/FRIENDS_IPHONE_TEST.md`) on a Mac.
+3. Owner supplies support email, privacy/support URLs, legal and dietitian review.
+4. Owner approves production migrations and scheduling the deletion executor; then any EAS/TestFlight step.

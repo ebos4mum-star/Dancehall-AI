@@ -329,7 +329,7 @@ export class MockStore implements DataStore {
   }
   async communityStatus() {
     // The local simulation has no moderators and no uploads server: everything is open.
-    return { mode: 'open' as const, videoEnabled: true, commentsEnabled: false }; // comments are off for V1
+    return { mode: 'open' as const, videoEnabled: false, commentsEnabled: false }; // video and comments are off for V1
   }
   async communityChangeUsername(raw: string) {
     const uid = await this.member();
