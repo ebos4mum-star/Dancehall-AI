@@ -259,3 +259,53 @@ Staging holds no test data, is in Read-only mode (database and floor), with comm
 - Still to do, with separate authorization: deploy the function to staging and repeat delete-then-fetch to see whether the CDN honours the header. Only that test can show how quickly a deleted photo stops being served; the signed link's own 600 s lifetime remains the guaranteed upper bound.
 - Audit log untouched; Community left in Read-only mode.
 - Remaining tasks, unchanged: guest rate-limit test from a single machine, expired (one-hour) member token test, scheduling the account-deletion executor.
+
+---
+
+# Phase 7: cache-fix deployment and live delete-then-fetch test (2026-11-16)
+
+Project `bxhnrjulksganzydgrgm` only (reference verified before each step). Development and production untouched. No PR. Friends was NOT deployed and its migration was NOT applied.
+
+## Deployment
+
+| Item                                         | Result                                                                                                                                                                                                     |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `community` function                         | **PASS**: version 3 to **version 4**, code hash `c1bde39d...` to `cd229287...`; built from pinned commit `447464bbfa8fb0496ecaf6b7f5a535d7c790b6c6` (contains `storageUploadOptions`, `cacheControl: '0'`) |
+| Read-only checks on version 4 before opening | **PASS** (`check-access.mjs function` 15 of 15)                                                                                                                                                            |
+
+## Controlled test (floor `open` set by the owner, database mode `open`, then restored)
+
+Baseline recorded first: database `read_only`, video/comments off, floor `read_only`. Floor verified open over HTTP (guest writes returned 401 instead of 503). Database restored to `read_only` immediately after the run (read back: `read_only`, false, false).
+
+**Photo suite (`scripts/staging/photo-checks.mjs`): 42 of 42 PASS.** Includes: private bucket, signed link lifetime exactly 600 s, tampered link refused, held photos invisible, moderator second factor required, member cannot approve, text file and over-size refused, video and comments refused.
+
+**Delete-then-fetch evidence (one photo, one run):**
+
+| Step                                     | HTTP    | Headers observed                                                       |
+| ---------------------------------------- | ------- | ---------------------------------------------------------------------- |
+| signed link, 1st fetch (published photo) | 200     | `cf-cache-status: MISS`                                                |
+| signed link, 2nd fetch                   | 200     | `cf-cache-status: REVALIDATED` (the earlier run, old code, gave `HIT`) |
+| owner deletes the post                   | 200     |                                                                        |
+| same link, fetched again after deletion  | **400** | `cf-cache-status: BYPASS`                                              |
+
+`Cache-Control` itself is not exposed on these responses (`null`), so the effect is inferred from `cf-cache-status`.
+
+## Immediate photo revocation: **PASS for the tested case, not a general guarantee**
+
+The previously fetched link stopped serving at once after deletion (400, BYPASS) and the CDN revalidated rather than serving a copy. Not tested: other CDN locations, a link first fetched long before deletion, or many deletions. The link's own 600 s lifetime remains the guaranteed upper bound.
+
+## Cleanup and restore
+
+- Floor restored to `read_only` by the owner; effective mode over HTTP verified **`read_only`**, comments and video disabled (C1b to C1d); guest writes 503 again. Database `read_only/false/false`.
+- Deleted (synthetic only, after a guard that every user was synthetic): the test posts (the owner's delete removed the file), reports, uploads, orphan records, rate-limit counters, and 3 accounts with identities, sessions, usernames and staff role.
+- Read-back: users 0, identities 0, sessions 0, second-factor 0, members 0, posts 0, uploads 0, reports 0, staff 0, storage objects 0.
+- **Audit chain preserved:** 8 rows, 8 valid hashes (7 of 7 before cleanup; the cascade added one entry).
+- `check-access.mjs db` and `function`: all pass after cleanup. Local scratch credentials shredded.
+- Staging host removed from the Default environment.
+
+## Remaining blockers
+
+1. Friends: migration `social.up.sql` and function `social` are not applied or deployed; they need your approval (they also need `community.up.sql`, already applied on staging, and applied nowhere else).
+2. Guest rate-limit test from one machine; expired member-token test; scheduling the account-deletion executor.
+3. Open Food Facts live lookups untested; no dietitian or cultural review of foods and recipes.
+4. App Store items in `docs/APP_STORE_READINESS.md` (privacy and support URLs, legal review, production accounts, cleared V1 video, App Privacy answers).
