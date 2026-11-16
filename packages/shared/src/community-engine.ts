@@ -326,11 +326,7 @@ export class CommunityEngine {
         flags = s.flags;
       }
     }
-    // Photos and videos cannot be scanned, so they are always reviewed by a person before anyone else sees them.
-    if (media.length > 0) {
-      hold = true;
-      flags = [...flags, 'media_review'];
-    }
+    // V1 decision: photos publish at once, with no staff pre-approval. Reports, blocking, rate limits and removal after publication are the safety net.
     const id = this.newId('post');
     const post: StoredPost = {
       id,
@@ -417,7 +413,7 @@ export class CommunityEngine {
     const post = this.state.posts.find((p) => p.id === postId);
     const v = this.viewer(userId);
     if (!post || !canSeePost(post, v)) return fail('not_found', 'That post is not available.');
-    if (post.authorId === userId) return fail('own_post', 'You cannot encourage your own post.');
+    if (post.authorId === userId) return fail('own_post', 'You cannot like your own post.');
     const had = this.state.reactions.some((r) => r.postId === postId && r.userId === userId);
     if (on === had) return { ok: true, encouraged: had };
     const blocked = this.gate(userId, 'reaction', false);

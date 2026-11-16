@@ -396,7 +396,7 @@ describe(
         );
         assert.ok(stored.length > 10);
       });
-      it('holds the post for review: invisible to guests and others, visible to its author through a short-lived signed link', async () => {
+      it('publishes a photo at once, with no staff approval, through a short-lived signed link', async () => {
         const r = await call(
           'post',
           {
@@ -407,14 +407,14 @@ describe(
           },
           tok('ama'),
         );
-        assert.equal(r.body.status, 'held', r.text);
+        assert.equal(r.body.status, 'published', r.text);
         heldPostId = r.body.id;
-        assert.ok(!(await call('feed', {}, null)).text.includes(heldPostId));
-        assert.ok(!(await call('feed', {}, tok('kofi'))).text.includes(heldPostId));
+        assert.ok((await call('feed', {}, null)).text.includes(heldPostId), 'guests see it');
+        assert.ok((await call('feed', {}, tok('kofi'))).text.includes(heldPostId));
         const own = (await call('feed', {}, tok('ama'))).body.posts.find(
           (x) => x.id === heldPostId,
         );
-        assert.equal(own.status, 'held');
+        assert.equal(own.status, 'published');
         const uri = own.media[0].uri;
         assert.ok(!uri.includes(users.ama), 'the link carries no account id');
         assert.equal((await fetch(uri)).status, 200, 'the signed link works');
@@ -541,10 +541,22 @@ describe(
         return '00000000-0000-4000-8000-000000000000';
       }
       it('shows a moderator the queue with usernames and signed media only, and nothing that identifies an account', async () => {
+        // Nothing is queued for approval; a photo reaches the queue when someone reports it.
+        const feedNow = (await call('feed', {}, tok('kofi'))).body.posts;
+        for (const who of ['ama_moves', 'efua_fit']) {
+          const ph = feedNow.find((x) => x.author === who && x.media.length > 0);
+          assert.ok(ph, `${who} has a published photo`);
+          const rp = await call(
+            'report',
+            { type: 'post', targetId: ph.id, reason: 'private_information' },
+            tok('kofi'),
+          );
+          assert.equal(rp.status, 200, rp.text);
+        }
         const q = await call('mod/queue', {}, tok('mod1', { aal: 'aal2' }));
         assert.equal(q.status, 200, q.text);
         const item = q.body.items.find((x) => x.media.length > 0 && x.author === 'ama_moves');
-        assert.ok(item, 'the held photo is in the queue');
+        assert.ok(item, 'the reported photo is in the queue');
         assert.equal((await fetch(item.media[0].uri)).status, 200);
         for (const id of Object.values(users)) assert.ok(!q.text.includes(id), 'no account id');
         assert.ok(!q.text.includes('accounts.dancehall.invalid'), 'no synthetic address');

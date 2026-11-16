@@ -21,7 +21,7 @@ Branch `feature/overnight-nutrition-fitness`. Verified on Linux only (unit, inte
 
 ### Incomplete
 
-- No known incomplete approved V1 feature. V1 instructional video content: none cleared (see external).
+- No known incomplete approved V1 feature. Separate from Community: instructional workout video content (none cleared; see external).
 
 ### Blocked by native iOS testing
 
@@ -35,9 +35,19 @@ Branch `feature/overnight-nutrition-fitness`. Verified on Linux only (unit, inte
 - Open Food Facts activation (support address, API usage form, privacy wording approval, preview first).
 - Auth leaked-password protection (needs paid plan and approval).
 - Friends enablement in shared builds (off by default; production build refuses it).
-- Community stays `read_only`; open tests: guest rate-limit from one machine, expired-token test.
+- Community (photo-only decision, see below): stays `read_only` in staging and production until the owner opens it. Open tests: guest rate-limit from one machine, expired-token test. Staging still runs the earlier "photos held for review" database function until the owner approves `supabase/proposed/community.patch2_photo_immediate.sql`; the live photo script `scripts/staging/photo-checks.mjs` expects the new behaviour only after that.
 - App Store items in `docs/APP_STORE_READINESS.md` (2.1.2 reviewer access, 2.1.3, 5.1.2 policy link).
-- Video: YouTube embed plan awaits terms verification/permissions.
+- Instructional workout video (not Community): YouTube embed plan awaits terms verification/permissions. This is a separate requirement from user-uploaded video and is unchanged.
+
+## Community decision (photo-only V1)
+
+- Photos and captions publish immediately; no staff approval, no first-post review. Captions the screen holds (weight-loss claims, health numbers) still wait for a check, and unsafe text is refused.
+- Likes: the existing single positive reaction, now labelled Like. Counts stay visible to the author only (no popularity signal).
+- Video uploads: off in code (server refuses `video` uploads and posts, status always reports video off) and in the database. **User-uploaded Community video is no longer a V1 launch blocker.**
+- Comments off; there is no private messaging.
+- Safety kept: reporting, mutual blocking, rate limits (5 posts/day, upload limits), photo checks (type, size, metadata stripped), serious reports hide a post at once and queue it for the moderator, moderator remove/restrict, author delete. No new screens or queues.
+- Unchanged: Community feed defaults off / `read_only` in shared builds; Friends off in production; usernames only, no health data in Community.
+- Hosted change needed (not applied): `community.patch2_photo_immediate.sql` on staging, and the full `community.up.sql` on production, each needing explicit migration approval.
 
 ## 1. Completed features
 

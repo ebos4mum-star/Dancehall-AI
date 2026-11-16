@@ -414,7 +414,7 @@ const ROUTES: Record<string, Route> = {
       const db: Mode = s?.mode === 'text_only' || s?.mode === 'read_only' ? s.mode : 'open';
       return done({
         mode: stricter(db, c.deps.floorMode ?? 'open'),
-        videoEnabled: s?.videoEnabled === true,
+        videoEnabled: false, // V1: no user-uploaded video, whatever the database says
         commentsEnabled: c.deps.commentsEnabled === true && s?.commentsEnabled === true,
       });
     },
@@ -463,6 +463,8 @@ const ROUTES: Record<string, Route> = {
     limit: ['upload', 10, 60],
     async run(c) {
       const kind = oneOf(c.body, 'kind', ['photo', 'video'] as const);
+      // V1: user-uploaded video is off whatever the database setting says. Only a reviewed code change can turn it on.
+      if (kind === 'video') return fail('video_disabled');
       const mime = oneOf(c.body, 'mime', [
         'image/jpeg',
         'image/png',
@@ -540,6 +542,8 @@ const ROUTES: Record<string, Route> = {
       const media = c.body.media === undefined || c.body.media === null ? [] : c.body.media;
       if (!Array.isArray(media) || media.length > COMMUNITY_LIMITS.maxPhotos)
         throw new Invalid('media');
+      if (type === 'video' || media.some((m) => isObj(m) && m.kind === 'video'))
+        return fail('video_disabled'); // V1: no user-uploaded video
       const items = media.map((m) => {
         if (!isObj(m)) throw new Invalid('media');
         const path = str(m, 'path', 200);

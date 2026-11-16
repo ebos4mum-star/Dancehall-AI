@@ -668,7 +668,7 @@ export const en = {
   'community.pickVideo': 'Choose a video (up to 30 seconds)',
   'community.removeMedia': 'Remove',
   'community.mediaNote':
-    'Photos can show your body and your surroundings. Only share what you are happy for everyone to see. Photos are resized and stripped of location data. A person reviews every photo before it appears.',
+    'Photos can show your body and your surroundings. Only share what you are happy for everyone to see. Photos are resized and stripped of location data. Photos appear right away, so check before you post. You can delete a photo at any time, and anyone can report one.',
   'community.public': 'I understand everyone can see this',
   'community.publicBody': 'This post will be public under your username.',
   'community.post': 'Post',
@@ -705,8 +705,8 @@ export const en = {
   'community.me.appealsNone': 'Appeals are not set up in this build yet.',
   'community.paused.all':
     'Sharing and commenting are paused for a short while. You can still read, and report anything that worries you.',
-  'community.encourage': 'Encourage',
-  'community.encouraged': 'Encouraged',
+  'community.encourage': 'Like',
+  'community.encouraged': 'Liked',
   'community.comments': 'Comments ({n})',
   'community.commentLabel': 'Write a comment',
   'community.commentSend': 'Comment',
@@ -727,10 +727,10 @@ export const en = {
   'community.reason.child_safety': 'A child may be involved',
   'community.reason.self_harm': 'Someone may need help',
   'community.reason.other': 'Something else',
-  'community.status.held': 'Waiting for a quick review. Only you can see this.',
+  'community.status.held': 'Held for a quick check because of its wording. Only you can see this.',
   'community.status.hidden':
     'Hidden while we review it. Only you can see this. If you are going through something hard, please reach out to a doctor, someone you trust, or a local crisis line.',
-  'community.encouragedCount': '{n} people encouraged this',
+  'community.encouragedCount': '{n} people liked this',
   'community.blockedTitle': 'Blocked members ({n})',
   'community.blockedNone': 'You have not blocked anyone.',
   'community.unblock': 'Unblock',

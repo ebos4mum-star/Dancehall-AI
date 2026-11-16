@@ -54,7 +54,7 @@ export function Composer({ onPosted, onClose }: { onPosted: () => void; onClose:
   const [recent, setRecent] = useState<WorkoutSession[]>([]);
   const [shareFrom, setShareFrom] = useState<WorkoutSession | null>(null);
   const [mode, setMode] = useState<'open' | 'text_only' | 'read_only'>('open');
-  const [videoEnabled, setVideoEnabled] = useState(true);
+  const [videoEnabled, setVideoEnabled] = useState(false);
 
   useEffect(() => {
     let live = true;

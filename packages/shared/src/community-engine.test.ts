@@ -154,27 +154,39 @@ describe('post types', () => {
       code: 'blocked',
     });
   });
-  it('photos and videos are held until a moderator approves them, and are invisible to everyone else meanwhile', () => {
+  it('photos publish at once with no staff approval, and a report can still pull one down afterwards', () => {
     tick();
     const r = e.createPost(
       'A',
       { type: 'photo', body: 'My journey', media: [photo('before'), photo('after')] },
       { confirmed: true },
     );
-    expect(r).toMatchObject({ ok: true, status: 'held' });
-    tick();
-    const v = e.createPost('A', { type: 'video', body: '', media: [video()] }, { confirmed: true });
-    expect(v).toMatchObject({ ok: true, status: 'held' });
-    expect(e.feed(null).posts).toEqual([]);
-    expect(e.feed('B').posts).toEqual([]);
-    expect(e.feed('A').posts.map((p) => p.status)).toEqual(['held', 'held']); // the author sees them, labelled
-    const q = e.moderationQueue(MOD);
-    expect(q.ok && q.items.map((i) => i.hasMedia)).toEqual([true, true]);
+    expect(r).toMatchObject({ ok: true, status: 'published' });
     if (!r.ok) return;
-    expect(e.moderate(MOD, { targetType: 'post', targetId: r.post.id, action: 'approve' }).ok).toBe(
+    expect(e.feed(null).posts.map((p) => p.id)).toEqual([r.post.id]);
+    expect(e.feed('B').posts.map((p) => p.id)).toEqual([r.post.id]);
+    // Nothing waits in a queue for an unreported photo.
+    const q0 = e.moderationQueue(MOD);
+    expect(q0.ok && q0.items).toEqual([]);
+    // After publication a report on a serious reason hides it at once and puts it in front of the moderator.
+    expect(
+      e.report('B', { targetType: 'post', targetId: r.post.id, reason: 'child_safety' }).ok,
+    ).toBe(true);
+    expect(e.feed(null).posts).toEqual([]);
+    const q = e.moderationQueue(MOD);
+    expect(q.ok && q.items.map((i) => i.hasMedia)).toEqual([true]);
+    expect(e.moderate(MOD, { targetType: 'post', targetId: r.post.id, action: 'remove' }).ok).toBe(
       true,
     );
-    expect(e.feed(null).posts.map((p) => p.id)).toEqual([r.post.id]);
+  });
+  it('a photo caption that screening holds is still held; an ordinary caption is not', () => {
+    tick();
+    const risky = e.createPost(
+      'A',
+      { type: 'photo', body: 'I lost 12 kg in 3 weeks', media: [photo()] },
+      { confirmed: true },
+    );
+    expect(risky).toMatchObject({ ok: true, status: 'held' });
   });
   it('rejects media that does not match the post type, and bad media', () => {
     tick();

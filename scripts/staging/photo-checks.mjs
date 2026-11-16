@@ -220,9 +220,13 @@ const post = await fn(
   },
   m1,
 );
+// PHOTO_MODE=published checks the V1 behaviour (photos publish at once; a report then pulls one down).
+// The default, held, matches the staging function until community.patch2_photo_immediate.sql is approved and applied.
+const IMMEDIATE = process.env.PHOTO_MODE === 'published';
+const expectStatus = IMMEDIATE ? 'published' : 'held';
 record(
-  'P6 a photo post is held, not published',
-  post.status === 200 && (post.j?.status === 'held' || post.j?.post?.status === 'held'),
+  `P6 a photo post is ${expectStatus}`,
+  post.status === 200 && (post.j?.status === expectStatus || post.j?.post?.status === expectStatus),
   `status ${post.status} ${post.j?.status ?? ''}`,
 );
 const postId = post.j?.id ?? post.j?.post?.id;
@@ -230,12 +234,20 @@ const hasPost = (feed, id) => JSON.stringify(feed.j ?? {}).includes(id);
 const fg = await fn('feed', { limit: 30 });
 const f3 = await fn('feed', { limit: 30 }, m3);
 const f1 = await fn('feed', { limit: 30 }, m1);
-record('P6b guests do not see the held post or its photo', !!postId && !hasPost(fg, postId), '');
-record('P6c another member does not see it', !hasPost(f3, postId), '');
+record(
+  'P6b guests see the post only if photos publish at once',
+  !!postId && hasPost(fg, postId) === IMMEDIATE,
+  '',
+);
+record(
+  'P6c another member sees it only if photos publish at once',
+  hasPost(f3, postId) === IMMEDIATE,
+  '',
+);
 const mine = (f1.j?.posts ?? []).find((p) => p.id === postId);
 record(
   'P6d the author sees it, labelled held, with a signed photo link',
-  mine?.status === 'held' && mine.media?.length === 1,
+  mine?.status === expectStatus && mine.media?.length === 1,
   '',
 );
 record(
@@ -279,6 +291,16 @@ if (token) {
 }
 
 // Moderation
+if (IMMEDIATE) {
+  const rp = await fn(
+    'report',
+    { type: 'post', targetId: postId, reason: 'private_information' },
+    m3,
+  );
+  record('P7f a report on a published photo is accepted', rp.status === 200, `status ${rp.status}`);
+  const afterReport = await fn('feed', { limit: 30 });
+  record('P7g a serious report hides the photo at once', !hasPost(afterReport, postId), '');
+}
 const q = await fn('mod/queue', {}, mod);
 const qi = (q.j?.items ?? []).find((i) => i.id === postId);
 record(

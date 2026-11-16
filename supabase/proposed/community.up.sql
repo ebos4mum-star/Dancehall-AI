@@ -6,7 +6,7 @@
 --    (an Edge Function using the service role), which verifies the caller's JWT and passes the verified user id. Guests browse through the same server, so a
 --    guest never holds a database privilege. This follows the account Edge Function pattern.
 --  * People are shown only by public username. Feeds return usernames and opaque content ids, never user ids, emails or health records.
---  * Photos and videos are always held for a moderator; risky text is held; unsafe text is refused. Reports hide content. Blocking is mutual. Every action is rate limited.
+--  * Photos publish at once (V1 decision: no staff pre-approval); risky text is held; unsafe text is refused. Video stays off. Reports hide content. Blocking is mutual. Every action is rate limited.
 --  * Deleting an account (auth.users) removes everything the person made or did, by cascade.
 
 -- ========== Tables (RLS on, no client access) ==========
@@ -366,8 +366,7 @@ begin
     if r ->> 'decision' = 'block' then raise exception 'blocked'; end if;
     if r ->> 'decision' = 'hold' then v_status := 'held'; flags := array(select jsonb_array_elements_text(r -> 'flags')); end if;
   end if;
-  -- Photos and videos cannot be scanned: a person reviews every one before anyone else sees it.
-  if photos + videos > 0 then v_status := 'held'; flags := flags || array['media_review']; end if;
+  -- V1 decision: photos publish at once, without staff approval. Safety rests on text screening, rate limits, reporting, blocking and fast removal after publication (a report hides the post and puts it in the moderator queue).
   insert into public.community_posts (author_id, type, body, milestone, status, flags) values (p_user, p_type, v_body, v_ms, v_status, flags) returning id into v_id;
   -- Only files the server itself received and checked can be attached, and only the member's own, once. Size and type come from that record, not the caller.
   for it in select * from jsonb_array_elements(media) loop

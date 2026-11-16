@@ -8,7 +8,7 @@
  * reader receives (`toPublicPost`, `toPublicComment`). A shared achievement carries only a short whitelist of fields (`buildAchievementShare`); weight, calories,
  * measurements, effort ratings and readiness answers can never be added to one.
  *
- * Safety: text is screened before it is stored (blocked, or held for a person to review); photos and videos are always held until a moderator approves them; reports hide a post
+ * Safety: text is screened before it is stored (blocked, or held for a person to review); photos publish at once (V1 decision: no staff pre-approval) and are acted on after publication through reports; reports hide a post
  * quickly; blocking is mutual and silent; every action is rate limited; authors can delete their own content at any time.
  *
  * PROVISIONAL: the word lists and limits below are engineering defaults. A reviewed list, a moderator process and a legal/terms review are required before this is public.

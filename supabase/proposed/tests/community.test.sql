@@ -133,7 +133,7 @@ begin
   perform test.assert((select (milestone ?& array['kind','title','style','minutes']) and not (milestone ? 'weightKg') and not (milestone ? 'kcal') and not (milestone ? 'email') from public.community_posts where id = (r ->> 'id')::uuid), 'milestone whitelist is enforced');
   perform test.assert(r ->> 'status' = 'published', 'a milestone publishes');
 
-  -- risky text is held, media is always held
+  -- risky text is held; photos publish at once (V1 decision, no staff pre-approval)
   r := app.community_create_post(b, 'text', 'I lost 12 kg in 3 weeks', null, null, true);
   perform test.assert(r ->> 'status' = 'held', 'a weight-loss claim is held for review');
   -- uploads: only a file the server received and verified can be attached, once, and only by its owner
@@ -149,7 +149,7 @@ begin
   perform test.throws(format($q$select app.community_create_post(%L, 'photo', 'x', null, jsonb_build_array(jsonb_build_object('kind','photo','role','before','path',%L)), true)$q$, b, p1), 'invalid_media'); -- one photo cannot be a before
   perform test.throws(format($q$select app.community_create_post(%L, 'video', 'x', null, jsonb_build_array(jsonb_build_object('kind','video','role','single','path',%L)), true)$q$, b, p1), 'invalid_media'); -- wrong kind
   r := app.community_create_post(b, 'photo', 'My journey', null, jsonb_build_array(jsonb_build_object('kind','photo','role','before','path',p1), jsonb_build_object('kind','photo','role','after','path',p2)), true);
-  perform test.assert(r ->> 'status' = 'held', 'a photo post is held');
+  perform test.assert(r ->> 'status' = 'published', 'a photo post publishes at once');
   perform test.assert((select count(*) = 2 and bool_and(bytes in (1000, 2000)) from public.community_media where storage_path in (p1, p2)), 'size and type come from the server record');
   perform test.throws(format($q$select app.community_create_post(%L, 'photo', 'x', null, jsonb_build_array(jsonb_build_object('kind','photo','role','single','path',%L)), true)$q$, b, p1), 'invalid_media'); -- already used
   -- the server rejects oversize photos and long videos
@@ -158,18 +158,18 @@ begin
   perform test.throws(format($q$select test.upload(%L, 'video', 'video/mp4', 1000, null)$q$, b), 'too_long');
   p3 := test.upload(b, 'video', 'video/mp4', 2000, 12);
   r := app.community_create_post(b, 'video', '', null, jsonb_build_array(jsonb_build_object('kind','video','role','single','path',p3)), true);
-  perform test.assert(r ->> 'status' = 'held', 'a video post is held');
+  perform test.assert(r ->> 'status' = 'published', 'a video post follows the same rule once an approved change turns video on');
 
   -- the feed: guests see published only; the author sees held; nothing identifies a person except the username
   select count(*) into n from app.community_feed(null, null, null, 30);
-  perform test.assert(n = 3, format('a guest sees the 3 published posts (got %s)', n));
+  perform test.assert(n = 5, format('a guest sees the 5 published posts (got %s)', n));
   select count(*) into n from app.community_feed(b, null, null, 30);
-  perform test.assert(n = 6, format('the author also sees their own held posts (got %s)', n));
+  perform test.assert(n = 6, format('the author sees their own posts, held ones included (got %s)', n));
   perform test.assert(not exists (select 1 from jsonb_each(to_jsonb((select f from app.community_feed(null, null, null, 1) f))) e where e.key ~* '(user|author_id|email)'), 'the feed row has no user id or email column');
   perform test.assert((select bool_and(author ~ '^[a-z][a-z0-9_]{2,19}$') from app.community_feed(null, null, null, 30)), 'authors are public usernames');
   perform test.assert(not exists (select 1 from app.community_feed(null, null, null, 30) f where f.encouraged_count is not null), 'readers never get a count');
   perform test.assert((select bool_and(created_at <= prev) from (select created_at, lag(created_at) over (order by rn) as prev0, coalesce(lag(created_at) over (order by rn), 'infinity'::timestamptz) as prev from (select f.*, row_number() over () rn from app.community_feed(null, null, null, 30) f) x) y), 'the feed is newest first');
-  perform test.assert((select count(*) = 2 from app.community_feed(null, null, null, 2)) and (select count(*) = 1 from app.community_feed(null, (select created_at from app.community_feed(null, null, null, 2) offset 1), (select id from app.community_feed(null, null, null, 2) offset 1), 30)), 'the cursor pages without gaps');
+  perform test.assert((select count(*) = 2 from app.community_feed(null, null, null, 2)) and (select count(*) = 3 from app.community_feed(null, (select created_at from app.community_feed(null, null, null, 2) offset 1), (select id from app.community_feed(null, null, null, 2) offset 1), 30)), 'the cursor pages without gaps');
 
   -- comments
   r := app.community_add_comment(b, pa, 'Well done!');
@@ -233,7 +233,10 @@ begin
   perform test.assert((select (app.community_backlog(m, true) ->> 'urgent')::int >= 1 and (app.community_backlog(m, true) ->> 'open')::int >= 4), 'the backlog counts open and urgent items');
   perform test.assert(not (app.community_backlog(m, true)::text ~* '(body|email|user_id)'), 'the backlog carries counts only');
   perform test.assert((select urgent and report_count >= 1 and 'self_harm' = any (reasons) from app.community_moderation_queue(m, true) q where q.id = pb), 'a self-harm report is urgent and shows its reason');
-  perform test.assert((select jsonb_array_length(media) > 0 from app.community_moderation_queue(m, true) q where q.id = (select id from public.community_posts where type = 'photo' limit 1)), 'the moderator sees the media paths to review');
+  -- a published photo is not queued until someone reports it; then it is acted on after publication
+  perform test.assert(not exists (select 1 from app.community_moderation_queue(m, true) q where q.id = (select id from public.community_posts where type = 'photo' limit 1)), 'an unreported published photo is not in the queue');
+  perform app.community_report(a, 'post', (select id from public.community_posts where type = 'photo' limit 1), 'other', null);
+  perform test.assert((select jsonb_array_length(media) > 0 from app.community_moderation_queue(m, true) q where q.id = (select id from public.community_posts where type = 'photo' limit 1)), 'once reported, the moderator sees the media paths to review');
   perform app.community_moderate(m, true, 'post', pa, 'approve', 'Looks fine');
   perform test.assert((select status = 'published' from public.community_posts where id = pa) and not exists (select 1 from public.community_reports where target_id = pa and resolved_at is null), 'approve republishes and resolves the reports');
   perform test.assert(exists (select 1 from public.community_reports where target_id = pa), 'resolved reports are kept for the record');

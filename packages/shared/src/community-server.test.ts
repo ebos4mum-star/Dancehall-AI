@@ -499,6 +499,23 @@ describe('uploads', () => {
       (await t.send('upload/ticket', { kind: 'photo', mime: 'application/x-msdownload' })).status,
     ).toBe(400);
   });
+  it('refuses user-uploaded video in V1, even if the database setting were on', async () => {
+    const t = setup({
+      community_issue_upload: () => ({ id: 'x', path }),
+      community_create_post: () => ({ id: 'p', status: 'published' }),
+    });
+    const r = await t.send('upload/ticket', { kind: 'video', mime: 'video/mp4' });
+    expect(r.body).toMatchObject({ ok: false, code: 'video_disabled' });
+    const p = await t.send('post', {
+      type: 'video',
+      body: '',
+      confirmed: true,
+      media: [
+        { kind: 'video', role: 'single', path: 'm/55555555-5555-4555-8555-555555555555.mp4' },
+      ],
+    });
+    expect(p.body).toMatchObject({ ok: false, code: 'video_disabled' });
+  });
   it('checks the real file, strips metadata and records what it found', async () => {
     const t = setup(
       { community_upload_ticket: () => 'image/jpeg', community_verify_upload: () => undefined },
@@ -801,7 +818,7 @@ describe('Community-only Read only floor', () => {
     );
     expect((await loose.send('status', {}, null)).body).toMatchObject({
       mode: 'read_only',
-      videoEnabled: true,
+      videoEnabled: false, // V1: the database cannot switch user video on
     });
   });
 });

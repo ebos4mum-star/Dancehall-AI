@@ -19,6 +19,7 @@ q -d "$DB" -f supabase/tests/helpers.sql
 ok() { echo "PASS     $1"; }
 run() { local msg="$1"; shift; if "$@"; then ok "$msg"; else echo "FAIL     $msg" >&2; exit 1; fi; }
 run "apply: community.up.sql" q -d "$DB" -f supabase/proposed/community.up.sql
+run "apply: community.patch2_photo_immediate.sql (repeatable)" q -d "$DB" -f supabase/proposed/community.patch2_photo_immediate.sql
 run "community tests (privileges, rules parity, behaviour, moderation, rate limits, deletion)" q -d "$DB" -f supabase/proposed/tests/community.test.sql
 # The repository's structural guards must still pass with the new tables and functions present.
 q -d "$DB" -c "create schema if not exists storage; create table if not exists storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]); create table if not exists storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text); alter table storage.objects enable row level security;"

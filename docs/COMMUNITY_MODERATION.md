@@ -4,10 +4,10 @@ Designed for **one primary authorized moderator and one backup**, each with thei
 
 ## Principles
 
-1. Nothing a person posts as a photo or video is visible to others until the moderator approves it.
+1. Photos publish at once, with no staff approval (V1 decision). Safety rests on text screening, rate limits, reporting, blocking and fast removal after publication: a serious report hides the post immediately and puts it in front of the moderator. Video uploads and comments are off.
 2. The moderator sees what they need and no more: username, content, reasons, ages. Never an account id, an email address, a health record or a member's real identity.
 3. Every moderator action is recorded in the tamper-evident audit log (who, what, when, which item). The log holds identifiers and the action, never the member's words or photos.
-4. When review cannot keep up, Community slows itself down instead of letting unchecked content through.
+4. When reports cannot be handled in time, the moderator (or the automatic pause) switches Community to text-only or read-only.
 5. When in doubt, remove. A member can post again; a harmful post cannot be un-seen.
 
 ## Access
