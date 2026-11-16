@@ -526,3 +526,13 @@ Nothing was uploaded; no EAS build, TestFlight or App Store; no production, deve
 1. Run the device test on your Mac (launcher above) and send the results; I remove the staging accounts afterwards.
 2. Support address; API usage form; counsel review of the wording; then preview-first activation of barcode lookups.
 3. Friends in shared builds, `community.up.sql` and `social.up.sql` outside staging, legal review, Community open items, leaked-password option, food and recipe review (unchanged).
+
+## Open-mode verification window (2026-11-16)
+
+Staging `bxhnrjulksganzydgrgm` only. Baseline: stored mode `read_only`, video/comments off, `community` v10 (`c6debb97…`), `social` v4, `account` v1, 0 users/posts. Owner set floor secret `open`; stored mode opened through `app.community_set_mode` (audited) with 3 synthetic accounts (2 members, 1 moderator).
+
+- `community-v1-checks.mjs`: 40 PASS, 0 FAIL (immediate photo publish, public like counts, no self-like, report hides at once, blocking, diet-drug/dangerous-claim/harassment rejected and not echoed, video and comments refused, no messaging route, author delete removes the file).
+- `PHOTO_MODE=published photo-checks.mjs`: 44 PASS, 0 FAIL ("All checks passed").
+- Stored mode restored to `read_only` immediately afterwards; read-only subset re-run: all PASS (member post and upload ticket 503). Owner then restores the floor secret to `read_only`.
+- Cleanup: users, identities, sessions, MFA factors, staff, members, posts, storage objects, profiles, reports, blocks, reactions all 0. Audit chain valid (16 entries; 6 record this window, the log is immutable). Temporary network host removed; credentials and generated images shredded.
+- Still not run on hosted staging: guest burst (needs the owner's single-address connection) and the expired-token check (needs a token over an hour old).
