@@ -607,6 +607,21 @@ create or replace function app.community_user_media(p_user uuid) returns setof t
   select storage_path from public.community_uploads where user_id = p_user
 $$;
 
+-- Leave Community without deleting the account: removes the username, posts, comments, reactions, blocks and files. Returns files for the server to delete.
+create or replace function app.community_leave(p_user uuid) returns text[] language plpgsql security definer set search_path = '' as $$
+declare paths text[];
+begin
+  select coalesce(array_agg(storage_path), '{}') into paths from public.community_uploads where user_id = p_user;
+  delete from public.community_posts where author_id = p_user;
+  delete from public.community_comments where author_id = p_user;
+  delete from public.community_reactions where user_id = p_user;
+  delete from public.community_blocks where blocker_id = p_user or blocked_id = p_user;
+  delete from public.community_uploads where user_id = p_user;
+  delete from public.community_retired_names where owner_id = p_user;
+  delete from public.community_members where user_id = p_user;
+  return paths;
+end $$;
+
 -- ========== Burst limits and housekeeping ==========
 -- True while the caller is within `p_max` requests per `p_seconds` for this key (a user id or a hashed network address) and bucket.
 create or replace function app.community_burst(p_key text, p_bucket text, p_max int, p_seconds int) returns boolean language plpgsql security definer set search_path = '' as $$

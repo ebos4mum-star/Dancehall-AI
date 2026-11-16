@@ -21,6 +21,9 @@ run() { local msg="$1"; shift; if "$@"; then ok "$msg"; else echo "FAIL     $msg
 run "apply: community.up.sql" q -d "$DB" -f supabase/proposed/community.up.sql
 run "community tests (privileges, rules parity, behaviour, moderation, rate limits, deletion)" q -d "$DB" -f supabase/proposed/tests/community.test.sql
 # The repository's structural guards must still pass with the new tables and functions present.
+q -d "$DB" -c "create schema if not exists storage; create table if not exists storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]); create table if not exists storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text); alter table storage.objects enable row level security;"
+run "apply: community.storage.sql" q -d "$DB" -f supabase/proposed/community.storage.sql
+run "storage tests (private bucket, no client policy)" q -d "$DB" -f supabase/proposed/tests/community.storage.test.sql
 run "structural RLS guard still holds" q -d "$DB" -f supabase/tests/01_rls_coverage.test.sql
 run "security-definer review guard still holds" q -d "$DB" -f supabase/tests/14_definer_review.test.sql
 run "rollback: community.down.sql" q -d "$DB" -f supabase/proposed/community.down.sql

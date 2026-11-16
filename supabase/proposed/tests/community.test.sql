@@ -335,3 +335,25 @@ begin
   pth := (app.community_issue_upload(a, 'photo', 'image/jpeg') ->> 'path'); perform app.community_reject_upload(a, pth);
   perform test.throws(format($q$select app.community_verify_upload(%L, %L, 10, null)$q$, a, pth), 'not_found');
 end $$;
+
+-- 10. Leaving Community keeps the account and removes everything public.
+do $$
+declare a uuid; b uuid; p text; q uuid; paths text[];
+begin
+  perform test.as_admin(); a := test.make_user('c-leave-a@example.test'); b := test.make_user('c-leave-b@example.test'); perform set_config('role', 'service_role', false);
+  perform app.community_claim_username(a, 'leaver_one'); perform app.community_claim_username(b, 'remainer_one');
+  p := test.upload(a, 'photo', 'image/jpeg', 500);
+  perform app.community_create_post(a, 'photo', 'mine', null, jsonb_build_array(jsonb_build_object('kind','photo','role','single','path',p)), true);
+  q := (app.community_create_post(b, 'text', 'theirs', null, null, true) ->> 'id')::uuid;
+  perform app.community_add_comment(a, q, 'hello'); perform app.community_set_encourage(a, q, true); perform app.community_block(a, 'remainer_one');
+  paths := app.community_leave(a);
+  perform test.assert(paths = array[p], 'the files are returned for deletion');
+  perform test.assert(not exists (select 1 from public.community_members where user_id = a) and not exists (select 1 from public.community_posts where author_id = a)
+    and not exists (select 1 from public.community_comments where author_id = a) and not exists (select 1 from public.community_reactions where user_id = a)
+    and not exists (select 1 from public.community_blocks where blocker_id = a) and not exists (select 1 from public.community_media where storage_path = p), 'everything public is gone');
+  perform set_config('role', 'none', false);
+  perform test.assert(exists (select 1 from auth.users where id = a), 'the account itself stays');
+  perform set_config('role', 'service_role', false);
+  perform test.assert(exists (select 1 from public.community_posts where id = q), 'other members are untouched');
+  perform test.assert(app.community_claim_username(a, 'leaver_two') = 'leaver_two', 'they can come back with a new name');
+end $$;
