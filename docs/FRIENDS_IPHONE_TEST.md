@@ -9,6 +9,16 @@ Nothing here uploads a build, uses TestFlight, touches production, or enables Fr
 | **A. Screens and flows on a real iPhone, local data** | the development mock with clearly labelled `sample_*` members | **Yes, today**                                                                                                                                                                                                                                                   |
 | **B. Friends against the hosted staging backend**     | staging `social` function + migration (deployed)              | **Blocked**: staging has no `account` Edge Function, so an app build cannot create a signed-in account there (public sign-up is off). It needs your approval to deploy the account function to staging (and a staging test account flow), or a separate decision |
 
+## Fastest way: the guarded launcher (staging, Friends on for this run only)
+
+```bash
+cp scripts/friends-staging.env.example .friends-staging.env   # then paste the staging publishable key into it
+bash scripts/friends-staging-ios.sh            # iOS Simulator
+bash scripts/friends-staging-ios.sh --device   # a connected iPhone
+```
+
+It refuses any project except staging (the development project and everything else are rejected), refuses a secret key, runs `expo run:ios` locally with Xcode and uploads nothing. Friends is switched on only inside that process (preview environment).
+
 ## Track A: run it on your iPhone from your Mac (no EAS, no upload)
 
 Requirements: Mac with Xcode, the iPhone connected by cable with Developer Mode on.

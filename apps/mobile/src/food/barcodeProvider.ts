@@ -15,7 +15,8 @@ import type { AppConfig } from '@/lib/env';
  */
 export function createBarcodeProvider(
   config: Pick<AppConfig, 'barcodeProvider'> & { supportEmail?: string },
-  fetchImpl: typeof fetch = fetch,
+  // Wrapped so the global is never called with another object as `this` (browsers refuse that: "Illegal invocation").
+  fetchImpl: typeof fetch = (...a) => fetch(...a),
 ): ProductProvider {
   switch (config.barcodeProvider) {
     case 'local':
@@ -37,7 +38,7 @@ export function createBarcodeProvider(
 export function createLayeredBarcodeProvider(
   config: Pick<AppConfig, 'barcodeProvider'> & { supportEmail?: string },
   stores: { mine: ProductStore; memory: ProductStore },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: typeof fetch = (...a) => fetch(...a),
 ): ProductProvider {
   return createLayeredProvider({
     mine: stores.mine,
@@ -45,3 +46,7 @@ export function createLayeredBarcodeProvider(
     memory: config.barcodeProvider === 'open_food_facts' ? stores.memory : undefined,
   });
 }
+
+/** The product page where Open Food Facts asks to be credited with a link (and where mistakes can be corrected). */
+export const offProductUrl = (code: string): string | null =>
+  /^\d{8,14}$/.test(code) ? `https://world.openfoodfacts.org/product/${code}` : null;

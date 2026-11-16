@@ -1,6 +1,7 @@
 import { withAccount } from '@/account/gate';
 import { useState } from 'react';
-import { Switch, View } from 'react-native';
+import { Pressable, Switch, View } from 'react-native';
+import { MIN_TOUCH_TARGET } from '@/theme/tokens';
 import {
   SHARE_CATEGORIES,
   localDateKey,
@@ -27,6 +28,46 @@ const msg = (code: string) => {
   const k = `social.err.${code}` as StringKey;
   return t(k) === k ? t('social.err.unknown') : t(k);
 };
+
+/** A whole row is the control: at least 44 points tall (the bare iOS switch is smaller), read by VoiceOver as one switch with its state. */
+function ToggleRow({
+  label,
+  text,
+  on,
+  onChange,
+}: {
+  label: string;
+  text?: string;
+  on: boolean;
+  onChange: (on: boolean) => void;
+}) {
+  const { spacing } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: on }}
+      aria-checked={on}
+      onPress={() => onChange(!on)}
+      style={{
+        minHeight: MIN_TOUCH_TARGET,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+      }}
+    >
+      <AppText style={{ flex: 1 }}>{text ?? label}</AppText>
+      <View
+        pointerEvents="none"
+        importantForAccessibility="no-hide-descendants"
+        aria-hidden
+        accessibilityElementsHidden
+      >
+        <Switch value={on} />
+      </View>
+    </Pressable>
+  );
+}
 
 /**
  * Friends, sharing and group goals. Only a weekly activity summary can ever be shared, one friend at a time, and it can be turned off at once.
@@ -228,20 +269,15 @@ function Friends() {
                     {seen[f] ?? ''}
                   </AppText>
                   {SHARE_CATEGORIES.map((c) => (
-                    <View
+                    <ToggleRow
                       key={c}
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
-                    >
-                      <AppText style={{ flex: 1 }}>{t('social.shareWeekly', { name: f })}</AppText>
-                      <Switch
-                        accessibilityLabel={t('social.shareWeekly', { name: f })}
-                        value={shared[f] === true}
-                        onValueChange={async (on) => {
-                          const ok = await run(() => store.socialSetShare!(f, c, on));
-                          if (ok) setShared((s) => ({ ...s, [f]: on }));
-                        }}
-                      />
-                    </View>
+                      label={t('social.shareWeekly', { name: f })}
+                      on={shared[f] === true}
+                      onChange={async (on) => {
+                        const ok = await run(() => store.socialSetShare!(f, c, on));
+                        if (ok) setShared((s) => ({ ...s, [f]: on }));
+                      }}
+                    />
                   ))}
                   <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
                     <Button
@@ -350,19 +386,13 @@ function Friends() {
               />
               <AppText variant="label">{t('social.inviteLabel')}</AppText>
               {data.friends.map((f) => (
-                <View
+                <ToggleRow
                   key={f}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
-                >
-                  <AppText style={{ flex: 1 }}>{f}</AppText>
-                  <Switch
-                    accessibilityLabel={t('social.inviteFriend', { name: f })}
-                    value={invite.includes(f)}
-                    onValueChange={(on) =>
-                      setInvite((l) => (on ? [...l, f] : l.filter((x) => x !== f)))
-                    }
-                  />
-                </View>
+                  label={t('social.inviteFriend', { name: f })}
+                  text={f}
+                  on={invite.includes(f)}
+                  onChange={(on) => setInvite((l) => (on ? [...l, f] : l.filter((x) => x !== f)))}
+                />
               ))}
               <AppText variant="caption" muted>
                 {t('social.groupConsent')}

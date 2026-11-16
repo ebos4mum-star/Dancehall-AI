@@ -37,3 +37,6 @@ dist-ios-check/
 apps/mobile/ios/
 apps/mobile/android/
 .staging-bundle/
+dist-staging/
+.friends-staging.env
+dist-off/

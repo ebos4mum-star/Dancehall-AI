@@ -781,6 +781,17 @@ export const en = {
   'barcode.incompleteTitle': 'This product listing is not complete enough to use',
   'barcode.enterYourself': 'Enter it from the label',
   'barcode.retry': 'Try again',
+  'barcode.consentTitle': 'Look up barcodes online?',
+  'barcode.consentBody':
+    "To find a packaged food, the app sends the barcode number to Open Food Facts, a free public database run by a non-profit. Their servers also see your phone's network address. We send nothing else: not your name, account, meals or health data. Product details can be wrong, so check the label. You can turn this off any time in Privacy, and you can always add food by hand.",
+  'barcode.consentAllow': 'Allow barcode lookups',
+  'barcode.consentNo': 'Not now, add food by hand',
+  'barcode.viewOff': 'View or correct this product on Open Food Facts',
+  'privacy.barcodeTitle': 'Barcode lookups',
+  'privacy.barcodeBody':
+    "When on, scanning a barcode sends that number (and your phone's network address) to Open Food Facts to find the product. Nothing else is sent. Your own saved products and earlier lookups on this phone work without it.",
+  'privacy.barcodeOn': 'Barcode lookups are on',
+  'privacy.barcodeOff': 'Barcode lookups are off',
   'barcode.busy': 'Lots of lookups just now. Add it from the label, or try again in a minute.',
   'barcode.manualInstead': 'Add it without a barcode',
   'barcode.cached': 'Saved from an earlier lookup. You are offline, so this may be out of date.',

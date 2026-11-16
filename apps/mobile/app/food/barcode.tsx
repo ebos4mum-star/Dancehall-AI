@@ -1,6 +1,6 @@
 import { withAccount } from '@/account/gate';
-import { useMemo, useRef, useState } from 'react';
-import { Platform, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Linking, Platform, View } from 'react-native';
 import { router } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import {
@@ -14,7 +14,8 @@ import {
 } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
 import { useDraft } from '@/food/draft';
-import { createLayeredBarcodeProvider } from '@/food/barcodeProvider';
+import { createLayeredBarcodeProvider, offProductUrl } from '@/food/barcodeProvider';
+import { readLookupConsent, writeLookupConsent } from '@/food/productStore';
 import {
   deviceProductStore,
   deviceRaw,
@@ -99,6 +100,15 @@ function FoundProduct({
         <AppText variant="caption" muted>
           {attribution}
         </AppText>
+      ) : null}
+      {product.source === 'open_food_facts' && offProductUrl(product.barcode) ? (
+        <Button
+          variant="secondary"
+          label={t('barcode.viewOff')}
+          onPress={() =>
+            void Linking.openURL(offProductUrl(product.barcode)!).catch(() => undefined)
+          }
+        />
       ) : null}
       <Button label={t('barcode.add')} onPress={() => onAdd(item)} />
       <Button variant="secondary" label={t('barcode.scanAgain')} onPress={onAgain} />
@@ -222,7 +232,21 @@ function BarcodeScreen() {
     }),
     [userId],
   );
-  const provider = useMemo(() => createLayeredBarcodeProvider(config, stores), [config, stores]);
+  // Looking a barcode up sends it (and the phone's network address) to a third party, so the database is asked only after the person has said yes. Their own products and
+  // the offline memory still work without it, and food can always be added by hand.
+  const [consent, setConsent] = useState<boolean | null>(null);
+  useEffect(() => {
+    void readLookupConsent(deviceRaw, userId).then(setConsent);
+  }, [userId]);
+  const live = config.barcodeProvider === 'open_food_facts';
+  const provider = useMemo(
+    () =>
+      createLayeredBarcodeProvider(
+        live && consent !== true ? { ...config, barcodeProvider: 'off' } : config,
+        stores,
+      ),
+    [config, stores, live, consent],
+  );
   const [perm, requestPerm] = useCameraPermissions();
   const [phase, setPhase] = useState<Phase>({ kind: 'scan' });
   const [typed, setTyped] = useState('');
@@ -256,7 +280,13 @@ function BarcodeScreen() {
   };
   const [scanned, setScanned] = useState<string | null>(null);
 
-  if (provider.id === 'off') {
+  if (live && consent === null)
+    return (
+      <Screen top={false}>
+        <AppText muted>{t('common.loading')}</AppText>
+      </Screen>
+    );
+  if (provider.id === 'off' && !live) {
     return (
       <Screen top={false}>
         <Notice>{t('barcode.off')}</Notice>
@@ -265,6 +295,30 @@ function BarcodeScreen() {
     );
   }
 
+  if (live && consent === false) {
+    return (
+      <Screen top={false}>
+        <DepthCard>
+          <AppText variant="heading" accessibilityRole="header">
+            {t('barcode.consentTitle')}
+          </AppText>
+          <AppText>{t('barcode.consentBody')}</AppText>
+          <Button
+            label={t('barcode.consentAllow')}
+            onPress={() => {
+              void writeLookupConsent(deviceRaw, userId, true);
+              setConsent(true);
+            }}
+          />
+          <Button
+            variant="secondary"
+            label={t('barcode.consentNo')}
+            onPress={() => router.replace('/food/add')}
+          />
+        </DepthCard>
+      </Screen>
+    );
+  }
   const cameraReady = perm?.granted && !camFailed && Platform.OS !== 'web';
   const scanning = phase.kind === 'scan' || phase.kind === 'invalid';
   return (

@@ -484,3 +484,45 @@ Project `bxhnrjulksganzydgrgm` only (reference verified before each hosted chang
 3. Friends disabled in shared builds until you decide; `community.up.sql` and `social.up.sql` not applied outside staging; legal review of the wording.
 4. Community open items: guest rate-limit test, expired-token test, deletion-executor scheduling. Auth leaked-password option (paid plan).
 5. Dietitian and cultural review of foods and recipes.
+
+---
+
+# Phase 11: iPhone verification preparation, screens checked in a browser, Open Food Facts consent (2026-11-16)
+
+Nothing was uploaded; no EAS build, TestFlight or App Store; no production, development Supabase, `main` or `integration/live-prep` change; no PR; Apple Health excluded.
+
+## Exactly what was tested where
+
+| Where                                                                                                      | What                                                                                                                                                                                                                                                                                                                   | Result                                                                         |
+| ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **Physical iPhone**                                                                                        | nothing                                                                                                                                                                                                                                                                                                                | **NOT TESTED**: there is no iPhone in this environment                         |
+| **iOS Simulator**                                                                                          | nothing                                                                                                                                                                                                                                                                                                                | **NOT TESTED**: this environment is Linux; the Simulator needs macOS and Xcode |
+| **Real staging backend, app's real code (no screens)**                                                     | account creation, sign-in, Friends, groups, deletion (Phase 10)                                                                                                                                                                                                                                                        | 37 of 37 and 5 of 5 PASS (earlier phase; not repeated)                         |
+| **Browser (Chromium at a 390 by 844 iPhone-sized window) on the web build of the real screens, mock data** | the Friends screen: add and refuse a friend, open a friend, the labelled sharing switch, sharing on and "Stop sharing with everyone", block and unblock, challenge with a friend, server-style numbers from a completed workout, couple and family goals, leaving a group, no food/weight/health values on screen      | **23 of 23 PASS**                                                              |
+| Same browser run                                                                                           | accessibility: every button, switch and field has an accessible name; touch targets at least 44 points; no sideways scrolling at 320, 390 and 430 px; content reachable at 200% size                                                                                                                                   | PASS (after one fix, below)                                                    |
+| Same, barcode: web build with Open Food Facts on, mock account                                             | consent screen before any lookup (no request sent), declining goes to manual entry, allowing then looking up a real barcode shows the product, credit, check-the-label warning and a product-page link; exactly one request left the app, to the product endpoint; Privacy shows the switch and withdrawing asks again | **10 of 10 PASS**                                                              |
+| Local unit and integration tests                                                                           | see below                                                                                                                                                                                                                                                                                                              | PASS                                                                           |
+
+**Not verified at all (need your Mac and phone):** secure local credential storage (Keychain), Face ID, real PIN lock, VoiceOver spoken output, true Dynamic Type, safe areas, haptics, the camera barcode scanner, and the real sign-in on a device. The browser run is a proxy for layout and interaction, not for these. **The staging sign-in cannot run in a browser**: the web build has no secure-storage implementation, so a hosted session fails there by design; only native builds can use it.
+
+## What was prepared for the device test
+
+- `scripts/friends-staging-ios.sh` (+ `friends-staging.env.example`, `docs/FRIENDS_IPHONE_TEST.md`): runs the app locally with Xcode (simulator or `--device`) against staging, Friends on for that process only, preview environment so the production guard is untouched. It refuses the development project, any other project, a secret key, and an http URL (tests: `scripts/friends-staging-ios.test.mjs`, 2 tests). Nothing is uploaded. A test also pins that no EAS profile sets the Friends flag.
+
+## Findings fixed in this phase
+
+1. **Touch targets:** the sharing and invite switches were 40 by 20 points. Each is now a full-width row at least 44 points tall that VoiceOver reads as one switch with its state; the bare switch inside is hidden from assistive technology.
+2. **Barcode lookup could not run in a browser** ("Illegal invocation"): the default `fetch` was called with another object as `this`. Fixed with a wrapper and a test; native apps were not affected, but it was a real bug.
+3. **Missing consent:** a lookup sent the barcode and IP address to a third party without asking. The app now asks first (and says what is sent), the answer is per person and kept on the phone, and Privacy can withdraw it. Their own saved products and the offline memory work without it; manual entry is always available.
+4. **Credit:** every Open Food Facts product now shows a link to its product page (credit and correction), as their terms ask.
+
+## Open Food Facts
+
+- Terms page read and recorded in `docs/OPEN_FOOD_FACTS_CHECKLIST.md`; draft privacy wording in `docs/OPEN_FOOD_FACTS_PRIVACY_DRAFT.md` (unpublished, for counsel). The 12-requests-a-minute limit, offline memory and manual entry are unchanged and still tested. The feature stays **off by default and in production** until you approve it.
+- **Support email: none is configured.** The repository contains no public support address and the EAS variables are unreadable; I did not invent one and did not use the owner's personal administration address. The User-Agent therefore carries no contact yet. Set `EXPO_PUBLIC_SUPPORT_EMAIL` to a mailbox that receives mail and I will confirm the User-Agent uses it.
+
+## Remaining blockers
+
+1. Run the device test on your Mac (launcher above) and send the results; I remove the staging accounts afterwards.
+2. Support address; API usage form; counsel review of the wording; then preview-first activation of barcode lookups.
+3. Friends in shared builds, `community.up.sql` and `social.up.sql` outside staging, legal review, Community open items, leaked-password option, food and recipe review (unchanged).

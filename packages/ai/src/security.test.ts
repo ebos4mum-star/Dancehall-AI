@@ -47,6 +47,8 @@ describe('no paid provider or live cloud service is wired in', () => {
       'supabaseCoach.ts',
       'supabaseCommunity.ts',
       'supabaseSocial.ts',
+      // Opt-in only (off by default and in production); the barcode-flow tests pin that it is the only app file that can reach Open Food Facts and that it sends just the barcode.
+      'barcodeProvider.ts',
     ]);
     // The one extra caller reaches only the configured project's `account` Edge Function, never another host.
     const account = read(hits.find((f) => f.endsWith('accountApi.ts'))!);

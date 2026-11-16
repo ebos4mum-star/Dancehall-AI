@@ -13,7 +13,8 @@ import { cleanDisplayName } from '@/lib/displayName';
 import { buildDataExport, exportToText } from '@/privacy/export';
 import { t, type StringKey } from '@/i18n';
 import { useTheme } from '@/theme/useTheme';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { deviceRaw, readLookupConsent, writeLookupConsent } from '@/food/productStore';
 import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -45,6 +46,11 @@ function Privacy() {
   const [msg, setMsg] = useState<string | null>(null);
   const [name, setName] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [lookupOn, setLookupOn] = useState(false);
+  const lookupUser = useApp().session?.userId ?? 'guest';
+  useEffect(() => {
+    void readLookupConsent(deviceRaw, lookupUser).then(setLookupOn);
+  }, [lookupUser]);
   const [exportText, setExportText] = useState<string | null>(null);
   const runExport = async () => {
     setExporting(true);
@@ -154,6 +160,23 @@ function Privacy() {
         );
       })}
 
+      {config.barcodeProvider === 'open_food_facts' ? (
+        <Card>
+          <AppText variant="heading" accessibilityRole="header">
+            {t('privacy.barcodeTitle')}
+          </AppText>
+          <AppText muted>{t('privacy.barcodeBody')}</AppText>
+          <Button
+            variant={lookupOn ? 'primary' : 'secondary'}
+            label={lookupOn ? t('privacy.barcodeOn') : t('privacy.barcodeOff')}
+            onPress={() => {
+              const next = !lookupOn;
+              setLookupOn(next);
+              void writeLookupConsent(deviceRaw, lookupUser, next);
+            }}
+          />
+        </Card>
+      ) : null}
       <AppText variant="heading" accessibilityRole="header">
         {t('privacy.exportTitle')}
       </AppText>

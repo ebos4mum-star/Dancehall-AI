@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { createLayeredProvider, userProduct, type ProductProvider } from '@dancehall/shared';
-import { deviceProductStore, myProductsKey, memoryProductsKey, type Raw } from './productStore';
+import {
+  deviceProductStore,
+  myProductsKey,
+  memoryProductsKey,
+  readLookupConsent,
+  writeLookupConsent,
+  type Raw,
+} from './productStore';
 
 const mem = (): Raw & { data: Map<string, string> } => {
   const data = new Map<string, string>();
@@ -74,5 +81,29 @@ describe('the device product store', () => {
       status: 'found',
       product: { name: 'My granola', source: 'user_entered' },
     });
+  });
+});
+
+describe('lookup consent', () => {
+  it('is off until the person allows it, per person, and can be withdrawn', async () => {
+    const raw = mem();
+    expect(await readLookupConsent(raw, 'u1')).toBe(false);
+    await writeLookupConsent(raw, 'u1', true);
+    expect(await readLookupConsent(raw, 'u1')).toBe(true);
+    expect(await readLookupConsent(raw, 'u2')).toBe(false);
+    await writeLookupConsent(raw, 'u1', false);
+    expect(await readLookupConsent(raw, 'u1')).toBe(false);
+  });
+  it('a storage failure means "not allowed"', async () => {
+    const broken: Raw = {
+      get: async () => {
+        throw new Error('disk');
+      },
+      set: async () => {
+        throw new Error('disk');
+      },
+    };
+    expect(await readLookupConsent(broken, 'u1')).toBe(false);
+    await expect(writeLookupConsent(broken, 'u1', true)).resolves.toBeUndefined();
   });
 });

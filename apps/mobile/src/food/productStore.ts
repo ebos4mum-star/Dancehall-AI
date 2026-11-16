@@ -54,3 +54,20 @@ export function deviceProductStore(raw: Raw, key: string, max: number): ProductS
 }
 export const myProductsKey = (userId: string) => `dh.products.mine.${userId}`;
 export const memoryProductsKey = (userId: string) => `dh.products.seen.${userId}`;
+
+/** Whether this person allowed barcode lookups to Open Food Facts (a third party). Off until they say yes; they can withdraw it any time. Kept on this device only. */
+export const lookupConsentKey = (userId: string) => `dh.barcode.lookupConsent.${userId}`;
+export async function readLookupConsent(raw: Raw, userId: string): Promise<boolean> {
+  try {
+    return (await raw.get(lookupConsentKey(userId))) === '1';
+  } catch {
+    return false;
+  }
+}
+export async function writeLookupConsent(raw: Raw, userId: string, on: boolean): Promise<void> {
+  try {
+    await raw.set(lookupConsentKey(userId), on ? '1' : '0');
+  } catch {
+    /* a convenience; without it the answer is "not allowed", which is the safe side */
+  }
+}
