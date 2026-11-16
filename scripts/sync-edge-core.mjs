@@ -12,6 +12,7 @@ const FILES = [
   'community-media.ts',
   'community-server.ts',
   'community-alerts.ts',
+  'gamification.ts',
   'social-server.ts',
 ];
 const OUT = 'supabase/functions/_shared/generated';

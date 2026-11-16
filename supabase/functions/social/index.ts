@@ -26,7 +26,11 @@ const server = createSocialServer({
   rpc: {
     async call(fn, args) {
       // `app` is not exposed over the API; this single service-role-only function runs the allow-listed functions (see social.up.sql).
-      const { data, error } = await admin.rpc('social_rpc', { fn, args });
+      // Gamification functions go through their own allow-listed door (gamification.up.sql); everything else through the Friends door.
+      const { data, error } = await admin.rpc(fn.startsWith('gm_') ? 'gm_rpc' : 'social_rpc', {
+        fn,
+        args,
+      });
       // The database raises plain codes ("not_friends", "taken"...). Anything else is reported upward as-is and mapped to a generic 500 there.
       if (error) throw new Error(error.message);
       return data;

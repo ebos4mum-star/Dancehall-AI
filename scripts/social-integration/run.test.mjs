@@ -92,6 +92,8 @@ describe(
         sh(['-d', DB, '-f', 'supabase/seed.sql']);
         sh(['-d', DB, '-f', 'supabase/proposed/community.up.sql']);
         sh(['-d', DB, '-f', 'supabase/proposed/social.up.sql']);
+        sh(['-d', DB, '-f', 'supabase/proposed/health_sync.up.sql']);
+        sh(['-d', DB, '-f', 'supabase/proposed/gamification.up.sql']);
         db = new pg.Client(pgOptions(DB));
         await db.connect();
         for (const n of ['ama', 'kofi', 'efua', 'yaw', 'plain']) {
@@ -405,6 +407,83 @@ describe(
           0,
         );
         assert.equal((await as('kofi')('overview')).body.overview.groups.length, 0);
+      });
+    });
+
+    describe('gamification is decided by the server, once', () => {
+      it('refuses guests, ignores any XP the client sends, and never pays the same record twice', async () => {
+        assert.equal((await call('gm/sync', {}, null)).status, 401);
+        assert.equal((await call('gm/league', {}, null)).status, 401);
+        await db.query(
+          "insert into public.workout_sessions (user_id, title, minutes, status, completed_at, duration_s) values ($1, 'GM walk', 30, 'completed', now() - interval '3 hours', 1800)",
+          [users.efua],
+        );
+        const first = await as('efua')('gm/sync', {
+          xp: 99999,
+          totalXp: 99999,
+          events: [{ id: 'workout:fake', kind: 'workout', day: '2026-01-01', xp: 100 }],
+          prefs: { targetDaysPerWeek: 3, restWeekdays: [0] },
+        });
+        assert.equal(first.status, 200, JSON.stringify(first.body));
+        assert.ok(
+          first.body.totalXp > 0 && first.body.totalXp < 500,
+          `total ${first.body.totalXp}`,
+        );
+        const again = await as('efua')('gm/sync', { prefs: { targetDaysPerWeek: 3 } });
+        const third = await as('efua')('gm/sync', {});
+        assert.equal(again.body.totalXp, first.body.totalXp);
+        assert.equal(third.body.totalXp, first.body.totalXp);
+        const rows = (
+          await db.query(
+            "select count(*)::int n from public.gm_ledger where user_id = $1 and event_id = 'workout:fake'",
+            [users.efua],
+          )
+        ).rows[0].n;
+        assert.equal(rows, 0);
+        assert.equal((await as('efua')('gm/state')).body.state.totalXp, first.body.totalXp);
+      });
+      it('an Apple Health workout that repeats an in-app session is rewarded once, and importing the same id twice is refused by the database', async () => {
+        const before = (await as('yaw')('gm/sync', {})).body.totalXp;
+        await db.query(
+          "insert into public.workout_sessions (user_id, title, minutes, status, completed_at, duration_s) values ($1, 'In app', 30, 'completed', now() - interval '2 hours', 1800)",
+          [users.yaw],
+        );
+        await db.query(
+          "insert into public.workout_sessions (user_id, title, minutes, status, completed_at, duration_s, source, external_id) values ($1, 'Apple Health: Dance', 31, 'completed', now() - interval '119 minutes', 1860, 'apple_health', 'hk-yaw-1')",
+          [users.yaw],
+        );
+        const one = (await as('yaw')('gm/sync', {})).body.totalXp;
+        await assert.rejects(
+          db.query(
+            "insert into public.workout_sessions (user_id, title, minutes, status, completed_at, duration_s, source, external_id) values ($1, 'Apple Health: Dance', 31, 'completed', now() - interval '5 hours', 1860, 'apple_health', 'hk-yaw-1')",
+            [users.yaw],
+          ),
+        );
+        assert.equal((await as('yaw')('gm/sync', {})).body.totalXp, one);
+        const w = (
+          await db.query(
+            "select count(*)::int n from public.gm_ledger where user_id = $1 and kind = 'workout'",
+            [users.yaw],
+          )
+        ).rows[0].n;
+        assert.equal(w, 1, 'one workout event for two overlapping records');
+        assert.ok(one > before);
+      });
+      it('the league needs both people to opt in and a friendship, and shows only a name and a number', async () => {
+        await as('ama')('friend/request', { username: 'yaw_beats' });
+        await as('yaw')('friend/respond', { username: 'ama_dances', accept: true });
+        assert.deepEqual((await as('yaw')('gm/league')).body.league, []);
+        assert.equal((await as('yaw')('gm/league/optin', { on: true })).status, 200);
+        assert.equal((await as('yaw')('gm/league')).body.league.length, 1);
+        await as('ama')('gm/sync', {});
+        await as('ama')('gm/league/optin', { on: true });
+        const lg = (await as('yaw')('gm/league')).body.league;
+        assert.deepEqual(lg.map((r) => r.username).sort(), ['ama_dances', 'yaw_beats']);
+        for (const r of lg) assert.deepEqual(Object.keys(r).sort(), ['isMe', 'username', 'weekXp']);
+        assert.equal((await as('efua')('gm/league')).body.league.length, 0);
+        await as('yaw')('block', { username: 'ama_dances' });
+        assert.equal((await as('yaw')('gm/league')).body.league.length, 1);
+        assert.equal((await as('ama')('gm/league')).body.league.length, 1);
       });
     });
 

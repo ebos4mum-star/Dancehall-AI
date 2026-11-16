@@ -1,5 +1,26 @@
-import { localDateKey } from './food';
-import { sessionMinutes, weekStartOf } from './activity';
+// Self-contained on purpose: the server copy of this file (supabase/functions/_shared/generated) must not drag in the food catalogue.
+const localDateKey = (iso: string, timeZone: string | null | undefined): string => {
+  const d = new Date(iso);
+  try {
+    const p = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timeZone || 'UTC',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(d);
+    const get = (t: string) => p.find((x) => x.type === t)!.value;
+    return `${get('year')}-${get('month')}-${get('day')}`;
+  } catch {
+    return d.toISOString().slice(0, 10);
+  }
+};
+const weekStartOf = (dateKey: string): string => {
+  const d = new Date(`${dateKey}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+};
+const sessionMinutes = (s: { durationS: number | null; minutes: number }): number =>
+  s.durationS && s.durationS > 0 ? Math.max(1, Math.round(s.durationS / 60)) : s.minutes;
 
 /**
  * Gamification engine: XP, lifetime levels, personalised streaks with planned rest days, daily and weekly quests, badges, cosmetics, seasons and league ranking.

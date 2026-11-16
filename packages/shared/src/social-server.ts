@@ -12,6 +12,8 @@
  *  - Friends works whether or not the public Community feed is switched on: it reuses only the Community username and its rate limiter, not its mode or its routes.
  *  - Errors are plain codes. Unexpected errors return a generic message and are never logged with content.
  */
+import { computeGamification, normalizePrefs, type GmInput } from './gamification';
+
 export interface SocialRpc {
   /** Calls `app.<fn>` as the server. Throws an Error whose message is the database's exception text. */
   call(fn: string, args: Record<string, unknown>): Promise<unknown>;
@@ -329,6 +331,56 @@ const ROUTES: Record<string, Route> = {
           p_group: uuid(c.body, 'groupId'),
         }),
       }),
+  },
+  'gm/state': {
+    limit: SOCIAL_RATE.read,
+    run: async (c) => done({ state: await rpc(c, 'gm_state', { p_user: c.user }) }),
+  },
+  'gm/sync': {
+    // The server reads the person's OWN records (ids, times, durations, days), runs the shared engine, and records the result. The client sends only its
+    // personal preferences (a weekly target of 1 to 5 days and planned rest weekdays), which are normalised here and only change how easy a personal goal is.
+    limit: SOCIAL_RATE.write,
+    run: async (c) => {
+      const raw = isObj(c.body.prefs) ? c.body.prefs : {};
+      const prefs = normalizePrefs({
+        enabled: true,
+        targetDaysPerWeek:
+          typeof raw.targetDaysPerWeek === 'number' ? raw.targetDaysPerWeek : undefined,
+        restWeekdays: Array.isArray(raw.restWeekdays) ? (raw.restWeekdays as number[]) : undefined,
+      });
+      const inputs = await rpc(c, 'gm_inputs', { p_user: c.user });
+      if (!isObj(inputs)) throw new Error('server_error');
+      const g = computeGamification({ ...(inputs as unknown as Omit<GmInput, 'prefs'>), prefs });
+      const ledger = await rpc(c, 'gm_record', { p_user: c.user, p_events: g.events.slice(-400) });
+      return done({
+        totalXp: isObj(ledger) ? ledger.totalXp : g.totalXp,
+        weekXp: isObj(ledger) ? ledger.weekXp : g.weekXp,
+        level: g.level,
+        streak: g.streak,
+        restNudge: g.restNudge,
+        dailyQuests: g.dailyQuests,
+        weeklyQuests: g.weeklyQuests,
+        badges: g.badges,
+        cosmetics: g.cosmetics,
+        seasonal: {
+          id: g.seasonal.season.id,
+          activeDays: g.seasonal.activeDays,
+          goalDays: g.seasonal.season.goalDays,
+          done: g.seasonal.done,
+        },
+      });
+    },
+  },
+  'gm/league': {
+    limit: SOCIAL_RATE.read,
+    run: async (c) => done({ league: await rpc(c, 'gm_league', { p_user: c.user }) }),
+  },
+  'gm/league/optin': {
+    limit: SOCIAL_RATE.write,
+    run: async (c) => (
+      await rpc(c, 'gm_set_league', { p_user: c.user, p_on: bool(c.body, 'on') }),
+      done()
+    ),
   },
 };
 
