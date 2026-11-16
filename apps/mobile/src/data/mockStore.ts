@@ -479,6 +479,18 @@ export class MockStore implements DataStore {
       ).size,
     };
   }
+  async socialClaimUsername(username: string) {
+    return await this.communityClaimUsername(username);
+  }
+  async socialRevokeAll() {
+    const { social, me } = await this.socialEngine();
+    for (const s of [...social.state.shares.filter((x) => x.owner === me)]) {
+      const name = this.state.community!.profiles[s.viewer]?.username;
+      if (name) social.setShare(me, name, s.category, false);
+    }
+    await this.commit();
+    return { ok: true as const };
+  }
   async socialOverview() {
     const { social, me, myName } = await this.socialEngine();
     return {

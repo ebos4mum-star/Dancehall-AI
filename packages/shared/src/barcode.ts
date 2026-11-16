@@ -40,7 +40,7 @@ export function parseBarcode(raw: string): ParsedBarcode | null {
   return { code: d, format: 'ean13' };
 }
 
-export type ProductSource = 'open_food_facts' | 'local_sample';
+export type ProductSource = 'open_food_facts' | 'local_sample' | 'user_entered';
 export interface ProductRecord {
   barcode: string;
   name: string;
@@ -55,7 +55,8 @@ export interface ProductRecord {
 }
 
 export type ProductLookup =
-  | { status: 'found'; product: ProductRecord }
+  /** `cached` means the answer came from this device's earlier lookup because the database could not be reached; the screen says so. */
+  | { status: 'found'; product: ProductRecord; cached?: boolean }
   /** The product exists but its numbers cannot be trusted or are missing: no value is produced. `problems` says why, in plain words. */
   | { status: 'incomplete'; product: ProductRecord; problems: string[] }
   | { status: 'not_found' }

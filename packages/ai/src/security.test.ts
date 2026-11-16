@@ -46,6 +46,7 @@ describe('no paid provider or live cloud service is wired in', () => {
       'accountApi.ts',
       'supabaseCoach.ts',
       'supabaseCommunity.ts',
+      'supabaseSocial.ts',
     ]);
     // The one extra caller reaches only the configured project's `account` Edge Function, never another host.
     const account = read(hits.find((f) => f.endsWith('accountApi.ts'))!);
@@ -55,6 +56,10 @@ describe('no paid provider or live cloud service is wired in', () => {
     const community = read(hits.find((f) => f.endsWith('supabaseCommunity.ts'))!);
     expect(community).toMatch(/\/functions\/v1\/community/);
     expect(community.match(/https?:\/\//g) ?? []).toEqual([]);
+    // Friends reaches only the configured project's `social` function, with no host written into the code.
+    const social = read(hits.find((f) => f.endsWith('supabaseSocial.ts'))!);
+    expect(social).toMatch(/\/functions\/v1\/social/);
+    expect(social.match(/https?:\/\//g) ?? []).toEqual([]);
   });
   it('the server handlers default to the mock provider label', () => {
     const t = read(join(repo, 'packages', 'ai', 'src', 'provider.ts'));

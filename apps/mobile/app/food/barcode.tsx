@@ -7,12 +7,21 @@ import {
   allergenLine,
   itemFromProduct,
   parseBarcode,
+  userProduct,
   type ProductLookup,
   type ProductRecord,
+  type ProductStore,
 } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
 import { useDraft } from '@/food/draft';
-import { createBarcodeProvider } from '@/food/barcodeProvider';
+import { createLayeredBarcodeProvider } from '@/food/barcodeProvider';
+import {
+  deviceProductStore,
+  deviceRaw,
+  memoryProductsKey,
+  myProductsKey,
+} from '@/food/productStore';
+import { parseDecimal } from '@/lib/format';
 import { PortionStepper, kcalText, macroText } from '@/food/ui';
 import { useNumbersHidden } from '@/wellness/hooks';
 import { t } from '@/i18n';
@@ -30,6 +39,7 @@ type Phase =
   | { kind: 'scan' }
   | { kind: 'looking' }
   | { kind: 'invalid' }
+  | { kind: 'label' }
   | { kind: 'result'; result: ProductLookup };
 
 /** The product the person is adding, with a portion they can change. Package data is labelled as such and every value stays editable after it is added. */
@@ -37,12 +47,16 @@ function FoundProduct({
   product,
   attribution,
   remote,
+  cached,
   onAdd,
   onAgain,
+  onForget,
 }: {
   product: ProductRecord;
   attribution?: string;
   remote: boolean;
+  cached?: boolean;
+  onForget?: () => void;
   onAdd: (item: NonNullable<ReturnType<typeof itemFromProduct>>) => void;
   onAgain: () => void;
 }) {
@@ -57,6 +71,8 @@ function FoundProduct({
       <AppText variant="heading" accessibilityRole="header">
         {item.name}
       </AppText>
+      {cached ? <Notice>{t('barcode.cached')}</Notice> : null}
+      {product.source === 'user_entered' ? <Notice>{t('barcode.mine')}</Notice> : null}
       {product.source === 'local_sample' ? (
         <Notice tone="warning">{t('barcode.sample')}</Notice>
       ) : null}
@@ -86,15 +102,127 @@ function FoundProduct({
       ) : null}
       <Button label={t('barcode.add')} onPress={() => onAdd(item)} />
       <Button variant="secondary" label={t('barcode.scanAgain')} onPress={onAgain} />
+      {onForget && product.source === 'user_entered' ? (
+        <Button variant="secondary" label={t('barcode.forget')} onPress={onForget} />
+      ) : null}
+    </DepthCard>
+  );
+}
+
+/** Typing the package label for a barcode nothing knew. Validated exactly like database data; saved on this device (and used on the next scan) only if the person asks. */
+function LabelForm({
+  code,
+  store,
+  onSaved,
+  onSkip,
+}: {
+  code: string;
+  store: ProductStore;
+  onSaved: (p: ProductRecord) => void;
+  onSkip: () => void;
+}) {
+  const { spacing } = useTheme();
+  const [v, setV] = useState({
+    name: '',
+    brand: '',
+    serving: '',
+    kcal: '',
+    protein: '',
+    carbs: '',
+    fat: '',
+  });
+  const [save, setSave] = useState(true);
+  const [problems, setProblems] = useState<string[]>([]);
+  const set = (k: keyof typeof v) => (x: string) => setV((s) => ({ ...s, [k]: x }));
+  const num = (s: string) => (s.trim() === '' ? undefined : (parseDecimal(s) ?? NaN));
+  const submit = async () => {
+    const r = userProduct({
+      barcode: code,
+      name: v.name,
+      brand: v.brand,
+      servingG: num(v.serving) ?? null,
+      per100g: {
+        kcal: num(v.kcal),
+        proteinG: num(v.protein),
+        carbsG: num(v.carbs),
+        fatG: num(v.fat),
+      },
+    });
+    if (!r.ok) return setProblems(r.problems);
+    if (save) await store.put(r.product);
+    onSaved(r.product);
+  };
+  return (
+    <DepthCard>
+      <AppText variant="heading" accessibilityRole="header">
+        {t('barcode.labelTitle')}
+      </AppText>
+      <AppText variant="caption" muted>
+        {t('barcode.labelHint')}
+      </AppText>
+      <TextField label={t('barcode.labelName')} value={v.name} onChangeText={set('name')} />
+      <TextField label={t('barcode.labelBrand')} value={v.brand} onChangeText={set('brand')} />
+      <TextField
+        label={t('barcode.labelKcal')}
+        value={v.kcal}
+        onChangeText={set('kcal')}
+        keyboardType="decimal-pad"
+      />
+      <TextField
+        label={t('barcode.labelProtein')}
+        value={v.protein}
+        onChangeText={set('protein')}
+        keyboardType="decimal-pad"
+      />
+      <TextField
+        label={t('barcode.labelCarbs')}
+        value={v.carbs}
+        onChangeText={set('carbs')}
+        keyboardType="decimal-pad"
+      />
+      <TextField
+        label={t('barcode.labelFat')}
+        value={v.fat}
+        onChangeText={set('fat')}
+        keyboardType="decimal-pad"
+      />
+      <TextField
+        label={t('barcode.labelServing')}
+        value={v.serving}
+        onChangeText={set('serving')}
+        keyboardType="decimal-pad"
+      />
+      {problems.map((p) => (
+        <Notice key={p} tone="warning">
+          {p}
+        </Notice>
+      ))}
+      <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
+        <Button
+          variant={save ? 'primary' : 'secondary'}
+          label={save ? t('barcode.saveOn') : t('barcode.saveOff')}
+          onPress={() => setSave(!save)}
+        />
+        <Button label={t('barcode.labelUse')} onPress={() => void submit()} />
+        <Button variant="secondary" label={t('barcode.labelSkip')} onPress={onSkip} />
+      </View>
     </DepthCard>
   );
 }
 
 function BarcodeScreen() {
-  const { config } = useApp();
+  const { config, session } = useApp();
   const { dispatch } = useDraft();
   const { colors, radius, spacing } = useTheme();
-  const provider = useMemo(() => createBarcodeProvider(config), [config]);
+  const userId = session?.userId ?? 'guest';
+  const stores = useMemo(
+    () => ({
+      mine: deviceProductStore(deviceRaw, myProductsKey(userId), 200),
+      memory: deviceProductStore(deviceRaw, memoryProductsKey(userId), 100),
+    }),
+    [userId],
+  );
+  const provider = useMemo(() => createLayeredBarcodeProvider(config, stores), [config, stores]);
   const [perm, requestPerm] = useCameraPermissions();
   const [phase, setPhase] = useState<Phase>({ kind: 'scan' });
   const [typed, setTyped] = useState('');
@@ -113,6 +241,7 @@ function BarcodeScreen() {
         return;
       }
       setPhase({ kind: 'looking' });
+      setScanned(parsed.code);
       const result = await provider.lookup(parsed.code);
       if (result.status === 'found') haptics.success();
       else haptics.warning();
@@ -125,6 +254,7 @@ function BarcodeScreen() {
     setTyped('');
     setPhase({ kind: 'scan' });
   };
+  const [scanned, setScanned] = useState<string | null>(null);
 
   if (provider.id === 'off') {
     return (
@@ -213,12 +343,29 @@ function BarcodeScreen() {
           </AppText>
         </DepthCard>
       ) : null}
+      {phase.kind === 'label' && scanned ? (
+        <LabelForm
+          code={scanned}
+          store={stores.mine}
+          onSaved={(p) => setPhase({ kind: 'result', result: { status: 'found', product: p } })}
+          onSkip={again}
+        />
+      ) : null}
       {phase.kind === 'result' ? (
         phase.result.status === 'found' ? (
           <FoundProduct
             product={phase.result.product}
             attribution={provider.attribution}
-            remote={provider.id === 'open_food_facts'}
+            remote={
+              provider.id === 'open_food_facts' &&
+              phase.result.product.source === 'open_food_facts' &&
+              !phase.result.cached
+            }
+            cached={phase.result.cached}
+            onForget={() => {
+              const code = (phase.result as { product: ProductRecord }).product.barcode;
+              void stores.mine.remove(code).then(again);
+            }}
             onAdd={(item) => {
               dispatch({ type: 'add', item });
               router.replace('/food/review');
@@ -245,8 +392,15 @@ function BarcodeScreen() {
                   : t('barcode.unavailable')}
               </Notice>
             )}
+            {scanned && phase.result.status !== 'unavailable' ? (
+              <Button
+                label={t('barcode.enterYourself')}
+                onPress={() => setPhase({ kind: 'label' })}
+              />
+            ) : null}
             <Button
-              label={t('barcode.enterYourself')}
+              variant="secondary"
+              label={t('barcode.manualInstead')}
               onPress={() => router.replace('/food/add')}
             />
             {phase.result.status === 'unavailable' ? (

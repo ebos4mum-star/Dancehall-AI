@@ -1,7 +1,6 @@
 import { withAccount } from '@/account/gate';
 import { useState } from 'react';
 import { Switch, View } from 'react-native';
-import { router } from 'expo-router';
 import {
   SHARE_CATEGORIES,
   localDateKey,
@@ -38,6 +37,7 @@ function Friends() {
   const { spacing } = useTheme();
   const { data, error, reload } = useLoad(async (s) => (await s.socialOverview?.()) ?? null);
   const [name, setName] = useState('');
+  const [claim, setClaim] = useState('');
   const [note, setNote] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
@@ -112,12 +112,34 @@ function Friends() {
   return (
     <Screen>
       <Notice>{t('social.privacy')}</Notice>
+      {data.username && typeof store.socialRevokeAll === 'function' ? (
+        <Button
+          variant="secondary"
+          label={t('social.stopAll')}
+          onPress={() => void run(() => store.socialRevokeAll!(), t('social.stoppedAll'))}
+        />
+      ) : null}
       {problem ? <Notice tone="warning">{problem}</Notice> : null}
       {note ? <Notice>{note}</Notice> : null}
       {!data.username ? (
         <DepthCard>
           <AppText>{t('social.needName')}</AppText>
-          <Button label={t('social.pickName')} onPress={() => router.push('/community')} />
+          <BigField
+            icon="at"
+            label={t('social.nameLabel')}
+            value={claim}
+            onChangeText={setClaim}
+            autoCapitalize="none"
+            maxLength={20}
+          />
+          <Button
+            label={t('social.claim')}
+            disabled={claim.trim() === ''}
+            onPress={async () => {
+              if (await run(() => store.socialClaimUsername!(claim), t('social.claimed')))
+                setClaim('');
+            }}
+          />
         </DepthCard>
       ) : (
         <>

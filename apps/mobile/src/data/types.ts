@@ -266,6 +266,9 @@ export interface DataStore {
   // Friends, sharing and group goals (optional). The development mock implements them; the hosted schema is a proposal that is NOT applied, so Supabase builds do not offer them.
   // Food, weight and health data can never be shared: the only shareable category is a weekly activity summary, chosen per friend.
   socialOverview?(): Promise<SocialOverview>;
+  /** Claims the public name Friends are found by. Works whether or not the public Community feed is switched on. */
+  socialClaimUsername?(username: string): Promise<SocialAck<{ username: string }>>;
+  socialRevokeAll?(): Promise<SocialAck>;
   socialRequest?(username: string): Promise<SocialAck<{ status: 'requested' | 'accepted' }>>;
   socialRespond?(username: string, accept: boolean): Promise<SocialAck>;
   socialCancel?(username: string): Promise<SocialAck>;

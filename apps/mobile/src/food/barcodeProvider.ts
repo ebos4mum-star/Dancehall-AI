@@ -3,7 +3,9 @@ import {
   SAMPLE_PRODUCTS,
   createCatalogProvider,
   createOpenFoodFactsProvider,
+  createLayeredProvider,
   type ProductProvider,
+  type ProductStore,
 } from '@dancehall/shared';
 import type { AppConfig } from '@/lib/env';
 
@@ -27,4 +29,17 @@ export function createBarcodeProvider(
     default:
       return OFF_PROVIDER;
   }
+}
+
+/** The configured database with the person's own products in front and, for a live database, an offline memory behind. */
+export function createLayeredBarcodeProvider(
+  config: Pick<AppConfig, 'barcodeProvider'>,
+  stores: { mine: ProductStore; memory: ProductStore },
+  fetchImpl: typeof fetch = fetch,
+): ProductProvider {
+  return createLayeredProvider({
+    mine: stores.mine,
+    remote: createBarcodeProvider(config, fetchImpl),
+    memory: config.barcodeProvider === 'open_food_facts' ? stores.memory : undefined,
+  });
 }
