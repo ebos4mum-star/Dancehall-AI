@@ -13,6 +13,8 @@ export const GATE_INTENTS = [
   'goals',
   'challenges',
   'profile',
+  'community_post',
+  'community_join',
 ] as const;
 export type GateIntent = (typeof GATE_INTENTS)[number];
 export const isGateIntent = (v: unknown): v is GateIntent =>
@@ -59,6 +61,7 @@ const NEXT_PREFIXES = [
   '/progress',
   '/privacy',
   '/me',
+  '/community',
 ];
 const SAFE = /^[A-Za-z0-9_\-.~%=&+:,/?]+$/;
 

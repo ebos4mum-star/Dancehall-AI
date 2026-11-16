@@ -518,6 +518,8 @@ export const en = {
   'gate.intent.goals': 'set goals',
   'gate.intent.challenges': 'join challenges',
   'gate.intent.profile': 'manage your account',
+  'gate.intent.community_post': 'share with the community',
+  'gate.intent.community_join': 'join in with the community',
   'gate.body':
     'Browsing is free. An account keeps your workouts, food and plans safe, and lets you pick up where you left off.',
   'gate.how':

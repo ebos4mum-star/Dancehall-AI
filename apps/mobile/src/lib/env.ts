@@ -9,6 +9,12 @@ export type BarcodeProviderId = 'off' | 'local' | 'open_food_facts';
 
 export interface AppConfig {
   barcodeProvider: BarcodeProviderId;
+  /**
+   * Whether this build offers Community. ON in the development mock build (synthetic sample members, clearly labelled); OFF everywhere else unless EXPO_PUBLIC_COMMUNITY=1.
+   * A production build refuses to start with it on: a public feed needs the moderation process, the database rules and the security verification in
+   * docs/COMMUNITY.md first, and lifting this needs a deliberate code change and its own review.
+   */
+  community: boolean;
   appEnv: AppEnv;
   authMode: 'mock' | 'supabase';
   supabaseUrl?: string;
@@ -52,6 +58,10 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
   const url = env.EXPO_PUBLIC_SUPABASE_URL?.trim() || undefined;
   const key = env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() || undefined;
   const contentFixtures = env.EXPO_PUBLIC_CONTENT_FIXTURES === '1';
+  if (appEnv === 'production' && env.EXPO_PUBLIC_COMMUNITY === '1')
+    throw new ConfigError(
+      'Community is not allowed in a production build yet. Remove EXPO_PUBLIC_COMMUNITY.',
+    );
   const rawBarcode = env.EXPO_PUBLIC_BARCODE_PROVIDER?.trim();
   if (rawBarcode && !['off', 'local', 'open_food_facts'].includes(rawBarcode))
     throw new ConfigError(`Unknown EXPO_PUBLIC_BARCODE_PROVIDER "${rawBarcode}"`);
@@ -75,7 +85,14 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
       throw new ConfigError(
         'Mock authentication is development-only and is not allowed in a production build.',
       );
-    return { appEnv, authMode: 'mock', contentFixtures, cloudAccounts: true, barcodeProvider };
+    return {
+      appEnv,
+      authMode: 'mock',
+      contentFixtures,
+      cloudAccounts: true,
+      barcodeProvider,
+      community: env.EXPO_PUBLIC_COMMUNITY !== '0',
+    };
   }
   if (!url || !key)
     throw new ConfigError(
@@ -106,5 +123,6 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
     contentFixtures,
     cloudAccounts: env.EXPO_PUBLIC_CLOUD_ACCOUNTS === '1',
     barcodeProvider,
+    community: env.EXPO_PUBLIC_COMMUNITY === '1',
   };
 }

@@ -66,9 +66,9 @@ export const emptyCommunity = (): CommunityState => ({
   seq: 0,
 });
 
-export type Fail = { ok: false; code: string; reasons: string[]; support?: boolean };
+export type CommunityFail = { ok: false; code: string; reasons: string[]; support?: boolean };
 export type Ok<T> = { ok: true } & T;
-const fail = (code: string, reason: string, extra: Partial<Fail> = {}): Fail => ({
+const fail = (code: string, reason: string, extra: Partial<CommunityFail> = {}): CommunityFail => ({
   ok: false,
   code,
   reasons: [reason],
@@ -104,7 +104,7 @@ export class CommunityEngine {
     const u = username.trim().toLowerCase();
     return Object.entries(this.state.profiles).find(([, p]) => p.username === u)?.[0] ?? null;
   }
-  claimUsername(userId: string, raw: string): Ok<{ username: string }> | Fail {
+  claimUsername(userId: string, raw: string): Ok<{ username: string }> | CommunityFail {
     if (this.state.profiles[userId])
       return fail('already_set', 'You already have a username. It cannot be changed.');
     const v = validateUsername(raw);
@@ -156,7 +156,11 @@ export class CommunityEngine {
     this.state.actions = this.state.actions.filter((a) => Date.parse(a.at) > since);
     this.state.actions.push({ userId, kind, at: this.now().toISOString() });
   }
-  private gate(userId: string, kind: CommunityAction, needsUsername: boolean): Fail | null {
+  private gate(
+    userId: string,
+    kind: CommunityAction,
+    needsUsername: boolean,
+  ): CommunityFail | null {
     const prof = this.state.profiles[userId];
     if (needsUsername && !prof) return fail('needs_username', 'Choose a public username first.');
     if (prof?.suspended) return fail('suspended', 'Posting is paused on this account.');
@@ -189,7 +193,7 @@ export class CommunityEngine {
     userId: string,
     input: NewPostInput,
     opts: { confirmed: boolean },
-  ): Ok<{ post: PublicPost; status: 'published' | 'held'; message: string }> | Fail {
+  ): Ok<{ post: PublicPost; status: 'published' | 'held'; message: string }> | CommunityFail {
     if (opts.confirmed !== true) return fail('not_confirmed', 'Please confirm before sharing.');
     const blocked = this.gate(userId, 'post', true);
     if (blocked) return blocked;
@@ -278,7 +282,7 @@ export class CommunityEngine {
     };
   }
 
-  deletePost(userId: string, postId: string): Ok<object> | Fail {
+  deletePost(userId: string, postId: string): Ok<object> | CommunityFail {
     const i = this.state.posts.findIndex((p) => p.id === postId);
     if (i < 0 || this.state.posts[i]!.authorId !== userId)
       return fail('not_found', 'That post is not available.');
@@ -292,7 +296,9 @@ export class CommunityEngine {
     userId: string,
     postId: string,
     text: string,
-  ): Ok<{ comment: PublicComment; status: 'published' | 'hidden'; message: string }> | Fail {
+  ):
+    | Ok<{ comment: PublicComment; status: 'published' | 'hidden'; message: string }>
+    | CommunityFail {
     const post = this.state.posts.find((p) => p.id === postId);
     const v = this.viewer(userId);
     if (!post || !canSeePost(post, v)) return fail('not_found', 'That post is not available.');
@@ -322,7 +328,7 @@ export class CommunityEngine {
           : 'Thank you. Your comment will appear after a quick review.',
     };
   }
-  deleteComment(userId: string, commentId: string): Ok<object> | Fail {
+  deleteComment(userId: string, commentId: string): Ok<object> | CommunityFail {
     const c = this.state.comments.find((x) => x.id === commentId);
     const post = c ? this.state.posts.find((p) => p.id === c.postId) : undefined;
     if (!c || !post || (c.authorId !== userId && post.authorId !== userId))
@@ -331,7 +337,11 @@ export class CommunityEngine {
     return { ok: true };
   }
 
-  setEncourage(userId: string, postId: string, on: boolean): Ok<{ encouraged: boolean }> | Fail {
+  setEncourage(
+    userId: string,
+    postId: string,
+    on: boolean,
+  ): Ok<{ encouraged: boolean }> | CommunityFail {
     const post = this.state.posts.find((p) => p.id === postId);
     const v = this.viewer(userId);
     if (!post || !canSeePost(post, v)) return fail('not_found', 'That post is not available.');
@@ -359,7 +369,7 @@ export class CommunityEngine {
       reason: ReportReason;
       note?: string;
     },
-  ): Ok<object> | Fail {
+  ): Ok<object> | CommunityFail {
     if (!(REPORT_REASONS as readonly string[]).includes(input.reason))
       return fail('invalid_reason', 'Choose a reason.');
     const v = this.viewer(userId);
@@ -415,7 +425,7 @@ export class CommunityEngine {
       ];
     return { ok: true };
   }
-  block(userId: string, username: string): Ok<object> | Fail {
+  block(userId: string, username: string): Ok<object> | CommunityFail {
     const id = this.idOfUsername(username);
     if (!id) return fail('not_found', 'We could not find that member.');
     if (id === userId) return fail('self', 'You cannot block yourself.');
@@ -423,7 +433,7 @@ export class CommunityEngine {
       this.state.blocks.push({ blockerId: userId, blockedId: id });
     return { ok: true };
   }
-  unblock(userId: string, username: string): Ok<object> | Fail {
+  unblock(userId: string, username: string): Ok<object> | CommunityFail {
     const id = this.idOfUsername(username);
     if (!id) return fail('not_found', 'We could not find that member.');
     this.state.blocks = this.state.blocks.filter(
@@ -443,15 +453,13 @@ export class CommunityEngine {
   private allowed(a: StaffActor): boolean {
     return hasPermission(a.role, 'moderation.review', { mfaVerified: a.mfaVerified });
   }
-  moderationQueue(
-    actor: StaffActor,
-  ):
+  moderationQueue(actor: StaffActor):
     | Ok<{
         items: Array<
           ModerationItem & { author: string; body: string; reportReasons: ReportReason[] }
         >;
       }>
-    | Fail {
+    | CommunityFail {
     if (!this.allowed(actor)) return fail('forbidden', 'Not allowed.');
     const mk = (
       targetType: 'post' | 'comment',
@@ -500,7 +508,7 @@ export class CommunityEngine {
   moderate(
     actor: StaffActor,
     input: { targetType: 'post' | 'comment'; targetId: string; action: ModerationAction },
-  ): Ok<object> | Fail {
+  ): Ok<object> | CommunityFail {
     if (!this.allowed(actor)) return fail('forbidden', 'Not allowed.');
     const target =
       input.targetType === 'post'
@@ -513,7 +521,7 @@ export class CommunityEngine {
       this.state.reports = this.state.reports.filter((r) => r.targetId !== input.targetId);
     return { ok: true };
   }
-  suspendMember(actor: StaffActor, username: string, on: boolean): Ok<object> | Fail {
+  suspendMember(actor: StaffActor, username: string, on: boolean): Ok<object> | CommunityFail {
     if (!this.allowed(actor)) return fail('forbidden', 'Not allowed.');
     const id = this.idOfUsername(username);
     if (!id) return fail('not_found', 'Not found.');

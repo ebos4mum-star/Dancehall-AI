@@ -13,6 +13,11 @@ import {
   type AiProvider,
 } from '@dancehall/ai';
 import {
+  CommunityEngine,
+  sampleCommunity,
+  type CommunityState,
+  type NewPostInput,
+  type ReportReason,
   AppError,
   FREE_ENTITLEMENT,
   MEAL_TYPES,
@@ -145,6 +150,8 @@ interface State {
   weeklyReviews: WeeklyReviewRecord[];
   aiControls: { killAll: boolean; userPaused?: boolean };
   deletionRequest?: { id: string; scheduledFor: string; status: 'requested' } | null;
+  /** Development Community: synthetic sample members and posts plus the one real local member. Mirrors the rules in `CommunityEngine`. */
+  community?: CommunityState;
 }
 
 const KEY = 'dh.mock.v1';
@@ -281,6 +288,114 @@ export class MockStore implements DataStore {
   }
   private requireConsent(s: State) {
     if (!this.consented(s)) throw new StoreError('consent_required');
+  }
+
+  // ---------- Community (development mock) ----------
+  /** The Community engine over local state. Sample members are created once and labelled as samples; they are not real people. */
+  private async engine(): Promise<CommunityEngine> {
+    await this.load();
+    let seeded = false;
+    if (!this.state.community) {
+      this.state.community = sampleCommunity(this.now().toISOString());
+      seeded = true;
+    }
+    if (seeded) await this.commit();
+    return new CommunityEngine(this.state.community, this.now);
+  }
+  private memberId(): string | null {
+    return this.state.signedIn ? DEV_USER : null;
+  }
+  private async member(): Promise<string> {
+    await this.load();
+    if (!this.state.signedIn) throw new StoreError('not_authenticated');
+    return DEV_USER;
+  }
+  async communityProfile() {
+    const e = await this.engine();
+    const u = this.memberId() ? e.usernameOf(DEV_USER) : null;
+    return u ? { username: u } : null;
+  }
+  async communityClaimUsername(raw: string) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.claimUsername(uid, raw);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  /** Public: works for a guest. */
+  async communityFeed(opts: { cursor?: string | null; limit?: number } = {}) {
+    const e = await this.engine();
+    return e.feed(this.memberId(), opts);
+  }
+  /** Public: works for a guest. */
+  async communityComments(postId: string) {
+    const e = await this.engine();
+    return e.comments(this.memberId(), postId);
+  }
+  async communityPost(input: NewPostInput, opts: { confirmed: boolean }) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.createPost(uid, input, opts);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async communityDeletePost(postId: string) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.deletePost(uid, postId);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async communityComment(postId: string, text: string) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.addComment(uid, postId, text);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async communityDeleteComment(commentId: string) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.deleteComment(uid, commentId);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async communityEncourage(postId: string, on: boolean) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.setEncourage(uid, postId, on);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async communityReport(input: {
+    targetType: 'post' | 'comment';
+    targetId: string;
+    reason: ReportReason;
+    note?: string;
+  }) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.report(uid, input);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async communityBlock(username: string) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.block(uid, username);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async communityUnblock(username: string) {
+    const uid = await this.member();
+    const e = await this.engine();
+    const r = e.unblock(uid, username);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async communityBlocked() {
+    const uid = await this.member();
+    return (await this.engine()).blockedUsernames(uid);
   }
 
   async getSession(): Promise<Session | null> {

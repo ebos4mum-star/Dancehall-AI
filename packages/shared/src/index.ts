@@ -35,6 +35,7 @@ export * from './daily-progress';
 export * from './maintenance';
 export * from './community';
 export * from './community-engine';
+export * from './community-samples';
 export * from './strength';
 export * from './celebrations';
 export * from './evidence';

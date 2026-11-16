@@ -111,6 +111,7 @@ describe('isolation from unrelated credentials', () => {
         'authMode',
         'barcodeProvider',
         'cloudAccounts',
+        'community',
         'contentFixtures',
         'supabasePublishableKey',
         'supabaseUrl',

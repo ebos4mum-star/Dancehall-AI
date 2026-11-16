@@ -12,6 +12,7 @@ describe('resolveConfig', () => {
       contentFixtures: false,
       cloudAccounts: true,
       barcodeProvider: 'local',
+      community: true,
     });
   });
   it('offers cloud accounts in a Supabase build only when explicitly enabled', () => {
