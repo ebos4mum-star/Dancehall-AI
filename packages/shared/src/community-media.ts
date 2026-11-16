@@ -3,6 +3,23 @@
 // refuses oversized or location-tagged files, and only then lets a post use the file. People still review every photo and video before anyone else sees it.
 import { COMMUNITY_LIMITS } from './community';
 
+/**
+ * Cache policy for every Community file we store. The storage client turns this number of seconds into `Cache-Control: max-age=<n>`; "0" means a cached copy must be
+ * revalidated before it is reused. The platform default is 3600 seconds, which let a CDN keep serving a photo that had already been deleted to anyone who still held a
+ * valid signed link. This narrows that window; it does not guarantee immediate revocation (that depends on the hosting CDN honouring the header, which is verified
+ * only by testing on hosted staging). The signed link itself still expires after SIGNED_VIEW_SECONDS.
+ */
+export const COMMUNITY_FILE_CACHE_SECONDS = '0';
+
+/** The one place the options for storing a Community file are decided (used by the Edge Function). */
+export function storageUploadOptions(mime: string): {
+  contentType: string;
+  upsert: true;
+  cacheControl: string;
+} {
+  return { contentType: mime, upsert: true, cacheControl: COMMUNITY_FILE_CACHE_SECONDS };
+}
+
 export type SniffedMedia = { kind: 'photo' | 'video'; mime: string };
 
 const at = (b: Uint8Array, i: number) => (i >= 0 && i < b.length ? b[i]! : -1);

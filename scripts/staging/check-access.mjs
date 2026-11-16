@@ -121,7 +121,8 @@ export async function runChecks({ ref, publishableKey, phase, fetchImpl = fetch 
       record(
         `C2 ${route} is refused without a member token`,
         // In Read only the pause is checked before sign-in, so a guest write gets 503 (paused) instead of 401. Either way nothing is written.
-        r.status === 401 || (r.status === 503 && ['post', 'comment', 'upload/ticket'].includes(route)),
+        r.status === 401 ||
+          (r.status === 503 && ['post', 'comment', 'upload/ticket'].includes(route)),
         `status ${r.status}`,
       );
     }

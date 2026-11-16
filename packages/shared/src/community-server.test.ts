@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Alerter } from './community-alerts';
 import {
   createCommunityServer,
+  SIGNED_VIEW_SECONDS,
   type CommunityDeps,
   type CommunityRequest,
 } from './community-server';
@@ -80,11 +81,14 @@ function setup(
     floorMode?: 'open' | 'text_only' | 'read_only';
     commentsEnabled?: boolean;
     burst?: () => boolean;
+    /** Models real storage: a deleted object can no longer be signed. */
+    realStorage?: boolean;
   } = {},
 ) {
   const calls: Array<{ fn: string; args: Record<string, unknown> }> = [];
   const uploaded: Array<{ path: string; bytes: Uint8Array }> = [];
   const removed: string[] = [];
+  const signedFor: Array<{ path: string; seconds: number }> = [];
   let downloads = 0;
   const deps: CommunityDeps = {
     rpc: {
@@ -114,7 +118,9 @@ function setup(
       async remove(paths) {
         removed.push(...paths);
       },
-      async signedUrl(path) {
+      async signedUrl(path, seconds) {
+        if (opts.realStorage && removed.includes(path)) return null;
+        signedFor.push({ path, seconds });
         return `https://storage.test/sign/${path}?t=1`;
       },
     },
@@ -138,7 +144,7 @@ function setup(
     token: string | null = 'member',
     extra: Partial<CommunityRequest> = {},
   ) => server.handle({ route, token, networkKey: 'net-hash', body, ...extra });
-  return { send, calls, uploaded, removed, downloads: () => downloads };
+  return { send, calls, uploaded, removed, signedFor, downloads: () => downloads };
 }
 const dbCalls = <T extends { fn: string }>(calls: T[]) =>
   calls.filter((c) => c.fn !== 'community_burst');
@@ -839,5 +845,71 @@ describe('maintenance and leaving', () => {
     const t = setup({ community_leave: () => ['u/a/1.jpg', 'u/a/2.mp4'] });
     expect((await t.send('leave', {})).status).toBe(200);
     expect(t.removed).toHaveLength(2);
+  });
+});
+
+describe('signed photo links and deletion', () => {
+  const PHOTO = 'm/88888888-8888-4888-8888-888888888888.jpg';
+  const row = () => ({
+    id: POST,
+    author: 'ama_dances',
+    type: 'photo',
+    body: 'x',
+    status: 'published',
+    created_at: '2026-01-01T00:00:00Z',
+    media: [{ kind: 'photo', role: 'single', path: PHOTO }],
+  });
+  it('only ever signs links that expire within ten minutes', async () => {
+    const t = setup({ community_feed: () => [row()] }, { realStorage: true });
+    const r = await t.send('feed', {}, null);
+    expect(r.status).toBe(200);
+    expect(t.signedFor).toEqual([{ path: PHOTO, seconds: SIGNED_VIEW_SECONDS }]);
+    expect(SIGNED_VIEW_SECONDS).toBeLessThanOrEqual(600);
+  });
+  it('removes the file when the owner deletes the post, and no new link is issued for it afterwards', async () => {
+    let deleted = false;
+    const t = setup(
+      {
+        community_feed: () => (deleted ? [] : [row()]),
+        community_delete_post: () => {
+          deleted = true;
+          return [PHOTO];
+        },
+      },
+      { realStorage: true },
+    );
+    const before = await t.send('feed', {}, null);
+    expect(JSON.stringify(before.body)).toContain('storage.test/sign/');
+    expect((await t.send('post/delete', { postId: POST })).status).toBe(200);
+    expect(t.removed).toEqual([PHOTO]);
+    // Even if a stale database row still pointed at the file, real storage no longer signs it.
+    const stale = setup({ community_feed: () => [row()] }, { realStorage: true });
+    stale.removed.push(PHOTO);
+    const after = await stale.send('feed', {}, null);
+    expect(JSON.stringify(after.body)).not.toContain('storage.test/sign/');
+    const gone = await t.send('feed', {}, null);
+    expect(JSON.stringify(gone.body)).not.toContain('storage.test/sign/');
+  });
+  it('removes the file of a post the moderator removes, and never signs a held photo for a stranger', async () => {
+    const t = setup(
+      { community_moderate: () => [PHOTO], community_feed: () => [] },
+      { realStorage: true },
+    );
+    const r = await t.send(
+      'mod/act',
+      { type: 'post', targetId: POST, action: 'remove', note: 'unsafe' },
+      'staff2',
+    );
+    expect(r.status).toBe(200);
+    expect(t.removed).toEqual([PHOTO]);
+    expect(
+      (await t.send('mod/act', { type: 'post', targetId: POST, action: 'remove' }, 'staff1'))
+        .status,
+    ).toBe(403);
+    expect(
+      (await t.send('mod/act', { type: 'post', targetId: POST, action: 'remove' }, 'member'))
+        .status,
+    ).toBe(403);
+    expect(t.removed).toEqual([PHOTO]);
   });
 });

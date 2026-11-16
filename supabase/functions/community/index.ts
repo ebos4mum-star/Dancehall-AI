@@ -18,6 +18,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { networkIdentity, safeEqual } from '../_shared/generated/account-core.ts';
 import { createAlerter } from '../_shared/generated/community-alerts.ts';
+import { storageUploadOptions } from '../_shared/generated/community-media.ts';
 import { createCommunityServer } from '../_shared/generated/community-server.ts';
 
 declare const Deno: {
@@ -69,9 +70,10 @@ const server = createCommunityServer({
       return error || !data ? null : new Uint8Array(await data.arrayBuffer());
     },
     async upload(path, bytes, mime) {
+      // Short-cache policy (see COMMUNITY_FILE_CACHE_SECONDS): a deleted photo must not stay cached for the platform default of an hour.
       const { error } = await admin.storage
         .from(BUCKET)
-        .upload(path, bytes, { contentType: mime, upsert: true });
+        .upload(path, bytes, storageUploadOptions(mime));
       if (error) throw new Error('storage_failed');
     },
     async remove(paths) {

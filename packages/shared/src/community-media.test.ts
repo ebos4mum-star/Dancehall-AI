@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import {
+  COMMUNITY_FILE_CACHE_SECONDS,
+  storageUploadOptions,
   checkUpload,
   imageInfo,
   mimeForPath,
@@ -204,5 +207,23 @@ describe('checkUpload', () => {
         cat(box('ftyp', cat(enc('isom'), be32(0))), box('mdat', new Uint8Array(8))),
       ),
     ).toMatchObject({ ok: false, code: 'unreadable' });
+  });
+});
+
+describe('stored file cache policy', () => {
+  it('never lets a stored photo be cached for the platform default', () => {
+    expect(COMMUNITY_FILE_CACHE_SECONDS).toBe('0');
+    const o = storageUploadOptions('image/jpeg');
+    expect(o).toEqual({ contentType: 'image/jpeg', upsert: true, cacheControl: '0' });
+    expect(Number(o.cacheControl)).toBe(0);
+  });
+  it('is the only way the Edge Function stores a file (no hand-written options that could cache for an hour)', () => {
+    const src = readFileSync(
+      new URL('../../../supabase/functions/community/index.ts', import.meta.url),
+      'utf8',
+    );
+    expect(src).toContain('storageUploadOptions(mime)');
+    expect(src).not.toMatch(/cacheControl\s*:/);
+    expect(src).not.toMatch(/\.upload\(path, bytes, \{/);
   });
 });
