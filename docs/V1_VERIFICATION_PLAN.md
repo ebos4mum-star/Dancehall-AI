@@ -36,7 +36,7 @@ Use `docs/NATIVE_IOS_TEST.md` section 2 as the checklist (Keychain, Face ID/PIN 
 3. Friends two-account steps: `docs/FRIENDS_IPHONE_TEST.md` Track A, then Track B only after staging approval.
 4. Send back the results as listed in section 3 of the runbook.
 
-**Gap to decide:** the launcher deliberately unsets `EXPO_PUBLIC_COMMUNITY`, so Community cannot be checked on a phone with it. Decision needed: also run Community natively (add `EXPO_PUBLIC_COMMUNITY=1` for that run only, which also needs staging in open mode, so do it inside the section 2 window) or leave Community phone checks for a later round. Community is photo-only, so the phone items worth checking are photo picker permission wording, upload, immediate publish and Like.
+**Community on a phone:** `bash scripts/friends-staging-ios.sh --community` (add `--device` for an iPhone) now switches Community on for that local run only; it needs staging in open mode (inside the section 2 window), otherwise the feed shows as paused. Production flags are untouched (a production build still refuses Community and Friends). Photo-only items worth checking: picker permission wording, upload, immediate publish and Like.
 
 ## 4. Minimum configuration for a staging-only preview build (do not start)
 

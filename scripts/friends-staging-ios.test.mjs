@@ -58,3 +58,16 @@ test('the launcher never builds for upload and never sets a production environme
   );
   assert.match(src, /expo run:ios/);
 });
+
+test('--community switches Community on for the run only, and unknown options are refused', () => {
+  const f = join(mkdtempSync(join(tmpdir(), 'fs-')), 'env');
+  writeFileSync(f, good);
+  const go = (arg) =>
+    spawnSync('bash', ['scripts/friends-staging-ios.sh', arg], {
+      env: { ...process.env, FRIENDS_ENV_FILE: f, DRY_RUN: '1' },
+      encoding: 'utf8',
+    });
+  assert.match(go('--community').stdout, /Community ON/);
+  assert.equal(go('--bogus').status, 2);
+  assert.doesNotMatch(run(good).stdout, /Community ON/);
+});
