@@ -49,6 +49,8 @@ export interface CommunityDeps {
    * unreachable. It can only make Community stricter than the moderator's setting, never looser. Nothing outside Community is affected.
    */
   floorMode?: 'open' | 'text_only' | 'read_only';
+  /** Called with an unexpected error (never with request content). Off in production; used by local diagnosis only. */
+  onError?: (e: unknown) => void;
 }
 export type Mode = 'open' | 'text_only' | 'read_only';
 const MODE_RANK: Record<Mode, number> = { open: 0, text_only: 1, read_only: 2 };
@@ -825,6 +827,7 @@ export function createCommunityServer(deps: CommunityDeps) {
             },
           };
         const code = e instanceof Error ? e.message.trim() : '';
+        if (!KNOWN.has(code)) deps.onError?.(e);
         return fail(code);
       }
     },

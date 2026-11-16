@@ -13,4 +13,6 @@ Status: draft clauses to add to the existing Terms. Not legal advice. Have a qua
 9. **No guarantees.** Community may be paused, limited to text, or closed at any time, for example while moderation catches up. We do not promise that every post will be reviewed within a set time.
 10. **Illegal content.** We may remove content and keep records of it where the law requires, and may share information with authorities where the law requires.
 
+Initial market: United States. Counsel should check, among other things, intermediary-liability and notice-and-takedown arrangements, state consumer and privacy laws, and any arbitration or governing-law clause.
+
 Open items for the lawyer: liability wording in your jurisdictions; intermediary-liability or notice-and-takedown duties; whether a dispute process is required; governing law.

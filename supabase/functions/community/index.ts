@@ -90,6 +90,15 @@ const server = createCommunityServer({
     },
   },
   maintenanceKeyOk: (key) => !!key && safeEqual(key, maintenanceKey),
+  // Local diagnosis only: COMMUNITY_DEBUG=1 prints the error's name and first words (never request content). Leave unset in any hosted project.
+  onError:
+    Deno.env.get('COMMUNITY_DEBUG') === '1'
+      ? (e) =>
+          console.error(
+            'community_error',
+            e instanceof Error ? `${e.name}: ${e.message.slice(0, 120)}` : 'unknown',
+          )
+      : undefined,
   alerts: createAlerter({
     enabled: Deno.env.get('COMMUNITY_ALERTS'),
     recipients: Deno.env.get('COMMUNITY_ALERT_RECIPIENTS'),

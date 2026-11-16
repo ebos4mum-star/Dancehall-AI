@@ -60,3 +60,44 @@ Status: **built locally, off in production.** Nothing here is applied to a hoste
 ## Decisions needed
 
 See `COMMUNITY_MODERATION.md` ("Decisions needed") and the checklist above. Product decisions already made: usernames are changeable; authors see their own Encourage counts and there are no public rankings; text, photos, before/after and short videos are in V1, all media reviewed before publication; one moderator with MFA.
+
+## Integration testing (local, no hosted project)
+
+`pnpm test:community-integration` runs the whole request path on one machine: a phone-like client, the real `community` Edge Function under a **real Deno runtime** (built as the same flat bundle a deploy would use), supabase-js, a local stand-in for Supabase Auth, REST and private Storage (`scripts/community-integration/platform.mjs`, strict about signatures and expiry, every database call run as the `service_role` role), and a real Postgres with all migrations plus `community.up.sql`. It needs Postgres and Deno (`DENO_BIN`, or `deno` on PATH) and skips with a reason otherwise. 23 scenarios pass, covering:
+
+- guest browsing, bad/forged/expired tokens, body limits;
+- username claim and change, look-alikes, the held old name, cooldown;
+- unsafe text refused without echo, held text, explicit confirmation, author-only Encourage counts;
+- uploads: one-time signed link, real-type check, metadata removed from the stored file, no account id in any path, held posts invisible to others, signed links that tamper-fail and expire, a disguised HTML file rejected and deleted, nobody else's upload can be committed or attached, video refused while disabled;
+- moderation: ordinary member, staff without a second factor, non-staff with one, forged and expired tokens all refused; moderator and backup both act; approved media becomes public; removed media is deleted from storage; the audit log names each moderator and holds no notes or content;
+- abuse: mute, suspend, release; daily post limit; per-network request limit; quiet repeat reports; mutual silent blocks;
+- Read only and text only switches, and the Community-only configuration floor that works with the database down while the normal instance is unaffected;
+- urgent email alerts: nothing sent by default; when configured, one email to moderator and backup with counts only, throttled, plus a scheduled reminder;
+- leaving Community, and an account deleted by cascade followed by maintenance leaving no file in storage;
+- a scan of every response for account ids, synthetic sign-in addresses and keys.
+
+What the stand-in is **not**: real Supabase. Real PostgREST error formats, real Auth (including MFA enrolment and `aal` claims minted by GoTrue), real Storage policies, and Edge runtime limits are verified only in a controlled hosted test (see below). The first run of this harness found one real defect in the stand-in's response encoding, and the Deno type-check of the bundle passed.
+
+## Remaining security gaps before a controlled hosted test
+
+1. **Real Auth behaviour.** The function trusts `aal` from a token the Auth service has just validated; confirm on staging that a password-only staff session carries `aal1` and a TOTP-verified one `aal2`, and that the Auth `getUser` call rejects revoked sessions.
+2. **Real Storage.** Confirm on staging that the bucket is private with no policy, that signed upload/view links behave as in the stand-in, and that file-size limits are enforced by the platform as well as by the server.
+3. **Edge limits.** Large files are downloaded into function memory to be checked and cleaned (photos up to 8 MB; videos are disabled). Confirm memory and time limits; consider checking size before download.
+4. **Rate limits** are database-backed fixed windows keyed by a hashed network address (guests) or account. A distributed attack across many addresses is only slowed by the daily per-account limits and the automatic pause. Consider a platform-level limit as well.
+5. **Video** stays disabled (there is no API to enable it; it needs an approved migration). Needed first: metadata removal, safe processing and moderation requirements.
+6. **Image safety scanning** is a launch dependency to evaluate, not built. Every file is human-reviewed first.
+7. **Email alerts** are off until a provider is approved; the sender has never been exercised against a real provider.
+8. **Word lists, translations and legal review** (United States) are outstanding.
+9. **Privacy of the audit log.** It records the acting moderator and target identifiers; retention and access need counsel's view.
+10. **The admin console** has been tested with a stand-in Auth flow only; run it against staging with a real moderator account.
+11. The aal1 token for a staff member is held in memory during sign-in only; no persistent staff session exists.
+
+## Decisions required before a controlled hosted test
+
+1. Approve a **staging** Supabase project (separate from production) for applying `community.up.sql` and `community.storage.sql` and deploying the function. Production stays untouched.
+2. Name the **primary moderator, backup and escalation contact**, and create their staff accounts with authenticator factors.
+3. Approve an **email provider** for urgent alerts (or decide to rely on checking the console for the test).
+4. Set the public **support email** for appeals (`EXPO_PUBLIC_SUPPORT_EMAIL`).
+5. Confirm the provisional **4-hour / 48-hour** targets are what you want to measure against (they are not promises).
+6. Counsel's answers on the **United States** questions in the minors, privacy and terms drafts, before any real members are invited.
+7. Whether the controlled test is invite-only, text and photos only (video stays off).

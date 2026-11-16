@@ -1,6 +1,6 @@
 # Community moderation runbook (DRAFT for the owner's approval)
 
-Designed for **one authorized staff member** (the moderator), with a named **escalation contact** (the owner, or someone they appoint). Nothing here is staffed yet: see "Decisions needed".
+Designed for **one primary authorized moderator and one backup**, each with their own staff account and second factor, plus a named **escalation contact** (the owner, or someone they appoint). Nothing here is staffed yet: see "Decisions needed". Both moderators hold the same `moderator` role; the audit log records which of them acted.
 
 ## Principles
 
@@ -24,14 +24,14 @@ Designed for **one authorized staff member** (the moderator), with a named **esc
 - **Actions:** Approve (publishes; resolves open reports), Remove (hides for everyone including the author and deletes the files; needs a short note), Restrict the author, and a **Community mode** switch.
 - **Restrictions:** Muted (cannot post, comment or upload; can still read, encourage and report) or Suspended (no member actions). Both can have an end time; a suspension needs a note. Lifting a restriction is the same form with "none".
 
-## Targets (proposed, for approval)
+## Targets (provisional)
 
 | What                                                           | Target                                         |
 | -------------------------------------------------------------- | ---------------------------------------------- |
 | Urgent item (self-harm, a possible child, private information) | Looked at within **4 hours**, in staffed hours |
 | Everything else, including every photo and video               | Within **48 hours**                            |
 
-Targets are goals to measure against, not promises to members. The Terms say so.
+Targets are goals to measure against, **not promises of coverage**. No hours are staffed yet, nothing in the app or Terms may say reviews happen within a set time, and the automatic pause below is what protects people when review is behind.
 
 ## Automatic safeguards when review falls behind
 
@@ -68,9 +68,18 @@ The same steps appear in the console next to each item.
 - A named backup moderator should hold the role during absences. (Open decision.)
 - If the moderator is the one person who can act, the automatic pause is the safety net; it does not replace review of existing items.
 
-## Appeals
+## Appeals (support email)
+
+Appeals use a plain support email: the app shows the address (from `EXPO_PUBLIC_SUPPORT_EMAIL`, set by the owner) in Community > "Questions or appeals" and in the Guidelines. A member writes with their Community username and what happened, and is asked not to include health details. There is no appeals form and no ticket system.
 
 A member who thinks a decision was wrong uses the contact route in Help. A different person from the original moderator should review (only possible with a second person). Until there is one, the owner reviews appeals. (Open decision.)
+
+## Urgent email alerts
+
+- An urgent report (self-harm, a possible child, private information) emails the moderator **and** the backup. A scheduled reminder repeats hourly while urgent items stay open.
+- Emails hold **counts and a link only**: no username, no content, no report note.
+- **Alerts are OFF until the owner approves a provider and sets its credentials.** The code is a generic HTTPS sender with no provider named or wired in (`COMMUNITY_ALERTS=1` plus recipients, a verified sender, the provider's https address and key are all required). The existing plan (docs/LIVE_INTEGRATION.md) is to use the free tier of the email service already chosen for sign-in codes; confirm that it allows transactional sending from the same verified domain before relying on it.
+- Until alerts are live, the console banner is the only signal and the automatic pause is the safety net.
 
 ## Audit and review
 
@@ -80,7 +89,7 @@ A member who thinks a decision was wrong uses the contact route in Help. A diffe
 ## Decisions needed
 
 1. Who is the moderator, and who is the backup?
-2. Who is the escalation contact, and how do they receive an urgent notice? (Today the app has **no push, email or SMS alert**: the console banner is the only signal. Reaching a person out of hours needs an external provider or a routine of checking the console; see below.)
+2. Who is the escalation contact? Which email provider is approved for urgent alerts?
 3. Are the proposed targets (4 h urgent / 48 h) realistic for your staffing?
-4. How are appeals handled and by whom?
-5. Which countries' child-safety reporting rules apply at launch?
+4. Which mailbox receives appeals, and who answers it?
+5. Counsel to confirm the US child-safety reporting duties that apply (see the minors policy).

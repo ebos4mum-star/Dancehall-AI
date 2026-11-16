@@ -31,6 +31,8 @@ Status: draft wording to add to the privacy notice when Community launches. Not 
 
 Community runs on the same hosting and database as the rest of the app. It uses no advertising, analytics or AI service. (If a photo-scanning or video-processing provider is added later, this section must name it before launch.)
 
+Initial market: United States. Counsel should check state privacy laws (including those with specific rights to access and delete), children's privacy rules, and the retention of moderation and legal-hold records.
+
 ## Open items for the reviewer
 
 1. Whether anything here requires a separate consent screen or a data-protection impact assessment in your launch countries.

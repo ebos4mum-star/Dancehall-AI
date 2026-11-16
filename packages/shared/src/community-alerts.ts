@@ -113,7 +113,12 @@ export function createAlerter(cfg: AlertConfig, sender?: EmailSender): Alerter {
   if (!s) {
     if (!cfg.apiUrl || !cfg.apiKey || !cfg.from || !EMAIL.test(cfg.from))
       return off('no approved email provider is configured');
-    if (!/^https:\/\//.test(cfg.apiUrl)) return off('the provider address must use https');
+    // https only; plain http is allowed solely for a provider stand-in on this machine (local testing).
+    if (
+      !/^https:\/\//.test(cfg.apiUrl) &&
+      !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(cfg.apiUrl)
+    )
+      return off('the provider address must use https');
     s = createHttpEmailSender({ apiUrl: cfg.apiUrl, apiKey: cfg.apiKey, from: cfg.from });
   }
   const send = s;

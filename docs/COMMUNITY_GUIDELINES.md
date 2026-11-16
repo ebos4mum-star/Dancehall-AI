@@ -32,4 +32,4 @@ Be kind and encouraging. Share your own progress, not numbers about your body. L
 
 **Reports are private.** The member you report is never told who reported them.
 
-**Appeals.** If you think a decision was wrong, use the contact route in the app's Help. A different person than the original moderator should look at it when there is more than one moderator. (Open decision: see the moderation runbook.)
+**Appeals.** If you think a decision was wrong, email the support address shown in Community (Questions or appeals) with your Community username and what happened. Please leave out health details. A person will look at it; where there is a backup moderator, they review rather than the person who made the original decision.
