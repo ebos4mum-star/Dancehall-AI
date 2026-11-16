@@ -1,12 +1,13 @@
 import { withAccount } from '@/account/gate';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
-import { totals } from '@dancehall/shared';
+import { totals, type ProductRecord } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
 import { errorMessage, useLoad } from '@/data/hooks';
 import { newKey, useDraft } from '@/food/draft';
 import { FoodHero } from '@/food/kit';
+import { deviceProductStore, deviceRaw, myProductsKey } from '@/food/productStore';
 import { FoodBadge, kcalText } from '@/food/ui';
 import { t } from '@/i18n';
 import { brand, radius, spacing } from '@/theme/tokens';
@@ -28,6 +29,13 @@ function Saved() {
   const { data, error } = useLoad((s) => s.listSavedMeals());
   const [err, setErr] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
+  const userId = useApp().session?.userId ?? 'guest';
+  const [mine, setMine] = useState<ProductRecord[]>([]);
+  const loadMine = useCallback(
+    () => void deviceProductStore(deviceRaw, myProductsKey(userId), 200).list().then(setMine),
+    [userId],
+  );
+  useEffect(loadMine, [loadMine]);
   return (
     <Screen>
       <FoodHero
@@ -132,6 +140,44 @@ function Saved() {
           </View>
         );
       })}
+      {mine.length > 0 ? (
+        <View style={{ gap: spacing.sm }}>
+          <AppText variant="heading">My products</AppText>
+          <AppText variant="caption" muted>
+            Typed in from a package label. Kept on this phone only.
+          </AppText>
+          {mine.map((p) => (
+            <View
+              key={p.barcode}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: spacing.sm,
+                padding: spacing.md,
+                borderRadius: radius.lg,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <AppText variant="label">{p.name}</AppText>
+                <AppText variant="caption" muted>
+                  {p.barcode}
+                </AppText>
+              </View>
+              <Button
+                variant="secondary"
+                label={t('common.delete')}
+                onPress={async () => {
+                  await deviceProductStore(deviceRaw, myProductsKey(userId), 200).remove(p.barcode);
+                  loadMine();
+                }}
+              />
+            </View>
+          ))}
+        </View>
+      ) : null}
     </Screen>
   );
 }

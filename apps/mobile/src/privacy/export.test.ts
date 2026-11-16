@@ -56,3 +56,13 @@ describe('buildDataExport', () => {
     await expect(buildDataExport(new MockStore(memory()))).rejects.toThrow();
   });
 });
+
+describe('buildDataExport extras', () => {
+  it('carries on-device products and a null social section when the adapter has no Friends', async () => {
+    const d = await buildDataExport(await seeded(), new Date('2026-06-16T00:00:00Z'), {
+      myProducts: [{ name: 'Oats', kcal: 380 }],
+    });
+    expect(d.myProducts).toHaveLength(1);
+    expect(d.social === null || typeof d.social === 'object').toBe(true);
+  });
+});

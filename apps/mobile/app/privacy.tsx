@@ -14,7 +14,13 @@ import { buildDataExport, exportToText } from '@/privacy/export';
 import { t, type StringKey } from '@/i18n';
 import { useTheme } from '@/theme/useTheme';
 import { useEffect, useState } from 'react';
-import { deviceRaw, readLookupConsent, writeLookupConsent } from '@/food/productStore';
+import {
+  deviceProductStore,
+  deviceRaw,
+  myProductsKey,
+  readLookupConsent,
+  writeLookupConsent,
+} from '@/food/productStore';
 import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
 import { Card } from '@/ui/Card';
@@ -56,7 +62,11 @@ function Privacy() {
     setExporting(true);
     setMsg(null);
     try {
-      const text = exportToText(await buildDataExport(store));
+      const text = exportToText(
+        await buildDataExport(store, new Date(), {
+          myProducts: await deviceProductStore(deviceRaw, myProductsKey(lookupUser), 200).list(),
+        }),
+      );
       setExportText(text);
       // The system share sheet is a deliberate tap; where it is unavailable the text stays on screen to copy.
       await Share.share({ title: 'DanceHall Fit export', message: text }).catch(() => undefined);

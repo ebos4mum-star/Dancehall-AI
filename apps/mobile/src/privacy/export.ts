@@ -27,6 +27,10 @@ export interface DataExport {
   household: unknown;
   householdMeals: unknown[];
   householdGrocery: unknown[];
+  /** Friends, requests, blocks, group goals and what the person shares with each friend (public usernames only). Null when the adapter has no Friends. */
+  social: unknown;
+  /** Products the person typed in from a package label (kept on this phone), when provided by the screen. */
+  myProducts: unknown[];
 }
 
 /**
@@ -36,6 +40,7 @@ export interface DataExport {
 export async function buildDataExport(
   store: DataStore,
   now: Date = new Date(),
+  extras: { myProducts?: unknown[] } = {},
 ): Promise<DataExport> {
   const [
     profile,
@@ -106,6 +111,34 @@ export async function buildDataExport(
     household,
     householdMeals,
     householdGrocery,
+    social: await readSocial(store),
+    myProducts: extras.myProducts ?? [],
+  };
+}
+
+/** Friends data is personal data too: who the person is connected to, who they blocked, their groups, and what they share with whom. Usernames only; never anyone's records. */
+async function readSocial(store: DataStore): Promise<unknown> {
+  if (!store.socialOverview) return null;
+  const o = await store.socialOverview();
+  const shares: Record<string, string[]> = {};
+  for (const f of o.friends) shares[f] = (await store.socialSharesWith?.(f)) ?? [];
+  return {
+    username: o.username,
+    friends: o.friends,
+    requestsReceived: o.incoming,
+    requestsSent: o.outgoing,
+    blocked: o.blocked,
+    sharingWithFriends: shares,
+    groups: o.groups.map((g) => ({
+      title: g.title,
+      kind: g.kind,
+      metric: g.metric,
+      startDay: g.startDay,
+      endDay: g.endDay,
+      status: g.iAm,
+      members: g.members,
+      totals: g.byMember,
+    })),
   };
 }
 

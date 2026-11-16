@@ -146,7 +146,13 @@ function Friends() {
     return (
       <Screen>
         {error ? <Notice tone="warning">{error}</Notice> : null}
-        <AppText muted>{t('common.loading')}</AppText>
+        {error ? (
+          <Button label={t('barcode.retry')} onPress={reload} />
+        ) : (
+          <AppText muted accessibilityLiveRegion="polite">
+            {t('common.loading')}
+          </AppText>
+        )}
       </Screen>
     );
 

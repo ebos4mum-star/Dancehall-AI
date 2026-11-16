@@ -95,6 +95,31 @@ function Fridge() {
         autoCapitalize="none"
       />
       <Button label={t('fridge.add')} disabled={text.trim() === ''} onPress={add} />
+      {have.length === 0 ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+          {STARTERS.map((w) => (
+            <Pressable
+              key={w}
+              accessibilityRole="button"
+              accessibilityLabel={w}
+              onPress={() => {
+                const r = resolveIngredients([w]);
+                setHave((h) => [...new Set([...h, ...r.ids])]);
+              }}
+              style={{
+                minHeight: 44,
+                justifyContent: 'center',
+                paddingHorizontal: spacing.md,
+                borderRadius: radius.pill,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <AppText variant="caption">{`+ ${w}`}</AppText>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
       {unknown.length > 0 ? (
         <Notice tone="warning">{t('fridge.unknown', { list: unknown.join(', ') })}</Notice>
       ) : null}
@@ -225,5 +250,7 @@ function Fridge() {
     </Screen>
   );
 }
+
+const STARTERS = ['eggs', 'rice', 'chicken', 'banana', 'oats', 'tomato', 'beans', 'spinach'];
 
 export default withAccount(Fridge, 'log_food');

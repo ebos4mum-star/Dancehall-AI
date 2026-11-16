@@ -1,11 +1,11 @@
-import { Switch, View } from 'react-native';
+import { Pressable, Switch, View } from 'react-native';
 import { spacing, radius } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 import { AppText } from './AppText';
 import { IconBadge, type IconName } from './kit';
 import { haptics } from './haptics';
 
-/** One setting: icon, what it is, what it does in a sentence, and a switch. The switch is named by the title. */
+/** One setting: icon, what it is, what it does in a sentence, and a switch. The whole row is the control (one 44-point-plus target that VoiceOver reads as a single switch named by the title, with its state). */
 export function SettingRow({
   icon,
   title,
@@ -23,7 +23,17 @@ export function SettingRow({
 }) {
   const { colors } = useTheme();
   return (
-    <View
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityLabel={title}
+      accessibilityHint={body}
+      accessibilityState={{ checked: value, disabled: !!disabled }}
+      aria-checked={value}
+      disabled={disabled}
+      onPress={() => {
+        haptics.tap();
+        onChange(!value);
+      }}
       style={{
         flexDirection: 'row',
         alignItems: 'flex-start',
@@ -33,6 +43,8 @@ export function SettingRow({
         borderWidth: 1,
         borderColor: value ? colors.primary : colors.border,
         padding: spacing.md,
+        minHeight: 44,
+        opacity: disabled ? 0.6 : 1,
       }}
     >
       <IconBadge name={icon} size={40} />
@@ -47,16 +59,9 @@ export function SettingRow({
           {value ? 'On' : 'Off'}
         </AppText>
       </View>
-      <Switch
-        accessibilityLabel={title}
-        value={value}
-        disabled={disabled}
-        onValueChange={(v) => {
-          haptics.tap();
-          onChange(v);
-        }}
-        trackColor={{ true: colors.primary, false: colors.border }}
-      />
-    </View>
+      <View pointerEvents="none" importantForAccessibility="no-hide-descendants" aria-hidden>
+        <Switch value={value} trackColor={{ true: colors.primary, false: colors.border }} />
+      </View>
+    </Pressable>
   );
 }
