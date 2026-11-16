@@ -375,3 +375,70 @@ The first run was cut short by my own rate-limit pacing (a legitimate member hit
 3. No dietitian/legal review of the sharing text; counsel review of friend and group privacy wording.
 4. Guest rate-limit test from one machine, expired-token test and account-deletion scheduling (Community items) are still open.
 5. Auth leaked-password protection (finding 2).
+
+---
+
+# Phase 9: Friends final verification (2026-11-16)
+
+Project `bxhnrjulksganzydgrgm` only. Development and production untouched. No PR, no build uploaded. Community floor and every Community setting left as they were (database `read_only`, comments and video off).
+
+## 1. Review of `social_patch1_view_dedupe`
+
+The patch (`supabase/proposed/social.patch1_view_dedupe.sql`) is byte-identical to the function body now in `social.up.sql` (checked with a diff). The diff against the version applied first (`git diff 1444af20 HEAD -- supabase/proposed/social.up.sql`) changes exactly one statement inside `app.social_view_friend`:
+
+- **Changed:** the `select` that totals a friend's last seven days of completed workouts now skips a repeat of the same workout recorded within ten minutes of another (the rule `app.social_sync_group` already used), and rounds minutes the same way.
+- **Not changed:** the function header (`security definer`, `search_path=''`), all gates ahead of the query (the viewer must be an accepted friend, no block either way, the owner's explicit `activity_summary` share must exist), the return shape (`username` plus `activity` only), and which table is read (`workout_sessions`, the friend's own rows only; the new sub-query is restricted to the same `user_id`). No new data, no cross-person join, no grant, policy or RLS change. `create or replace` keeps the existing grants.
+- **Confirmed on staging after applying it:** anon and signed-in users still cannot execute the function, `service_role` can, RLS is on for all 6 tables, clients hold no table grants.
+
+## 5. Deployed and applied versus the reviewed source: IDENTICAL (differences documented)
+
+| Item                                                                                                                                                                                                    | Result                                                                                                                                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 24 database functions (23 `app.social_*` plus `public.social_rpc`), definitions normalised and hashed, staging versus a local database built from the repository (`community.up.sql` + `social.up.sql`) | **all 24 identical**. Local is PostgreSQL 16, staging 17: the hashes still match                                                                                                                                       |
+| Columns, constraints, RLS flags and policies, table grants, function execute rights / definer / `search_path`, indexes (six signature hashes)                                                           | **all 6 identical**                                                                                                                                                                                                    |
+| Function `social` version 1 versus `supabase/functions/social/index.ts`                                                                                                                                 | identical after removing comments, whitespace and trailing commas; the only deliberate difference is that the relative import is replaced by the same file pinned to commit `1444af20f4d20e86814d3577c71d2c7d9bcd1a68` |
+| The pinned shared code (`social-server.ts`) versus the current source                                                                                                                                   | **byte-identical** (same SHA-256; no change to the social function or its shared code since the deployed commit)                                                                                                       |
+| Applied migration history                                                                                                                                                                               | `social_up` (file SHA-256 `fa16d8b9...`) then `social_patch1_view_dedupe` (`86757a16...`); the first applied file lacks the patch, which is why the patch exists; the live definitions equal the current file          |
+
+## 3. Clean full-suite rerun (existing deployment, 7 synthetic accounts, real HTTPS API)
+
+**`social-checks.mjs main`: 95 of 95 PASS, 0 FAIL, in one run.** Then the account-deletion phase: server-side executor run for the account that requested deletion, **`after-delete`: 5 of 5 PASS**. Total 100 of 100.
+Highlights confirmed in this run: the weekly summary now shows **2 sessions, 50 minutes** (duplicate counted once, previously 80); the corrected spoof check passes inside the suite (a non-friend sending other accounts' ids gets 403 and the unrelated friendship survives); no internal id, email or private value (seeded weight 71.37 and a food marker) in any response; Community status still `read_only`, comments and video disabled; `check-access.mjs` function and db checks pass.
+Item 2 (permanent test): the flawed check is corrected in `scripts/staging/social-checks.mjs` (R3). The local end-to-end suite (`pnpm test:social-integration`, 11 scenarios) already used a non-friend and is unchanged.
+
+## 6. Cleanup
+
+All synthetic users, public names, friendships, blocks, shares, groups, invitations, numbers, seeded workouts, weight and food records, deletion requests, rate-limit counters and retired-name holds deleted. Read-back: users 0, identities 0, sessions 0, profiles 0, community members 0, social rows 0, workouts 0, weights 0, food items 0, posts 0, storage objects 0, deletion requests 0. **Audit chain: 8 rows, 8 valid.** `http` extension not installed. Staging host removed from the Default environment; local credentials shredded.
+
+## 7. Auth "leaked password protection" warning (not changed)
+
+- **What it is:** a Supabase Auth setting that rejects a new or changed password found in the public HaveIBeenPwned "Pwned Passwords" list, to stop credential stuffing with breached passwords.
+- **Availability:** the official Supabase documentation states it is **available on the Pro plan and above**. This organisation is on the free plan (it has only free projects), so **the option cannot be switched on without a paid upgrade**, which you have not approved.
+- **Does it matter for DanceHall?** Very little. The app has no user-chosen passwords: the Auth password of each account is a 256-bit random device secret (43 URL-safe characters) generated on the phone and held in secure storage (see `docs/ACCOUNT_SECURITY.md`); the PIN is an app lock only and is never sent. A random secret would never appear in a breach list, and the check would not reject it. Public sign-up is disabled, so nobody can choose a weak password.
+- **Options:** (a) leave it off and accept the advisor warning as informational (recommended for now; no cost, no user impact); (b) upgrade the organisation to Pro (paid) and switch it on for defence in depth, and also set a minimum password length; (c) when you decide to launch, review the advisor list as a whole, because the other findings are the intentional user-callable functions already reviewed.
+- **Approval:** changing it is a project Auth setting and, because it needs a paid plan, **it requires your approval**. I did not change it and will not without it.
+
+## 8. Mobile Friends: prepared for a development-only iPhone test
+
+`docs/FRIENDS_IPHONE_TEST.md` (checklist and exact commands). Friends stays off in every shared build: a new test pins that no EAS profile sets `EXPO_PUBLIC_SOCIAL` and that a production build given the flag refuses to start. Track A (local screens with the labelled sample members, run from your Mac with `expo run:ios`, no EAS and no upload) can be done now. Track B (the iPhone against the staging backend) is **blocked**: staging has no `account` Edge Function, so an app build cannot create a signed-in account there. No build was made or uploaded, and nothing was activated in production.
+
+## Final results
+
+| Area                                                              | Result                                                                            |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Patch review (scope, RLS, grants, isolation)                      | **PASS**                                                                          |
+| Deployed function and applied migration match the reviewed source | **PASS** (differences documented above)                                           |
+| Clean full hosted Friends suite                                   | **PASS** (95/95 main, 5/5 deletion)                                               |
+| Community floor Read only, comments and video off                 | **PASS**                                                                          |
+| Cleanup and audit chain                                           | **PASS** (0 test records, 8/8 valid)                                              |
+| Auth leaked-password option                                       | **BLOCKED** by plan (needs a paid plan and your approval); explained, not changed |
+| iPhone test against staging                                       | **BLOCKED** (no account function on staging); local Track A prepared              |
+
+## Remaining blockers and exact next steps
+
+1. Run Track A on your iPhone from your Mac (`docs/FRIENDS_IPHONE_TEST.md`) and send me the results.
+2. For a hosted iPhone test: approve deploying the `account` function to staging only (and say whether to also apply its migration there; staging already has the account migration set); then I run the app flow against staging and clean up.
+3. Decide when Friends may be switched on in any shared build (`EXPO_PUBLIC_SOCIAL=1` for that build only). Production keeps refusing it until a code change you approve.
+4. Review and approve applying `community.up.sql` and `social.up.sql` (plus the patch folded in) to any non-staging database before use; not done.
+5. Legal review of the friend and group privacy wording; Open Food Facts live test; Community open items (guest rate limit, expired token, deletion scheduling).
+6. Auth leaked-password option: decide (leave off, or approve a plan upgrade).
