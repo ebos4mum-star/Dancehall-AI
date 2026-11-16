@@ -12,6 +12,7 @@ const FILES = [
   'community-media.ts',
   'community-server.ts',
   'community-alerts.ts',
+  'social-server.ts',
 ];
 const OUT = 'supabase/functions/_shared/generated';
 const noble = JSON.parse(readFileSync('node_modules/@noble/hashes/package.json', 'utf8')).version;

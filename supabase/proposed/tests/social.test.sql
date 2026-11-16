@@ -56,6 +56,9 @@ begin
   perform app.community_claim_username(a, 'ama_social'); perform app.community_claim_username(b, 'kofi_social');
   perform app.community_claim_username(c, 'esi_social'); perform app.community_claim_username(d, 'yaw_social');
 
+  -- a person without a public name cannot ask, and cannot start a group
+  perform test.throws(format($q$select app.social_request(%L, 'kofi_social')$q$, test.make_user('s-noname@example.test')), 'needs_username');
+  perform test.throws(format($q$select app.social_create_group(%L, 'challenge', 'x', 'active_days', null, current_date, current_date + 3, array[]::text[])$q$, (select id from auth.users where email = 's-noname@example.test')), 'needs_username');
   -- friend requests
   perform test.assert(app.social_request(a, 'kofi_social') = 'requested', 'a request is made');
   perform test.throws($q$select app.social_request((select user_id from public.community_members where username = 'ama_social'), 'kofi_social')$q$, 'already_requested');
@@ -128,4 +131,43 @@ begin
   select (select count(*) from public.social_friendships) + (select count(*) from public.social_shares) + (select count(*) from public.social_contributions) into n;
   perform test.assert(n = 0, 'deleting an account removes its friendships, shares and numbers');
   perform test.assert((select count(*) from public.social_blocks) = 1, 'other people''s blocks are untouched');
+end $$;
+
+-- 4. Numbers computed by the server, and withdrawal of all consent.
+do $$
+declare a uuid; b uuid; g uuid; n int; ru jsonb;
+begin
+  perform test.as_admin();
+  a := test.make_user('s4-a@example.test'); b := test.make_user('s4-b@example.test');
+  perform app.community_claim_username(a, 'ama_four'); perform app.community_claim_username(b, 'kofi_four');
+  perform app.social_request(a, 'kofi_four'); perform app.social_respond(b, 'ama_four', true);
+  g := app.social_create_group(a, 'challenge', 'Sync', 'active_minutes', null, current_date - 5, current_date + 5, array['kofi_four']);
+  perform app.social_respond_group(b, g, true);
+  -- a: 30 min yesterday, a duplicate of the same workout 4 minutes later (counts once), 20 min two days ago, an uncompleted plan and a future plan (ignored).
+  insert into public.workout_sessions (user_id, title, minutes, status, completed_at, duration_s) values
+    (a, 'Dancehall Basics', 30, 'completed', now() - interval '1 day', 1800),
+    (a, 'Dancehall Basics', 30, 'completed', now() - interval '1 day' + interval '4 minutes', 1800),
+    (a, 'Afrobeats', 20, 'completed', now() - interval '2 days', 1200);
+  insert into public.workout_sessions (user_id, title, minutes, status, planned_for) values (a, 'Planned', 30, 'planned', current_date + 1);
+  -- b's own workouts must never leak into a's numbers.
+  insert into public.workout_sessions (user_id, title, minutes, status, completed_at, duration_s) values (b, 'Other', 60, 'completed', now() - interval '1 day', 3600);
+  n := app.social_sync_group(a, g);
+  perform test.assert(n = 2, 'two days have numbers');
+  perform test.assert((select sum(value) from public.social_contributions where group_id = g and user_id = a) = 50, 'the duplicate counted once: 30 + 20');
+  perform test.assert((select count(*) = 0 from public.social_contributions where group_id = g and user_id = b), 'only my own workouts are read');
+  perform app.social_sync_group(a, g);   -- idempotent
+  perform test.assert((select sum(value) from public.social_contributions where group_id = g and user_id = a) = 50, 'syncing again changes nothing');
+  perform test.throws(format($q$select app.social_sync_group(%L, %L)$q$, (select id from auth.users where email = 's-c@example.test'), g), 'not_member');
+  -- A day without a number after the workout is removed from the group on the next sync.
+  delete from public.workout_sessions where user_id = a and title = 'Afrobeats';
+  perform app.social_sync_group(a, g);
+  perform test.assert((select sum(value) from public.social_contributions where group_id = g and user_id = a) = 30, 'numbers follow the workouts');
+  -- consent withdrawal
+  perform app.social_set_share(a, 'kofi_four', 'activity_summary', true);
+  perform test.assert(app.social_revoke_all(a) = 1, 'one sharing choice withdrawn');
+  perform test.assert(app.social_view_friend(b, 'ama_four') -> 'activity' = 'null'::jsonb, 'nothing is visible after withdrawal');
+  -- the door: reused community functions work through social_rpc, others do not
+  perform test.assert(public.social_rpc('community_burst', jsonb_build_object('p_key', 'soc:x', 'p_bucket', 'b', 'p_max', 2, 'p_seconds', 60)) = 'true'::jsonb, 'the shared rate limiter is reachable');
+  perform test.throws($q$select public.social_rpc('community_create_post', '{}')$q$, 'not_found');
+  perform test.throws($q$select public.social_rpc('community_moderate', '{}')$q$, 'not_found');
 end $$;

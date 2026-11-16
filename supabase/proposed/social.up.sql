@@ -79,6 +79,11 @@ end $$;
 create or replace function app.social_id(p_name text) returns uuid language sql stable security definer set search_path = '' as $$
   select user_id from public.community_members where username = lower(btrim(p_name))
 $$;
+-- Friends are addressed by public Community username, so a person needs one before they can ask, be asked or start a group.
+create or replace function app.social_require_name(p_user uuid) returns void language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not exists (select 1 from public.community_members where user_id = p_user) then raise exception 'needs_username'; end if;
+end $$;
 create or replace function app.social_blocked(p_a uuid, p_b uuid) returns boolean language sql stable security definer set search_path = '' as $$
   select exists (select 1 from public.social_blocks where (by_user = p_a and blocked_user = p_b) or (by_user = p_b and blocked_user = p_a))
 $$;
@@ -95,6 +100,7 @@ end $$;
 create or replace function app.social_request(p_user uuid, p_name text) returns text language plpgsql security definer set search_path = '' as $$
 declare o uuid := app.social_id(p_name); f public.social_friendships;
 begin
+  perform app.social_require_name(p_user);
   if o is null or o <> p_user and app.social_blocked(p_user, o) then raise exception 'not_found'; end if;
   if o = p_user then raise exception 'self'; end if;
   select * into f from public.social_friendships where user_a = least(p_user, o) and user_b = greatest(p_user, o);
@@ -188,6 +194,7 @@ create or replace function app.social_create_group(p_user uuid, p_kind text, p_t
 language plpgsql security definer set search_path = '' as $$
 declare gid uuid; n text; o uuid; ids uuid[] := '{}'; cap int := case p_kind when 'couple' then 2 when 'family' then 6 else 12 end;
 begin
+  perform app.social_require_name(p_user);
   foreach n in array coalesce(p_invite, '{}') loop
     o := app.social_id(n);
     if o is null or o = p_user or not app.social_friends(p_user, o) or app.social_blocked(p_user, o) then raise exception 'not_friends'; end if;
@@ -244,11 +251,53 @@ create or replace function app.social_overview(p_user uuid) returns jsonb langua
   select app.social_lists(p_user) || jsonb_build_object('username', (select username from public.community_members where user_id = p_user), 'groups', app.social_groups(p_user))
 $$;
 
+
+-- ========== numbers computed by the SERVER from completed workouts (not typed by the client) ==========
+-- Sums the caller's completed workout minutes per local day inside the group's dates (never future days). A repeat of the same workout recorded within ten minutes of
+-- another counts once. Reads workout_sessions only, and only the caller's own rows. Joined members only.
+create or replace function app.social_sync_group(p_user uuid, p_group uuid) returns int language plpgsql security definer set search_path = '' as $$
+declare g public.social_groups; tz text; n int := 0; r record; today date;
+begin
+  select * into g from public.social_groups where id = p_group;
+  if not found or not exists (select 1 from public.social_group_members where group_id = p_group and user_id = p_user and status = 'joined') then raise exception 'not_member'; end if;
+  select coalesce((select time_zone from public.profiles where id = p_user), 'UTC') into tz;
+  begin perform now() at time zone tz; exception when others then tz := 'UTC'; end;
+  today := (now() at time zone tz)::date;
+  delete from public.social_contributions where group_id = p_group and user_id = p_user;
+  for r in
+    select (s.completed_at at time zone tz)::date as d, sum(coalesce(round(s.duration_s / 60.0), s.minutes))::int as mins
+      from public.workout_sessions s
+     where s.user_id = p_user and s.status = 'completed'
+       and (s.completed_at at time zone tz)::date between g.start_day and least(g.end_day, today)
+       and not exists (select 1 from public.workout_sessions t where t.user_id = s.user_id and t.status = 'completed' and t.id <> s.id
+                          and coalesce(t.workout_id, lower(t.title)) = coalesce(s.workout_id, lower(s.title))
+                          and t.completed_at <= s.completed_at and s.completed_at - t.completed_at < interval '10 minutes'
+                          and (t.completed_at < s.completed_at or t.id < s.id))
+     group by 1 having sum(coalesce(round(s.duration_s / 60.0), s.minutes)) > 0
+  loop
+    insert into public.social_contributions (group_id, user_id, day, value)
+    values (p_group, p_user, r.d, case g.metric when 'active_days' then 1 else least(600, greatest(1, r.mins)) end);
+    n := n + 1;
+  end loop;
+  return n;
+end $$;
+
+-- Withdraws every sharing choice the person has made, at once.
+create or replace function app.social_revoke_all(p_user uuid) returns int language plpgsql security definer set search_path = '' as $$
+declare n int;
+begin
+  delete from public.social_shares where owner_id = p_user;
+  get diagnostics n = row_count;
+  return n;
+end $$;
+
 -- ========== the one door the server uses ==========
 create or replace function public.social_rpc(fn text, args jsonb default '{}'::jsonb) returns jsonb language plpgsql set search_path = '' as $$
 declare
   allowed text[] := array['social_request', 'social_respond', 'social_cancel', 'social_remove', 'social_block', 'social_unblock', 'social_set_share', 'social_shares_with',
-    'social_view_friend', 'social_create_group', 'social_respond_group', 'social_leave_group', 'social_report', 'social_overview'];
+    'social_view_friend', 'social_create_group', 'social_respond_group', 'social_leave_group', 'social_report', 'social_overview', 'social_sync_group', 'social_revoke_all',
+    -- Reused from Community (same public names, same rate limiter), so Friends works whether or not the public Community feed is switched on.
+    'community_claim_username', 'community_profile', 'community_burst'];
   f record; call_args text := ''; i int; k text; t text; result jsonb;
 begin
   if fn is null or not (fn = any (allowed)) then raise exception 'not_found'; end if;

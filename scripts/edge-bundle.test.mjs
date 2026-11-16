@@ -43,3 +43,18 @@ test('the community function bundles flat with only the files it reaches', () =>
   // Nothing from the account's recovery database layer is shipped with Community.
   assert.ok(!names.includes('account-rpc-db.ts'));
 });
+
+test('the social function bundles flat: only its own server layer, no Community routes, no account recovery code', () => {
+  const out = join(mkdtempSync(join(tmpdir(), 'edge-')), 'b');
+  const names = buildBundle(out, 'social')
+    .map((r) => r.name)
+    .sort();
+  assert.deepEqual(names, ['index.ts', 'social-server.ts']);
+  const idx = readFileSync(join(out, 'index.ts'), 'utf8');
+  assert.match(idx, /from '\.\/social-server\.ts'/);
+  assert.doesNotMatch(idx, /_shared|community-server/);
+  assert.match(idx, /Deno\.serve/);
+  // It talks to the database only through its own allow-listed door.
+  assert.match(idx, /admin\.rpc\('social_rpc'/);
+  assert.doesNotMatch(idx, /community_rpc/);
+});

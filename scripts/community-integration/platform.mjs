@@ -116,7 +116,8 @@ export async function startPlatform({ port, database, jwtSecret, serviceKey }) {
       }
 
       // ---- REST: the one door ----
-      if (path === '/rest/v1/rpc/community_rpc' && req.method === 'POST') {
+      const door = /^\/rest\/v1\/rpc\/(community_rpc|social_rpc)$/.exec(path)?.[1];
+      if (door && req.method === 'POST') {
         if (!isService(req)) return send(res, 401, { message: 'permission denied' });
         if (state.rpcDown) return send(res, 503, { message: 'database unavailable' });
         const { fn, args } = JSON.parse((await readBody(req)).toString());
@@ -125,7 +126,7 @@ export async function startPlatform({ port, database, jwtSecret, serviceKey }) {
         try {
           await c.query('begin');
           await c.query('set local role service_role'); // exactly the privileges the real server key has
-          const r = await c.query('select public.community_rpc($1, $2::jsonb) as r', [
+          const r = await c.query(`select public.${door}($1, $2::jsonb) as r`, [
             fn,
             JSON.stringify(args ?? {}),
           ]);
