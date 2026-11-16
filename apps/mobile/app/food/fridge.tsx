@@ -90,9 +90,13 @@ function Fridge() {
         icon="nutrition"
         label={t('fridge.input')}
         hint={t('fridge.hint')}
+        kind="search"
         value={text}
         onChangeText={setText}
-        autoCapitalize="none"
+        returnKeyType="done"
+        onSubmitEditing={() => {
+          if (text.trim() !== '') add();
+        }}
       />
       <Button label={t('fridge.add')} disabled={text.trim() === ''} onPress={add} />
       {have.length === 0 ? (

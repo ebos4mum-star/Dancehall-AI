@@ -1,0 +1,32 @@
+{
+  "normal-home-week": {
+    "ok": true,
+    "bars": 7
+  },
+  "normal-progress": {
+    "ok": true,
+    "hasNutrition": true
+  },
+  "normal-scenes-and-pulse": {
+    "ok": true,
+    "friendsHasBanner": true,
+    "pulseLabelAfterTap": "Pulse, your guide, is welcoming you.",
+    "reacted": false
+  },
+  "normal-pageerrors": [],
+  "reduced-home-week": {
+    "ok": true,
+    "bars": 7
+  },
+  "reduced-progress": {
+    "ok": true,
+    "hasNutrition": true
+  },
+  "reduced-scenes-and-pulse": {
+    "ok": true,
+    "friendsHasBanner": true,
+    "pulseLabelAfterTap": "Pulse, your guide, is welcoming you.",
+    "reacted": false
+  },
+  "reduced-pageerrors": []
+}

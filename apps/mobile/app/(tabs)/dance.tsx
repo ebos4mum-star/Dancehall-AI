@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { WeekActivityChart } from '@/charts/sections';
 import { MovementProgressCard, RewardBanner } from '@/gamification/ui';
 import { Animated, Pressable, ScrollView, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -212,6 +213,7 @@ export default function Dance() {
       </Reveal>
       <RewardBanner />
       <MovementProgressCard />
+      <WeekActivityChart />
 
       {pending && pendingWorkout ? (
         <View

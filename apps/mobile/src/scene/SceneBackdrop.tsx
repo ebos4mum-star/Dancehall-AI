@@ -16,7 +16,7 @@ import { useReducedMotion } from '@/a11y/useReducedMotion';
 import { brand } from '@/theme/tokens';
 
 /** Each main tab has its own environment. They share lighting, palette, framing and the stage floor, so they read as one world. */
-export const WORLDS = ['today', 'dance', 'food', 'coach', 'me'] as const;
+export const WORLDS = ['today', 'dance', 'food', 'coach', 'me', 'friends', 'progress'] as const;
 export type World = (typeof WORLDS)[number];
 
 const SKY: Record<World, [string, string, string]> = {
@@ -25,6 +25,8 @@ const SKY: Record<World, [string, string, string]> = {
   food: ['#1F1030', '#3B1B4A', '#6B2A55'],
   coach: ['#160B29', '#2A1A52', '#3F2C85'],
   me: ['#1A0E2E', '#2A1850', '#4A3290'],
+  friends: ['#1A0E2E', '#2B1650', '#5B2F7A'],
+  progress: ['#150B29', '#25194F', '#3E3A8C'],
 };
 
 function Props({ world }: { world: World }) {
@@ -142,6 +144,79 @@ function Props({ world }: { world: World }) {
               fill={brand.lime}
               opacity={0.55}
             />
+          ))}
+        </G>
+      );
+    case 'friends':
+      return (
+        <G>
+          {/* a warm campfire glow with lanterns strung between friends */}
+          <Ellipse cx="180" cy="232" rx="90" ry="22" fill={brand.coral} opacity={0.12} />
+          <Path d="M168 238 Q180 196 192 238 Z" fill={brand.coral} opacity={0.6} />
+          <Path d="M174 238 Q180 214 186 238 Z" fill={brand.lime} opacity={0.5} />
+          <Path
+            d="M0 40 Q90 90 180 50 T360 44"
+            stroke={brand.violet}
+            strokeWidth="1.5"
+            fill="none"
+            opacity={0.5}
+          />
+          {[40, 110, 180, 250, 320].map((x, k) => (
+            <Circle
+              key={x}
+              cx={x}
+              cy={k % 2 ? 72 : 62}
+              r="7"
+              fill={k % 2 ? brand.lime : brand.coral}
+              opacity={0.55}
+            />
+          ))}
+          {[60, 300].map((x) => (
+            <G key={x}>
+              <Circle cx={x} cy="206" r="14" fill="#4A2B8C" opacity={0.85} />
+              <Rect
+                x={x - 16}
+                y="218"
+                width="32"
+                height="30"
+                rx="14"
+                fill="#4A2B8C"
+                opacity={0.85}
+              />
+            </G>
+          ))}
+        </G>
+      );
+    case 'progress':
+      return (
+        <G>
+          {/* a landscape: far hills, a winding path to a flag, a rising sun */}
+          <Circle cx="290" cy="86" r="30" fill={brand.lime} opacity={0.16} />
+          <Circle cx="290" cy="86" r="16" fill={brand.lime} opacity={0.3} />
+          <Path
+            d="M0 200 Q70 120 150 190 T300 170 T360 190 V250 H0 Z"
+            fill="#3B2A7E"
+            opacity={0.85}
+          />
+          <Path d="M0 226 Q90 170 190 216 T360 206 V250 H0 Z" fill="#4C3699" opacity={0.95} />
+          <Path
+            d="M120 250 Q150 224 190 220 Q240 214 250 190"
+            stroke={brand.ivory}
+            strokeWidth="3"
+            strokeDasharray="2 7"
+            strokeLinecap="round"
+            fill="none"
+            opacity={0.45}
+          />
+          <Path d="M250 190 V150" stroke={brand.ivory} strokeWidth="2.5" opacity={0.75} />
+          <Path d="M250 150 L278 160 L250 170 Z" fill={brand.coral} />
+          {[
+            { x: 50, y: 50 },
+            { x: 150, y: 36 },
+            { x: 214, y: 70 },
+            { x: 330, y: 40 },
+          ].map(({ x, y }) => (
+            <Circle key={x} cx={x} cy={y} r="2" fill={brand.ivory} opacity={0.6} />
           ))}
         </G>
       );

@@ -248,6 +248,7 @@ export default function Onboarding() {
           <StepCard icon="person" title={t('onb.aboutTitle')} note={t('onb.aboutBody')}>
             <BigField
               label={t('onb.name')}
+              kind="name"
               icon="person-circle"
               value={name}
               onChangeText={setName}
@@ -301,6 +302,7 @@ export default function Onboarding() {
               <>
                 <BigField
                   label={t('onb.country')}
+                  kind="search"
                   icon="search"
                   value={countryQuery}
                   onChangeText={(v) => {

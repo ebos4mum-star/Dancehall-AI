@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { PulseStage } from '@/pulse/PulseStage';
 import type { PulseState } from '@/pulse/machine';
 import { HeroScene } from '@/scene/HeroScene';
@@ -20,11 +20,14 @@ export function TodayHero({
   line,
   chips,
   pulse,
+  onPulseTap,
 }: {
   greeting: string;
   line: string;
   chips: HeroChip[];
   pulse: PulseState;
+  /** Touching Pulse. Omit to leave Pulse as plain art. */
+  onPulseTap?: () => void;
 }) {
   return (
     <HeroScene height={348}>
@@ -44,7 +47,19 @@ export function TodayHero({
         </AppText>
       </View>
       <View style={{ position: 'absolute', right: -4, bottom: 30 }}>
-        <PulseStage state={pulse} size={212} />
+        {onPulseTap ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Say hi to Pulse"
+            accessibilityHint="Pulse waves back"
+            onPress={onPulseTap}
+            style={{ minWidth: 44, minHeight: 44 }}
+          >
+            <PulseStage state={pulse} size={212} />
+          </Pressable>
+        ) : (
+          <PulseStage state={pulse} size={212} />
+        )}
       </View>
       <View
         style={{

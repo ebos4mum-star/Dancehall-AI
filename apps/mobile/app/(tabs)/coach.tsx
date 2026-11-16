@@ -365,6 +365,11 @@ function Coach() {
             onChangeText={setText}
             onSubmitEditing={() => send(text)}
             returnKeyType="send"
+            // A question can be long: the box grows (to a limit) and Return still sends it, as in a messaging app.
+            multiline
+            submitBehavior="submit"
+            autoCapitalize="sentences"
+            enablesReturnKeyAutomatically
             maxLength={1000}
             style={[
               typography.body,
@@ -372,8 +377,11 @@ function Coach() {
                 flex: 1,
                 minWidth: 0,
                 minHeight: MIN_TOUCH_TARGET,
+                maxHeight: 120,
+                paddingTop: spacing.sm,
+                paddingBottom: spacing.sm,
                 color: colors.text,
-                borderRadius: radius.pill,
+                borderRadius: radius.lg,
                 borderWidth: 1,
                 borderColor: colors.border,
                 paddingHorizontal: spacing.md,

@@ -92,7 +92,7 @@ function AddFood() {
       </View>
       {tab === 'search' ? (
         <>
-          <TextField label={t('add.search')} value={q} onChangeText={setQ} autoCapitalize="none" />
+          <TextField label={t('add.search')} kind="search" value={q} onChangeText={setQ} />
           <AppText variant="caption" muted>
             {t('food.sourceNote')}
           </AppText>

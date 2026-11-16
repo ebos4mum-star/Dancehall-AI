@@ -5,7 +5,16 @@
 export const PULSE_STATES = ['idle', 'welcome', 'dance', 'celebrate', 'encourage'] as const;
 export type PulseState = (typeof PULSE_STATES)[number];
 export type PulseEvent =
-  'appOpened' | 'workoutStarted' | 'workoutEnded' | 'milestone' | 'comeback' | 'settled';
+  | 'appOpened'
+  | 'workoutStarted'
+  | 'workoutEnded'
+  | 'milestone'
+  | 'comeback'
+  /** The person touched Pulse. A small wave, only while Pulse is idle. */
+  | 'tapped'
+  /** A planned rest day with nothing recorded: a calm, gentle acknowledgement (never pressure). */
+  | 'restDay'
+  | 'settled';
 
 /** Higher number wins. A lower-priority request while a higher one-shot is playing is dropped, never queued. */
 const PRIORITY: Record<PulseState, number> = {
@@ -31,7 +40,10 @@ export function pulseReduce(cur: PulseState, e: PulseEvent): PulseState {
     case 'milestone':
       return go(cur, 'celebrate');
     case 'comeback':
+    case 'restDay':
       return go(cur, 'encourage');
+    case 'tapped':
+      return cur === 'idle' ? 'welcome' : cur;
     case 'settled':
       return ONE_SHOT.has(cur) ? 'idle' : cur;
   }
@@ -52,3 +64,14 @@ export const PULSE_DESCRIPTION: Record<PulseState, string> = {
   celebrate: 'Pulse, your guide, is celebrating with you.',
   encourage: 'Pulse, your guide, is cheering you on gently.',
 };
+
+/**
+ * Tap-to-react is limited so it stays charming: at least 1.2 s between reactions and at most 4 in any 20 s. `history` is the times (ms) of
+ * reactions already played. Pure.
+ */
+export function tapAllowed(history: readonly number[], now: number): boolean {
+  const recent = history.filter((t) => now - t < 20_000);
+  if (recent.length >= 4) return false;
+  const last = recent[recent.length - 1];
+  return last === undefined || now - last >= 1200;
+}

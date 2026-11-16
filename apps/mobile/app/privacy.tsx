@@ -125,6 +125,7 @@ function Privacy() {
         <BigField
           icon="person"
           label={t('privacy.displayName')}
+          kind="name"
           value={name ?? profile?.displayName ?? ''}
           onChangeText={setName}
           maxLength={40}

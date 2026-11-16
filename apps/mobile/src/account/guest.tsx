@@ -87,6 +87,7 @@ export function GuestFood() {
       <Card>
         <TextField
           label={t('guest.foodSearch')}
+          kind="search"
           value={q}
           onChangeText={setQ}
           autoCapitalize="none"

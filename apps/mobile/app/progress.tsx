@@ -1,4 +1,5 @@
 import { withAccount } from '@/account/gate';
+import { ActivityCalendar, MovementTrends, NutritionTrends } from '@/charts/sections';
 import { ProgressRewards, RewardBanner } from '@/gamification/ui';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -76,7 +77,7 @@ function Progress() {
     <Screen
       top={false}
       banner={{
-        world: 'me',
+        world: 'progress',
         title: t('ban.progress.title'),
         line: t('ban.progress.line'),
         pulse: 'idle',
@@ -86,6 +87,9 @@ function Progress() {
       <RewardBanner />
       <ProgressRewards />
       <PeriodCard />
+      <MovementTrends />
+      <ActivityCalendar />
+      <NutritionTrends />
       <MaintenanceCard />
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {loading && !data ? <SkeletonList label={t('common.loading')} cards={2} /> : null}

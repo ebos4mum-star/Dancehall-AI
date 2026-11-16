@@ -634,6 +634,8 @@ export const en = {
   'maint.provisional':
     'General guidance, not medical advice. Provisional and not reviewed by a dietitian or clinician.',
   'community.title': 'Community',
+  'ban.friends.title': 'Friends',
+  'ban.friends.line': 'Share what you choose, together and at your own pace.',
   'ban.community.title': 'Community',
   'ban.community.line': 'Kind, simple, and at your own pace.',
   'community.unavailable': 'Community is not available in this build.',

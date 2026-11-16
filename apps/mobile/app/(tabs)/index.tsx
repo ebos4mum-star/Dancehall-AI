@@ -1,4 +1,5 @@
 import { GuestToday } from '@/account/guest';
+import { WeekActivityChart } from '@/charts/sections';
 import { ProgressionCard, RewardBanner } from '@/gamification/ui';
 import { HealthAutoImport } from '@/health/ui';
 import { useEffect, useRef, useState } from 'react';
@@ -24,6 +25,8 @@ import { usePulse } from '@/pulse/PulseStage';
 import { ReviewBar } from '@/preview/ReviewBar';
 import { useReview } from '@/preview/review';
 import { haptics } from '@/ui/haptics';
+import { useProgression } from '@/gamification/progressionStore';
+import { useFeedback } from '@/charts/useFeedback';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useApp } from '@/data/AppProvider';
 import { PlanCard } from '@/coach/PlanCard';
@@ -115,6 +118,25 @@ function TodayAccount() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [summary2.comeback]);
 
+  const prog = useProgression();
+  const feedback = useFeedback();
+  // Touching Pulse: a small wave, rate-limited, silent when the person turned Pulse celebrations off.
+  const onPulseTap = () => {
+    if (prog.policy.level === 'off') return;
+    if (pulse.tap()) feedback('select');
+  };
+  // A planned rest day with nothing recorded gets one calm acknowledgement. Never pressure, never a nudge to move.
+  const restSent = useRef(false);
+  useEffect(() => {
+    const wd = new Date(`${todayKey}T00:00:00Z`).getUTCDay();
+    if (restSent.current || !summary2.ready || summary2.score > 0) return;
+    if (prog.prefs.restWeekdays.includes(wd) && prog.policy.level !== 'off') {
+      restSent.current = true;
+      pulse.send('restDay');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary2.ready, summary2.score, todayKey, prog.prefs.restWeekdays]);
+
   const hideNumbers = useNumbersHidden();
   const glance = todayGlance({
     doneToday: dance.doneToday.map((x) => ({ minutes: sessionMinutes(x) })),
@@ -177,12 +199,14 @@ function TodayAccount() {
         })}
         chips={heroChips}
         pulse={shownPulse}
+        onPulseTap={onPulseTap}
       />
       <ReviewBar />
       <DayCard habitsDone={summary2.habitsDoneCount} habitsTotal={summary2.habitCount} />
       <HealthAutoImport />
       <RewardBanner />
       <ProgressionCard />
+      <WeekActivityChart />
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {loading && !data ? <SkeletonList label={t('common.loading')} /> : null}
 

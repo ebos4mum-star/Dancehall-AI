@@ -8,6 +8,7 @@ import {
   ONE_SHOT_MS,
   PULSE_DESCRIPTION,
   pulseReduce,
+  tapAllowed,
   type PulseEvent,
   type PulseState,
 } from './machine';
@@ -21,7 +22,16 @@ export function usePulse(initial: PulseState = 'idle') {
     const h = setTimeout(() => dispatch('settled'), ONE_SHOT_MS[state]);
     return () => clearTimeout(h);
   }, [state]);
-  return { state, send };
+  const taps = useRef<number[]>([]);
+  /** Touch reaction with a cooldown. Returns whether Pulse reacted (so the caller can add a haptic only when it did). */
+  const tap = useCallback(() => {
+    const now = Date.now();
+    if (!tapAllowed(taps.current, now)) return false;
+    taps.current = [...taps.current.filter((t) => now - t < 20_000), now];
+    dispatch('tapped');
+    return true;
+  }, []);
+  return { state, send, tap };
 }
 
 /**

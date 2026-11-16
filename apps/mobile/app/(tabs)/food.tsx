@@ -1,4 +1,5 @@
 import { GuestFood } from '@/account/guest';
+import { NutritionTrends } from '@/charts/sections';
 import { MealQuestChip, RewardBanner } from '@/gamification/ui';
 import { ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -285,6 +286,7 @@ function FoodDashboardAccount() {
         ) : null,
       )}
       <PlateCard />
+      <NutritionTrends />
       <TargetsCard />
     </Screen>
   );

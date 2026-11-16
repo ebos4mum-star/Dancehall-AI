@@ -41,3 +41,24 @@ describe('Pulse state machine', () => {
     expect(run(['milestone', 'appOpened', 'settled'])).toBe('idle');
   });
 });
+
+describe('Pulse tap and rest-day reactions', () => {
+  it('a tap waves only while idle; it never interrupts anything else', () => {
+    expect(pulseReduce('idle', 'tapped')).toBe('welcome');
+    for (const s of ['dance', 'celebrate', 'encourage', 'welcome'] as const)
+      expect(pulseReduce(s, 'tapped')).toBe(s);
+  });
+  it('a rest day is a gentle encouragement and yields to a celebration', () => {
+    expect(pulseReduce('idle', 'restDay')).toBe('encourage');
+    expect(pulseReduce('celebrate', 'restDay')).toBe('celebrate');
+    expect(pulseReduce('encourage', 'settled')).toBe('idle');
+  });
+  it('tap reactions are limited: 1.2 s apart and at most 4 in 20 s', async () => {
+    const { tapAllowed } = await import('./machine');
+    expect(tapAllowed([], 0)).toBe(true);
+    expect(tapAllowed([0], 500)).toBe(false);
+    expect(tapAllowed([0], 1300)).toBe(true);
+    expect(tapAllowed([0, 2000, 4000, 6000], 8000)).toBe(false);
+    expect(tapAllowed([0, 2000, 4000, 6000], 21_000)).toBe(true);
+  });
+});

@@ -33,6 +33,7 @@ export function UsernameClaim({
       ) : null}
       <TextField
         label={t('community.username.label')}
+        kind="username"
         value={raw}
         onChangeText={(v) => {
           setRaw(v);

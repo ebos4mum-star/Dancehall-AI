@@ -44,6 +44,7 @@ function SwapScreen() {
           <BigField
             icon="search"
             label={t('add.search')}
+            kind="search"
             value={q}
             onChangeText={(v) => {
               setQ(v);

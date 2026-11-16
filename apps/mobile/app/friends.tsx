@@ -178,7 +178,15 @@ function Friends() {
     );
 
   return (
-    <Screen>
+    <Screen
+      top={false}
+      banner={{
+        world: 'friends',
+        title: t('ban.friends.title'),
+        line: t('ban.friends.line'),
+        pulse: 'idle',
+      }}
+    >
       <Notice>{t('social.privacy')}</Notice>
       {data.username && typeof store.socialRevokeAll === 'function' ? (
         <Button
@@ -195,6 +203,7 @@ function Friends() {
           <BigField
             icon="at"
             label={t('social.nameLabel')}
+            kind="username"
             value={claim}
             onChangeText={setClaim}
             autoCapitalize="none"
@@ -218,9 +227,16 @@ function Friends() {
             <BigField
               icon="person-add"
               label={t('social.addLabel')}
+              kind="username"
               value={name}
               onChangeText={setName}
-              autoCapitalize="none"
+              returnKeyType="send"
+              onSubmitEditing={() => {
+                if (name.trim() !== '')
+                  void run(() => store.socialRequest!(name), t('social.sent')).then(
+                    (ok) => ok && setName(''),
+                  );
+              }}
             />
             <Button
               label={t('social.send')}

@@ -1,5 +1,14 @@
 import type { ReactNode } from 'react';
-import { Pressable, Switch, TextInput, View, type KeyboardTypeOptions } from 'react-native';
+import { useFormField } from '@/ui/formFocus';
+import type { FieldKind } from '@/ui/inputBehavior';
+import {
+  Pressable,
+  Switch,
+  TextInput,
+  View,
+  type KeyboardTypeOptions,
+  type ReturnKeyTypeOptions,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PulseStage } from '@/pulse/PulseStage';
 import type { PulseState } from '@/pulse/machine';
@@ -167,6 +176,10 @@ export function BigField({
   editable = true,
   autoCapitalize,
   status,
+  kind,
+  returnKeyType,
+  onSubmitEditing,
+  autoCorrect,
 }: {
   label: string;
   value: string;
@@ -179,11 +192,26 @@ export function BigField({
   maxLength?: number;
   autoComplete?: 'name' | 'email' | 'one-time-code';
   editable?: boolean;
-  autoCapitalize?: 'none' | 'words';
+  autoCapitalize?: 'none' | 'sentences' | 'words';
+  /** What the field is for; sets the right keyboard, capitalisation, autocorrect and return key. Explicit props still win. */
+  kind?: FieldKind;
+  returnKeyType?: ReturnKeyTypeOptions;
+  onSubmitEditing?: () => void;
+  autoCorrect?: boolean;
   /** A short validation state shown under the field (never the only signal: it has text). */
   status?: { ok: boolean; text: string } | null;
 }) {
   const { colors, typography } = useTheme();
+  const f = useFormField({
+    kind,
+    props: {
+      keyboardType,
+      autoCapitalize,
+      autoCorrect,
+      returnKeyType,
+      onSubmitEditing: onSubmitEditing ? () => onSubmitEditing() : undefined,
+    },
+  });
   return (
     <View style={{ gap: spacing.xs }}>
       <AppText variant="label">{label}</AppText>
@@ -208,11 +236,10 @@ export function BigField({
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor={colors.textMuted}
-          keyboardType={keyboardType}
           maxLength={maxLength}
           autoComplete={autoComplete}
           editable={editable}
-          autoCapitalize={autoCapitalize}
+          {...f}
           style={[
             typography.body,
             {
