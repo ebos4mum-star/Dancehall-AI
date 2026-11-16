@@ -2,7 +2,7 @@
   "name": "dancehall-fit-ai",
   "private": true,
   "version": "0.0.0",
-  "description": "DanceHall Fit AI monorepo: mobile app, admin portal, shared domain package, AI gateway package and Supabase files.",
+  "description": "Locked In Fitness monorepo: mobile app, admin portal, shared domain package, AI gateway package and Supabase files.",
   "packageManager": "pnpm@10.28.0",
   "engines": {
     "node": ">=22.12.0"

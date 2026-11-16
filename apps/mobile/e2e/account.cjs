@@ -98,7 +98,7 @@ async function step(name, fn) {
   await step(
     'guest: the app opens straight into browsing, with no sign-in wall and no account created',
     async () => {
-      await seen('Welcome to DanceHall Fit');
+      await seen('Welcome to Locked In Fitness');
       for (const t of ['Today', 'Dance', 'Food', 'Coach', 'Me'])
         assert.ok(await p.getByRole('tab', { name: t, exact: true }).isVisible(), t);
       await tab('Dance');
@@ -172,7 +172,7 @@ async function step(name, fn) {
     'recovery setup: two different questions are required, short answers are refused, nothing is created until it succeeds',
     async () => {
       await p.goto(base);
-      await seen('Welcome to DanceHall Fit', 15000);
+      await seen('Welcome to Locked In Fitness', 15000);
       await btn('Create account').click();
       await seen('Create your account');
       await recoveryGate();
@@ -202,7 +202,7 @@ async function step(name, fn) {
     'recovery key: shown once with warnings, share/copy are user actions that fail honestly, continuing needs the confirmation, then the key is erased from the phone',
     async () => {
       await p.goto(base);
-      await seen('Welcome to DanceHall Fit', 15000);
+      await seen('Welcome to Locked In Fitness', 15000);
       await toRecovery();
       await p.getByRole('radio').locator('visible=true').nth(0).click();
       await p.getByRole('radio').locator('visible=true').nth(12).click();

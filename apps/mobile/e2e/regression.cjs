@@ -64,7 +64,7 @@ async function step(name, fn) {
     'A: the app opens to browsing, and the account screen says adults only (account made with a PIN)',
     async () => {
       await seen('Development mode: mock sign-in');
-      await seen('Welcome to DanceHall Fit');
+      await seen('Welcome to Locked In Fitness');
       await btn('Create account').click();
       await seen('adults aged 18 and over');
       await p.goBack();

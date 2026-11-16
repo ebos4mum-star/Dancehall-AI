@@ -1,5 +1,5 @@
 /**
- * LIVE verification against the approved DanceHall Fit AI development project. SKIPPED unless explicitly enabled (see liveGuard.ts and
+ * LIVE verification against the approved Locked In Fitness development project. SKIPPED unless explicitly enabled (see liveGuard.ts and
  * docs/LIVE_VERIFICATION.md). Uses the real Supabase adapters, two owner-created TEST users and synthetic data only, and removes what it creates.
  * It never touches paid AI, the server AI route, payments or any other project.
  */

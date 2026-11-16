@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { SECTIONS } from '@/sections';
 
 export const metadata: Metadata = {
-  title: 'DanceHall Fit AI Admin',
+  title: 'Locked In Fitness Admin',
   robots: { index: false, follow: false },
 };
 
@@ -27,7 +27,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             aria-label="Admin sections"
             style={{ width: 220, padding: 16, borderRight: '1px solid #E6DCEB' }}
           >
-            <p style={{ fontWeight: 800 }}>DanceHall Fit AI</p>
+            <p style={{ fontWeight: 800 }}>Locked In Fitness</p>
             <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 8 }}>
               <li>
                 <Link href="/">Overview</Link>

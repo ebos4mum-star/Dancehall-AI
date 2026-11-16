@@ -1,4 +1,4 @@
-# DanceHall Fit AI
+# Locked In Fitness
 
 A standalone, global, AI-powered dance fitness, nutrition, weight-management and lifestyle coaching app. **Status: Phase 0B foundation plus Batches A-D, on a development mock.** No cloud backend, AI service, subscription or content exists yet.
 

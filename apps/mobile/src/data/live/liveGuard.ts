@@ -1,6 +1,6 @@
 /**
  * Safety guard for the live (hosted) verification suite. The suite never runs unless it is explicitly enabled AND points at the one approved
- * DanceHall Fit AI development project. Nothing else is ever contacted, and secret keys are refused.
+ * Locked In Fitness development project. Nothing else is ever contacted, and secret keys are refused.
  */
 export const APPROVED_PROJECT_REF = 'vvwjhbsyxetnktimgaxg';
 export const APPROVED_URL = `https://${APPROVED_PROJECT_REF}.supabase.co`;

@@ -133,7 +133,7 @@ export function nutritionTargets(i: TargetInput): NutritionTargets {
       `To see an estimate we still need your ${missing.join(', ')}. We never guess these: add them in your profile (one entry is enough, you do not have to track them over time). Until then, a balanced plate and regular movement are a good default.`,
     ]);
   if (ageYears < MIN_USER_AGE_YEARS)
-    return none('general', ['DanceHall Fit is for adults aged 18 and over.']);
+    return none('general', ['Locked In Fitness is for adults aged 18 and over.']);
 
   const reasons: string[] = [];
   let weekly = 0;

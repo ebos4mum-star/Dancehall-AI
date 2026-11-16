@@ -69,7 +69,9 @@ function Privacy() {
       );
       setExportText(text);
       // The system share sheet is a deliberate tap; where it is unavailable the text stays on screen to copy.
-      await Share.share({ title: 'DanceHall Fit export', message: text }).catch(() => undefined);
+      await Share.share({ title: 'Locked In Fitness export', message: text }).catch(
+        () => undefined,
+      );
     } catch (e) {
       setExportText(null);
       setMsg(errorMessage(e));

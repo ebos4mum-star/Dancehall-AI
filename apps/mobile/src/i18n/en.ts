@@ -23,7 +23,7 @@ export const en = {
   'dev.banner': 'Development mode: mock sign-in. Synthetic data on this device only.',
   'config.errorTitle': 'App configuration problem',
 
-  'signIn.title': 'Welcome to DanceHall Fit',
+  'signIn.title': 'Welcome to Locked In Fitness',
   'signIn.subtitle': 'Dance fitness, food and coaching that fit your life.',
   'signIn.devButton': 'Continue with development sign-in',
   'signIn.devNote':
@@ -37,7 +37,7 @@ export const en = {
   'signIn.resend': 'Resend code',
   'signIn.resendIn': 'Resend code in {n}s',
   'signIn.changeEmail': 'Use a different email',
-  'signIn.adultsOnly': 'DanceHall Fit is for adults aged 18 and over.',
+  'signIn.adultsOnly': 'Locked In Fitness is for adults aged 18 and over.',
 
   'ach.title': 'Your milestones',
   'ach.note':
@@ -132,7 +132,7 @@ export const en = {
   'onb.aboutBody': 'We use this to personalize your plan. You can change it later.',
   'onb.name': 'What should we call you?',
   'onb.birthDate': 'Date of birth (YYYY-MM-DD)',
-  'onb.birthHint': 'You must be 18 or older to use DanceHall Fit.',
+  'onb.birthHint': 'You must be 18 or older to use Locked In Fitness.',
   'onb.country': 'Country or region',
   'onb.countrySearch': 'Search countries',
   'onb.countryNote': 'Choosing a country does not mean every feature is available there yet.',
@@ -459,7 +459,7 @@ export const en = {
   'acct.k.label': 'Your Recovery Key',
   'acct.k.share': 'Save with another app',
   'acct.k.shareHint':
-    'Opens your phone’s share sheet, where you can pick a password manager or a secure notes app. DanceHall Fit cannot save it there for you automatically.',
+    'Opens your phone’s share sheet, where you can pick a password manager or a secure notes app. Locked In Fitness cannot save it there for you automatically.',
   'acct.k.shareFailed': 'The share sheet could not open. Copy the key or write it down instead.',
   'acct.k.copy': 'Copy key',
   'acct.k.copied':
@@ -541,7 +541,7 @@ export const en = {
   'gate.dev': 'Developer sign-in (email code)',
   'guest.banner':
     'You are browsing as a guest. Create an account to start workouts, log food and save your progress.',
-  'guest.todayTitle': 'Welcome to DanceHall Fit',
+  'guest.todayTitle': 'Welcome to Locked In Fitness',
   'guest.todayLine':
     'Look around first. Nothing needs an account until you want to save something.',
   'guest.todayQuick': 'Try a quick workout',
@@ -1773,7 +1773,7 @@ export const en = {
   'err.coach_consent_required': 'Weekly reviews need personalization turned on in Coach privacy.',
   'err.goal_blocked': 'That goal cannot be set safely right now, so nothing was changed.',
   'err.not_authenticated': 'Please sign in again.',
-  'err.adults_only': 'DanceHall Fit is for adults aged 18 and over.',
+  'err.adults_only': 'Locked In Fitness is for adults aged 18 and over.',
   'err.invalid_birth_date': 'That date of birth is not valid.',
   'err.consent_required':
     'We need your permission to store health information. You can turn it on in Privacy and settings.',

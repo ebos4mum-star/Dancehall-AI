@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "DanceHall Fit AI",
+    "name": "Locked In Fitness",
     "slug": "dancehall-fit-ai",
     "scheme": "dancehallfit",
     "version": "0.0.1",
@@ -14,7 +14,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "DanceHall Fit uses the camera so you can photograph a meal to estimate its nutrition. The photo is resized on your device and removed from it right after analysis.",
+          "cameraPermission": "Locked In Fitness uses the camera so you can photograph a meal to estimate its nutrition. The photo is resized on your device and removed from it right after analysis.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
@@ -22,7 +22,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "DanceHall Fit can use a photo you choose from your library to estimate a meal, or to share in Community if you choose to. Photos are resized on your device and stripped of location data. A meal photo is removed from your device right after analysis. A Community photo is reviewed by a person before anyone else sees it.",
+          "photosPermission": "Locked In Fitness can use a photo you choose from your library to estimate a meal, or to share in Community if you choose to. Photos are resized on your device and stripped of location data. A meal photo is removed from your device right after analysis. A Community photo appears in the feed right away; you can delete it any time.",
           "cameraPermission": false,
           "microphonePermission": false
         }
@@ -30,7 +30,7 @@
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "DanceHall Fit uses Face ID so you can open the app without typing your PIN. Your PIN always works instead."
+          "faceIDPermission": "Locked In Fitness uses Face ID so you can open the app without typing your PIN. Your PIN always works instead."
         }
       ]
     ],

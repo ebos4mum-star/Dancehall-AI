@@ -58,7 +58,7 @@ export const SAFE_REDIRECT_MESSAGES: Record<
   },
   minor: {
     message:
-      'DanceHall Fit is for adults aged 18 and over, so I cannot coach you here. A parent, carer, teacher or doctor can help you find activity and food guidance that suits your age.',
+      'Locked In Fitness is for adults aged 18 and over, so I cannot coach you here. A parent, carer, teacher or doctor can help you find activity and food guidance that suits your age.',
     supportReferral: false,
     because: ['This app is for adults.'],
   },

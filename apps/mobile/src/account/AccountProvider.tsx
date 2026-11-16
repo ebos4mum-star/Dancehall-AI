@@ -207,7 +207,7 @@ export function AccountProvider({
   );
   const unlockWithBiometric = useCallback(async () => {
     if (!biometric.enabled || resetRequired || lockedForS > 0) return false;
-    const ok = await bio.prompt('Unlock DanceHall Fit', 'Use PIN');
+    const ok = await bio.prompt('Unlock Locked In Fitness', 'Use PIN');
     if (ok) setLocked(false);
     return ok;
   }, [bio, biometric.enabled, resetRequired, lockedForS]);
