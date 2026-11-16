@@ -30,3 +30,11 @@ describe('an empty schedule is not a dead end', () => {
     expect(read('app/dance/schedule.tsx')).toMatch(/sch\.pick/);
   });
 });
+
+describe('signing out drops the in-progress workout recovery point', () => {
+  it('signOutDevice clears the device-wide snapshot so the next person is not offered it', () => {
+    const s = read('src/account/AccountProvider.tsx');
+    const body = s.slice(s.indexOf('const signOutDevice'), s.indexOf('const value: AccountState'));
+    expect(body).toMatch(/clearSnapshot\(deviceSnapshotStore\)/);
+  });
+});

@@ -25,6 +25,7 @@ import {
   type SimulationApi,
 } from './cloud/accountApi';
 import { createAccountService, type AccountService } from './cloud/accountService';
+import { clearSnapshot, deviceSnapshotStore } from '@/dance/resume';
 
 /** Locks the app again after it has been in the background this long. */
 export const LOCK_AFTER_MS = 60_000;
@@ -274,6 +275,8 @@ export function AccountProvider({
     await cloud.forgetDevice();
     await refreshBackup();
     await clearPending();
+    // The in-progress workout recovery point is not tied to an account: drop it so the next person on this phone is never offered it.
+    await clearSnapshot(deviceSnapshotStore);
     await readStatus();
     setLocked(false);
     await refresh();
