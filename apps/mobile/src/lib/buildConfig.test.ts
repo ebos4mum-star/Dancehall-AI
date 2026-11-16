@@ -29,11 +29,12 @@ describe('app.json', () => {
 describe('eas.json', () => {
   const eas = readJson('eas.json');
   const text = readFileSync(join(root, 'eas.json'), 'utf8');
-  it('defines development, preview, preview-cloud and production build profiles', () => {
+  it('defines development, preview, preview-cloud, staging-preview and production build profiles', () => {
     expect(Object.keys(eas.build)).toEqual([
       'development',
       'preview',
       'preview-cloud',
+      'staging-preview',
       'production',
     ]);
   });
@@ -43,13 +44,13 @@ describe('eas.json', () => {
     expect(eas.build.preview.env.EXPO_PUBLIC_AUTH_MODE).toBe('supabase');
     expect(eas.build.development.env.EXPO_PUBLIC_APP_ENV).toBe('development');
   });
-  it('cloud accounts are on in the preview-cloud profile ONLY: development, preview and production stay off', () => {
+  it('cloud accounts are on in the preview-cloud and staging-preview profiles ONLY: development, preview and production stay off', () => {
     for (const [name, profile] of Object.entries(eas.build) as [
       string,
       { env?: Record<string, string> },
     ][])
       expect(profile.env?.EXPO_PUBLIC_CLOUD_ACCOUNTS, name).toBe(
-        name === 'preview-cloud' ? '1' : undefined,
+        name === 'preview-cloud' || name === 'staging-preview' ? '1' : undefined,
       );
   });
   it('preview-cloud is an isolated internal preview build: it extends nothing, is not a store or release profile, and is never submitted', () => {
@@ -63,6 +64,16 @@ describe('eas.json', () => {
     expect(p).not.toHaveProperty('channel');
     expect(Object.keys(eas.submit ?? {})).toEqual(['production']);
     expect(JSON.stringify(eas.submit)).not.toMatch(/preview/);
+  });
+  it('staging-preview is an isolated internal staging build: preview environment only, never submitted, never production', () => {
+    const p = eas.build['staging-preview'];
+    expect(p.env.EXPO_PUBLIC_APP_ENV).toBe('preview');
+    expect(p.env.EXPO_PUBLIC_AUTH_MODE).toBe('supabase');
+    expect(p.distribution).toBe('internal');
+    expect(p.environment).toBe('staging'); // the staging URL and publishable key come from a separate EAS "staging" environment, not from git
+    expect(p).not.toHaveProperty('extends');
+    expect(p).not.toHaveProperty('autoIncrement');
+    expect(p).not.toHaveProperty('channel');
   });
   it('the existing profiles are unchanged by the cloud-account work', () => {
     expect(eas.build.development).toEqual({
@@ -143,9 +154,13 @@ describe('Friends is never switched on by a shared build profile', () => {
   const eas = JSON.parse(readFileSync(join(__dirname, '..', '..', 'eas.json'), 'utf8')) as {
     build: Record<string, { env?: Record<string, string> }>;
   };
-  it('no EAS profile sets EXPO_PUBLIC_SOCIAL, and the production profile cannot reach it', () => {
-    for (const [name, p] of Object.entries(eas.build))
-      expect(p.env ?? {}, name).not.toHaveProperty('EXPO_PUBLIC_SOCIAL');
+  it('only the staging-preview profile sets EXPO_PUBLIC_SOCIAL or EXPO_PUBLIC_COMMUNITY, and the production profile cannot reach either', () => {
+    for (const [name, p] of Object.entries(eas.build)) {
+      const staging = name === 'staging-preview';
+      expect(p.env?.EXPO_PUBLIC_SOCIAL, name).toBe(staging ? '1' : undefined);
+      expect(p.env?.EXPO_PUBLIC_COMMUNITY, name).toBe(staging ? '1' : undefined);
+    }
+    expect(eas.build.production!.env ?? {}).not.toHaveProperty('EXPO_PUBLIC_SOCIAL');
     expect(eas.build.production!.env ?? {}).not.toHaveProperty('EXPO_PUBLIC_COMMUNITY');
   });
   it('a production build that is handed the flag refuses to start', () => {

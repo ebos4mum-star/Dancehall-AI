@@ -78,14 +78,14 @@ describe('cloud accounts: what the app must never do', () => {
     expect(src).toMatch(/const copy = async/);
   });
 
-  it('only the preview-cloud profile enables cloud accounts, and nothing that can reach production does', () => {
+  it('only the preview-cloud and staging-preview profiles enable cloud accounts, and nothing that can reach production does', () => {
     const eas = JSON.parse(readFileSync(join(root, 'eas.json'), 'utf8')) as {
       build: Record<string, { env?: Record<string, string> }>;
     };
     const enabled = Object.entries(eas.build).filter(
       ([, p]) => p.env?.EXPO_PUBLIC_CLOUD_ACCOUNTS !== undefined,
     );
-    expect(enabled.map(([n]) => n)).toEqual(['preview-cloud']);
+    expect(enabled.map(([n]) => n)).toEqual(['preview-cloud', 'staging-preview']);
     expect(eas.build.production!.env).not.toHaveProperty('EXPO_PUBLIC_CLOUD_ACCOUNTS');
   });
 

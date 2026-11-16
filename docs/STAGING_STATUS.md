@@ -536,3 +536,5 @@ Staging `bxhnrjulksganzydgrgm` only. Baseline: stored mode `read_only`, video/co
 - Stored mode restored to `read_only` immediately afterwards; read-only subset re-run: all PASS (member post and upload ticket 503). Owner then restores the floor secret to `read_only`.
 - Cleanup: users, identities, sessions, MFA factors, staff, members, posts, storage objects, profiles, reports, blocks, reactions all 0. Audit chain valid (16 entries; 6 record this window, the log is immutable). Temporary network host removed; credentials and generated images shredded.
 - Still not run on hosted staging: guest burst (needs the owner's single-address connection) and the expired-token check (needs a token over an hour old).
+
+Combined result of the window: 84/84 checks passed (40 + 44), 0 failures. Afterwards the owner confirmed the floor secret is back to `read_only`; the stored mode was verified `read_only` (video and comments off). The floor secret value cannot be read or tested independently without reopening Community, which was not done. Community stays closed until the owner approves another window.

@@ -38,13 +38,19 @@ Use `docs/NATIVE_IOS_TEST.md` section 2 as the checklist (Keychain, Face ID/PIN 
 
 **Community on a phone:** `bash scripts/friends-staging-ios.sh --community` (add `--device` for an iPhone) now switches Community on for that local run only; it needs staging in open mode (inside the section 2 window), otherwise the feed shows as paused. Production flags are untouched (a production build still refuses Community and Friends). Photo-only items worth checking: picker permission wording, upload, immediate publish and Like.
 
-## 4. Minimum configuration for a staging-only preview build (do not start)
+## 4. First native iPhone build: staging-only EAS profile (prepared, not started)
 
-- Owner's Expo account and an initialised EAS project: `app.json` has no `owner` or `extra.eas.projectId` yet (`eas init` is an owner action).
-- Owner's Apple Developer team, signing and a registered test device (internal distribution). No signing changes by Claude.
-- Profile `preview-cloud` in `apps/mobile/eas.json` already sets `APP_ENV=preview`, `AUTH_MODE=supabase`, `CLOUD_ACCOUNTS=1`. Missing, to add only when approved: `EXPO_PUBLIC_SOCIAL=1` (Friends, preview only; production refuses it) and, only if wanted, `EXPO_PUBLIC_COMMUNITY=1`.
-- EAS "preview" environment variables: `EXPO_PUBLIC_SUPABASE_URL=https://bxhnrjulksganzydgrgm.supabase.co` and the staging publishable key. Never a secret key, never production or development.
-- Open Food Facts stays off; no support email invented.
+Profile `staging-preview` in `apps/mobile/eas.json`: internal distribution, `EXPO_PUBLIC_APP_ENV=preview`, `AUTH_MODE=supabase`, `CLOUD_ACCOUNTS=1`, `SOCIAL=1` (Friends), `COMMUNITY=1`, and `environment: "staging"`. It has no credentials and no URLs; the staging URL and publishable key come from an EAS environment named `staging`. No other profile enables Friends or Community, a production build refuses both flags (`resolveConfig`), and tests lock all of this (`buildConfig.test.ts`, `cloudBoundary.test.ts`). Bundle ID `com.dancehallfit.app`, slug `dancehall-fit-ai`, scheme `dancehallfit` and signing are unchanged.
+
+Remaining requirements before the first build (all owner actions, none started):
+
+1. Expo account with `eas-cli` logged in on a machine you control; run `eas init` in `apps/mobile` (adds `extra.eas.projectId` and `owner` to `app.json`; no EAS project exists yet).
+2. EAS environment `staging` (expo.dev, project, Environment variables) with `EXPO_PUBLIC_SUPABASE_URL=https://bxhnrjulksganzydgrgm.supabase.co` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<staging publishable key>` (Supabase dashboard, Settings, API). Never a secret key, never the development or production project.
+3. Apple Developer team, with EAS-managed or your own signing, and your iPhone registered for internal distribution (`eas device:create`). Claude makes no signing changes.
+4. Your explicit go-ahead for `eas build --profile staging-preview --platform ios`. Never `--auto-submit`; `submit` stays production-only and unused.
+5. Community on the phone only posts while staging is open (approved window, floor secret and stored mode both `open`). While `read_only` the feed reads but posting shows as paused.
+
+Optional, not required for staging: `EXPO_PUBLIC_SUPPORT_EMAIL`, privacy and support URLs. Open Food Facts stays off.
 
 ## 5. Remaining launch checklist (one list)
 

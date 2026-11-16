@@ -23,6 +23,17 @@
         "EXPO_PUBLIC_CLOUD_ACCOUNTS": "1"
       }
     },
+    "staging-preview": {
+      "distribution": "internal",
+      "environment": "staging",
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "preview",
+        "EXPO_PUBLIC_AUTH_MODE": "supabase",
+        "EXPO_PUBLIC_CLOUD_ACCOUNTS": "1",
+        "EXPO_PUBLIC_SOCIAL": "1",
+        "EXPO_PUBLIC_COMMUNITY": "1"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "env": { "EXPO_PUBLIC_APP_ENV": "production", "EXPO_PUBLIC_AUTH_MODE": "supabase" }
