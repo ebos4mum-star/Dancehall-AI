@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { Animated, Easing, View } from 'react-native';
 import { useReducedMotion } from '@/a11y/useReducedMotion';
+import type { CosmeticId } from '@dancehall/shared';
 import { PulseFigure } from './PulseFigure';
+import type { Flourish } from './moment';
 import {
   ONE_SHOT_MS,
   PULSE_DESCRIPTION,
@@ -26,7 +28,17 @@ export function usePulse(initial: PulseState = 'idle') {
  * Renders Pulse in a state. Motion is transform and opacity only (native driver). With reduced motion on, nothing moves: the authored
  * still pose for the state is shown instead. Idle is a slow, tiny breathing loop that stops when the screen unmounts.
  */
-export function PulseStage({ state, size = 170 }: { state: PulseState; size?: number }) {
+export function PulseStage({
+  state,
+  size = 170,
+  flourish,
+  cosmetics,
+}: {
+  state: PulseState;
+  size?: number;
+  flourish?: Flourish;
+  cosmetics?: readonly CosmeticId[];
+}) {
   const reduced = useReducedMotion();
   const y = useRef(new Animated.Value(0)).current;
   const rot = useRef(new Animated.Value(0)).current;
@@ -42,6 +54,8 @@ export function PulseStage({ state, size = 170 }: { state: PulseState; size?: nu
       return;
     }
     const nat = { useNativeDriver: true } as const;
+    // Vertical movement is designed for a 170 px figure; smaller figures (toasts, banners) move in proportion so they never leave their box.
+    const k = size / 170;
     let anim: Animated.CompositeAnimation | null = null;
     const ease = Easing.inOut(Easing.sin);
     const breathe = () =>
@@ -57,7 +71,7 @@ export function PulseStage({ state, size = 170 }: { state: PulseState; size?: nu
       rot.setValue(0);
       anim = breathe();
     } else if (state === 'welcome') {
-      y.setValue(34);
+      y.setValue(34 * k);
       fade.setValue(0);
       scale.setValue(0.94);
       anim = Animated.parallel([
@@ -67,9 +81,9 @@ export function PulseStage({ state, size = 170 }: { state: PulseState; size?: nu
       ]);
     } else if (state === 'celebrate') {
       anim = Animated.sequence([
-        Animated.spring(y, { toValue: -26, speed: 22, bounciness: 8, ...nat }),
+        Animated.spring(y, { toValue: -26 * k, speed: 22, bounciness: 8, ...nat }),
         Animated.spring(y, { toValue: 0, speed: 16, bounciness: 10, ...nat }),
-        Animated.spring(y, { toValue: -12, speed: 22, bounciness: 8, ...nat }),
+        Animated.spring(y, { toValue: -12 * k, speed: 22, bounciness: 8, ...nat }),
         Animated.spring(y, { toValue: 0, speed: 16, bounciness: 9, ...nat }),
       ]);
     } else if (state === 'encourage') {
@@ -83,7 +97,7 @@ export function PulseStage({ state, size = 170 }: { state: PulseState; size?: nu
         Animated.sequence([
           Animated.parallel([
             Animated.timing(rot, { toValue: 1, duration: 600, easing: ease, ...nat }),
-            Animated.timing(y, { toValue: -8, duration: 300, easing: ease, ...nat }),
+            Animated.timing(y, { toValue: -8 * k, duration: 300, easing: ease, ...nat }),
           ]),
           Animated.parallel([
             Animated.timing(rot, { toValue: -1, duration: 600, easing: ease, ...nat }),
@@ -94,7 +108,7 @@ export function PulseStage({ state, size = 170 }: { state: PulseState; size?: nu
     }
     anim.start();
     return () => anim?.stop();
-  }, [state, reduced, y, rot, scale, fade]);
+  }, [state, reduced, y, rot, scale, fade, size]);
 
   // The two dance poses alternate at a fixed, slow beat. Only while dancing and only without reduced motion.
   useEffect(() => {
@@ -130,7 +144,13 @@ export function PulseStage({ state, size = 170 }: { state: PulseState; size?: nu
           ],
         }}
       >
-        <PulseFigure state={state} size={size} beat={beat} />
+        <PulseFigure
+          state={state}
+          size={size}
+          beat={beat}
+          flourish={flourish}
+          cosmetics={cosmetics}
+        />
       </Animated.View>
     </View>
   );

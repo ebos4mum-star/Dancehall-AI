@@ -1,5 +1,11 @@
 import { withAccount } from '@/account/gate';
-import { GroupCoopNote, LeagueCard } from '@/gamification/ui';
+import {
+  GroupCoopNote,
+  GroupGoalProgress,
+  LeagueCard,
+  RewardBanner,
+  useGroupGoalCelebration,
+} from '@/gamification/ui';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, Switch, View } from 'react-native';
 import { MIN_TOUCH_TARGET } from '@/theme/tokens';
@@ -102,6 +108,8 @@ function Friends() {
       .then(() => reload())
       .catch(() => undefined);
   }, [data, store, reload]);
+
+  useGroupGoalCelebration(data?.groups, localDateKey(new Date(), tz));
 
   const run = async (fn: () => Promise<SocialAck<object>>, ok?: string) => {
     try {
@@ -315,6 +323,7 @@ function Friends() {
             </DepthCard>
           ))}
 
+          <RewardBanner />
           <LeagueCard />
 
           <AppText variant="heading" accessibilityRole="header">
@@ -349,6 +358,7 @@ function Friends() {
                       {`${m.username}${m.isMe ? ` (${t('social.you')})` : ''}: ${m.total} ${g.metric === 'active_days' ? t('social.days') : t('social.min')}`}
                     </AppText>
                   ))}
+                  <GroupGoalProgress g={g} />
                   {g.target ? (
                     <AppText variant="caption" muted>
                       {t('social.target', {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MovementProgressCard } from '@/gamification/ui';
+import { MovementProgressCard, RewardBanner } from '@/gamification/ui';
 import { Animated, Pressable, ScrollView, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -210,6 +210,7 @@ export default function Dance() {
           ) : null}
         </HeroCard>
       </Reveal>
+      <RewardBanner />
       <MovementProgressCard />
 
       {pending && pendingWorkout ? (

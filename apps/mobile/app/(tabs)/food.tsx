@@ -1,5 +1,5 @@
 import { GuestFood } from '@/account/guest';
-import { MealQuestChip } from '@/gamification/ui';
+import { MealQuestChip, RewardBanner } from '@/gamification/ui';
 import { ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { IconBadge, SectionTitle, type IconName } from '@/ui/kit';
@@ -115,6 +115,7 @@ function FoodDashboardAccount() {
           ) : null}
         </HeroCard>
       </Reveal>
+      <RewardBanner />
       <MealQuestChip />
 
       <ScrollView

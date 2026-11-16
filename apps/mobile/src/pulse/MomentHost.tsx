@@ -56,7 +56,7 @@ export function MomentHost() {
           }}
         >
           <View style={{ width: 64, height: 60, overflow: 'hidden', alignItems: 'center' }}>
-            <PulseStage state={m.state} size={64} />
+            <PulseStage state={m.state} size={64} flourish={m.flourish} />
           </View>
           <AppText variant="label" style={{ color: brand.ivory, flex: 1 }}>
             {m.message}

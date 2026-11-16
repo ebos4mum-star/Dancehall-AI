@@ -2,10 +2,13 @@ import { useSyncExternalStore } from 'react';
 import type { PulseState } from './machine';
 
 /** A short Pulse reaction to something the person really did (a meal saved, a goal set). One at a time; a newer one replaces an older one. */
+/** A small decoration around Pulse for the occasion (drawn in the figure; never carries information the message does not). */
+export type Flourish = 'stars' | 'flame' | 'confetti' | 'heart' | 'shield';
 export interface Moment {
   id: number;
   message: string;
   state: PulseState;
+  flourish?: Flourish;
 }
 export const MOMENT_MS = 2600;
 
@@ -14,9 +17,13 @@ let seq = 0;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
-export function showMoment(message: string, state: PulseState = 'celebrate'): number {
+export function showMoment(
+  message: string,
+  state: PulseState = 'celebrate',
+  flourish?: Flourish,
+): number {
   seq += 1;
-  current = { id: seq, message, state };
+  current = { id: seq, message, state, flourish };
   emit();
   return seq;
 }

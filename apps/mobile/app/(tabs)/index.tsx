@@ -1,5 +1,5 @@
 import { GuestToday } from '@/account/guest';
-import { ProgressionCard } from '@/gamification/ui';
+import { ProgressionCard, RewardBanner } from '@/gamification/ui';
 import { HealthAutoImport } from '@/health/ui';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
@@ -181,6 +181,7 @@ function TodayAccount() {
       <ReviewBar />
       <DayCard habitsDone={summary2.habitsDoneCount} habitsTotal={summary2.habitCount} />
       <HealthAutoImport />
+      <RewardBanner />
       <ProgressionCard />
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {loading && !data ? <SkeletonList label={t('common.loading')} /> : null}

@@ -1,4 +1,5 @@
 import { ShareAchievement } from '@/community/ShareAchievement';
+import { WorkoutRewardSlot } from '@/gamification/ui';
 import { useCommunityAvailable } from '@/community/useCommunity';
 import { withAccount } from '@/account/gate';
 import { useMemo, useRef, useState } from 'react';
@@ -240,6 +241,7 @@ function Session() {
             </>
           )}
           {err ? <Notice tone="warning">{err}</Notice> : null}
+          {saved && summary.recordable ? <WorkoutRewardSlot /> : null}
           {saved && communityOn && summary.recordable ? (
             sharing ? (
               <ShareAchievement

@@ -7,6 +7,7 @@ import { LockScreen } from '@/account/LockScreen';
 import { AppProvider } from '@/data/AppProvider';
 import { DraftProvider } from '@/food/draft';
 import { CelebrationWatcher } from '@/celebrations/CelebrationWatcher';
+import { GamificationHost } from '@/gamification/GamificationHost';
 import { MomentHost } from '@/pulse/MomentHost';
 import { t } from '@/i18n';
 import { AppText } from '@/ui/AppText';
@@ -149,6 +150,7 @@ export default function RootLayout() {
               </Stack>
               <MomentHost />
               <CelebrationWatcher />
+              <GamificationHost />
             </DraftProvider>
           </LockLayer>
         </AccountProvider>

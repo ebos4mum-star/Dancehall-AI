@@ -1,5 +1,5 @@
 import { withAccount } from '@/account/gate';
-import { BadgesCard } from '@/gamification/ui';
+import { ProgressRewards, RewardBanner } from '@/gamification/ui';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { lbToKg, summarizeWeights } from '@dancehall/shared';
@@ -83,7 +83,8 @@ function Progress() {
       }}
     >
       <RecapCard />
-      <BadgesCard />
+      <RewardBanner />
+      <ProgressRewards />
       <PeriodCard />
       <MaintenanceCard />
       {error ? <Notice tone="warning">{error}</Notice> : null}

@@ -8,6 +8,7 @@ import { Card } from '@/ui/Card';
 import { SectionTitle } from '@/ui/kit';
 import { SettingRow } from '@/ui/SettingRow';
 import { formatDate } from '@/lib/format';
+import { progressionActions } from '@/gamification/progressionStore';
 import { deviceRaw, readHealthPrefs, writeHealthPrefs, type HealthPrefs } from './prefs';
 import { healthProviderFor } from './provider';
 import { syncHealth } from './sync';
@@ -50,6 +51,7 @@ export function useHealthImport() {
         const next = { ...p, lastSyncIso: new Date().toISOString() };
         setPrefs(next);
         await writeHealthPrefs(deviceRaw, userId, next);
+        if (r.imported > 0) progressionActions().noteImported(r.imported);
         setMessage(r.imported > 0 ? t('hk.result', { n: r.imported }) : t('hk.resultNone'));
       } catch {
         setMessage(t('hk.error'));

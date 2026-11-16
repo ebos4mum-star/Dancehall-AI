@@ -1,0 +1,81 @@
+{
+  "R1-prompt-update": {
+    "ok": true,
+    "xpBefore": 0,
+    "xpAfter": 5,
+    "updatedWithinMs": 774,
+    "streakLine": "1-day streak",
+    "bannerShown": true,
+    "bannerLines": ["+5 XP", "+10 XP", "+10 XP"]
+  },
+  "workout-xp-feedback": {
+    "ok": true,
+    "scheduled": "Scheduled for Nov 16, 2026.",
+    "bannerLines": ["+25 XP", "Quest done: Move for 10 minutes", "+10 XP", "+10 XP"],
+    "xpOnLevelCard": 25,
+    "checkingShown": false
+  },
+  "levelup-and-health-summary": {
+    "ok": true,
+    "xpBefore": 50,
+    "xpAfter": 180,
+    "toastShown": true,
+    "bannerLines": [
+      "+130 XP",
+      "Brought in 2 workouts from Apple Health",
+      "Level 2 reached",
+      "+10 XP"
+    ],
+    "errors": []
+  },
+  "streak-milestone-and-badge": {
+    "ok": true,
+    "streakBefore": "6-day streak",
+    "streakAfter": "7-day streak",
+    "toastShown": true,
+    "bannerLines": [
+      "+30 XP",
+      "7 active days in a row",
+      "New badge: Seven active days in a row",
+      "+10 XP",
+      "+10 XP"
+    ]
+  },
+  "cosmetic-unlock-and-equip": {
+    "ok": true,
+    "toastShown": true,
+    "wornAfterUnlock": "Pulse, wearing Headband",
+    "afterTakeOff": "Pulse, wearing nothing yet",
+    "afterWearAgain": "Pulse, wearing Headband"
+  },
+  "group-goal-completion": {
+    "ok": true,
+    "celebrationShown": true,
+    "cardText": ["Goal reached together", "Each person’s share"]
+  },
+  "R2-celebrations-off": {
+    "ok": true,
+    "xpBefore": null,
+    "xpAfter": 180,
+    "toastShown": false,
+    "bannerShown": false,
+    "levelNow": "Level 2"
+  },
+  "reduce-motion-bars": {
+    "ok": true,
+    "motionOn": {
+      "distinctPositions": 17,
+      "first": "matrix(1, 0, 0, 1, -228, 0)",
+      "last": "matrix(1, 0, 0, 1, -71.5091, 0)"
+    },
+    "reduceMotion": {
+      "distinctPositions": 1,
+      "first": "matrix(1, 0, 0, 1, -71.5091, 0)",
+      "last": "matrix(1, 0, 0, 1, -71.5091, 0)"
+    }
+  },
+  "veteran-visuals": {
+    "ok": true,
+    "errors": []
+  }
+}

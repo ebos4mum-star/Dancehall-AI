@@ -1,5 +1,5 @@
 import { useAccount } from '@/account/AccountProvider';
-import { GmSettingsCard } from '@/gamification/ui';
+import { GmSettingsCard, RewardBanner } from '@/gamification/ui';
 import { HealthSettingsCard } from '@/health/ui';
 import { withAccount } from '@/account/gate';
 import { Linking, Share, View } from 'react-native';
@@ -114,6 +114,7 @@ function Privacy() {
       {error ? <Notice tone="warning">{`${error} ${t('privacy.loadFailed')}`}</Notice> : null}
       {msg ? <Notice tone="warning">{msg}</Notice> : null}
 
+      <RewardBanner />
       <GmSettingsCard />
       <HealthSettingsCard />
 
