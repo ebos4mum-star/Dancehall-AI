@@ -24,6 +24,7 @@ import { Screen } from '@/ui/Screen';
 import { SkeletonList } from '@/ui/Skeleton';
 import { TextField } from '@/ui/TextField';
 import { WeightChart } from '@/ui/WeightChart';
+import { PeriodCard } from '@/progress/PeriodCard';
 import { MeasurementsCard, SleepCard } from '@/wellness/trackers';
 
 function Progress() {
@@ -81,6 +82,7 @@ function Progress() {
       }}
     >
       <RecapCard />
+      <PeriodCard />
       <MaintenanceCard />
       {error ? <Notice tone="warning">{error}</Notice> : null}
       {loading && !data ? <SkeletonList label={t('common.loading')} cards={2} /> : null}
