@@ -49,6 +49,12 @@ Branch `feature/overnight-nutrition-fitness`. Verified on Linux only (unit, inte
 - Unchanged: Community feed defaults off / `read_only` in shared builds; Friends off in production; usernames only, no health data in Community.
 - Hosted change needed (not applied): `community.patch2_photo_immediate.sql` on staging, and the full `community.up.sql` on production, each needing explicit migration approval.
 
+## Verified staging status (handoff)
+
+- Staging `bxhnrjulksganzydgrgm`: Community patch 2 applied (SHA-256 `70fb1a2d…`), Edge Function `community` v10 deployed, stored mode `read_only`, video and comments off, clean of synthetic data, audit chain valid (10/10). Details and remaining HTTP tests: `docs/CLAUDE_HANDOFF.md`.
+- Verified: 18/18 live staging function checks (rolled-back transaction); read-only HTTP subset; local end-to-end 26/26. Not yet run: open-mode HTTP suite (needs the owner to set the floor secret), hosted guest burst, expired-token check.
+- Production and development Supabase: untouched. No native iPhone testing has happened.
+
 ## 1. Completed features
 
 See "Complete and verified".
