@@ -14,6 +14,8 @@ export const en = {
   'common.loading': 'Loading…',
   'common.retry': 'Try again',
   'common.error': 'Something went wrong. Please try again.',
+  'common.goHome': 'Go to Today',
+  'common.pageNotFound': 'That page could not be found.',
   'load.failedTitle': 'Can’t reach your account',
   'load.failedBody':
     'We couldn’t load your data. Check your connection and try again. You are still signed in.',
@@ -1634,6 +1636,7 @@ export const en = {
   'ses.saved': 'Saved to your activity.',
   'sch.title': 'Schedule',
   'sch.empty': 'Nothing scheduled. Pick a workout and choose a day.',
+  'sch.pick': 'Choose a workout',
   'sch.earlier': 'Earlier',
   'sch.upcoming': 'Coming up',
   'sch.start': 'Start',

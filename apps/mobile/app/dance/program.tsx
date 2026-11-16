@@ -20,6 +20,7 @@ import { Button } from '@/ui/Button';
 import { DepthCard } from '@/ui/Depth';
 import { Notice } from '@/ui/Banner';
 import { Choice } from '@/ui/Choice';
+import { NotFound } from '@/ui/NotFound';
 import { Screen } from '@/ui/Screen';
 import { haptics } from '@/ui/haptics';
 
@@ -32,12 +33,7 @@ export default function Program() {
   const [when, setWhen] = useState('today');
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  if (!p)
-    return (
-      <Screen top={false}>
-        <Notice>{t('wk.notFound')}</Notice>
-      </Screen>
-    );
+  if (!p) return <NotFound message={t('wk.notFound')} />;
 
   const slots = programSlots(p.schedule, dance.sessions, p.id);
   const prog = programProgress(p.id, p.schedule.length, dance.sessions, dance.todayKey);

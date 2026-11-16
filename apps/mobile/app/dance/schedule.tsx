@@ -147,6 +147,7 @@ function Schedule() {
     >
       {dance.error || err ? <Notice tone="warning">{String(dance.error ?? err)}</Notice> : null}
       {empty ? <Notice>{t('sch.empty')}</Notice> : null}
+      {empty ? <Button label={t('sch.pick')} onPress={() => router.push('/(tabs)/dance')} /> : null}
       {dance.overdue.length > 0 ? <SectionTitle icon="time" title={t('sch.earlier')} /> : null}
       {dance.overdue.map((s) => (
         <SessionRow key={s.id} s={s} onError={setErr} todayKey={dance.todayKey} />

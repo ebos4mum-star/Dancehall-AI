@@ -33,6 +33,7 @@ import { PulseStage } from '@/pulse/PulseStage';
 import { CharacterStage, DepthCard, HeroCard } from '@/ui/Depth';
 import { Notice } from '@/ui/Banner';
 import { Ring } from '@/ui/motion';
+import { NotFound } from '@/ui/NotFound';
 import { Screen } from '@/ui/Screen';
 import { haptics } from '@/ui/haptics';
 import { once } from '@/dance/once';
@@ -96,11 +97,7 @@ function Session() {
   );
 
   if (!workout || workout.blocks.length === 0) {
-    return (
-      <Screen top={false}>
-        <Notice>{t('wk.notFound')}</Notice>
-      </Screen>
-    );
+    return <NotFound message={t('wk.notFound')} />;
   }
   const seg = s.segments[s.index]!;
   // A strength set shows its exercise; a dance block shows the movement at that position of the workout.

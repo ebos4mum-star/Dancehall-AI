@@ -38,6 +38,7 @@ import { CharacterStage, DepthCard } from '@/ui/Depth';
 import { Notice } from '@/ui/Banner';
 import { Choice } from '@/ui/Choice';
 import { Reveal } from '@/ui/motion';
+import { NotFound } from '@/ui/NotFound';
 import { Screen } from '@/ui/Screen';
 import { haptics } from '@/ui/haptics';
 
@@ -65,11 +66,7 @@ export default function WorkoutDetail() {
   }, [dance.lowImpactDefault, touched]);
 
   if (!w) {
-    return (
-      <Screen top={false}>
-        <Notice>{t('wk.notFound')}</Notice>
-      </Screen>
-    );
+    return <NotFound message={t('wk.notFound')} />;
   }
   const meta = w.style ? STYLE_META[w.style] : STRENGTH_META;
   const strength = w.kind === 'strength';
