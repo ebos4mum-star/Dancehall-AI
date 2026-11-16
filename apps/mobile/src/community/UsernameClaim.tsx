@@ -48,9 +48,10 @@ export function UsernameClaim({
         disabled={!check || !check.ok}
         onPress={async () => {
           try {
-            const r = await (
-              mode === 'claim' ? store.communityClaimUsername! : store.communityChangeUsername!
-            )(raw);
+            const r =
+              mode === 'claim'
+                ? await store.communityClaimUsername!(raw)
+                : await store.communityChangeUsername!(raw);
             if (r.ok) onClaimed(r.username);
             else setErr(r.reasons[0] ?? '');
           } catch (e) {

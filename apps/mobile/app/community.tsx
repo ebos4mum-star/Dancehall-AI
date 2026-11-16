@@ -110,7 +110,9 @@ export default function CommunityScreen() {
       {next ? (
         <Button variant="secondary" label={t('community.loadMore')} onPress={() => void more()} />
       ) : null}
-      {session ? <MyCommunity onChanged={() => void load()} /> : null}
+      {session ? (
+        <MyCommunity key={composing ? 'composing' : 'idle'} onChanged={() => void load()} />
+      ) : null}
       {session ? (
         <Card>
           <Disclosure title={t('community.blockedTitle', { n: blocked.length })}>

@@ -12,7 +12,10 @@ const enc = (s: string) => Uint8Array.from(s, (c) => c.charCodeAt(0));
 const cat = (...p: Uint8Array[]) => {
   const o = new Uint8Array(p.reduce((n, x) => n + x.length, 0));
   let i = 0;
-  for (const x of p) (o.set(x, i), (i += x.length));
+  for (const x of p) {
+    o.set(x, i);
+    i += x.length;
+  }
   return o;
 };
 const be16 = (n: number) => Uint8Array.of((n >> 8) & 255, n & 255);

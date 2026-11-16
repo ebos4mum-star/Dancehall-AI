@@ -29,4 +29,6 @@ if bash supabase/tests/concurrency.sh "$DB"; then :; else fail=1; fi
 q -d postgres -c "drop database if exists $DB" >/dev/null
 # The M3 v2 release step, rehearsed on its own throwaway database (never a hosted project).
 if bash supabase/proposed/dry-run.sh; then :; else fail=1; fi
+# The proposed Community schema, rehearsed the same way (also never a hosted project).
+if bash supabase/proposed/community-dry-run.sh; then :; else fail=1; fi
 [ "$fail" = 0 ] && echo "Database tests passed." || { echo "Database tests FAILED." >&2; exit 1; }

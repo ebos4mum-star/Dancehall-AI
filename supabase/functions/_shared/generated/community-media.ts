@@ -192,7 +192,7 @@ function stripWebp(b: Uint8Array): Uint8Array | null {
       i += total;
       continue;
     }
-    let chunk = b.slice(i, Math.min(i + total, b.length));
+    const chunk = b.slice(i, Math.min(i + total, b.length));
     if (type === 'VP8X') chunk[8] = chunk[8]! & ~0x0c; // EXIF and XMP flags
     parts.push(chunk);
     i += total;

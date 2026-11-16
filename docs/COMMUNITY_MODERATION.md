@@ -46,7 +46,7 @@ Targets are goals to measure against, not promises to members. The Terms say so.
 The same steps appear in the console next to each item.
 
 - **Photo or video review.** Look at every file in full. Remove anything with a child, nudity, someone who has not clearly agreed, or a place that shows where someone lives; remove before-and-after pairs that shame a body or promote fast weight loss. Approve only if you would be comfortable with it being the first thing a new member sees.
-- **Someone may need help (urgent).** Keep it hidden. Do not contact the member outside the app and do not guess where they are. Record the action; tell the escalation contact the same day. The member sees that their post is hidden, together with support information. Do not penalise a member for asking for help.
+- **Someone may need help (urgent).** Keep it hidden. Do not contact the member outside the app and do not guess where they are. Record the action; tell the escalation contact the same day. The member sees only a "hidden while we review it" note on their own post together with a gentle line pointing to a doctor, someone they trust or a local crisis line. Do not penalise a member for asking for help.
 - **A child may be involved (urgent).** Keep it hidden; do not copy or forward it. Record the action; tell the escalation contact the same day. Legal reporting duties are for the escalation contact and counsel to decide.
 - **Private information (urgent).** Remove now; mute 24 hours if it was deliberate or repeated.
 - **Harassment.** Remove; first time mute 24 hours, repeat 7 days, then suspend.
@@ -58,7 +58,7 @@ The same steps appear in the console next to each item.
 ## Escalation
 
 1. The escalation contact is named in the staff handbook (open decision). They are told the **same day** about any self-harm, child-safety or legal-threat item.
-2. For self-harm: the app already shows the member support information when they try to post it and when their post is hidden. Beyond that, any outreach or emergency step is the escalation contact's decision, taken with the member's safety and privacy in mind. The moderator does not investigate who the member is.
+2. For self-harm: the app already shows the member support information when they try to post such words. Beyond that, any outreach or emergency step is the escalation contact's decision, taken with the member's safety and privacy in mind. The moderator does not investigate who the member is.
 3. For a child-safety item: hide, record, escalate. Preserve nothing outside the system.
 4. For a legal request or press enquiry: do not respond; pass to the escalation contact.
 

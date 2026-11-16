@@ -718,7 +718,8 @@ export const en = {
   'community.reason.self_harm': 'Someone may need help',
   'community.reason.other': 'Something else',
   'community.status.held': 'Waiting for a quick review. Only you can see this.',
-  'community.status.hidden': 'Hidden while we review it. Only you can see this.',
+  'community.status.hidden':
+    'Hidden while we review it. Only you can see this. If you are going through something hard, please reach out to a doctor, someone you trust, or a local crisis line.',
   'community.encouragedCount': '{n} people encouraged this',
   'community.blockedTitle': 'Blocked members ({n})',
   'community.blockedNone': 'You have not blocked anyone.',
