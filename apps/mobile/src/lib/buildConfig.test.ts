@@ -113,8 +113,10 @@ describe('isolation from unrelated credentials', () => {
         'cloudAccounts',
         'community',
         'contentFixtures',
+        'privacyPolicyUrl',
         'supabasePublishableKey',
         'supportEmail',
+        'supportUrl',
         'supabaseUrl',
       ].sort(),
     );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ConfigError, resolveConfig } from './env';
+import { ConfigError, PRODUCTION_ACCOUNTS_ACK, resolveConfig } from './env';
 
 const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');
 const jwt = (role: string) => `${b64({ alg: 'HS256' })}.${b64({ role })}.sig`;
@@ -21,6 +21,25 @@ describe('resolveConfig', () => {
     );
     expect(resolveConfig({}).supportEmail).toBeUndefined();
     expect(() => resolveConfig({ EXPO_PUBLIC_SUPPORT_EMAIL: 'not an email' })).toThrow(/email/);
+  });
+  it('carries optional public policy and support addresses, https only', () => {
+    const c = resolveConfig({
+      EXPO_PUBLIC_PRIVACY_POLICY_URL: ' https://example.test/privacy ',
+      EXPO_PUBLIC_SUPPORT_URL: 'https://example.test/support',
+    });
+    expect(c).toMatchObject({
+      privacyPolicyUrl: 'https://example.test/privacy',
+      supportUrl: 'https://example.test/support',
+    });
+    expect(resolveConfig({}).privacyPolicyUrl).toBeUndefined();
+    for (const bad of [
+      'http://example.test/p',
+      'javascript:alert(1)',
+      'https://',
+      'https://a b.test',
+      'example.test/privacy',
+    ])
+      expect(() => resolveConfig({ EXPO_PUBLIC_PRIVACY_POLICY_URL: bad })).toThrow(/https/);
   });
   it('offers cloud accounts in a Supabase build only when explicitly enabled', () => {
     const base = {
@@ -165,7 +184,7 @@ describe('internal content fixtures', () => {
     });
     expect(c).toMatchObject({ authMode: 'supabase', contentFixtures: true });
   });
-  it('a production build refuses to start with cloud accounts switched on', () => {
+  it('a production build refuses cloud accounts unless the backend is explicitly confirmed live and reviewed', () => {
     const base = {
       EXPO_PUBLIC_APP_ENV: 'production',
       EXPO_PUBLIC_AUTH_MODE: 'supabase',
@@ -174,6 +193,51 @@ describe('internal content fixtures', () => {
     };
     expect(resolveConfig(base).cloudAccounts).toBe(false);
     expect(() => resolveConfig({ ...base, EXPO_PUBLIC_CLOUD_ACCOUNTS: '1' })).toThrow(/production/);
+    // the acknowledgement alone does nothing, a wrong value does nothing, and only both together offer accounts
+    expect(
+      resolveConfig({ ...base, EXPO_PUBLIC_PRODUCTION_ACCOUNTS: PRODUCTION_ACCOUNTS_ACK })
+        .cloudAccounts,
+    ).toBe(false);
+    expect(() =>
+      resolveConfig({
+        ...base,
+        EXPO_PUBLIC_CLOUD_ACCOUNTS: '1',
+        EXPO_PUBLIC_PRODUCTION_ACCOUNTS: 'yes',
+      }),
+    ).toThrow(/production/);
+    expect(() =>
+      resolveConfig({
+        ...base,
+        EXPO_PUBLIC_CLOUD_ACCOUNTS: '1',
+        EXPO_PUBLIC_PRODUCTION_ACCOUNTS: '1',
+      }),
+    ).toThrow(/production/);
+    const on = resolveConfig({
+      ...base,
+      EXPO_PUBLIC_CLOUD_ACCOUNTS: '1',
+      EXPO_PUBLIC_PRODUCTION_ACCOUNTS: PRODUCTION_ACCOUNTS_ACK,
+    });
+    expect(on.cloudAccounts).toBe(true);
+    // accounts in production never bring Community, fixtures or mock sign-in with them
+    expect(on.community).toBe(false);
+    expect(on.contentFixtures).toBe(false);
+    expect(on.authMode).toBe('supabase');
+    expect(() =>
+      resolveConfig({
+        ...base,
+        EXPO_PUBLIC_CLOUD_ACCOUNTS: '1',
+        EXPO_PUBLIC_PRODUCTION_ACCOUNTS: PRODUCTION_ACCOUNTS_ACK,
+        EXPO_PUBLIC_COMMUNITY: '1',
+      }),
+    ).toThrow(/Community/);
+    expect(() =>
+      resolveConfig({
+        ...base,
+        EXPO_PUBLIC_CLOUD_ACCOUNTS: '1',
+        EXPO_PUBLIC_PRODUCTION_ACCOUNTS: PRODUCTION_ACCOUNTS_ACK,
+        EXPO_PUBLIC_CONTENT_FIXTURES: '1',
+      }),
+    ).toThrow();
     // preview and development builds may enable it
     expect(
       resolveConfig({ ...base, EXPO_PUBLIC_APP_ENV: 'preview', EXPO_PUBLIC_CLOUD_ACCOUNTS: '1' })

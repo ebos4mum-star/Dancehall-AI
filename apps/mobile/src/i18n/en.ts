@@ -641,6 +641,8 @@ export const en = {
   'community.guidelinesTitle': 'Community guidelines',
   'community.guidelines':
     'Be kind and encouraging. Share your own progress, not numbers about your body: please leave out weight, calories, links, contact details and anything private. No advice about fast weight loss, no medical claims, no comparing bodies. Photos are checked by a person before they appear. You can delete your posts any time, and you can report or block anyone. If something here is hard for you, you can skip it: your goals work without it.',
+  'privacy.policyLink': 'Read our privacy policy',
+  'privacy.supportLink': 'Support and contact',
   'community.contact':
     'Questions, concerns or appeals: email {email}. Use Report on any post, and Block on any member.',
   'community.contactNone': 'Contact details for this community are not set up in this build yet.',

@@ -17,6 +17,9 @@ export interface AppConfig {
   community: boolean;
   /** Public support address shown for appeals and questions. Not a secret. Absent until the owner sets one. */
   supportEmail?: string;
+  /** Public https address of the published privacy policy and support page. Not secrets. Absent until the owner publishes them; the app shows a link only when set. */
+  privacyPolicyUrl?: string;
+  supportUrl?: string;
   appEnv: AppEnv;
   authMode: 'mock' | 'supabase';
   supabaseUrl?: string;
@@ -34,6 +37,9 @@ export interface AppConfig {
    */
   cloudAccounts: boolean;
 }
+
+/** The exact value that confirms the account backend is live and reviewed. A build profile sets it only after the hosted account gates have passed. */
+export const PRODUCTION_ACCOUNTS_ACK = 'backend-live-and-reviewed';
 
 export class ConfigError extends Error {
   constructor(message: string) {
@@ -68,6 +74,17 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
   if (rawSupport && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawSupport))
     throw new ConfigError('EXPO_PUBLIC_SUPPORT_EMAIL must be an email address.');
   const supportEmail = rawSupport || undefined;
+  const publicUrl = (
+    name: 'EXPO_PUBLIC_PRIVACY_POLICY_URL' | 'EXPO_PUBLIC_SUPPORT_URL',
+  ): string | undefined => {
+    const v = env[name]?.trim();
+    if (!v) return undefined;
+    if (!/^https:\/\/[^\s/]+\.[^\s/]+/.test(v) || /[\s"'<>]/.test(v))
+      throw new ConfigError(`${name} must be an https address.`);
+    return v;
+  };
+  const privacyPolicyUrl = publicUrl('EXPO_PUBLIC_PRIVACY_POLICY_URL');
+  const supportUrl = publicUrl('EXPO_PUBLIC_SUPPORT_URL');
   const rawBarcode = env.EXPO_PUBLIC_BARCODE_PROVIDER?.trim();
   if (rawBarcode && !['off', 'local', 'open_food_facts'].includes(rawBarcode))
     throw new ConfigError(`Unknown EXPO_PUBLIC_BARCODE_PROVIDER "${rawBarcode}"`);
@@ -99,6 +116,8 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
       barcodeProvider,
       community: env.EXPO_PUBLIC_COMMUNITY !== '0',
       supportEmail,
+      privacyPolicyUrl,
+      supportUrl,
     };
   }
   if (!url || !key)
@@ -117,9 +136,16 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
     throw new ConfigError('The AI service URL must use https.');
   // Cloud accounts are being rolled out on development and preview builds only. A production build refuses to start with the flag on, so it cannot be switched
   // on there by accident (an EAS profile, a copied .env, a mistaken variable); lifting this needs a deliberate code change and its own review.
-  if (appEnv === 'production' && env.EXPO_PUBLIC_CLOUD_ACCOUNTS === '1')
+  // A production build can offer account creation (App Review needs it for every account feature), but only on purpose: the flag AND a separate acknowledgement
+  // that the account backend is live and reviewed. Neither alone is enough, so an EAS profile, a copied .env or a mistaken variable cannot switch it on by accident.
+  // This changes WHEN accounts may be offered, never HOW people sign in (PIN-first, email-free) or recover.
+  if (
+    appEnv === 'production' &&
+    env.EXPO_PUBLIC_CLOUD_ACCOUNTS === '1' &&
+    env.EXPO_PUBLIC_PRODUCTION_ACCOUNTS !== PRODUCTION_ACCOUNTS_ACK
+  )
     throw new ConfigError(
-      'Cloud accounts are not allowed in a production build yet. Remove EXPO_PUBLIC_CLOUD_ACCOUNTS.',
+      'Cloud accounts in a production build need EXPO_PUBLIC_PRODUCTION_ACCOUNTS to confirm the account backend is live and reviewed. Remove EXPO_PUBLIC_CLOUD_ACCOUNTS until then.',
     );
   return {
     appEnv,
@@ -132,5 +158,7 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
     barcodeProvider,
     community: env.EXPO_PUBLIC_COMMUNITY === '1',
     supportEmail,
+    privacyPolicyUrl,
+    supportUrl,
   };
 }

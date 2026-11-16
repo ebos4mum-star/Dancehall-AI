@@ -1,6 +1,6 @@
 import { useAccount } from '@/account/AccountProvider';
 import { withAccount } from '@/account/gate';
-import { Share, View } from 'react-native';
+import { Linking, Share, View } from 'react-native';
 import { IconChoice, type IconName } from '@/ui/kit';
 import { FoodHero } from '@/food/kit';
 import { BigField } from '@/onboarding/kit';
@@ -182,6 +182,20 @@ function Privacy() {
         <AppText variant="caption" muted>
           {t('privacy.exportNote')}
         </AppText>
+        {config.privacyPolicyUrl ? (
+          <Button
+            variant="secondary"
+            label={t('privacy.policyLink')}
+            onPress={() => void Linking.openURL(config.privacyPolicyUrl!).catch(() => undefined)}
+          />
+        ) : null}
+        {config.supportUrl ? (
+          <Button
+            variant="secondary"
+            label={t('privacy.supportLink')}
+            onPress={() => void Linking.openURL(config.supportUrl!).catch(() => undefined)}
+          />
+        ) : null}
         {store.requestAccountDeletion ? (
           <Button
             variant="secondary"
