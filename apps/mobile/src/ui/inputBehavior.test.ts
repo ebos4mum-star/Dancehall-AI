@@ -85,6 +85,16 @@ describe('Return moves through the form in order and the last field ends it', ()
   });
 });
 
+describe('symbol keyboards never get prose behaviour', () => {
+  it('a date-of-birth style field (numbers-and-punctuation) is never capitalised or autocorrected, and still offers Next', () => {
+    const b = inputBehavior({ keyboardType: 'numbers-and-punctuation', hasNext: true });
+    expect(b.autoCapitalize).toBe('none');
+    expect(b.autoCorrect).toBe(false);
+    expect(b.returnKeyType).toBe('next');
+    expect(inputBehavior({ keyboardType: 'url', hasNext: false }).autoCorrect).toBe(false);
+  });
+});
+
 describe('every input in the app goes through the shared behaviour (static audit)', () => {
   it('the only raw TextInputs are the two wrappers and the Coach message box', () => {
     const files = execSync("grep -rlE '<TextInput( |$)' app src --include=*.tsx", {
@@ -130,5 +140,23 @@ describe('every input in the app goes through the shared behaviour (static audit
       ['src/community/UsernameClaim.tsx', /kind="username"/],
     ];
     for (const [f, re] of must) expect(read(f), f).toMatch(re);
+  });
+});
+
+describe('press feedback is shared, not copied', () => {
+  it('selectable cards use Tappable', () => {
+    const kit = readFileSync(join(__dirname, 'kit.tsx'), 'utf8');
+    const onb = readFileSync(join(__dirname, '../onboarding/kit.tsx'), 'utf8');
+    expect(kit).toMatch(/export function IconChoice[\s\S]*<Tappable/);
+    expect(onb).toMatch(/export function YesNoCard[\s\S]*<Tappable/);
+  });
+});
+
+describe('household fields submit their own action', () => {
+  it('the join code is a code field and Return submits create/join instead of moving to an unrelated field', () => {
+    const src = read('app/food/household.tsx');
+    expect(src).toMatch(/kind="code"/);
+    expect(src).toMatch(/onSubmitEditing=\{\(\) => void run\(\(\) => store\.joinHousehold/);
+    expect(src).toMatch(/onSubmitEditing=\{\(\) => void run\(\(\) => store\.createHousehold/);
   });
 });

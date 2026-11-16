@@ -16,6 +16,17 @@ const NUMERIC: ReadonlySet<string> = new Set(['number-pad', 'decimal-pad', 'nume
 export const isNumericKeyboard = (k: KeyboardTypeOptions | undefined): boolean =>
   !!k && NUMERIC.has(k);
 
+/** Keyboards that are never for prose: digits and symbols, links, email. Autocapitalise and autocorrect would only corrupt what is typed (a date of birth, a URL). */
+const NOT_PROSE: ReadonlySet<string> = new Set([
+  ...NUMERIC,
+  'numbers-and-punctuation',
+  'url',
+  'email-address',
+  'visible-password',
+]);
+export const isProseKeyboard = (k: KeyboardTypeOptions | undefined): boolean =>
+  !k || !NOT_PROSE.has(k);
+
 export interface InputBehaviorIn {
   kind?: FieldKind;
   keyboardType?: KeyboardTypeOptions;
@@ -68,6 +79,7 @@ export function inputBehavior(i: InputBehaviorIn): InputBehaviorOut {
     kind === 'code' ||
     kind === 'name' ||
     kind === 'search' ||
+    !isProseKeyboard(i.keyboardType) ||
     !!i.secureTextEntry;
   const autoCapitalize =
     i.autoCapitalize ?? (kind === 'name' ? 'words' : never ? 'none' : 'sentences');

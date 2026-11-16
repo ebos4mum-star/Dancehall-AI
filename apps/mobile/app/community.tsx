@@ -69,7 +69,7 @@ export default function CommunityScreen() {
     <Screen
       top={false}
       banner={{
-        world: 'friends',
+        world: 'community',
         title: t('ban.community.title'),
         line: t('ban.community.line'),
         pulse: 'idle',

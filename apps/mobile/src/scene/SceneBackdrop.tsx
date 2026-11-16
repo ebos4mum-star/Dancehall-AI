@@ -16,7 +16,17 @@ import { useReducedMotion } from '@/a11y/useReducedMotion';
 import { brand } from '@/theme/tokens';
 
 /** Each main tab has its own environment. They share lighting, palette, framing and the stage floor, so they read as one world. */
-export const WORLDS = ['today', 'dance', 'food', 'coach', 'me', 'friends', 'progress'] as const;
+export const WORLDS = [
+  'today',
+  'dance',
+  'food',
+  'coach',
+  'me',
+  'friends',
+  'progress',
+  'community',
+  'onboard',
+] as const;
 export type World = (typeof WORLDS)[number];
 
 const SKY: Record<World, [string, string, string]> = {
@@ -27,9 +37,11 @@ const SKY: Record<World, [string, string, string]> = {
   me: ['#1A0E2E', '#2A1850', '#4A3290'],
   friends: ['#1A0E2E', '#2B1650', '#5B2F7A'],
   progress: ['#150B29', '#25194F', '#3E3A8C'],
+  community: ['#1A0E2E', '#2E1858', '#6A3A86'],
+  onboard: ['#160B29', '#2A1A52', '#5A3FA0'],
 };
 
-function Props({ world }: { world: World }) {
+function Props({ world, chapter }: { world: World; chapter: number }) {
   switch (world) {
     case 'dance':
       return (
@@ -120,8 +132,277 @@ function Props({ world }: { world: World }) {
             fill="none"
             opacity={0.5}
           />
+          {/* a quiet study nook: shelf of books, a reading lamp and a cup of tea */}
+          <Rect x="14" y="196" width="104" height="5" rx="2" fill="#4A2B8C" />
+          {[
+            [18, 168, 12, brand.coral],
+            [32, 176, 10, brand.violet],
+            [44, 164, 13, brand.lime],
+            [59, 172, 11, brand.ivory],
+            [72, 170, 12, brand.coral],
+            [86, 178, 10, brand.violet],
+          ].map(([x, y, w, c], k) => (
+            <Rect
+              key={k}
+              x={x as number}
+              y={y as number}
+              width={w as number}
+              height={196 - (y as number)}
+              rx="2"
+              fill={c as string}
+              opacity={0.5}
+            />
+          ))}
+          <Path d="M316 248 V196" stroke={brand.ivory} strokeWidth="3" opacity={0.5} />
+          <Path d="M298 196 L334 196 L326 170 L306 170 Z" fill={brand.lime} opacity={0.45} />
+          <Polygon points="306,196 326,196 352,250 280,250" fill={brand.lime} opacity={0.07} />
+          <Path d="M150 244 H182 L178 226 H154 Z" fill={brand.ivory} opacity={0.4} />
+          <Path
+            d="M162 220 Q156 208 164 198 M172 220 Q178 210 170 200"
+            stroke={brand.ivory}
+            strokeWidth="2"
+            fill="none"
+            strokeLinecap="round"
+            opacity={0.25}
+          />
         </G>
       );
+    case 'community':
+      return (
+        <G>
+          {/* a village square: bunting across the sky, a notice board with pinned notes, lanterns */}
+          <Path
+            d="M-4 30 Q90 74 180 38 T364 34"
+            stroke={brand.ivory}
+            strokeWidth="1.5"
+            fill="none"
+            opacity={0.7}
+          />
+          {[22, 62, 104, 148, 196, 240, 284, 328].map((x, k) => (
+            <Polygon
+              key={x}
+              points={`${x - 11},${44 + (k % 2 ? 2 : 0) + Math.sin(k) * 6} ${x + 11},${44 + (k % 2 ? 2 : 0) + Math.sin(k) * 6} ${x},${66 + Math.sin(k) * 6}`}
+              fill={[brand.coral, brand.lime, brand.violet][k % 3]}
+              opacity={0.9}
+            />
+          ))}
+          <Rect x="40" y="168" width="104" height="64" rx="8" fill="#4A2B8C" opacity={0.95} />
+          <Rect x="48" y="176" width="88" height="48" rx="5" fill="#2A1850" />
+          {[
+            [56, 184, brand.lime],
+            [88, 182, brand.coral],
+            [112, 194, brand.ivory],
+            [60, 204, brand.violet],
+          ].map(([x, y, c], k) => (
+            <Rect
+              key={k}
+              x={x as number}
+              y={y as number}
+              width="22"
+              height="18"
+              rx="2"
+              fill={c as string}
+              opacity={0.75}
+            />
+          ))}
+          <Rect x="60" y="232" width="6" height="16" fill="#4A2B8C" />
+          <Rect x="118" y="232" width="6" height="16" fill="#4A2B8C" />
+          {[200, 300].map((x, k) => (
+            <G key={x}>
+              <Path
+                d={`M${x} 90 V${120 + k * 10}`}
+                stroke={brand.violet}
+                strokeWidth="1.5"
+                opacity={0.9}
+              />
+              <Ellipse cx={x} cy={134 + k * 10} rx="12" ry="15" fill={brand.coral} opacity={0.85} />
+              <Ellipse cx={x} cy={134 + k * 10} rx="30" ry="34" fill={brand.coral} opacity={0.16} />
+            </G>
+          ))}
+          <Rect x="168" y="214" width="62" height="12" rx="6" fill={brand.violet} opacity={0.25} />
+          <Path
+            d="M160 236 H250 M176 244 H236"
+            stroke={brand.violet}
+            strokeWidth="1.5"
+            opacity={0.35}
+          />
+        </G>
+      );
+    case 'onboard': {
+      const ch = Math.min(5, Math.max(1, Math.round(chapter)));
+      const mx = [34, 108, 182, 254, 322][ch - 1]!;
+      const my = [252, 247, 242, 236, 224][ch - 1]!;
+      return (
+        <G>
+          {/* the journey: one winding trail, a lantern marking how far along you are */}
+          <Path
+            d="M-10 262 C 70 238 120 260 190 242 S 310 238 370 216"
+            stroke={brand.ivory}
+            strokeWidth="3"
+            strokeDasharray="2 8"
+            strokeLinecap="round"
+            fill="none"
+            opacity={0.4}
+          />
+          {/* the chapter emblem, hung in the open corner above Pulse so each step is recognisable at a glance */}
+          <Circle cx="306" cy="58" r="44" fill={brand.lime} opacity={0.1} />
+          <Circle cx="306" cy="58" r="32" fill="#24143D" opacity={0.75} />
+          <G transform="translate(-26 0)">
+            <Circle
+              cx="306"
+              cy="58"
+              r="32"
+              stroke={brand.lime}
+              strokeWidth="2.5"
+              fill="none"
+              opacity={0.8}
+            />
+            {ch === 1 ? (
+              <G>
+                <Path d="M306 76 V40" stroke={brand.ivory} strokeWidth="3" strokeLinecap="round" />
+                <Path d="M306 42 H326 L332 49 L326 56 H306 Z" fill={brand.coral} />
+                <Path d="M306 58 H288 L282 65 L288 72 H306 Z" fill={brand.violet} />
+              </G>
+            ) : null}
+            {ch === 2 ? (
+              <G>
+                <Path
+                  d="M306 38 L324 45 V60 C324 70 315 77 306 81 C297 77 288 70 288 60 V45 Z"
+                  fill={brand.lime}
+                />
+                <Path
+                  d="M298 59 L304 65 L315 52"
+                  stroke={brand.plum}
+                  strokeWidth="4"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </G>
+            ) : null}
+            {ch === 3 ? (
+              <G>
+                <Rect x="286" y="52" width="40" height="12" rx="6" fill={brand.ivory} />
+                {[292, 300, 308, 316, 324].map((x, k) => (
+                  <Path
+                    key={x}
+                    d={`M${x} 52 V${k % 2 ? 58 : 61}`}
+                    stroke={brand.plum}
+                    strokeWidth="2"
+                  />
+                ))}
+                <Ellipse cx="306" cy="76" rx="14" ry="5" fill={brand.violet} />
+              </G>
+            ) : null}
+            {ch === 4 ? (
+              <G>
+                <Path
+                  d="M306 80 C 284 64 288 44 299 46 C 303 47 306 51 306 54 C 306 51 309 47 313 46 C 324 44 328 64 306 80 Z"
+                  fill={brand.coral}
+                />
+                <Path
+                  d="M291 62 H301 L305 55 L310 68 L314 61 H323"
+                  stroke={brand.lime}
+                  strokeWidth="2.5"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </G>
+            ) : null}
+            {ch === 5 ? (
+              <G>
+                <Polygon points="286,80 306,52 326,80" fill={brand.violet} />
+                <Path d="M306 52 V32" stroke={brand.ivory} strokeWidth="3" strokeLinecap="round" />
+                <Path d="M306 32 L324 38 L306 44 Z" fill={brand.coral} />
+              </G>
+            ) : null}
+          </G>
+          <Circle cx={mx} cy={my} r="20" fill={brand.lime} opacity={0.14} />
+          <Circle cx={mx} cy={my} r="9" fill={brand.lime} opacity={0.85} />
+          {ch === 1 ? (
+            <G>
+              {/* a signpost at the start of the path: "who is walking?" */}
+              <Path d="M168 248 V196" stroke={brand.ivory} strokeWidth="3" opacity={0.55} />
+              <Path d="M168 198 H206 L214 207 L206 216 H168 Z" fill={brand.coral} opacity={0.85} />
+              <Path d="M168 222 H138 L130 230 L138 238 H168 Z" fill={brand.violet} opacity={0.9} />
+            </G>
+          ) : null}
+          {ch === 2 ? (
+            <G>
+              {/* a lantern-lit gate with a shield: your information, your say */}
+              <Rect x="236" y="112" width="12" height="136" rx="4" fill="#4A2B8C" />
+              <Rect x="312" y="112" width="12" height="136" rx="4" fill="#4A2B8C" />
+              <Path d="M236 118 Q280 62 324 118" stroke="#6B49BD" strokeWidth="10" fill="none" />
+              <Ellipse cx="242" cy="104" rx="9" ry="11" fill={brand.coral} opacity={0.6} />
+              <Ellipse cx="318" cy="104" rx="9" ry="11" fill={brand.coral} opacity={0.6} />
+            </G>
+          ) : null}
+          {ch === 3 ? (
+            <G>
+              {/* stepping stones and a soft ruler: getting to know your body, gently */}
+              {[
+                [214, 232, 26],
+                [252, 216, 24],
+                [288, 196, 22],
+                [320, 172, 20],
+              ].map(([x, y, r], k) => (
+                <Ellipse
+                  key={k}
+                  cx={x}
+                  cy={y}
+                  rx={r as number}
+                  ry={(r as number) * 0.4}
+                  fill="#6B49BD"
+                  opacity={0.95}
+                />
+              ))}
+              <Rect x="40" y="96" width="14" height="150" rx="5" fill={brand.ivory} opacity={0.2} />
+              {Array.from({ length: 10 }, (_, k) => (
+                <Path
+                  key={k}
+                  d={`M40 ${104 + k * 14} H${k % 2 ? 48 : 54}`}
+                  stroke={brand.plum}
+                  strokeWidth="2"
+                  opacity={0.6}
+                />
+              ))}
+            </G>
+          ) : null}
+          {ch === 4 ? (
+            <G>
+              {/* a heart beacon with calm rings: how you feel today */}
+              {[70, 52, 34].map((r, k) => (
+                <Circle
+                  key={r}
+                  cx="272"
+                  cy="130"
+                  r={r}
+                  stroke={brand.coral}
+                  strokeWidth="1.5"
+                  fill="none"
+                  opacity={0.12 + k * 0.08}
+                />
+              ))}
+            </G>
+          ) : null}
+          {ch === 5 ? (
+            <G>
+              {/* the summit with a flag: the goal you choose */}
+              <Polygon points="190,246 262,110 340,246" fill="#4C3699" opacity={0.95} />
+              <Polygon points="262,110 292,166 262,156 238,170" fill={brand.ivory} opacity={0.35} />
+              {[
+                { x: 60, y: 60 },
+                { x: 150, y: 40 },
+                { x: 330, y: 50 },
+              ].map(({ x, y }) => (
+                <Circle key={x} cx={x} cy={y} r="2.5" fill={brand.lime} opacity={0.7} />
+              ))}
+            </G>
+          ) : null}
+        </G>
+      );
+    }
     case 'me':
       return (
         <G>
@@ -151,15 +432,15 @@ function Props({ world }: { world: World }) {
       return (
         <G>
           {/* a warm campfire glow with lanterns strung between friends */}
-          <Ellipse cx="180" cy="232" rx="90" ry="22" fill={brand.coral} opacity={0.12} />
-          <Path d="M168 238 Q180 196 192 238 Z" fill={brand.coral} opacity={0.6} />
-          <Path d="M174 238 Q180 214 186 238 Z" fill={brand.lime} opacity={0.5} />
+          <Ellipse cx="180" cy="232" rx="90" ry="22" fill={brand.coral} opacity={0.28} />
+          <Path d="M168 238 Q180 196 192 238 Z" fill={brand.coral} opacity={0.9} />
+          <Path d="M174 238 Q180 214 186 238 Z" fill={brand.lime} opacity={0.8} />
           <Path
             d="M0 40 Q90 90 180 50 T360 44"
             stroke={brand.violet}
             strokeWidth="1.5"
             fill="none"
-            opacity={0.5}
+            opacity={0.8}
           />
           {[40, 110, 180, 250, 320].map((x, k) => (
             <Circle
@@ -173,15 +454,15 @@ function Props({ world }: { world: World }) {
           ))}
           {[60, 300].map((x) => (
             <G key={x}>
-              <Circle cx={x} cy="206" r="14" fill="#4A2B8C" opacity={0.85} />
+              <Circle cx={x} cy="206" r="14" fill="#7A58D0" opacity={0.9} />
               <Rect
                 x={x - 16}
                 y="218"
                 width="32"
                 height="30"
                 rx="14"
-                fill="#4A2B8C"
-                opacity={0.85}
+                fill="#7A58D0"
+                opacity={0.9}
               />
             </G>
           ))}
@@ -229,7 +510,14 @@ function Props({ world }: { world: World }) {
  * The layered environment behind a hero: sky, rhythm arcs, a world-specific prop layer, curtains, spotlight and a lime-rimmed floor. Static art
  * with one slowly drifting glow (stops under reduced motion). Decorative: hidden from screen readers. Absolutely fills its parent.
  */
-export function SceneBackdrop({ world = 'today' }: { world?: World }) {
+export function SceneBackdrop({
+  world = 'today',
+  chapter = 1,
+}: {
+  world?: World;
+  /** Onboarding only: which of the five steps (1 to 5) the scene shows. */
+  chapter?: number;
+}) {
   const reduced = useReducedMotion();
   const drift = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -311,7 +599,7 @@ export function SceneBackdrop({ world = 'today' }: { world?: World }) {
           opacity={0.18}
         />
         <Polygon points="226,0 254,0 330,240 150,240" fill={`url(#${id}-beam)`} />
-        <Props world={world} />
+        <Props world={world} chapter={chapter} />
         <Path d="M0 0 H40 C30 70 46 150 26 250 L0 262 Z" fill={`url(#${id}-curtain)`} />
         <Path d="M360 0 H322 C332 66 316 150 338 250 L360 262 Z" fill={`url(#${id}-curtain)`} />
         <Path

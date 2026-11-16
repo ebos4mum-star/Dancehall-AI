@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
+import { Tappable } from '@/ui/Tappable';
 import { useFormField } from '@/ui/formFocus';
 import type { FieldKind } from '@/ui/inputBehavior';
 import {
-  Pressable,
   Switch,
   TextInput,
   View,
@@ -39,7 +39,7 @@ export function JourneyHeader({
   stepLabel: string;
 }) {
   return (
-    <HeroScene world="today" height={248}>
+    <HeroScene world="onboard" chapter={step} height={292}>
       <View style={{ position: 'absolute', top: spacing.md, left: spacing.md, right: 128 }}>
         <View
           accessible
@@ -55,7 +55,7 @@ export function JourneyHeader({
           <AppText style={{ color: brand.plum, fontWeight: '600' }}>{line}</AppText>
         </View>
       </View>
-      <View style={{ position: 'absolute', right: -6, top: 24 }}>
+      <View style={{ position: 'absolute', right: -6, top: 70 }}>
         <PulseStage state={pulse} size={150} />
       </View>
       <View
@@ -380,7 +380,7 @@ export function YesNoCard({
   const opt = (v: boolean, label: string, icon: IconName) => {
     const selected = value === v;
     return (
-      <Pressable
+      <Tappable
         accessibilityRole="radio"
         accessibilityState={{ selected }}
         aria-checked={selected}
@@ -408,7 +408,7 @@ export function YesNoCard({
           color={selected ? colors.success : colors.textMuted}
         />
         <AppText variant="label">{label}</AppText>
-      </Pressable>
+      </Tappable>
     );
   };
   return (

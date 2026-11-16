@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { Tappable } from '@/ui/Tappable';
 import { Pressable, View, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { brand, MIN_TOUCH_TARGET, radius, spacing } from '@/theme/tokens';
@@ -159,7 +160,7 @@ export function IconChoice({
 }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <Tappable
       accessibilityRole="button"
       accessibilityState={{ selected }}
       accessibilityLabel={label}
@@ -185,7 +186,7 @@ export function IconChoice({
       <AppText variant="caption" style={{ fontWeight: selected ? '700' : '500' }}>
         {label}
       </AppText>
-    </Pressable>
+    </Tappable>
   );
 }
 

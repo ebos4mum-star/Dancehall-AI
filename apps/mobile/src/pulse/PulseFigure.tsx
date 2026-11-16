@@ -49,6 +49,7 @@ export function PulseFigure({
   beat = 0,
   flourish,
   cosmetics,
+  blink = false,
 }: {
   state: PulseState;
   size?: number;
@@ -58,6 +59,8 @@ export function PulseFigure({
   cosmetics?: readonly CosmeticId[];
   /** 0 or 1: which dance pose to show. Ignored for other states. */
   beat?: 0 | 1;
+  /** A momentary blink: the eyes close for an instant. Driven by the stage, idle only. */
+  blink?: boolean;
 }) {
   // SVG ids are document-global: every instance needs its own, or hidden tabs' gradients shadow the visible figure.
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
@@ -66,7 +69,7 @@ export function PulseFigure({
   const pose = state === 'dance' && beat === 1 ? DANCE_ALT : POSES[state];
   const celebrate = state === 'celebrate';
   const encourage = state === 'encourage';
-  const eyeRy = state === 'welcome' ? 14 : encourage ? 9.5 : 12.5;
+  const eyeRy = blink ? 1.6 : state === 'welcome' ? 14 : encourage ? 9.5 : 12.5;
   return (
     <Svg width={size} height={size * (262 / 280)} viewBox="-40 -12 280 262">
       <Defs>

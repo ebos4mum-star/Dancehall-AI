@@ -113,6 +113,8 @@ function HouseholdScreen() {
               value={name}
               onChangeText={setName}
               maxLength={40}
+              returnKeyType="done"
+              onSubmitEditing={() => void run(() => store.createHousehold!(name))}
             />
             <Button
               label={t('household.create')}
@@ -125,7 +127,10 @@ function HouseholdScreen() {
               label={t('household.joinLabel')}
               value={code}
               onChangeText={setCode}
+              kind="code"
               autoCapitalize="characters"
+              returnKeyType="done"
+              onSubmitEditing={() => void run(() => store.joinHousehold!(code))}
               maxLength={24}
             />
             <Button

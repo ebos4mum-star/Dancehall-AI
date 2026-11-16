@@ -130,6 +130,30 @@ export function PulseStage({
     return () => clearInterval(h);
   }, [state, reduced]);
 
+  // A rare, quick blink while resting makes Pulse feel alive without ever pulling attention. Never with Reduce Motion, never during another state.
+  const [blink, setBlink] = useState(false);
+  useEffect(() => {
+    if (state !== 'idle' || reduced) {
+      setBlink(false);
+      return;
+    }
+    let h: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      h = setTimeout(
+        () => {
+          setBlink(true);
+          h = setTimeout(() => {
+            setBlink(false);
+            schedule();
+          }, 140);
+        },
+        3800 + Math.random() * 3200,
+      );
+    };
+    schedule();
+    return () => clearTimeout(h);
+  }, [state, reduced]);
+
   const lean = state === 'encourage' ? 7 : 4;
   return (
     <View
@@ -160,6 +184,7 @@ export function PulseStage({
           beat={beat}
           flourish={flourish}
           cosmetics={cosmetics}
+          blink={blink}
         />
       </Animated.View>
     </View>

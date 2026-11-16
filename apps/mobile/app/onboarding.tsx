@@ -29,6 +29,7 @@ import { AppText } from '@/ui/AppText';
 import { Button } from '@/ui/Button';
 import { Notice } from '@/ui/Banner';
 import { IconBadge, IconChoice, type IconName } from '@/ui/kit';
+import { StepTransition } from '@/ui/StepTransition';
 import { BigField, JourneyHeader, StepCard, TrustCard, YesNoCard } from '@/onboarding/kit';
 import { Ionicons } from '@expo/vector-icons';
 import { brand } from '@/theme/tokens';
@@ -243,361 +244,362 @@ export default function Onboarding() {
         stepLabel={t('onb.step', { n: step, total: TOTAL })}
       />
 
-      {step === 1 && (
-        <>
-          <StepCard icon="person" title={t('onb.aboutTitle')} note={t('onb.aboutBody')}>
-            <BigField
-              label={t('onb.name')}
-              kind="name"
-              icon="person-circle"
-              value={name}
-              onChangeText={setName}
-              autoComplete="name"
-              maxLength={40}
-            />
-            <BigField
-              label={t('onb.birthDate')}
-              icon="calendar"
-              hint={t('onb.birthHint')}
-              value={birth}
-              onChangeText={setBirth}
-              keyboardType="numbers-and-punctuation"
-              placeholder="1990-05-21"
-              maxLength={10}
-              status={ageStatus}
-            />
-          </StepCard>
-          <StepCard icon="globe" title={t('onb.country')} note={t('onb.countryNote')}>
-            {selectedCountry ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <IconBadge
-                  name="checkmark"
-                  size={36}
-                  fill={colors.successBg}
-                  color={colors.success}
-                />
-                <AppText
-                  variant="heading"
-                  style={{ flex: 1 }}
-                >{`✓ ${selectedCountry.name}`}</AppText>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t('onb.changeCountry')}
-                  onPress={() => {
-                    setCountry(null);
-                    setCountryQuery('');
-                  }}
-                  style={{
-                    minHeight: MIN_TOUCH_TARGET,
-                    justifyContent: 'center',
-                    paddingHorizontal: spacing.sm,
-                  }}
-                >
-                  <AppText variant="label" style={{ color: colors.primary }}>
-                    {t('onb.changeCountry')}
-                  </AppText>
-                </Pressable>
-              </View>
-            ) : (
-              <>
-                <BigField
-                  label={t('onb.country')}
-                  kind="search"
-                  icon="search"
-                  value={countryQuery}
-                  onChangeText={(v) => {
-                    setCountryQuery(v);
-                    setCountry(null);
-                  }}
-                  placeholder={t('onb.countrySearch')}
-                />
-                {countryQuery.length > 0
-                  ? filtered.map((c) => (
-                      <Pressable
-                        key={c.code}
-                        accessibilityRole="button"
-                        accessibilityLabel={c.name}
-                        onPress={() => {
-                          setCountry(c.code);
-                          setCountryQuery('');
-                        }}
-                        style={{
-                          minHeight: MIN_TOUCH_TARGET,
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: spacing.sm,
-                          paddingHorizontal: spacing.md,
-                          borderRadius: radius.md,
-                          backgroundColor: colors.background,
-                          borderWidth: 1,
-                          borderColor: colors.border,
-                        }}
-                      >
-                        <Ionicons name="location" size={18} color={colors.textMuted} />
-                        <AppText style={{ flex: 1 }}>{c.name}</AppText>
-                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-                      </Pressable>
-                    ))
-                  : null}
-              </>
-            )}
-          </StepCard>
-          <StepCard icon="resize" title={t('onb.units')}>
-            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-              {(
-                [
-                  ['metric', 'speedometer', t('common.metric')],
-                  ['imperial', 'flag', t('common.imperial')],
-                ] as const
-              ).map(([v, icon, label]) => (
-                <View key={v} style={{ flex: 1 }}>
-                  <IconChoice
-                    icon={icon}
-                    label={label}
-                    selected={units === v}
-                    onPress={() => setUnits(v)}
-                    tint={brand.lime}
-                  />
-                </View>
-              ))}
-            </View>
-          </StepCard>
-        </>
-      )}
-
-      {step === 2 && (
-        <>
-          <StepCard
-            icon="shield-checkmark"
-            title={t('onb.consentTitle')}
-            note={t('onb.consentBody')}
-          >
-            <AppText variant="caption" muted>
-              {t('onb.consentSummary')}
-            </AppText>
-          </StepCard>
-          {(Object.keys(CONSENT_LABEL) as ConsentPurpose[]).map((p) => {
-            const [labelKey, bodyKey] = CONSENT_LABEL[p];
-            return (
-              <TrustCard
-                key={p}
-                icon={CONSENT_ICON[p]}
-                title={t(labelKey)}
-                body={t(bodyKey)}
-                required={!OPTIONAL_CONSENTS.includes(p)}
-                value={consents[p]}
-                onChange={(v) => setConsents({ ...consents, [p]: v })}
-                requiredLabel={t('onb.tagRequired')}
-                optionalLabel={t('onb.tagOptional')}
-              />
-            );
-          })}
-        </>
-      )}
-
-      {step === 3 && (
-        <>
-          <StepCard icon="body" title={t('onb.bodyTitle')} note={t('onb.bodyBody')}>
-            {units === 'metric' ? (
+      <StepTransition stepKey={step}>
+        {step === 1 && (
+          <>
+            <StepCard icon="person" title={t('onb.aboutTitle')} note={t('onb.aboutBody')}>
               <BigField
-                label={t('onb.heightCm')}
-                icon="resize"
-                suffix="cm"
-                value={heightCm}
-                onChangeText={setHeightCm}
-                keyboardType="decimal-pad"
+                label={t('onb.name')}
+                kind="name"
+                icon="person-circle"
+                value={name}
+                onChangeText={setName}
+                autoComplete="name"
+                maxLength={40}
               />
-            ) : (
-              <View style={{ flexDirection: 'row', gap: spacing.md }}>
-                <View style={{ flex: 1 }}>
+              <BigField
+                label={t('onb.birthDate')}
+                icon="calendar"
+                hint={t('onb.birthHint')}
+                value={birth}
+                onChangeText={setBirth}
+                keyboardType="numbers-and-punctuation"
+                placeholder="1990-05-21"
+                maxLength={10}
+                status={ageStatus}
+              />
+            </StepCard>
+            <StepCard icon="globe" title={t('onb.country')} note={t('onb.countryNote')}>
+              {selectedCountry ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                  <IconBadge
+                    name="checkmark"
+                    size={36}
+                    fill={colors.successBg}
+                    color={colors.success}
+                  />
+                  <AppText
+                    variant="heading"
+                    style={{ flex: 1 }}
+                  >{`✓ ${selectedCountry.name}`}</AppText>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('onb.changeCountry')}
+                    onPress={() => {
+                      setCountry(null);
+                      setCountryQuery('');
+                    }}
+                    style={{
+                      minHeight: MIN_TOUCH_TARGET,
+                      justifyContent: 'center',
+                      paddingHorizontal: spacing.sm,
+                    }}
+                  >
+                    <AppText variant="label" style={{ color: colors.primary }}>
+                      {t('onb.changeCountry')}
+                    </AppText>
+                  </Pressable>
+                </View>
+              ) : (
+                <>
                   <BigField
-                    label={t('onb.heightFt')}
-                    icon="resize"
-                    suffix="ft"
-                    value={feet}
-                    onChangeText={setFeet}
-                    keyboardType="number-pad"
+                    label={t('onb.country')}
+                    kind="search"
+                    icon="search"
+                    value={countryQuery}
+                    onChangeText={(v) => {
+                      setCountryQuery(v);
+                      setCountry(null);
+                    }}
+                    placeholder={t('onb.countrySearch')}
                   />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <BigField
-                    label={t('onb.heightIn')}
-                    icon="resize"
-                    suffix="in"
-                    value={inches}
-                    onChangeText={setInches}
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
-            )}
-            <BigField
-              label={`${t('onb.weight')} (${unitWord})`}
-              icon="scale"
-              suffix={unitWord}
-              value={weight}
-              onChangeText={setWeight}
-              keyboardType="decimal-pad"
-            />
-          </StepCard>
-          <StepCard icon="people" title={t('onb.sex')}>
-            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-              {(
-                [
-                  ['female', 'female'],
-                  ['male', 'male'],
-                  ['unspecified', 'help-circle'],
-                ] as const
-              ).map(([v, icon]) => (
-                <View key={v} style={{ flex: 1 }}>
-                  <IconChoice
-                    icon={icon}
-                    label={t(`sex.${v}` as StringKey)}
-                    selected={sex === v}
-                    onPress={() => setSex(v)}
-                    tint={brand.lime}
-                  />
-                </View>
-              ))}
-            </View>
-          </StepCard>
-          <StepCard icon="walk" title={t('onb.activity')}>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {(
-                [
-                  ['low', 'bed'],
-                  ['light', 'walk'],
-                  ['moderate', 'bicycle'],
-                  ['high', 'flame'],
-                ] as const
-              ).map(([v, icon]) => (
-                <View key={v} style={{ flexBasis: '47%', flexGrow: 1 }}>
-                  <IconChoice
-                    icon={icon}
-                    label={t(`activity.${v}` as StringKey)}
-                    selected={activity === v}
-                    onPress={() => setActivity(v)}
-                    tint={brand.lime}
-                  />
-                </View>
-              ))}
-            </View>
-          </StepCard>
-        </>
-      )}
-
-      {step === 4 && (
-        <>
-          <StepCard icon="heart" title={t('onb.readyTitle')} note={t('onb.readyBody')}>
-            <AppText variant="caption" muted>
-              {t('onb.readyProgress', {
-                n: READINESS_QUESTIONS.filter((q) => answers[q] !== undefined).length,
-                total: READINESS_QUESTIONS.length,
-              })}
-            </AppText>
-          </StepCard>
-          {READINESS_QUESTIONS.map((q) => (
-            <YesNoCard
-              key={q}
-              question={t(`ready.q.${q}` as StringKey)}
-              value={answers[q]}
-              onChange={(v) => setAnswers({ ...answers, [q]: v })}
-              yes={t('ready.yes')}
-              no={t('ready.no')}
-            />
-          ))}
-          {readiness.flagged.length > 0 ? <Notice>{t('onb.readyNote')}</Notice> : null}
-        </>
-      )}
-
-      {step === 5 && (
-        <>
-          <StepCard icon="flag" title={t('onb.goalTitle')} note={t('onb.goalBody')}>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {(
-                [
-                  ['none', 'fitness', t('wl.intent.fitness')],
-                  ['lose', 'trending-down', t('wl.intent.lose')],
-                  ['maintain', 'swap-horizontal', t('wl.intent.maintain')],
-                  ['gain', 'trending-up', t('goals.gain')],
-                ] as const
-              ).map(([v, icon, label]) => (
-                <View key={v} style={{ flexBasis: '47%', flexGrow: 1 }}>
-                  <IconChoice
-                    icon={icon}
-                    label={label}
-                    selected={goalType === v}
-                    onPress={() => setGoalType(v)}
-                    tint={brand.lime}
-                  />
-                </View>
-              ))}
-            </View>
-            <AppText variant="caption" muted accessibilityLiveRegion="polite">
-              {t(`wl.intentNote.${goalType === 'none' ? 'fitness' : goalType}` as StringKey)}
-            </AppText>
-          </StepCard>
-          {goalType !== 'none' && (
-            <StepCard icon="calendar" title={t('goals.period')}>
+                  {countryQuery.length > 0
+                    ? filtered.map((c) => (
+                        <Pressable
+                          key={c.code}
+                          accessibilityRole="button"
+                          accessibilityLabel={c.name}
+                          onPress={() => {
+                            setCountry(c.code);
+                            setCountryQuery('');
+                          }}
+                          style={{
+                            minHeight: MIN_TOUCH_TARGET,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: spacing.sm,
+                            paddingHorizontal: spacing.md,
+                            borderRadius: radius.md,
+                            backgroundColor: colors.background,
+                            borderWidth: 1,
+                            borderColor: colors.border,
+                          }}
+                        >
+                          <Ionicons name="location" size={18} color={colors.textMuted} />
+                          <AppText style={{ flex: 1 }}>{c.name}</AppText>
+                          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                        </Pressable>
+                      ))
+                    : null}
+                </>
+              )}
+            </StepCard>
+            <StepCard icon="resize" title={t('onb.units')}>
               <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                {(['weekly', 'monthly', 'yearly'] as const).map((v) => (
+                {(
+                  [
+                    ['metric', 'speedometer', t('common.metric')],
+                    ['imperial', 'flag', t('common.imperial')],
+                  ] as const
+                ).map(([v, icon, label]) => (
                   <View key={v} style={{ flex: 1 }}>
                     <IconChoice
-                      icon="calendar"
-                      label={t(`goals.${v}` as StringKey)}
-                      selected={goalPeriod === v}
-                      onPress={() => setGoalPeriod(v)}
+                      icon={icon}
+                      label={label}
+                      selected={units === v}
+                      onPress={() => setUnits(v)}
                       tint={brand.lime}
                     />
                   </View>
                 ))}
               </View>
-              {goalType !== 'maintain' && (
+            </StepCard>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <StepCard
+              icon="shield-checkmark"
+              title={t('onb.consentTitle')}
+              note={t('onb.consentBody')}
+            >
+              <AppText variant="caption" muted>
+                {t('onb.consentSummary')}
+              </AppText>
+            </StepCard>
+            {(Object.keys(CONSENT_LABEL) as ConsentPurpose[]).map((p) => {
+              const [labelKey, bodyKey] = CONSENT_LABEL[p];
+              return (
+                <TrustCard
+                  key={p}
+                  icon={CONSENT_ICON[p]}
+                  title={t(labelKey)}
+                  body={t(bodyKey)}
+                  required={!OPTIONAL_CONSENTS.includes(p)}
+                  value={consents[p]}
+                  onChange={(v) => setConsents({ ...consents, [p]: v })}
+                  requiredLabel={t('onb.tagRequired')}
+                  optionalLabel={t('onb.tagOptional')}
+                />
+              );
+            })}
+          </>
+        )}
+
+        {step === 3 && (
+          <>
+            <StepCard icon="body" title={t('onb.bodyTitle')} note={t('onb.bodyBody')}>
+              {units === 'metric' ? (
                 <BigField
-                  label={t('goals.target', { unit: unitWord })}
-                  icon="trophy"
-                  suffix={unitWord}
-                  hint={t('goals.targetHint')}
-                  value={goalTarget}
-                  onChangeText={setGoalTarget}
+                  label={t('onb.heightCm')}
+                  icon="resize"
+                  suffix="cm"
+                  value={heightCm}
+                  onChangeText={setHeightCm}
                   keyboardType="decimal-pad"
                 />
+              ) : (
+                <View style={{ flexDirection: 'row', gap: spacing.md }}>
+                  <View style={{ flex: 1 }}>
+                    <BigField
+                      label={t('onb.heightFt')}
+                      icon="resize"
+                      suffix="ft"
+                      value={feet}
+                      onChangeText={setFeet}
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <BigField
+                      label={t('onb.heightIn')}
+                      icon="resize"
+                      suffix="in"
+                      value={inches}
+                      onChangeText={setInches}
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
               )}
+              <BigField
+                label={`${t('onb.weight')} (${unitWord})`}
+                icon="scale"
+                suffix={unitWord}
+                value={weight}
+                onChangeText={setWeight}
+                keyboardType="decimal-pad"
+              />
             </StepCard>
-          )}
-          {goalType !== 'none' && proposal ? (
-            <View
-              style={{
-                borderRadius: radius.lg,
-                borderWidth: 2,
-                borderColor: proposal.status === 'block' ? colors.warningText : colors.primary,
-                backgroundColor: proposal.status === 'block' ? colors.warningBg : colors.surface,
-                padding: spacing.lg,
-                gap: spacing.xs,
-              }}
-            >
-              <AppText variant="label">
-                {t(proposal.status === 'block' ? 'goals.blocked' : 'onb.goalProposed')}
-              </AppText>
-              {proposal.goal ? (
-                <AppText variant="title">{`${formatWeight(proposal.goal.startKg, units)} → ${formatWeight(proposal.goal.targetKg, units)}`}</AppText>
-              ) : null}
-              {proposal.goal ? (
-                <AppText
-                  variant="caption"
-                  muted
-                >{`${t(`goals.${proposal.goal.period}` as StringKey)} (${t('goals.until', { date: goalEndDate(todayIso(), goalPeriod) })})`}</AppText>
-              ) : null}
-              {proposal.reasons.map((r) => (
-                <AppText key={r} variant="caption" muted>
-                  {r}
-                </AppText>
-              ))}
-            </View>
-          ) : null}
-        </>
-      )}
+            <StepCard icon="people" title={t('onb.sex')}>
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                {(
+                  [
+                    ['female', 'female'],
+                    ['male', 'male'],
+                    ['unspecified', 'help-circle'],
+                  ] as const
+                ).map(([v, icon]) => (
+                  <View key={v} style={{ flex: 1 }}>
+                    <IconChoice
+                      icon={icon}
+                      label={t(`sex.${v}` as StringKey)}
+                      selected={sex === v}
+                      onPress={() => setSex(v)}
+                      tint={brand.lime}
+                    />
+                  </View>
+                ))}
+              </View>
+            </StepCard>
+            <StepCard icon="walk" title={t('onb.activity')}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {(
+                  [
+                    ['low', 'bed'],
+                    ['light', 'walk'],
+                    ['moderate', 'bicycle'],
+                    ['high', 'flame'],
+                  ] as const
+                ).map(([v, icon]) => (
+                  <View key={v} style={{ flexBasis: '47%', flexGrow: 1 }}>
+                    <IconChoice
+                      icon={icon}
+                      label={t(`activity.${v}` as StringKey)}
+                      selected={activity === v}
+                      onPress={() => setActivity(v)}
+                      tint={brand.lime}
+                    />
+                  </View>
+                ))}
+              </View>
+            </StepCard>
+          </>
+        )}
 
+        {step === 4 && (
+          <>
+            <StepCard icon="heart" title={t('onb.readyTitle')} note={t('onb.readyBody')}>
+              <AppText variant="caption" muted>
+                {t('onb.readyProgress', {
+                  n: READINESS_QUESTIONS.filter((q) => answers[q] !== undefined).length,
+                  total: READINESS_QUESTIONS.length,
+                })}
+              </AppText>
+            </StepCard>
+            {READINESS_QUESTIONS.map((q) => (
+              <YesNoCard
+                key={q}
+                question={t(`ready.q.${q}` as StringKey)}
+                value={answers[q]}
+                onChange={(v) => setAnswers({ ...answers, [q]: v })}
+                yes={t('ready.yes')}
+                no={t('ready.no')}
+              />
+            ))}
+            {readiness.flagged.length > 0 ? <Notice>{t('onb.readyNote')}</Notice> : null}
+          </>
+        )}
+
+        {step === 5 && (
+          <>
+            <StepCard icon="flag" title={t('onb.goalTitle')} note={t('onb.goalBody')}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {(
+                  [
+                    ['none', 'fitness', t('wl.intent.fitness')],
+                    ['lose', 'trending-down', t('wl.intent.lose')],
+                    ['maintain', 'swap-horizontal', t('wl.intent.maintain')],
+                    ['gain', 'trending-up', t('goals.gain')],
+                  ] as const
+                ).map(([v, icon, label]) => (
+                  <View key={v} style={{ flexBasis: '47%', flexGrow: 1 }}>
+                    <IconChoice
+                      icon={icon}
+                      label={label}
+                      selected={goalType === v}
+                      onPress={() => setGoalType(v)}
+                      tint={brand.lime}
+                    />
+                  </View>
+                ))}
+              </View>
+              <AppText variant="caption" muted accessibilityLiveRegion="polite">
+                {t(`wl.intentNote.${goalType === 'none' ? 'fitness' : goalType}` as StringKey)}
+              </AppText>
+            </StepCard>
+            {goalType !== 'none' && (
+              <StepCard icon="calendar" title={t('goals.period')}>
+                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                  {(['weekly', 'monthly', 'yearly'] as const).map((v) => (
+                    <View key={v} style={{ flex: 1 }}>
+                      <IconChoice
+                        icon="calendar"
+                        label={t(`goals.${v}` as StringKey)}
+                        selected={goalPeriod === v}
+                        onPress={() => setGoalPeriod(v)}
+                        tint={brand.lime}
+                      />
+                    </View>
+                  ))}
+                </View>
+                {goalType !== 'maintain' && (
+                  <BigField
+                    label={t('goals.target', { unit: unitWord })}
+                    icon="trophy"
+                    suffix={unitWord}
+                    hint={t('goals.targetHint')}
+                    value={goalTarget}
+                    onChangeText={setGoalTarget}
+                    keyboardType="decimal-pad"
+                  />
+                )}
+              </StepCard>
+            )}
+            {goalType !== 'none' && proposal ? (
+              <View
+                style={{
+                  borderRadius: radius.lg,
+                  borderWidth: 2,
+                  borderColor: proposal.status === 'block' ? colors.warningText : colors.primary,
+                  backgroundColor: proposal.status === 'block' ? colors.warningBg : colors.surface,
+                  padding: spacing.lg,
+                  gap: spacing.xs,
+                }}
+              >
+                <AppText variant="label">
+                  {t(proposal.status === 'block' ? 'goals.blocked' : 'onb.goalProposed')}
+                </AppText>
+                {proposal.goal ? (
+                  <AppText variant="title">{`${formatWeight(proposal.goal.startKg, units)} → ${formatWeight(proposal.goal.targetKg, units)}`}</AppText>
+                ) : null}
+                {proposal.goal ? (
+                  <AppText
+                    variant="caption"
+                    muted
+                  >{`${t(`goals.${proposal.goal.period}` as StringKey)} (${t('goals.until', { date: goalEndDate(todayIso(), goalPeriod) })})`}</AppText>
+                ) : null}
+                {proposal.reasons.map((r) => (
+                  <AppText key={r} variant="caption" muted>
+                    {r}
+                  </AppText>
+                ))}
+              </View>
+            ) : null}
+          </>
+        )}
+      </StepTransition>
       {fieldError ? <Notice tone="warning">{fieldError}</Notice> : null}
       {error ? <Notice tone="warning">{error}</Notice> : null}
 

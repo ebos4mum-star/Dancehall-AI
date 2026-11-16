@@ -1,7 +1,10 @@
 import { withAccount } from '@/account/gate';
+import { Tappable } from '@/ui/Tappable';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PulseStage, usePulse } from '@/pulse/PulseStage';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { HeroScene } from '@/scene/HeroScene';
 import { IconBadge } from '@/ui/kit';
 import { brand } from '@/theme/tokens';
 import {
@@ -174,18 +177,38 @@ function Coach() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm }}>
-          <View
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-          >
+          {chat.length > 0 ? (
+            <HeroScene world="coach" height={88}>
+              <LinearGradient
+                pointerEvents="none"
+                colors={['rgba(26,14,46,0.88)', 'rgba(26,14,46,0.5)', 'rgba(26,14,46,0)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '70%' }}
+              />
+              <View style={{ position: 'absolute', left: spacing.md, top: spacing.md }}>
+                <AppText variant="title" accessibilityRole="header" style={{ color: brand.ivory }}>
+                  {t('coach.title')}
+                </AppText>
+              </View>
+              <View
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  bottom: 0,
+                  width: 84,
+                  height: 78,
+                  overflow: 'hidden',
+                }}
+              >
+                <PulseStage state={busy ? 'idle' : pulse.state} size={84} />
+              </View>
+            </HeroScene>
+          ) : (
             <AppText variant="title" accessibilityRole="header">
               {t('coach.title')}
             </AppText>
-            {chat.length > 0 ? (
-              <View style={{ width: 64, height: 58, overflow: 'hidden' }}>
-                <PulseStage state={busy ? 'idle' : pulse.state} size={64} />
-              </View>
-            ) : null}
-          </View>
+          )}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
             {activeId ? (
               <Button
@@ -215,6 +238,14 @@ function Coach() {
           ) : null}
           {chat.length === 0 ? (
             <HeroCard world="coach">
+              {/* A soft plum scrim keeps the words legible over the study-nook props. */}
+              <LinearGradient
+                pointerEvents="none"
+                colors={['rgba(26,14,46,0.9)', 'rgba(26,14,46,0.7)', 'rgba(26,14,46,0.15)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}
+              />
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
                 <View style={{ flex: 1, gap: spacing.sm }}>
                   <AppText
@@ -260,7 +291,7 @@ function Coach() {
               </AppText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
                 {PROMPTS.map((p) => (
-                  <Pressable
+                  <Tappable
                     key={p}
                     accessibilityRole="button"
                     accessibilityLabel={t(`coach.prompt.${p}` as StringKey)}
@@ -280,7 +311,7 @@ function Coach() {
                   >
                     <IconBadge name={PROMPT_ICON[p]} size={30} fill={brand.violet} />
                     <AppText variant="label">{t(`coach.prompt.${p}` as StringKey)}</AppText>
-                  </Pressable>
+                  </Tappable>
                 ))}
               </View>
               <Pressable
@@ -368,6 +399,8 @@ function Coach() {
             // A question can be long: the box grows (to a limit) and Return still sends it, as in a messaging app.
             multiline
             submitBehavior="submit"
+            // React Native Web only submits a multiline field on Enter when blurOnSubmit is set (it ignores submitBehavior); iOS uses submitBehavior.
+            {...(Platform.OS === 'web' ? { blurOnSubmit: true } : {})}
             autoCapitalize="sentences"
             enablesReturnKeyAutomatically
             maxLength={1000}

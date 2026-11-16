@@ -1,0 +1,362 @@
+{
+  "/": {
+    "inputs": [
+      {
+        "label": "New habit",
+        "tag": "INPUT",
+        "type": "text",
+        "inputmode": null,
+        "enterkeyhint": "done",
+        "autocapitalize": "sentences",
+        "autocorrect": "on",
+        "secure": false
+      }
+    ],
+    "enterProgression": []
+  },
+  "/dance": {
+    "inputs": [
+      {
+        "label": "Walk length",
+        "tag": "INPUT",
+        "type": null,
+        "inputmode": "decimal",
+        "enterkeyhint": "done",
+        "autocapitalize": "none",
+        "autocorrect": "off",
+        "secure": false
+      },
+      {
+        "label": "Distance (optional)",
+        "tag": "INPUT",
+        "type": null,
+        "inputmode": "decimal",
+        "enterkeyhint": "done",
+        "autocapitalize": "none",
+        "autocorrect": "off",
+        "secure": false
+      },
+      {
+        "label": "Strength session length",
+        "tag": "INPUT",
+        "type": null,
+        "inputmode": "decimal",
+        "enterkeyhint": "done",
+        "autocapitalize": "none",
+        "autocorrect": "off",
+        "secure": false
+      }
+    ],
+    "enterProgression": [
+      {
+        "from": "Walk length",
+        "to": "BODY",
+        "moved": true
+      },
+      {
+        "from": "Distance (optional)",
+        "to": "Strength session length",
+        "moved": true
+      }
+    ]
+  },
+  "/food": {
+    "inputs": [],
+    "enterProgression": []
+  },
+  "/coach": {
+    "inputs": [
+      {
+        "label": "Ask your coach…",
+        "tag": "TEXTAREA",
+        "type": null,
+        "inputmode": null,
+        "enterkeyhint": "send",
+        "autocapitalize": "sentences",
+        "autocorrect": "on",
+        "secure": false
+      }
+    ],
+    "enterProgression": []
+  },
+  "/me": {
+    "inputs": [],
+    "enterProgression": []
+  },
+  "/progress": {
+    "inputs": [
+      {
+        "label": "Hours slept",
+        "tag": "INPUT",
+        "type": null,
+        "inputmode": "decimal",
+        "enterkeyhint": "done",
+        "autocapitalize": "none",
+        "autocorrect": "off",
+        "secure": false
+      }
+    ],
+    "enterProgression": []
+  },
+  "/goals": {
+    "inputs": [
+      {
+        "label": "Minutes a week you would like to move (optional)",
+        "tag": "INPUT",
+        "type": null,
+        "inputmode": "numeric",
+        "enterkeyhint": "done",
+        "autocapitalize": "none",
+        "autocorrect": "off",
+        "secure": false
+      },
+      {
+        "label": "Daily water goal in ml (optional)",
+        "tag": "INPUT",
+        "type": null,
+        "inputmode": "numeric",
+        "enterkeyhint": "done",
+        "autocapitalize": "none",
+        "autocorrect": "off",
+        "secure": false
+      },
+      {
+        "label": "Daily movement goal",
+        "tag": "INPUT",
+        "type": null,
+        "inputmode": "numeric",
+        "enterkeyhint": "done",
+        "autocapitalize": "none",
+        "autocorrect": "off",
+        "secure": false
+      },
+      {
+        "label": "Weeks a month you want to reach your weekly goal",
+        "tag": "INPUT",
+        "type": null,
+        "inputmode": "numeric",
+        "enterkeyhint": "done",
+        "autocapitalize": "none",
+        "autocorrect": "off",
+        "secure": false
+      },
+      {
+        "label": "Weeks a year you want to reach your weekly goal",
+        "tag": "INPUT",
+        "type": null,
+        "inputmode": "numeric",
+        "enterkeyhint": "done",
+        "autocapitalize": "none",
+        "autocorrect": "off",
+        "secure": false
+      }
+    ],
+    "enterProgression": [
+      {
+        "from": "Minutes a week you would like to move (optional)",
+        "to": "BODY",
+        "moved": true
+      },
+      {
+        "from": "Daily water goal in ml (optional)",
+        "to": "BODY",
+        "moved": true
+      },
+      {
+        "from": "Daily movement goal",
+        "to": "BODY",
+        "moved": true
+      },
+      {
+        "from": "Weeks a month you want to reach your weekly goal",
+        "to": "Weeks a year you want to reach your weekly goal",
+        "moved": true
+      },
+      {
+        "from": "Weeks a year you want to reach your weekly goal",
+        "to": "BODY",
+        "moved": true
+      }
+    ]
+  },
+  "/challenges": {
+    "inputs": [],
+    "enterProgression": []
+  },
+  "/privacy": {
+    "inputs": [
+      {
+        "label": "Display name",
+        "tag": "INPUT",
+        "type": "text",
+        "inputmode": null,
+        "enterkeyhint": "done",
+        "autocapitalize": "words",
+        "autocorrect": "off",
+        "secure": false
+      }
+    ],
+    "enterProgression": [
+      {
+        "from": "Display name",
+        "to": "BODY",
+        "moved": true
+      }
+    ]
+  },
+  "/friends": {
+    "inputs": [
+      {
+        "label": "Their public name",
+        "tag": "INPUT",
+        "type": "text",
+        "inputmode": null,
+        "enterkeyhint": "send",
+        "autocapitalize": "none",
+        "autocorrect": "off",
+        "secure": false
+      },
+      {
+        "label": "Name it",
+        "tag": "INPUT",
+        "type": "text",
+        "inputmode": null,
+        "enterkeyhint": "done",
+        "autocapitalize": "sentences",
+        "autocorrect": "on",
+        "secure": false
+      }
+    ],
+    "enterProgression": [
+      {
+        "from": "Their public name",
+        "to": "BODY",
+        "moved": true
+      },
+      {
+        "from": "Name it",
+        "to": "BODY",
+        "moved": true
+      }
+    ]
+  },
+  "/community": {
+    "inputs": [],
+    "enterProgression": []
+  },
+  "/food/add": {
+    "inputs": [
+      {
+        "label": "Search foods",
+        "tag": "INPUT",
+        "type": "text",
+        "inputmode": null,
+        "enterkeyhint": "search",
+        "autocapitalize": "none",
+        "autocorrect": "off",
+        "secure": false
+      }
+    ],
+    "enterProgression": []
+  },
+  "/food/fridge": {
+    "inputs": [
+      {
+        "label": "What do you have?",
+        "tag": "INPUT",
+        "type": "text",
+        "inputmode": null,
+        "enterkeyhint": "done",
+        "autocapitalize": "none",
+        "autocorrect": "off",
+        "secure": false
+      }
+    ],
+    "enterProgression": []
+  },
+  "/food/swap": {
+    "inputs": [
+      {
+        "label": "Search foods",
+        "tag": "INPUT",
+        "type": "text",
+        "inputmode": null,
+        "enterkeyhint": "search",
+        "autocapitalize": "none",
+        "autocorrect": "off",
+        "secure": false
+      }
+    ],
+    "enterProgression": []
+  },
+  "/food/household": {
+    "inputs": [
+      {
+        "label": "Household name",
+        "tag": "INPUT",
+        "type": "text",
+        "inputmode": null,
+        "enterkeyhint": "done",
+        "autocapitalize": "sentences",
+        "autocorrect": "on",
+        "secure": false
+      },
+      {
+        "label": "Invite code",
+        "tag": "INPUT",
+        "type": "text",
+        "inputmode": null,
+        "enterkeyhint": "done",
+        "autocapitalize": "characters",
+        "autocorrect": "off",
+        "secure": false
+      }
+    ],
+    "enterProgression": [
+      {
+        "from": "Household name",
+        "to": "BODY",
+        "moved": true
+      }
+    ]
+  },
+  "/food/barcode": {
+    "inputs": [
+      {
+        "label": "Or type the number under the barcode",
+        "tag": "INPUT",
+        "type": null,
+        "inputmode": "numeric",
+        "enterkeyhint": "done",
+        "autocapitalize": "none",
+        "autocorrect": "off",
+        "secure": false
+      }
+    ],
+    "enterProgression": []
+  },
+  "/food/review": {
+    "inputs": [],
+    "enterProgression": []
+  },
+  "/dance/schedule": {
+    "inputs": [],
+    "enterProgression": []
+  },
+  "/dance/program": {
+    "inputs": [],
+    "enterProgression": []
+  },
+  "/dance/history": {
+    "inputs": [],
+    "enterProgression": []
+  },
+  "/coach/settings": {
+    "inputs": [],
+    "enterProgression": []
+  },
+  "/coach/review": {
+    "inputs": [],
+    "enterProgression": []
+  }
+}

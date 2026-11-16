@@ -10,8 +10,7 @@
   "normal-scenes-and-pulse": {
     "ok": true,
     "friendsHasBanner": true,
-    "pulseLabelAfterTap": "Pulse, your guide, is welcoming you.",
-    "reacted": false
+    "pulseLabelAfterTap": "Pulse, your guide, is welcoming you."
   },
   "normal-pageerrors": [],
   "reduced-home-week": {
@@ -25,8 +24,7 @@
   "reduced-scenes-and-pulse": {
     "ok": true,
     "friendsHasBanner": true,
-    "pulseLabelAfterTap": "Pulse, your guide, is welcoming you.",
-    "reacted": false
+    "pulseLabelAfterTap": "Pulse, your guide, is welcoming you."
   },
   "reduced-pageerrors": []
 }

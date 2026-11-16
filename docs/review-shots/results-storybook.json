@@ -1,0 +1,90 @@
+{
+  "onb-1-attrs": {
+    "ok": true,
+    "name": {
+      "type": "text",
+      "inputmode": null,
+      "enterkeyhint": "next",
+      "autocapitalize": "words",
+      "autocorrect": "off",
+      "spellcheck": "false",
+      "tag": "INPUT"
+    },
+    "dob": {
+      "type": "text",
+      "inputmode": null,
+      "enterkeyhint": "next",
+      "autocapitalize": "none",
+      "autocorrect": "off",
+      "spellcheck": "false",
+      "tag": "INPUT"
+    },
+    "country": {
+      "type": "text",
+      "inputmode": null,
+      "enterkeyhint": "search",
+      "autocapitalize": "none",
+      "autocorrect": "off",
+      "spellcheck": "false",
+      "tag": "INPUT"
+    },
+    "focusedAfterEnterOnName": "Date of birth (YYYY-MM-DD)"
+  },
+  "onb-3-attrs": {
+    "ok": true,
+    "height": {
+      "type": null,
+      "inputmode": "decimal",
+      "enterkeyhint": "done",
+      "autocapitalize": "none",
+      "autocorrect": "off",
+      "spellcheck": "false",
+      "tag": "INPUT"
+    },
+    "weight": {
+      "type": null,
+      "inputmode": "decimal",
+      "enterkeyhint": "done",
+      "autocapitalize": "none",
+      "autocorrect": "off",
+      "spellcheck": "false",
+      "tag": "INPUT"
+    }
+  },
+  "onb-pageerrors": [],
+  "coach-sentBy": "Enter",
+  "coach": {
+    "ok": true,
+    "composer": {
+      "type": null,
+      "inputmode": null,
+      "enterkeyhint": "send",
+      "autocapitalize": "sentences",
+      "autocorrect": "on",
+      "spellcheck": "true",
+      "tag": "TEXTAREA"
+    },
+    "sendHint": "send",
+    "tag": "TEXTAREA"
+  },
+  "progress-top": {
+    "ok": true
+  },
+  "community": {
+    "ok": true,
+    "text": "Development mode: mock sign-in. Synthetic data on this device only.\nCommunity\nKind, simple, and at your own pace.\nDevelopment build: these are sample posts from"
+  },
+  "friends": {
+    "ok": true,
+    "username": {
+      "type": "text",
+      "inputmode": null,
+      "enterkeyhint": "send",
+      "autocapitalize": "none",
+      "autocorrect": "off",
+      "spellcheck": "false",
+      "tag": "INPUT"
+    }
+  },
+  "seed-pageerrors": []
+}

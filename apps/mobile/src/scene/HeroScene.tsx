@@ -8,10 +8,13 @@ export function HeroScene({
   children,
   height = 320,
   world = 'today',
+  chapter,
 }: {
   children: ReactNode;
   height?: number;
   world?: World;
+  /** Onboarding step (1 to 5) for the `onboard` world. */
+  chapter?: number;
 }) {
   return (
     <View
@@ -27,7 +30,7 @@ export function HeroScene({
         elevation: 8,
       }}
     >
-      <SceneBackdrop world={world} />
+      <SceneBackdrop world={world} chapter={chapter} />
       {children}
     </View>
   );
