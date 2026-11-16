@@ -138,3 +138,25 @@ describe('internal content fixtures stay out of real builds', () => {
     expect(hits).toEqual(['/src/data/AppProvider.tsx']);
   });
 });
+
+describe('Friends is never switched on by a shared build profile', () => {
+  const eas = JSON.parse(readFileSync(join(__dirname, '..', '..', 'eas.json'), 'utf8')) as {
+    build: Record<string, { env?: Record<string, string> }>;
+  };
+  it('no EAS profile sets EXPO_PUBLIC_SOCIAL, and the production profile cannot reach it', () => {
+    for (const [name, p] of Object.entries(eas.build))
+      expect(p.env ?? {}, name).not.toHaveProperty('EXPO_PUBLIC_SOCIAL');
+    expect(eas.build.production!.env ?? {}).not.toHaveProperty('EXPO_PUBLIC_COMMUNITY');
+  });
+  it('a production build that is handed the flag refuses to start', () => {
+    expect(() =>
+      resolveConfig({
+        EXPO_PUBLIC_APP_ENV: 'production',
+        EXPO_PUBLIC_AUTH_MODE: 'supabase',
+        EXPO_PUBLIC_SUPABASE_URL: 'https://x.example.test',
+        EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_placeholder',
+        EXPO_PUBLIC_SOCIAL: '1',
+      }),
+    ).toThrow(/production/);
+  });
+});

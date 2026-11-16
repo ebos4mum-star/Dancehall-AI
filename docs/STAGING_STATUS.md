@@ -309,3 +309,69 @@ The previously fetched link stopped serving at once after deletion (400, BYPASS)
 2. Guest rate-limit test from one machine; expired member-token test; scheduling the account-deletion executor.
 3. Open Food Facts live lookups untested; no dietitian or cultural review of foods and recipes.
 4. App Store items in `docs/APP_STORE_READINESS.md` (privacy and support URLs, legal review, production accounts, cleared V1 video, App Privacy answers).
+
+---
+
+# Phase 8: Friends and Group Goals on staging (2026-11-16)
+
+Project `bxhnrjulksganzydgrgm` only (reference verified before each hosted change). Development and production untouched. No PR. Public Community left in Read only; no Community secret or floor setting was changed.
+
+## What was applied and deployed
+
+| Item                                    | Result                                                                                                                                                                                                                                                                                                                                                                 |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Review                                  | `social.up.sql` creates only new objects (6 tables, 23 `app` functions, one door `public.social_rpc`); it alters no existing table, policy, function or grant. Dependencies confirmed present on staging: `community_members`, `community_burst`, `app.community_claim_username`/`community_profile`, `workout_sessions`, `profiles`; no social objects existed before |
+| Migration `social_up`                   | **APPLIED** (hash-verified loader, pinned commit `1444af20f4d20e86814d3577c71d2c7d9bcd1a68`, file SHA-256 `fa16d8b9...`). The temporary `http` extension was dropped in the same migration                                                                                                                                                                             |
+| Migration `social_patch1_view_dedupe`   | **APPLIED** (file `social.patch1_view_dedupe.sql`, commit `84719b41...`, SHA-256 `86757a16...`): replaces one function, same signature and grants, found by the hosted tests (see findings). Already folded into `social.up.sql`. **This goes beyond the reviewed file, so please review it**                                                                          |
+| Post-migration checks                   | 6 tables, RLS on all 6 with a deny-all policy, 0 grants to `anon`/`authenticated`, the door executable by `service_role` only, user-callable definer list unchanged (the same 10 reviewed functions), no `social` finding in the security advisors                                                                                                                     |
+| Function `social`                       | **DEPLOYED, version 1**, `verify_jwt=false` (the function verifies every token itself), code hash `09f95127...`, shared code pinned to commit `1444af20...`                                                                                                                                                                                                            |
+| Function `community`                    | **Unchanged** (hash `cd229287...`, same as the cache-fix deployment)                                                                                                                                                                                                                                                                                                   |
+| Production, development, other projects | not touched                                                                                                                                                                                                                                                                                                                                                            |
+
+## Hosted test results (real HTTPS API, synthetic accounts, `scripts/staging/social-checks.mjs`)
+
+The first run was cut short by my own rate-limit pacing (a legitimate member hits 12 requests or 30 writes a minute) and by one real inconsistency (finding 1). After the patch and pacing the full suite ran: **94 PASS, 1 FAIL**; the one failure (R3) was a test-design error (the test account was genuinely the target's friend, so removing her was legitimate). The corrected R3 check, run against the same state, **PASSES** (403 `not_friends`, the friendship between the other two survived). The deletion phase then ran: **5 of 5 PASS**. R3 corrected was not re-run inside one single full suite.
+
+| Area                                                                                                                                                                                                                                                         | Result                                         |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| Only POST; bad JSON 400; oversized 413; unknown route 404; no token, garbage, forged signature and the publishable key alone all 401                                                                                                                         | **PASS**                                       |
+| Social tables, the database door and the `app` functions unreachable by a signed-in member through the data API                                                                                                                                              | **PASS** (all refused)                         |
+| Community feed untouched, still Read only, comments and video off                                                                                                                                                                                            | **PASS** (status route and `check-access.mjs`) |
+| Friends works with the Community feed not enabled (names claimed through the social function; Community stays Read only)                                                                                                                                     | **PASS**                                       |
+| Claim a public name; staff look-alike and invalid names refused; second claim and taken names refused                                                                                                                                                        | **PASS**                                       |
+| Request, repeat refused, withdraw, decline, accept, self and unknown refused, only the asked person can answer, strangers see nothing                                                                                                                        | **PASS**                                       |
+| Shares nothing by default; food, food_diary, weight, weight_entries, health, photo, location, meals and "activity" all refused and nothing stored                                                                                                            | **PASS**                                       |
+| Weekly summary shared only after explicit consent, to one friend, one way; other friends and strangers see nothing                                                                                                                                           | **PASS**                                       |
+| Revocation immediate (single toggle and "stop sharing with everyone", which withdrew exactly 2 choices)                                                                                                                                                      | **PASS**                                       |
+| Server-calculated progress from completed workouts (duplicate recorded 4 minutes apart counted once; planned workout ignored): ama 50, kofi 40, repeatable                                                                                                   | **PASS**                                       |
+| Remove friend; block severs friendship for both and hides each; a blocked person's request is byte-identical to an unknown name; unblock then re-friend with nothing shared                                                                                  | **PASS**                                       |
+| Challenge: only friends invited; invitees see only the invitation and cannot report; strangers cannot sync, leave or see it; join and decline; ownership passes to the remaining member when the owner leaves; leaver's numbers gone; empty group disappears | **PASS**                                       |
+| Couple goal needs exactly one invitee and a target; family goal with several invitees, all joined members see the same family                                                                                                                                | **PASS**                                       |
+| Rate limits: 45 parallel writes by one member gave 429s and no 5xx, another member unaffected; request spam limited                                                                                                                                          | **PASS**                                       |
+| A body naming other account ids changes nothing (identity is the token)                                                                                                                                                                                      | **PASS** (corrected check)                     |
+| Account deletion: request through the API, server-side executor, then friendship, memberships, group totals, name and sign-in all gone while others are intact                                                                                               | **PASS** (5 of 5)                              |
+| No internal id, email, or private value (the seeded weight 71.37 and the food marker) in any API response; a UUID appears only as a group `id`                                                                                                               | **PASS**                                       |
+
+## Security findings
+
+1. **Inconsistency, FIXED (patch 1):** the friend's weekly summary counted a repeated workout twice while the server sync counted it once (minutes 80 versus 50). Not a privacy issue; fixed in staging, in `social.up.sql`, and covered by a new SQL test.
+2. **Pre-existing, not changed:** the security advisor now warns that Auth "leaked password protection" is disabled. It is a project Auth setting I was told not to change; it matters little for the PIN-first, device-secret sign-in, but should be reviewed before launch.
+3. Group numbers are now computed by the server from `workout_sessions`, but workouts themselves are self-recorded by the member; fine for friendly goals, not for prizes (none are offered).
+4. Friends depends on the Community username system and the existing rate limiter; it does not depend on Community mode or its routes.
+5. No test could read another member's food, weight or health data; no internal identifier was returned.
+
+## Cleanup and verification
+
+- Deleted (synthetic only, after a guard that every user was synthetic): 7 accounts with identities, profiles, public names, all friendships, blocks, shares, groups, invitations and numbers, plus the seeded workouts, weight, and food records, rate-limit counters, retired-name holds and deletion requests.
+- Read-back: users 0, identities 0, sessions 0, profiles 0, community members 0, social rows 0, workouts 0, weights 0, food logs and items 0, posts 0, storage objects 0.
+- **Audit chain preserved:** 8 rows, 8 valid hashes.
+- Community: database `read_only`, comments and video off; `check-access.mjs` function and db checks pass; `http` extension not installed.
+- Staging host removed from the Default environment; local scratch credentials shredded.
+
+## Remaining launch blockers for Friends
+
+1. **Hosted builds keep Friends disabled** (`EXPO_PUBLIC_SOCIAL` off by default; production refuses it). Turning it on for a build needs your decision and an on-device test.
+2. Development and production databases do not have `community.up.sql` or `social.up.sql`; they need separate approval.
+3. No dietitian/legal review of the sharing text; counsel review of friend and group privacy wording.
+4. Guest rate-limit test from one machine, expired-token test and account-deletion scheduling (Community items) are still open.
+5. Auth leaked-password protection (finding 2).
