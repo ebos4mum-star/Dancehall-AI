@@ -66,3 +66,4 @@ export * from './recovery-key';
 export * from './security-questions';
 export * from './account-core';
 export * from './account-memory-db';
+export * from './recipes';

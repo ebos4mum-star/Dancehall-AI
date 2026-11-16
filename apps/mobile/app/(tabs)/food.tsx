@@ -51,6 +51,7 @@ function FoodDashboardAccount() {
     { icon: 'bookmark', label: t('food.saved'), to: '/food/saved' },
     { icon: 'calendar', label: t('food.plan'), to: '/food/plan' },
     { icon: 'swap-horizontal', label: t('food.swapIdeas'), to: '/food/swap' },
+    { icon: 'restaurant', label: t('food.fridge'), to: '/food/fridge' },
     { icon: 'home', label: t('food.household'), to: '/food/household' },
     { icon: 'time', label: t('food.history'), to: '/food/history' },
   ];

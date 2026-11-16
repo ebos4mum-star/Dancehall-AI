@@ -385,6 +385,8 @@ const MAX_TIER: Record<BudgetLevel, 1 | 2 | 3> = { low: 1, medium: 2, flexible: 
 export interface PlannedMeal {
   mealType: MealType;
   items: FoodItemValues[];
+  /** Recipe name when the meal comes from a recipe (see recipes.ts). */
+  title?: string;
 }
 export interface PlannedDay {
   dayIndex: number;

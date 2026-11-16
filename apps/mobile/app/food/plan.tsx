@@ -10,6 +10,8 @@ import {
   BUDGET_LEVELS,
   FOOD_BY_ID,
   planMeals,
+  planWeekFromRecipes,
+  recipePlanToDraft,
   totals,
   type BudgetLevel,
   type MealPlanDraft,
@@ -60,6 +62,7 @@ function Plan() {
   const { spacing } = useTheme();
   const { data: plans } = useLoad((s) => s.listMealPlans());
   const [days, setDays] = useState<'3' | '7'>('3');
+  const [source, setSource] = useState<'foods' | 'recipes'>('foods');
   const [level, setLevel] = useState<BudgetLevel>('low');
   const [region, setRegion] = useState<Region>('any');
   const [regionTouched, setRegionTouched] = useState(false);
@@ -82,6 +85,27 @@ function Plan() {
 
   const build = (sd: number) => {
     if (!guide) return;
+    if (source === 'recipes') {
+      const diet = parsePrefs(savedPrefs).diet;
+      setPreview(
+        recipePlanToDraft(
+          planWeekFromRecipes({
+            days: Number(days),
+            targetKcal: guide.guideKcal,
+            floorKcal: guide.floorKcal,
+            regions: region === 'any' ? [] : regionTagsFor([region]),
+            diet: diet.includes('vegan')
+              ? 'vegan'
+              : diet.includes('vegetarian')
+                ? 'vegetarian'
+                : null,
+            seed: sd,
+          }),
+          level,
+        ),
+      );
+      return;
+    }
     setPreview(
       planMeals({
         days: Number(days),
@@ -146,6 +170,19 @@ function Plan() {
         {t('food2.planStep1')}
       </AppText>
       <DepthCard>
+        <AppText variant="label">{t('plan.source')}</AppText>
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          {(['foods', 'recipes'] as const).map((k) => (
+            <View key={k} style={{ flex: 1 }}>
+              <IconChoice
+                icon={k === 'foods' ? 'nutrition' : 'restaurant'}
+                label={t(k === 'foods' ? 'plan.sourceFoods' : 'plan.sourceRecipes')}
+                selected={source === k}
+                onPress={() => setSource(k)}
+              />
+            </View>
+          ))}
+        </View>
         <AppText variant="label">{t('plan.days')}</AppText>
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>
           {(['3', '7'] as const).map((d) => (
@@ -248,7 +285,11 @@ function Plan() {
                     fill={brand.violet}
                   />
                   <View style={{ flex: 1 }}>
-                    <AppText variant="label">{t(`food.meal.${m.mealType}` as StringKey)}</AppText>
+                    <AppText variant="label">
+                      {m.title
+                        ? `${t(`food.meal.${m.mealType}` as StringKey)}: ${m.title}`
+                        : t(`food.meal.${m.mealType}` as StringKey)}
+                    </AppText>
                     <AppText variant="caption" muted>
                       {m.items.map((i) => `${i.name} ${Math.round(i.grams)} g`).join(', ')}
                     </AppText>
