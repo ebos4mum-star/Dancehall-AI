@@ -69,3 +69,4 @@ export * from './account-memory-db';
 export * from './recipes';
 export * from './activity-energy';
 export * from './period-summary';
+export * from './social-engine';

@@ -14,7 +14,15 @@ import {
 } from '@dancehall/ai';
 import {
   CommunityEngine,
+  SocialEngine,
+  emptySocial,
+  countedSessions,
+  sessionMinutes,
   sampleCommunity,
+  type SocialState,
+  type GroupKind,
+  type GroupMetric,
+  type ActivityWeek,
   type CommunityState,
   type NewPostInput,
   type ReportReason,
@@ -152,6 +160,8 @@ interface State {
   deletionRequest?: { id: string; scheduledFor: string; status: 'requested' } | null;
   /** Development Community: synthetic sample members and posts plus the one real local member. Mirrors the rules in `CommunityEngine`. */
   community?: CommunityState;
+  /** Development Friends, sharing and group goals. Mirrors the rules in `SocialEngine`; sample members are synthetic and clearly labelled. */
+  social?: SocialState;
 }
 
 const KEY = 'dh.mock.v1';
@@ -332,6 +342,9 @@ export class MockStore implements DataStore {
     const uid = await this.member();
     const e = await this.engine();
     e.deleteMember(uid);
+    // Leaving Community removes the public name everything social is addressed by, so it removes the social records too.
+    if (this.state.social)
+      new SocialEngine(this.state.social, { nameOf: () => null, idOf: () => null }).erase(uid);
     await this.commit();
     return { ok: true as const };
   }
@@ -416,6 +429,179 @@ export class MockStore implements DataStore {
   async communityBlocked() {
     const uid = await this.member();
     return (await this.engine()).blockedUsernames(uid);
+  }
+
+  // ---------- Friends, sharing and group goals (development mock) ----------
+  /** Resolves public usernames through the Community profiles (same names, same rules). Sample members are synthetic. */
+  private async socialEngine(): Promise<{
+    social: SocialEngine;
+    me: string;
+    myName: string | null;
+  }> {
+    const uid = await this.member();
+    const c = await this.engine();
+    if (!this.state.social) this.state.social = emptySocial();
+    const profiles = this.state.community!.profiles;
+    const dir = {
+      nameOf: (id: string) => profiles[id]?.username ?? null,
+      idOf: (name: string) =>
+        Object.entries(profiles).find(
+          ([, p]) => p.username.toLowerCase() === name.trim().toLowerCase(),
+        )?.[0] ?? null,
+    };
+    return {
+      social: new SocialEngine(this.state.social, dir, this.now),
+      me: uid,
+      myName: c.usernameOf(uid) ?? null,
+    };
+  }
+  private static isSample = (id: string) => id.startsWith('sample-member-');
+  /** Sample members always have the same pretend week, so the screen can be exercised alone. */
+  private sampleWeek(id: string): ActivityWeek {
+    const n = Number(id.slice(-1)) || 1;
+    return { sessions: n + 1, minutes: 30 * n, activeDays: Math.min(7, n + 1) };
+  }
+  private async myWeek(): Promise<ActivityWeek> {
+    const sessions = countedSessions(this.state.sessions);
+    const today = localDateKey(this.now(), this.state.profile.timeZone);
+    const from = new Date(Date.parse(`${today}T00:00:00Z`) - 6 * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    const inWeek = sessions.filter((x) => {
+      const k = localDateKey(x.completedAt!, this.state.profile.timeZone);
+      return k >= from && k <= today;
+    });
+    return {
+      sessions: inWeek.length,
+      minutes: inWeek.reduce((a, x) => a + sessionMinutes(x), 0),
+      activeDays: new Set(
+        inWeek.map((x) => localDateKey(x.completedAt!, this.state.profile.timeZone)),
+      ).size,
+    };
+  }
+  async socialOverview() {
+    const { social, me, myName } = await this.socialEngine();
+    return {
+      username: myName,
+      ...social.lists(me),
+      blocked: social.blocked(me),
+      groups: social.listGroups(me),
+    };
+  }
+  async socialRequest(username: string) {
+    const { social, me, myName } = await this.socialEngine();
+    if (!myName) return { ok: false as const, code: 'needs_username' as const };
+    const r = social.request(me, username);
+    // A sample member answers at once, so the flow can be tried alone. Real people would have to accept.
+    if (r.ok && r.status === 'requested') {
+      const id = Object.entries(this.state.community!.profiles).find(
+        ([, p]) => p.username.toLowerCase() === username.trim().toLowerCase(),
+      )?.[0];
+      if (id && MockStore.isSample(id)) social.respond(id, myName, true);
+    }
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async socialRespond(username: string, accept: boolean) {
+    const { social, me } = await this.socialEngine();
+    const r = social.respond(me, username, accept);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async socialCancel(username: string) {
+    const { social, me } = await this.socialEngine();
+    const r = social.cancelRequest(me, username);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async socialRemove(username: string) {
+    const { social, me } = await this.socialEngine();
+    const r = social.remove(me, username);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async socialBlock(username: string) {
+    const { social, me } = await this.socialEngine();
+    const r = social.block(me, username);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async socialUnblock(username: string) {
+    const { social, me } = await this.socialEngine();
+    const r = social.unblock(me, username);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async socialSetShare(username: string, category: string, on: boolean) {
+    const { social, me } = await this.socialEngine();
+    const r = social.setShare(me, username, category, on);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async socialSharesWith(username: string) {
+    const { social, me } = await this.socialEngine();
+    return social.sharesWith(me, username);
+  }
+  async socialViewFriend(username: string) {
+    const { social, me } = await this.socialEngine();
+    const week = await this.myWeek();
+    return social.viewFriend(me, username, (id) =>
+      MockStore.isSample(id) ? this.sampleWeek(id) : week,
+    );
+  }
+  async socialCreateGroup(input: {
+    kind: GroupKind;
+    title: string;
+    metric: GroupMetric;
+    target?: number | null;
+    startDay: string;
+    endDay: string;
+    invite: string[];
+  }) {
+    const { social, me, myName } = await this.socialEngine();
+    if (!myName) return { ok: false as const, code: 'needs_username' as const };
+    const r = social.createGroup(me, input);
+    if (r.ok) {
+      // Sample friends join at once so a group can be tried alone.
+      for (const name of input.invite) {
+        const id = Object.entries(this.state.community!.profiles).find(
+          ([, p]) => p.username.toLowerCase() === name.toLowerCase(),
+        )?.[0];
+        if (id && MockStore.isSample(id)) social.respondGroup(id, r.id, true);
+      }
+      await this.commit();
+    }
+    return r;
+  }
+  async socialRespondGroup(id: string, accept: boolean) {
+    const { social, me } = await this.socialEngine();
+    const r = social.respondGroup(me, id, accept);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  async socialLeaveGroup(id: string) {
+    const { social, me } = await this.socialEngine();
+    const r = social.leaveGroup(me, id);
+    if (r.ok) await this.commit();
+    return r;
+  }
+  /** Sends my own numbers for the group's dates: one number per day, from completed workouts counted once. Nothing else is read. */
+  async socialSyncGroup(id: string) {
+    const { social, me } = await this.socialEngine();
+    const v = social.groupView(me, id);
+    if (!v.ok || v.view.iAm !== 'joined')
+      return { ok: false as const, code: 'not_member' as const };
+    const tz = this.state.profile.timeZone;
+    const todayKey = localDateKey(this.now(), tz);
+    const perDay = new Map<string, number>();
+    for (const x of countedSessions(this.state.sessions)) {
+      const k = localDateKey(x.completedAt!, tz);
+      if (k < v.view.startDay || k > v.view.endDay || k > todayKey) continue;
+      perDay.set(k, (perDay.get(k) ?? 0) + sessionMinutes(x));
+    }
+    for (const [day, minutes] of perDay) social.report(me, id, day, minutes);
+    await this.commit();
+    return { ok: true as const };
   }
 
   async getSession(): Promise<Session | null> {

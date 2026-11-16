@@ -1,5 +1,9 @@
 import type {
   CommunityFail,
+  ActivityWeek,
+  GroupKind,
+  GroupMetric,
+  GroupView,
   NewPostInput,
   PublicComment,
   PublicPost,
@@ -258,6 +262,33 @@ export interface DataStore {
   communityBlock?(username: string): Promise<{ ok: true } | CommunityFail>;
   communityUnblock?(username: string): Promise<{ ok: true } | CommunityFail>;
   communityBlocked?(): Promise<string[]>;
+
+  // Friends, sharing and group goals (optional). The development mock implements them; the hosted schema is a proposal that is NOT applied, so Supabase builds do not offer them.
+  // Food, weight and health data can never be shared: the only shareable category is a weekly activity summary, chosen per friend.
+  socialOverview?(): Promise<SocialOverview>;
+  socialRequest?(username: string): Promise<SocialAck<{ status: 'requested' | 'accepted' }>>;
+  socialRespond?(username: string, accept: boolean): Promise<SocialAck>;
+  socialCancel?(username: string): Promise<SocialAck>;
+  socialRemove?(username: string): Promise<SocialAck>;
+  socialBlock?(username: string): Promise<SocialAck>;
+  socialUnblock?(username: string): Promise<SocialAck>;
+  socialSetShare?(username: string, category: string, on: boolean): Promise<SocialAck>;
+  socialSharesWith?(username: string): Promise<string[]>;
+  socialViewFriend?(
+    username: string,
+  ): Promise<SocialAck<{ username: string; activity: ActivityWeek | null }>>;
+  socialCreateGroup?(input: {
+    kind: GroupKind;
+    title: string;
+    metric: GroupMetric;
+    target?: number | null;
+    startDay: string;
+    endDay: string;
+    invite: string[];
+  }): Promise<SocialAck<{ id: string }>>;
+  socialRespondGroup?(id: string, accept: boolean): Promise<SocialAck>;
+  socialLeaveGroup?(id: string): Promise<SocialAck>;
+  socialSyncGroup?(id: string): Promise<SocialAck>;
 
   // Wellness (optional logs and preferences). Optional: not every adapter provides them.
   /** Entries on or after `sinceDay` (YYYY-MM-DD), newest first. */
@@ -602,4 +633,16 @@ export interface DeletionRequest {
   id: string;
   scheduledFor: string;
   status: 'requested';
+}
+
+export type SocialAck<T extends object = Record<never, never>> =
+  ({ ok: true } & T) | { ok: false; code: string };
+export interface SocialOverview {
+  /** My public name (needed before anyone can find me). Null until one is claimed. */
+  username: string | null;
+  friends: string[];
+  incoming: string[];
+  outgoing: string[];
+  blocked: string[];
+  groups: GroupView[];
 }

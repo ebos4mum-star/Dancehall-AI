@@ -13,6 +13,7 @@ describe('resolveConfig', () => {
       cloudAccounts: true,
       barcodeProvider: 'local',
       community: true,
+      social: true,
     });
   });
   it('carries an optional public support address and refuses anything that is not an email address', () => {
@@ -250,5 +251,22 @@ describe('internal content fixtures', () => {
         EXPO_PUBLIC_CLOUD_ACCOUNTS: '1',
       }).cloudAccounts,
     ).toBe(true);
+  });
+});
+
+describe('social flag', () => {
+  const sb = {
+    EXPO_PUBLIC_SUPABASE_URL: 'https://x.example.test',
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_abc',
+  };
+  it('is on in the development mock, off in a Supabase build unless asked, and refused in production', () => {
+    expect(resolveConfig({}).social).toBe(true);
+    expect(resolveConfig({ EXPO_PUBLIC_SOCIAL: '0' }).social).toBe(false);
+    expect(resolveConfig({ ...sb }).social).toBe(false);
+    expect(resolveConfig({ ...sb, EXPO_PUBLIC_SOCIAL: '1' }).social).toBe(true);
+    expect(() =>
+      resolveConfig({ ...sb, EXPO_PUBLIC_APP_ENV: 'production', EXPO_PUBLIC_SOCIAL: '1' }),
+    ).toThrow(/production/);
+    expect(resolveConfig({ ...sb, EXPO_PUBLIC_APP_ENV: 'production' }).social).toBe(false);
   });
 });

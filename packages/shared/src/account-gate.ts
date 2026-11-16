@@ -27,6 +27,7 @@ const ACCOUNT_PATHS: ReadonlyArray<readonly [string, GateIntent]> = [
   ['/dance/history', 'save_progress'],
   ['/progress', 'save_progress'],
   ['/challenges', 'challenges'],
+  ['/friends', 'challenges'],
   ['/goals', 'goals'],
   ['/coach', 'coach'],
   ['/food/add', 'log_food'],

@@ -33,7 +33,7 @@ const MENU: Array<{ icon: IconName; title: StringKey; sub: StringKey; to: string
 ];
 
 function MeScreenAccount() {
-  const { profile } = useApp();
+  const { profile, config, store } = useApp();
   // The progress row says "Weight progress" only for people who track weight.
   const showW = useShowWeight();
   const { colors, spacing: sp, radius } = useTheme();
@@ -44,9 +44,21 @@ function MeScreenAccount() {
   const rowSub = (m: (typeof MENU)[number]): StringKey =>
     m.to === '/progress' && !showW ? 'me.progressNoScaleSub' : m.sub;
   const communityOn = useCommunityAvailable();
-  const menu = communityOn
+  const socialOn = config.social && typeof store.socialOverview === 'function';
+  const base = socialOn
     ? [
         ...MENU,
+        {
+          icon: 'people-circle' as IconName,
+          title: 'social.entry' as StringKey,
+          sub: 'social.entrySub' as StringKey,
+          to: '/friends',
+        },
+      ]
+    : MENU;
+  const menu = communityOn
+    ? [
+        ...base,
         {
           icon: 'people' as IconName,
           title: 'community.entry' as StringKey,
@@ -54,7 +66,7 @@ function MeScreenAccount() {
           to: '/community',
         },
       ]
-    : MENU;
+    : base;
   const recent = insights.achievements.slice(0, 6);
   const name = profile?.displayName ?? null;
   return (

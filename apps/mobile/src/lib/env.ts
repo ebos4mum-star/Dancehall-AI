@@ -15,6 +15,11 @@ export interface AppConfig {
    * docs/COMMUNITY.md first, and lifting this needs a deliberate code change and its own review.
    */
   community: boolean;
+  /**
+   * Whether this build offers Friends, sharing and group goals. ON in the development mock (synthetic sample members); OFF everywhere else unless EXPO_PUBLIC_SOCIAL=1.
+   * A production build refuses to start with it on: it needs the social schema applied to a reviewed backend first (supabase/proposed/social.up.sql, not applied).
+   */
+  social: boolean;
   /** Public support address shown for appeals and questions. Not a secret. Absent until the owner sets one. */
   supportEmail?: string;
   /** Public https address of the published privacy policy and support page. Not secrets. Absent until the owner publishes them; the app shows a link only when set. */
@@ -70,6 +75,10 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
     throw new ConfigError(
       'Community is not allowed in a production build yet. Remove EXPO_PUBLIC_COMMUNITY.',
     );
+  if (appEnv === 'production' && env.EXPO_PUBLIC_SOCIAL === '1')
+    throw new ConfigError(
+      'Friends and group goals are not allowed in a production build yet. Remove EXPO_PUBLIC_SOCIAL.',
+    );
   const rawSupport = env.EXPO_PUBLIC_SUPPORT_EMAIL?.trim();
   if (rawSupport && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawSupport))
     throw new ConfigError('EXPO_PUBLIC_SUPPORT_EMAIL must be an email address.');
@@ -115,6 +124,7 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
       cloudAccounts: true,
       barcodeProvider,
       community: env.EXPO_PUBLIC_COMMUNITY !== '0',
+      social: env.EXPO_PUBLIC_SOCIAL !== '0',
       supportEmail,
       privacyPolicyUrl,
       supportUrl,
@@ -157,6 +167,7 @@ export function resolveConfig(env: Record<string, string | undefined>): AppConfi
     cloudAccounts: env.EXPO_PUBLIC_CLOUD_ACCOUNTS === '1',
     barcodeProvider,
     community: env.EXPO_PUBLIC_COMMUNITY === '1',
+    social: env.EXPO_PUBLIC_SOCIAL === '1',
     supportEmail,
     privacyPolicyUrl,
     supportUrl,

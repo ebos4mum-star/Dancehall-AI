@@ -103,6 +103,10 @@ export default function RootLayout() {
                   options={{ headerShown: true, title: t('swap.title') }}
                 />
                 <Stack.Screen
+                  name="friends"
+                  options={{ headerShown: true, title: t('social.title') }}
+                />
+                <Stack.Screen
                   name="food/fridge"
                   options={{ headerShown: true, title: t('fridge.title') }}
                 />
