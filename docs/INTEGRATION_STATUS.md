@@ -98,3 +98,7 @@ All reuse existing screens and components; none adds a route or a migration. Eve
 **Observation, not changed:** the Daily Fit Plan still offers "Aim for protein, veg and carbs at your next meal" and a "Log food" button to someone with an eating concern. It contains no numbers, but it is a food prompt; whether it should be withheld for that preference is a product decision.
 
 **Open Food Facts** remains OFF. See `docs/OPEN_FOOD_FACTS_CHECKLIST.md` for what could and could not be verified.
+
+
+## Community and Share My Achievement (local, off in production)
+Built on `claude/community`; see `docs/COMMUNITY.md`. Database proposal verified locally only, not applied. Server function, storage, admin UI and legal review are open; the public feed stays disabled until approved.

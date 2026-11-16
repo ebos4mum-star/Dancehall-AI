@@ -446,3 +446,26 @@ describe('moderation queue', () => {
     expect(q.map((i) => i.id)).toEqual(['3', '6', '2', '1']);
   });
 });
+
+import { readFileSync } from 'node:fs';
+describe('shared cases: the TypeScript rules and the database proposal must agree', () => {
+  const doc = JSON.parse(
+    readFileSync(new URL('../../../supabase/tests/community-cases.json', import.meta.url), 'utf8'),
+  ) as {
+    text: Array<{ text: string; max: number; decision: string; flags: string[] }>;
+    usernames: Array<{ name: string; ok: boolean }>;
+  };
+  it('text screening gives the recorded decision and flags for every case', () => {
+    expect(doc.text.length).toBeGreaterThan(30);
+    for (const c of doc.text) {
+      const r = screenText(c.text, { maxChars: c.max });
+      expect(
+        { decision: r.decision, flags: [...r.flags].sort() },
+        JSON.stringify(c.text.slice(0, 40)),
+      ).toEqual({ decision: c.decision, flags: c.flags });
+    }
+  });
+  it('usernames are accepted or refused exactly as recorded', () => {
+    for (const c of doc.usernames) expect(validateUsername(c.name).ok, c.name).toBe(c.ok);
+  });
+});
