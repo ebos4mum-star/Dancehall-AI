@@ -2,6 +2,8 @@
 
 Date: 2026-11-16. Method: a search of the whole repository for media and audio files, a read of the workout data, the player and audio code, and the content, licensing and media documents. Nothing was purchased, generated or published.
 
+> **Decision (2026-11-16): the owner approved Option A, real instructor-led dance workout videos for the first App Store release.** The detailed plan, hosting comparison, rights requirements and production options are in `docs/V1_VIDEO_PLAN.md`. This audit is the starting point; the library below is the planned content, **not content that exists**.
+
 **Bottom line:** DanceHall Fit AI today contains **no workout video, no music, no instructor, no choreography recording and no licensed media of any kind**. What exists is a working _guided timer_ for written workout outlines. That is not a dance class and must not be described as one. A real V1 needs recorded, licensed, professionally reviewed content.
 
 ## 1. What actually exists

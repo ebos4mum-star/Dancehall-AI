@@ -95,9 +95,24 @@ Status date: 2026-11-16. Scope: Community staging and V1 launch preparation. No 
 5. **Account deletion:** approve applying the purge job (to staging first) and confirm the waiting period.
 6. **Legal:** counsel review of the Community and privacy documents.
 
+## V1 content direction (approved 2026-11-16)
+
+Instructor-led, human-presented dance workout videos, **streamed** (not bundled), eight classes: warm-up, cool-down, Dancehall, Afrobeats, Amapiano, low-impact, plus longer Dancehall and Afrobeats sessions. No AI-generated instructors, no unlicensed commercial music. Nothing has been produced, licensed, hosted or built. Plan, hosting options, rights and safety requirements and cost ranges: `docs/V1_VIDEO_PLAN.md`.
+
+| #   | Requirement                                                     | Status                         | Evidence / what is needed                                                                                                                                                             |
+| --- | --------------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| V.1 | Eight instructor-led classes exist and play                     | BLOCKED                        | None exist. Needs route, budget, instructors, shoot, edit (owner decisions).                                                                                                          |
+| V.2 | Streaming (not bundling) with signed playback                   | BLOCKED                        | Design ready (`V1_VIDEO_PLAN.md` section 2); the renderer registry and licence/review gates exist, no `real_dancer` renderer, no playback function, no host chosen.                   |
+| V.3 | Captions on every class                                         | BLOCKED                        | Required by the approval gate; track captions not yet in the data model (small change in the plan).                                                                                   |
+| V.4 | Instructor, performer, choreography and music rights in writing | BLOCKED                        | No agreements, licences or releases exist; counsel needed.                                                                                                                            |
+| V.5 | Fitness-professional review of each class                       | BLOCKED                        | No reviewer engaged; gate F1 exists in code.                                                                                                                                          |
+| V.6 | Timer, logging and completion reused                            | PASS (design)                  | Existing wall-clock engine and logging stay the source of truth; the video follows the clock (`instruction-media.ts`, `player/catalog.ts`). To be re-verified on a device once built. |
+| V.7 | Listing and review notes describe only what ships               | PASS (rule), BLOCKED (listing) | Rule recorded; listing and screenshots not written.                                                                                                                                   |
+| V.8 | Guests can watch (territory licence)                            | BLOCKED (decision)             | A guest has no country; classes need a worldwide licence or a limited-territory listing.                                                                                              |
+
 ## Remaining blockers, prioritized by launch impact
 
-1. **No real dance content** (2.1.3). No video, music, instructor or licensed media exists. Without it the product is a guided timer, which App Review and customers will not accept as a dance-fitness app. Longest lead time: rights, shoot, review. Plan: `docs/V1_CONTENT_AUDIT.md`.
+1. **No real dance content** (2.1.3, 4.2). No video, music, instructor or licensed media exists. Direction is decided (instructor-led, streamed); production, rights, review and streaming integration are all still to do. Longest lead time: rights, shoot, review, about 8-12 weeks plus integration _(assumption)_. Plans: `docs/V1_VIDEO_PLAN.md`, `docs/V1_CONTENT_AUDIT.md`.
 2. **Account backend unproven and unreachable in production** (2.1.2). The fix is prepared but the hosted account gates have never run, and staging does not exist. Without working account creation, every account feature, including Community and account deletion, cannot be reviewed.
 3. **Account deletion does not yet delete** (5.1.1(v)). The executor is written and tested locally but not applied anywhere; it must be tested in isolated staging, scheduled, and its waiting period and disclosure confirmed.
 4. **Privacy policy, support page and support mailbox do not exist** (5.1.2, 1.2). Cannot submit without them. Requirements: `docs/PRIVACY_SUPPORT_PUBLICATION.md`.
