@@ -482,7 +482,11 @@ export class CommunityEngine {
     this.record(userId, 'report');
     const mine = this.state.reports.filter((r) => r.targetId === input.targetId);
     const flagged =
-      input.reason === 'private_information' || input.reason === 'self_harm' ? [input.reason] : [];
+      input.reason === 'private_information' ||
+      input.reason === 'child_safety' ||
+      input.reason === 'self_harm'
+        ? [input.reason]
+        : [];
     if (
       shouldHideAfterReports(
         mine.map((r) => r.reason),

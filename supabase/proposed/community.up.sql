@@ -145,7 +145,7 @@ create table public.community_reports (
   target_type text not null check (target_type in ('post', 'comment')),
   target_id uuid not null,
   reporter_id uuid not null references auth.users (id) on delete cascade,
-  reason text not null check (reason in ('harassment', 'unsafe_advice', 'body_shaming_or_eating_concern', 'spam', 'private_information', 'self_harm', 'other')),
+  reason text not null check (reason in ('harassment', 'unsafe_advice', 'body_shaming_or_eating_concern', 'spam', 'private_information', 'child_safety', 'self_harm', 'other')),
   note text check (note is null or char_length(note) <= 200),
   created_at timestamptz not null default now(),
   resolved_at timestamptz,
@@ -474,9 +474,9 @@ begin
   if app.community_used(p_user, 'report') >= app.community_limit('report') then raise exception 'rate_limited'; end if;
   insert into public.community_reports (target_type, target_id, reporter_id, reason, note) values (p_type, p_target, p_user, p_reason, left(btrim(p_note), 200));
   select count(distinct reporter_id)::int, array_agg(reason) into n, reasons from public.community_reports where target_id = p_target and resolved_at is null;
-  if n >= 3 or reasons && array['private_information', 'self_harm'] then
+  if n >= 3 or reasons && array['private_information', 'child_safety', 'self_harm'] then
     if p_type = 'post' then
-      update public.community_posts set status = 'hidden', flags = case when p_reason in ('private_information', 'self_harm') and not (flags @> array[p_reason]) then flags || p_reason else flags end
+      update public.community_posts set status = 'hidden', flags = case when p_reason in ('private_information', 'child_safety', 'self_harm') and not (flags @> array[p_reason]) then flags || p_reason else flags end
        where id = p_target and status = 'published';
     else
       update public.community_comments set status = 'hidden' where id = p_target and status = 'published';
@@ -508,7 +508,7 @@ begin
   if not app.community_is_moderator(p_actor, p_aal2) then raise exception 'forbidden'; end if;
   return query
     select q.id, q.target_type, q.author, q.body, q.status, q.flags, q.reasons, q.report_count,
-           (q.flags && array['self_harm', 'private_information'] or q.reasons && array['self_harm', 'private_information']),
+           (q.flags && array['self_harm', 'child_safety', 'private_information'] or q.reasons && array['self_harm', 'child_safety', 'private_information']),
            q.media, round(extract(epoch from (now() - q.created_at)) / 3600, 1), q.created_at from (
       select p.id, 'post'::text as target_type, m.username as author, p.body, p.status, p.flags,
              coalesce((select array_agg(distinct r.reason) from public.community_reports r where r.target_id = p.id and r.resolved_at is null), '{}'::text[]) as reasons,
@@ -523,7 +523,7 @@ begin
              (select count(*)::int from public.community_reports r where r.target_id = c.id and r.resolved_at is null), '[]'::jsonb, c.created_at
         from public.community_comments c join public.community_members m on m.user_id = c.author_id
        where c.status = 'hidden' or (c.status = 'published' and exists (select 1 from public.community_reports r where r.target_id = c.id and r.resolved_at is null))) q
-    order by case when q.flags && array['self_harm', 'private_information'] or q.reasons && array['self_harm', 'private_information'] then 0 when q.report_count > 0 then 1 else 2 end, q.created_at, q.id;
+    order by case when q.flags && array['self_harm', 'child_safety', 'private_information'] or q.reasons && array['self_harm', 'child_safety', 'private_information'] then 0 when q.report_count > 0 then 1 else 2 end, q.created_at, q.id;
 end $$;
 
 -- Tamper-evident record in the shared audit log. The acting moderator is passed in (the server verified them). Never records content or health data.

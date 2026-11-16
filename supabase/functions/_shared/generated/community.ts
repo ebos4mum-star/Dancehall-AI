@@ -489,12 +489,13 @@ export const REPORT_REASONS = [
   'body_shaming_or_eating_concern',
   'spam',
   'private_information',
+  'child_safety',
   'self_harm',
   'other',
 ] as const;
 export type ReportReason = (typeof REPORT_REASONS)[number];
 /** Reasons that hide the content at once, before any threshold, because waiting could cause harm. */
-const IMMEDIATE: readonly ReportReason[] = ['private_information', 'self_harm'];
+const IMMEDIATE: readonly ReportReason[] = ['private_information', 'child_safety', 'self_harm'];
 
 export function shouldHideAfterReports(
   reasons: readonly ReportReason[],
@@ -583,7 +584,9 @@ export interface ModerationItem {
 /** The review queue: held and hidden items, reported ones and self-harm or private-information first, then oldest first. Moderators never see private health records. */
 export function moderationQueue(items: readonly ModerationItem[]): ModerationItem[] {
   const urgent = (i: ModerationItem) =>
-    i.flags.includes('self_harm') || i.flags.includes('private_information')
+    i.flags.includes('self_harm') ||
+    i.flags.includes('child_safety') ||
+    i.flags.includes('private_information')
       ? 0
       : i.reportCount > 0
         ? 1

@@ -714,6 +714,7 @@ export const en = {
   'community.reason.body_shaming_or_eating_concern': 'Body shaming or disordered eating',
   'community.reason.spam': 'Spam or selling',
   'community.reason.private_information': 'Shares private information',
+  'community.reason.child_safety': 'A child may be involved',
   'community.reason.self_harm': 'Someone may need help',
   'community.reason.other': 'Something else',
   'community.status.held': 'Waiting for a quick review. Only you can see this.',

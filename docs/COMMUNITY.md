@@ -19,21 +19,44 @@ Status: **built locally, off in production.** Nothing here is applied to a hoste
 - Encourage counts are visible to the author only (no popularity signal).
 - Public projections never contain account ids or synthetic auth emails.
 
-## Server design (`supabase/proposed/community.up.sql`, NOT APPLIED)
+## Server design (all local, NOT DEPLOYED, NOT APPLIED)
 
-Tables have RLS on with deny-all policies and no client grants. Every operation is an `app.community_*` function executable only by `service_role`; an Edge Function must verify the JWT and pass the user id. Guests browse through the same server path. Moderation functions require the `moderation.review` permission and aal2.
-Verified on a throwaway local Postgres: `bash supabase/proposed/community-dry-run.sh` (privileges, TS/SQL rule parity, behaviour, moderation, rate limits, cascade deletion, existing RLS/definer guards, rollback, re-apply).
+- **Database proposal:** `supabase/proposed/community.up.sql` (+ `.down.sql`, `community.storage.sql`). Tables have RLS on with deny-all policies and no client privileges. Every operation is an `app.community_*` function. The `app` schema is not exposed; the Edge Function reaches the allow-listed functions through a single service-role-only door, `public.community_rpc`.
+- **Edge Function:** `supabase/functions/community/index.ts`, with logic in `packages/shared/src/community-server.ts` (generated copy in `_shared/generated`). Verified JWT identity (never from the request body), field-by-field validation, per-member and per-network rate limits before any work, generic errors, short-lived signed links for media. Staff routes need a verified second factor and are re-checked in the database.
+- **Media:** private bucket, no client policy. The member gets a one-time signed upload link, then the server downloads the file, checks its real type (not the claimed one), size, pixel count and video length, strips location/camera metadata from images, refuses videos with a saved location, and only then lets a post attach it. File paths carry no account identifier. Every photo and video is still reviewed by a person before publication. Video is checked but **not transcoded** (see dependencies).
+- **Usernames:** changeable; first change free, then every 30 days; the released name is held for 90 days; look-alikes of staff, the app and other members are refused (`usernameSkeleton`).
+- **Moderation:** audit-logged actions, report handling that resolves rather than deletes, removal that deletes files, member restrictions (muted/suspended, optional end), backlog counts and targets, manual and automatic modes.
+- **Admin console:** `apps/admin` Moderation page. Staff sign-in is password + authenticator code against the project's Auth service; with no project configured it offers a clearly labelled demo with made-up items.
+
+## Verification (local)
+
+- `bash supabase/proposed/community-dry-run.sh`: database privileges, TS/SQL rule parity, behaviour, uploads, moderation, restrictions, modes, rate limits, deletion, rollback, re-apply, on a throwaway Postgres.
+- `pnpm -r test`: shared (rules, engine, media, server), mobile (store, Edge Function client), admin (queue rules, console rendering, staff sign-in).
+
+## Documents prepared for review
+
+`COMMUNITY_GUIDELINES.md`, `COMMUNITY_PRIVACY_DISCLOSURE.md`, `COMMUNITY_TERMS.md`, `COMMUNITY_MINORS_POLICY.md`, `COMMUNITY_MODERATION.md`. All are drafts for the owner and a lawyer.
 
 ## Launch checklist (all open)
 
-1. Write the Edge Function / server route in front of the SQL functions (JWT check, input size limits, abuse/rate limiting at the edge).
-2. Storage bucket and policies for photos/videos; malware/image scanning; video transcoding.
-3. Admin moderation UI (queue logic exists; UI does not) and named moderators with MFA.
-4. Reviewed word lists (current ones are a starter set), Terms/Community Guidelines and privacy-notice legal review, minors policy.
-5. Moderation response-time target and escalation path for self-harm reports.
-6. Security review of the applied migration on a staging project; then owner approval to apply.
-7. Set `EXPO_PUBLIC_COMMUNITY=1` only for a build that has passed 1-6. Production builds with the flag throw today.
+1. Owner approval to apply `community.up.sql` and `community.storage.sql` to a **staging** project first; run the dry-run's checks there; security review of the applied schema.
+2. Owner approval to deploy the `community` Edge Function to staging, with `COMMUNITY_PEPPER` and `COMMUNITY_MAINTENANCE_KEY` set, and a scheduled call to `maintenance/prune`.
+3. Create the moderator's staff account with an enrolled authenticator factor; confirm a non-staff account and a password-only staff session are refused.
+4. Name the moderator, backup and escalation contact; decide targets and appeals.
+5. Legal review of the Guidelines, privacy disclosure, Terms and minors policy; safeguarding review of the word lists.
+6. Decide on video processing (below) and out-of-hours alerts (below).
+7. Device test of upload, posting, username change and leaving on a real phone.
+8. Build with `EXPO_PUBLIC_COMMUNITY=1` only after 1 to 7. Production builds with the flag still throw.
+
+## Dependencies needing an external provider or an operating decision
+
+- **Video transcoding and deeper inspection.** The server checks type, size, length and saved location, but cannot re-encode video or detect content. A transcoding/inspection service (a paid or self-hosted worker) would remove embedded metadata and standardise formats. Until then every video is human-reviewed and videos with saved locations are refused.
+- **Automated image/video safety scanning** (for example nudity or CSAM hashing). Not built; every file is human-reviewed. Some jurisdictions expect hash-matching for child-safety content; counsel must advise. This is a paid or regulated service.
+- **Out-of-hours alerts** to the moderator or escalation contact for urgent reports (email/SMS/push provider). Not built; the console banner is the only signal.
+- **Staff account setup**: the moderator account and authenticator enrolment are done in the Auth dashboard by the owner.
+- **Word lists** reviewed by a safeguarding adviser; **translations** for non-English launches.
+- **Hosted storage region and retention** decisions.
 
 ## Decisions needed
 
-Username permanence; whether authors see Encourage counts; photo/video launch timing (text-only first is possible); moderator staffing.
+See `COMMUNITY_MODERATION.md` ("Decisions needed") and the checklist above. Product decisions already made: usernames are changeable; authors see their own Encourage counts and there are no public rankings; text, photos, before/after and short videos are in V1, all media reviewed before publication; one moderator with MFA.

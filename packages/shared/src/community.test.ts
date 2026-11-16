@@ -359,6 +359,7 @@ describe('limits and reports', () => {
     expect(shouldHideAfterReports(['spam'], 2)).toBe(false);
     expect(shouldHideAfterReports(['spam', 'harassment', 'other'], 3)).toBe(true);
     expect(shouldHideAfterReports(['private_information'], 1)).toBe(true);
+    expect(shouldHideAfterReports(['child_safety'], 1)).toBe(true);
     expect(shouldHideAfterReports(['self_harm'], 1)).toBe(true);
     expect(shouldHideAfterReports(['harassment'], 1)).toBe(false);
   });

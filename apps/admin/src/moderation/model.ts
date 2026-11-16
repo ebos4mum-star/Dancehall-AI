@@ -111,6 +111,17 @@ export function playbookFor(item: Pick<QueueItem, 'reasons' | 'flags' | 'media'>
         'Do not penalise the member for asking for help. Restrict only if they also broke another rule.',
       ],
     };
+  if (all.has('child_safety'))
+    return {
+      title: 'A child may be involved (urgent)',
+      urgent: true,
+      steps: [
+        'Keep it hidden. Do not approve it, and do not copy or forward the image or text anywhere.',
+        'Do not contact the member outside the app.',
+        'Record the action and tell the named escalation contact the same day. Any legal duty to report is theirs and counsel’s to decide, not yours alone.',
+        'If the account appears to belong to someone under 18, the account-closure process applies.',
+      ],
+    };
   if (all.has('private_information'))
     return {
       title: 'Private information (urgent)',

@@ -79,6 +79,13 @@ describe('procedures', () => {
     expect(text).toMatch(/escalation/i);
     expect(text).toMatch(/Do not approve/);
   });
+  it('treats a possible child as urgent, with no copying and the legal duty left to the escalation contact', () => {
+    const p = playbookFor(item({ reasons: ['child_safety'] }));
+    expect(p.urgent).toBe(true);
+    const text = p.steps.join(' ');
+    expect(text).toMatch(/do not copy or forward/i);
+    expect(text).toMatch(/escalation contact/);
+  });
   it('treats private information as urgent and never to be copied', () => {
     const p = playbookFor(item({ reasons: ['private_information'] }));
     expect(p.urgent).toBe(true);

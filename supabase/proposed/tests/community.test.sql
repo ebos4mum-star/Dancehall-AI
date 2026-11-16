@@ -430,3 +430,17 @@ begin
   insert into public.community_media (post_id, kind, role, storage_path, mime, bytes) select id, 'photo', 'single', 'm/old.jpg', 'image/jpeg', 10 from public.community_posts where body = 'old';
   perform test.assert(app.community_status() ->> 'mode' = 'text_only', 'a photo post waiting more than 72 hours pauses media');
 end $$;
+
+-- 13. A child-safety report hides at once and is urgent.
+do $$
+declare a uuid; b uuid; m uuid; pid uuid;
+begin
+  perform test.as_admin(); a := test.make_user('c-cs-a@example.test'); b := test.make_user('c-cs-b@example.test'); m := test.make_user('c-cs-m@example.test');
+  insert into public.staff_roles (user_id, role) values (m, 'moderator');
+  perform set_config('role', 'service_role', false);
+  perform app.community_claim_username(a, 'cs_author'); perform app.community_claim_username(b, 'cs_reporter');
+  pid := (app.community_create_post(a, 'text', 'dance class today', null, null, true) ->> 'id')::uuid;
+  perform app.community_report(b, 'post', pid, 'child_safety', null);
+  perform test.assert((select status = 'hidden' and flags @> array['child_safety'] from public.community_posts where id = pid), 'one child-safety report hides the post and flags it');
+  perform test.assert((select urgent from app.community_moderation_queue(m, true) q where q.id = pid), 'and it is urgent in the queue');
+end $$;
