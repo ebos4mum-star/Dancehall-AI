@@ -781,6 +781,7 @@ export const en = {
   'barcode.incompleteTitle': 'This product listing is not complete enough to use',
   'barcode.enterYourself': 'Enter it from the label',
   'barcode.retry': 'Try again',
+  'barcode.busy': 'Lots of lookups just now. Add it from the label, or try again in a minute.',
   'barcode.manualInstead': 'Add it without a barcode',
   'barcode.cached': 'Saved from an earlier lookup. You are offline, so this may be out of date.',
   'barcode.mine': 'Entered by you from the package. Check it still matches.',

@@ -389,7 +389,9 @@ function BarcodeScreen() {
               <Notice tone="warning">
                 {phase.result.status === 'not_found'
                   ? t('barcode.notFound')
-                  : t('barcode.unavailable')}
+                  : phase.result.reason === 'rate_limited'
+                    ? t('barcode.busy')
+                    : t('barcode.unavailable')}
               </Notice>
             )}
             {scanned && phase.result.status !== 'unavailable' ? (

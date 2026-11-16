@@ -285,6 +285,31 @@ describe('Open Food Facts adapter (fake network only; never called live)', () =>
     expect((await q.lookup('4006381333931')).status).toBe('found');
     expect(n).toBe(2); // the failure was not remembered
   });
+  it('keeps to the published limit: at most 12 real requests in a rolling minute, then "rate_limited" without sending', async () => {
+    let t = 0;
+    let calls = 0;
+    const f = (async () => {
+      calls++;
+      return new Response(JSON.stringify(body));
+    }) as unknown as typeof fetch;
+    const p = make(f, {
+      now: () => t,
+      sleep: async (ms: number) => void (t += ms),
+      cacheMs: 0,
+      minIntervalMs: 0,
+    });
+    const codes = ['4006381333931', '036000291452', '96385074'];
+    for (let i = 0; i < 12; i++) expect((await p.lookup(codes[i % 3]!)).status).toBe('found');
+    expect(calls).toBe(12);
+    expect(await p.lookup('4006381333931')).toEqual({
+      status: 'unavailable',
+      reason: 'rate_limited',
+    });
+    expect(calls).toBe(12); // nothing was sent
+    t += 61_000;
+    expect((await p.lookup('4006381333931')).status).toBe('found'); // the window moved on
+    expect(calls).toBe(13);
+  });
   it('carries the Open Food Facts credit', () => {
     expect(make(ok({})).attribution).toMatch(/Open Food Facts/);
   });

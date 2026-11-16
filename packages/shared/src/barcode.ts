@@ -60,7 +60,7 @@ export type ProductLookup =
   /** The product exists but its numbers cannot be trusted or are missing: no value is produced. `problems` says why, in plain words. */
   | { status: 'incomplete'; product: ProductRecord; problems: string[] }
   | { status: 'not_found' }
-  | { status: 'unavailable'; reason: 'off' | 'network' | 'error' };
+  | { status: 'unavailable'; reason: 'off' | 'network' | 'error' | 'rate_limited' };
 
 export interface ProductProvider {
   id: ProductSource | 'off';
@@ -178,6 +178,11 @@ export function createOpenFoodFactsProvider(opts: {
   /** Courtesy limits, kept well under any published rate limit: at least this long between requests (default 700 ms), results remembered for this long (default 10 min). */
   minIntervalMs?: number;
   cacheMs?: number;
+  /**
+   * Open Food Facts publishes 15 product reads a minute per IP address and reserves the right to ban an address above it. The adapter keeps to 12 in any rolling minute
+   * (default) and answers "unavailable (rate_limited)" instead of sending more, so a burst of scans can never push a household behind one address over the limit.
+   */
+  maxPerMinute?: number;
   /** Injectable clock and delay, for tests. */
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
@@ -188,6 +193,8 @@ export function createOpenFoodFactsProvider(opts: {
   const ttl = opts.cacheMs ?? 10 * 60_000;
   const cache = new Map<string, { at: number; value: ProductLookup }>();
   let last = 0;
+  const maxPerMinute = opts.maxPerMinute ?? 12;
+  const sent: number[] = [];
   const base = (opts.baseUrl ?? 'https://world.openfoodfacts.org').replace(/\/+$/, '');
   return {
     id: 'open_food_facts',
@@ -198,9 +205,13 @@ export function createOpenFoodFactsProvider(opts: {
       // A product already looked up recently is answered from memory: the same barcode is never requested twice in a row.
       const hit = cache.get(parsed.code);
       if (hit && now() - hit.at < ttl) return hit.value;
+      // Rolling one-minute budget, checked BEFORE anything is sent.
+      while (sent.length > 0 && now() - sent[0]! >= 60_000) sent.shift();
+      if (sent.length >= maxPerMinute) return { status: 'unavailable', reason: 'rate_limited' };
       const wait = last + minGap - now();
       if (wait > 0) await sleep(wait);
       last = now();
+      sent.push(last);
       const remember = (value: ProductLookup): ProductLookup => {
         // Only definite answers are remembered; a network or server failure is retried next time.
         if (value.status !== 'unavailable') {

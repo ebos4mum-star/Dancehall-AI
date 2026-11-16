@@ -14,7 +14,7 @@ import type { AppConfig } from '@/lib/env';
  * in development and review builds. Open Food Facts is used only when the owner has switched it on.
  */
 export function createBarcodeProvider(
-  config: Pick<AppConfig, 'barcodeProvider'>,
+  config: Pick<AppConfig, 'barcodeProvider'> & { supportEmail?: string },
   fetchImpl: typeof fetch = fetch,
 ): ProductProvider {
   switch (config.barcodeProvider) {
@@ -23,8 +23,10 @@ export function createBarcodeProvider(
     case 'open_food_facts':
       return createOpenFoodFactsProvider({
         fetchImpl,
-        // Identifies the app to Open Food Facts, as they ask. Contains no personal details.
-        userAgent: 'DanceHallFit/0.0 (barcode lookup)',
+        // Open Food Facts asks for AppName/Version (ContactEmail). The contact is the app's public support address (set by the owner); there is nothing about the person.
+        userAgent: config.supportEmail
+          ? `DanceHallFit/0.0 (${config.supportEmail})`
+          : 'DanceHallFit/0.0 (barcode lookup)',
       });
     default:
       return OFF_PROVIDER;
@@ -33,7 +35,7 @@ export function createBarcodeProvider(
 
 /** The configured database with the person's own products in front and, for a live database, an offline memory behind. */
 export function createLayeredBarcodeProvider(
-  config: Pick<AppConfig, 'barcodeProvider'>,
+  config: Pick<AppConfig, 'barcodeProvider'> & { supportEmail?: string },
   stores: { mine: ProductStore; memory: ProductStore },
   fetchImpl: typeof fetch = fetch,
 ): ProductProvider {

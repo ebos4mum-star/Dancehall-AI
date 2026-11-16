@@ -47,7 +47,7 @@ EXPO_PUBLIC_SUPABASE_URL=https://bxhnrjulksganzydgrgm.supabase.co EXPO_PUBLIC_SU
 npx expo run:ios --device
 ```
 
-Then repeat the checklist with two phones or one phone plus the hosted test script for the second account. Remove the synthetic accounts afterwards.
+Create a real account in the app (Recovery Key, PIN; no email). A second account needs a second phone or simulator: on the Mac run `npx expo run:ios` again with another simulator (`--device "iPhone 15"`). Repeat the checklist above for real sign-in, public name, requests, blocking, consent sharing, challenge, couple and family goals, and the Delete my account button (the 30-day wait is provisional; ask me to run the server-side executor on staging to prove the cleanup). Tell me when you are done and I remove every account and record from staging.
 
 ## Not done and not allowed here
 

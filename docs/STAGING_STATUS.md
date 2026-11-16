@@ -442,3 +442,45 @@ All synthetic users, public names, friendships, blocks, shares, groups, invitati
 4. Review and approve applying `community.up.sql` and `social.up.sql` (plus the patch folded in) to any non-staging database before use; not done.
 5. Legal review of the friend and group privacy wording; Open Food Facts live test; Community open items (guest rate limit, expired token, deletion scheduling).
 6. Auth leaked-password option: decide (leave off, or approve a plan upgrade).
+
+---
+
+# Phase 10: staging account integration, Friends with the app's real code, live barcode (2026-11-16)
+
+Project `bxhnrjulksganzydgrgm` only (reference verified before each hosted change). Development Supabase, production, `main` and `integration/live-prep` untouched. No PR, no EAS build, no TestFlight. Public Community stayed Read only throughout (database `read_only`, comments and video off; no Community secret or floor setting touched).
+
+## 1. `account` function deployed to staging
+
+| Item                   | Result                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dependencies           | the account database layer was already on staging from the 19 approved migrations (17 `app.acct_*` functions, service-role only, no client grants); no further migration was needed or applied                                                                                                                                          |
+| Secrets                | `ACCOUNT_PEPPER` and `MAINTENANCE_KEY` entered by you in the dashboard prompt (never seen by me). Optional settings left at their defaults (24-hour recovery wait, `accounts.dancehall.invalid` identifier domain)                                                                                                                      |
+| Deployed               | function `account`, **version 1**, `verify_jwt=false` (it authorises each action itself, as on development), code hash `ac596a31...`, shared code pinned to commit `434cabb2149abb2ae2760ea2d7c2cf88123797f9`; the function file is the repository's `supabase/functions/account/index.ts` with comments removed and its imports pinned |
+| Isolation              | the function uses only the platform-provided URL and service key of the project it is deployed to (staging). It holds no development or production reference                                                                                                                                                                            |
+| Boundary checks        | `status` and `rotate` without a token 401; GET 405; maintenance with a wrong key 401; `check-access.mjs` function and db checks pass; Community status `read_only`, comments and video disabled                                                                                                                                         |
+| Account security model | unchanged (PIN-first, email-free, 24-hour recovery wait, Recovery Key, security answers)                                                                                                                                                                                                                                                |
+
+## 2. Friends with the app's REAL code on staging (not a device)
+
+`apps/mobile/src/data/live/friendsStaging.test.ts` drives the app's real account service (create account, device secret, sign-in, no email), the real Supabase store and its social adapter, and the deployed `account` and `social` functions. Guarded to the staging reference (the development reference and any other project are refused). Synthetic accounts only.
+
+- **Phase `main`: 37 of 37 PASS.** Three real accounts created and signed in with no email; claiming a public name (staff look-alike refused, a person without a name cannot ask); request, accept, decline, remove; C blocks A, and A's request to C is byte-identical to a request for an unknown name; nothing shared by default; food, weight, health, food_diary and weight_entries all refused as share categories; consent-based weekly summary shows the server-calculated 30 minutes to the chosen friend only, holds no food, weight or health data, and withdrawal is immediate; challenge, couple goal and family goal created and accepted; progress calculated by the server (30 and 40 minutes); a stranger cannot sync a group; the second account's own records exclude the first one's weight and food; a direct database query by one member for another's weight and food returns nothing (row-level security); the social tables are closed to a signed-in client (error 42501); account deletion requested through the real app code.
+- **Server-side deletion executor** then ran for that account. **Phase `after`: 5 of 5 PASS** (friendship gone, gone from every group and total, nobody can view it, its old access token is refused by the `social` function, none of its private records remain). A first version of that last check expected the phone's stored session to vanish; a stored token stays cryptographically valid until it expires, which is normal, so the check was corrected to the meaningful one (the server refuses it).
+- Cleanup: all synthetic accounts, names, friendships, groups, numbers, workouts, weight and food records, consents, account provisioning rows and rate-limit counters deleted. Read-back all 0. **Audit chain 8 of 8 valid.** Staging host removed from the Default environment.
+
+## Real device versus simulator
+
+- **Real iPhone: NOT TESTED.** There is no iPhone, no iOS Simulator and no macOS in this environment, so nothing here ran on a phone or simulator. The Friends flows were exercised by the app's real TypeScript code (account service, store, social adapter) over the real network against staging, which proves the backend, the authentication path and the data rules, but not the screens, the Keychain, Face ID, VoiceOver or layout.
+- What the owner still runs: `docs/FRIENDS_IPHONE_TEST.md`, Track B (now possible from your Mac: staging `account` v1 and `social` v1 are deployed). Production Friends stays disabled: no EAS profile sets the flag (a test pins that) and a production build given the flag refuses to start.
+
+## 4. Open Food Facts live tests (read-only, no paid service)
+
+7 of 7 PASS against the real service (details in `docs/OPEN_FOOD_FACTS_CHECKLIST.md`). Two **findings fixed**: (1) the adapter's 700 ms spacing allowed about 85 requests a minute against Open Food Facts' published **15 reads a minute per IP**, so it now keeps to 12 in any rolling minute and answers "rate limited" without sending; (2) their documentation asks for a User-Agent of the form `AppName/Version (ContactEmail)`, so the adapter now sends the public support address when the owner has set one (set `EXPO_PUBLIC_SUPPORT_EMAIL` before enabling). The feature stays OFF by default and in production.
+
+## Remaining blockers
+
+1. On-device (or Simulator) test of Friends and everything else on a Mac, Track B (the owner).
+2. Open Food Facts: owner to set a support address, approve the privacy wording, read their terms page and fill their API usage form, then preview-first activation.
+3. Friends disabled in shared builds until you decide; `community.up.sql` and `social.up.sql` not applied outside staging; legal review of the wording.
+4. Community open items: guest rate-limit test, expired-token test, deletion-executor scheduling. Auth leaked-password option (paid plan).
+5. Dietitian and cultural review of foods and recipes.
