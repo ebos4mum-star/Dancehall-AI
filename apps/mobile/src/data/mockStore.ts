@@ -109,6 +109,7 @@ import {
   type DailyPlanItem,
   type WeeklyReviewRecord,
 } from './types';
+import { withoutDuplicateWorkouts } from './eligibleSessions';
 import { isValidChallenge } from '../challenges/logic';
 import { MAX_HABITS, cleanHabitName } from '../habits/logic';
 import {
@@ -507,6 +508,8 @@ export class MockStore implements DataStore {
         source: x.source,
         style: x.style,
         lowImpact: x.lowImpact,
+        workoutId: x.workoutId,
+        title: x.title,
       })),
       mealLogDays: [...new Set(s.foodLogs.map((l) => localDateKey(l.loggedAt, tz)))],
       habitDays: (s.habitCheckins ?? []).map((c) => ({ day: c.day, habitId: c.habitId })),
@@ -1094,9 +1097,10 @@ export class MockStore implements DataStore {
   }
 
   // ---------- Workout sessions ----------
-  async listSessions() {
+  async listSessions(opts?: { includeDuplicates?: boolean }) {
     const s = await this.authed();
-    return [...s.sessions]
+    const all = opts?.includeDuplicates ? s.sessions : withoutDuplicateWorkouts(s.sessions);
+    return [...all]
       .sort((a, b) =>
         (b.completedAt ?? b.plannedFor ?? b.createdAt).localeCompare(
           a.completedAt ?? a.plannedFor ?? a.createdAt,
@@ -1541,7 +1545,7 @@ export class MockStore implements DataStore {
           minutes: x.minutes,
           lowImpact: x.lowImpact,
         })),
-      doneToday: s.sessions
+      doneToday: withoutDuplicateWorkouts(s.sessions)
         .filter(
           (x) =>
             x.status === 'completed' && x.completedAt && localDateKey(x.completedAt, tz) === date,
@@ -1640,13 +1644,13 @@ export class MockStore implements DataStore {
     );
     const change = weights.change30dKg;
     const wk = weekStartOf(today);
-    const doneThisWeek = s.sessions.filter(
+    const doneThisWeek = withoutDuplicateWorkouts(s.sessions).filter(
       (x) =>
         x.status === 'completed' &&
         x.completedAt &&
         weekStartOf(localDateKey(x.completedAt, tz)) === wk,
     );
-    const lastDone = s.sessions
+    const lastDone = withoutDuplicateWorkouts(s.sessions)
       .filter((x) => x.status === 'completed' && x.completedAt)
       .map((x) => localDateKey(x.completedAt!, tz))
       .sort()

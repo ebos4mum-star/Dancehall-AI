@@ -30,7 +30,7 @@ do $$ declare t text; begin
   end loop;
 end $$;
 
--- The person's own recent records, as the engine's input. Facts only: ids, times, durations and days. Food content, weights and notes are never selected.
+-- The person's own recent records, as the engine's input (workouts de-duplicated by app.eligible_workouts). Facts only: ids, times, durations and days. Food content, weights and notes are never selected.
 create or replace function app.gm_inputs(p_user uuid) returns jsonb language plpgsql stable security definer set search_path = '' as $$
 declare tz text;
 begin
@@ -39,9 +39,10 @@ begin
   return jsonb_build_object(
     'timeZone', tz,
     'today', to_char((now() at time zone tz)::date, 'YYYY-MM-DD'),
-    'sessions', coalesce((select jsonb_agg(jsonb_build_object('id', s.id::text, 'status', s.status, 'completedAt', s.completed_at, 'durationS', s.duration_s, 'minutes', s.minutes,
-        'source', s.source, 'style', s.style, 'lowImpact', s.low_impact) order by s.completed_at desc)
-      from (select * from public.workout_sessions where user_id = p_user and status = 'completed' and completed_at >= now() - interval '75 days' order by completed_at desc limit 500) s), '[]'::jsonb),
+    -- Only workouts that count, once each (app.eligible_workouts, social.up.sql): the same physical session saved in the app and imported from Apple Health is one record here too.
+    'sessions', coalesce((select jsonb_agg(jsonb_build_object('id', w.id::text, 'status', 'completed', 'completedAt', w.completed_at, 'durationS', w.duration_s, 'minutes', w.minutes,
+        'source', w.source, 'style', w.style, 'lowImpact', w.low_impact, 'workoutId', w.workout_id, 'title', w.title) order by w.completed_at desc)
+      from (select * from app.eligible_workouts(p_user, now() - interval '75 days') order by completed_at desc limit 500) w), '[]'::jsonb),
     'mealLogDays', coalesce((select jsonb_agg(d order by d) from (select distinct to_char((logged_at at time zone tz)::date, 'YYYY-MM-DD') d from public.food_logs
         where user_id = p_user and logged_at >= now() - interval '75 days') x), '[]'::jsonb),
     'habitDays', coalesce((select jsonb_agg(jsonb_build_object('day', to_char(c.day, 'YYYY-MM-DD'), 'habitId', c.habit_id::text))

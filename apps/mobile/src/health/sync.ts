@@ -49,7 +49,7 @@ export async function syncHealth(args: {
   const external = (await provider.readWorkouts(since.toISOString())).filter(
     (w) => Date.parse(w.endedAt) <= now.getTime() + DAY_MS,
   );
-  const recorded = (await store.listSessions()).map((s) => ({
+  const recorded = (await store.listSessions({ includeDuplicates: true })).map((s) => ({
     completedAt: s.completedAt,
     durationS: s.durationS ?? s.minutes * 60,
     externalId: s.externalId,

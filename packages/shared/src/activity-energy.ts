@@ -1,3 +1,4 @@
+import { eligibleWorkouts } from './eligible-workouts';
 import { localDateKey } from './food';
 import { sessionMinutes } from './activity';
 import { estimateBmrKcal, type ActivityLevel, type Sex } from './safety';
@@ -62,31 +63,17 @@ export interface EnergySession {
   durationS: number | null;
   minutes: number;
   lowImpact: boolean;
+  /** 'apple_health' for an imported workout; it never counts alongside an in-app record of the same session (see eligible-workouts.ts). */
+  source?: string | null;
 }
 
 /**
- * The completed sessions that should count, once each: only completed ones, one per id, and a repeat of the same workout recorded within ten minutes of another
- * (for example logged by hand and then again from the plan) is treated as the same session.
+ * The completed sessions that should count, once each: only completed ones, one per id, a repeat of the same workout recorded within ten minutes of another
+ * (for example logged by hand and then again from the plan) is treated as the same session, and an Apple Health record of a session already recorded in the app is dropped.
+ * The rule lives in eligible-workouts.ts.
  */
 export function countedSessions<T extends EnergySession>(sessions: readonly T[]): T[] {
-  const done = sessions
-    .filter((s) => s.status === 'completed' && s.completedAt)
-    .sort((a, b) => a.completedAt!.localeCompare(b.completedAt!) || a.id.localeCompare(b.id));
-  const out: T[] = [];
-  const ids = new Set<string>();
-  for (const s of done) {
-    if (ids.has(s.id)) continue;
-    const t = Date.parse(s.completedAt!);
-    const dup = out.some(
-      (o) =>
-        (o.workoutId ?? o.title.toLowerCase()) === (s.workoutId ?? s.title.toLowerCase()) &&
-        Math.abs(Date.parse(o.completedAt!) - t) < 10 * 60_000,
-    );
-    if (dup) continue;
-    ids.add(s.id);
-    out.push(s);
-  }
-  return out;
+  return eligibleWorkouts(sessions);
 }
 
 /** What the activity level in the daily guide already assumes, per day (kcal above sedentary). */

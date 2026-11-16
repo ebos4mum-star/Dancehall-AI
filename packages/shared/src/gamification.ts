@@ -1,3 +1,5 @@
+import { eligibleWorkouts } from './eligible-workouts';
+
 // Self-contained on purpose: the server copy of this file (supabase/functions/_shared/generated) must not drag in the food catalogue.
 const localDateKey = (iso: string, timeZone: string | null | undefined): string => {
   const d = new Date(iso);
@@ -50,7 +52,6 @@ export const GM = {
   /** More than this many minutes of recorded exercise in a day shows a rest nudge. */
   REST_NUDGE_MINUTES: 120,
   MAX_LEVEL: 100,
-  DUPLICATE_WINDOW_MIN: 10,
 } as const;
 
 export type GmKind = 'workout' | 'meal_day' | 'habit_day' | 'quest' | 'badge';
@@ -94,6 +95,8 @@ export interface GmSession {
   source?: string | null;
   style?: string | null;
   lowImpact?: boolean;
+  workoutId?: string | null;
+  title?: string | null;
 }
 export interface GmInput {
   today: string;
@@ -126,42 +129,19 @@ export interface CountedWorkout {
  * dropped, so a guided session that a watch also recorded is rewarded once. Sessions shorter than the minimum earn nothing.
  */
 export function countedWorkouts(input: Pick<GmInput, 'sessions' | 'timeZone'>): CountedWorkout[] {
-  const done = input.sessions
-    .filter(
-      (s) =>
-        s.status === 'completed' && s.completedAt && Number.isFinite(Date.parse(s.completedAt)),
-    )
-    .map((s) => ({
-      s,
-      end: Date.parse(s.completedAt!),
-      min: sessionMinutes({ durationS: s.durationS, minutes: s.minutes }),
-    }));
-  const win = GM.DUPLICATE_WINDOW_MIN * 60_000;
-  const native = done.filter((d) => d.s.source !== 'apple_health');
-  const out: CountedWorkout[] = [];
-  const seen = new Set<string>();
-  for (const d of done) {
-    if (seen.has(d.s.id)) continue;
-    seen.add(d.s.id);
-    if (!(d.min >= GM.MIN_WORKOUT_MIN)) continue;
-    if (d.s.source === 'apple_health') {
-      const began = d.end - d.min * 60_000;
-      const overlaps = native.some((n) => {
-        const nb = n.end - n.min * 60_000;
-        return Math.abs(nb - began) <= win || (began >= nb - win && began <= n.end);
-      });
-      if (overlaps) continue;
-    }
-    out.push({
-      id: d.s.id,
-      day: localDateKey(d.s.completedAt!, input.timeZone),
-      minutes: Math.min(d.min, 600),
-      style: d.s.style ?? null,
-      lowImpact: d.s.lowImpact === true,
-      source: d.s.source ?? 'manual',
-    });
-  }
-  return out.sort((a, b) => a.day.localeCompare(b.day) || a.id.localeCompare(b.id));
+  // The one eligibility rule (eligible-workouts.ts): the same session recorded in the app and imported from Apple Health counts once, in either order.
+  return eligibleWorkouts(input.sessions)
+    .map((s) => ({ s, min: sessionMinutes({ durationS: s.durationS, minutes: s.minutes }) }))
+    .filter((x) => x.min >= GM.MIN_WORKOUT_MIN)
+    .map(({ s, min }) => ({
+      id: s.id,
+      day: localDateKey(s.completedAt!, input.timeZone),
+      minutes: Math.min(min, 600),
+      style: s.style ?? null,
+      lowImpact: s.lowImpact === true,
+      source: s.source ?? 'manual',
+    }))
+    .sort((a, b) => a.day.localeCompare(b.day) || a.id.localeCompare(b.id));
 }
 
 export const workoutXp = (minutes: number): number =>

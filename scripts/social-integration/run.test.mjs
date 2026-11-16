@@ -487,6 +487,112 @@ describe(
       });
     });
 
+    describe('one physical workout counts once (Group Goals, XP and the league), in either order', () => {
+      let gid;
+      const total = async (uid) =>
+        Number(
+          (
+            await db.query(
+              'select coalesce(sum(value), 0)::int n from public.social_contributions where group_id = $1 and user_id = $2',
+              [gid, uid],
+            )
+          ).rows[0].n,
+        );
+      const workoutEvents = async (uid, ids) =>
+        (
+          await db.query(
+            "select count(*)::int n from public.gm_ledger where user_id = $1 and kind = 'workout' and event_id = any($2)",
+            [uid, ids.map((i) => `workout:${i}`)],
+          )
+        ).rows[0].n;
+      it('an Apple Health import first, then the guided session of the same workout: stored twice, added once to the group, paid once', async () => {
+        await as('efua')('friend/request', { username: 'yaw_beats' });
+        await as('yaw')('friend/respond', { username: 'efua_fit', accept: true });
+        const made = await as('efua')('group/create', {
+          kind: 'challenge',
+          title: 'Same session',
+          metric: 'active_minutes',
+          startDay: new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10),
+          endDay: new Date(Date.now() + 10 * 86400000).toISOString().slice(0, 10),
+          invite: ['yaw_beats'],
+        });
+        assert.equal(made.status, 200, JSON.stringify(made.body));
+        gid = made.body.id;
+        await as('yaw')('group/respond', { groupId: gid, accept: true });
+        await as('efua')('group/sync', { groupId: gid });
+        const base = await total(users.efua); // whatever efua already did (the earlier gamification test left one 30-minute walk)
+        const hk = (
+          await db.query(
+            "insert into public.workout_sessions (user_id, title, minutes, status, completed_at, duration_s, source, external_id) values ($1, 'Apple Health: Dance', 31, 'completed', now() - interval '26 hours' + interval '1 minute', 1860, 'apple_health', 'hk-ef-dup') returning id",
+            [users.efua],
+          )
+        ).rows[0].id;
+        await as('efua')('group/sync', { groupId: gid });
+        assert.equal(await total(users.efua), base + 31, 'the import alone counts');
+        const guided = (
+          await db.query(
+            "insert into public.workout_sessions (user_id, title, minutes, status, completed_at, duration_s) values ($1, 'Guided class', 30, 'completed', now() - interval '26 hours', 1800) returning id",
+            [users.efua],
+          )
+        ).rows[0].id;
+        await as('efua')('group/sync', { groupId: gid });
+        assert.equal(
+          await total(users.efua),
+          base + 30,
+          'now the same workout is not added twice (30, not 61)',
+        );
+        await as('efua')('gm/sync', {});
+        assert.equal(
+          await workoutEvents(users.efua, [guided, hk]),
+          1,
+          'XP is paid for one of the two records',
+        );
+        assert.equal(await workoutEvents(users.efua, [guided]), 1, 'and it is the in-app record');
+      });
+      it('a legitimate separate workout the same day still counts; an edit separates the records; a deletion lets the import count again', async () => {
+        const before = await total(users.efua);
+        await db.query(
+          "insert into public.workout_sessions (user_id, title, minutes, status, completed_at, duration_s, source, external_id) values ($1, 'Apple Health: Run', 20, 'completed', now() - interval '20 hours', 1200, 'apple_health', 'hk-ef-run')",
+          [users.efua],
+        );
+        await as('efua')('group/sync', { groupId: gid });
+        assert.equal(await total(users.efua), before + 20, 'a separate workout counts');
+        // Edit the guided session to the evening of the previous day: it no longer overlaps the import, so both count.
+        await db.query(
+          "update public.workout_sessions set completed_at = now() - interval '40 hours' where user_id = $1 and title = 'Guided class'",
+          [users.efua],
+        );
+        await as('efua')('group/sync', { groupId: gid });
+        assert.equal(
+          await total(users.efua),
+          before + 20 + 31,
+          'after the edit the import is a separate workout (30 + 31 + 20 on top of the base)',
+        );
+        // Move it back, then delete it: the import counts alone.
+        await db.query(
+          "update public.workout_sessions set completed_at = now() - interval '26 hours' where user_id = $1 and title = 'Guided class'",
+          [users.efua],
+        );
+        await db.query(
+          "delete from public.workout_sessions where user_id = $1 and title = 'Guided class'",
+          [users.efua],
+        );
+        await as('efua')('group/sync', { groupId: gid });
+        assert.equal(
+          await total(users.efua),
+          before + 20 + 31 - 30,
+          'after the deletion the import counts alone',
+        );
+        const view = await as('yaw')('friend/view', { username: 'efua_fit' });
+        assert.ok([200, 403].includes(view.status)); // not shared: nothing about efua's activity is shown
+        assert.equal(view.body.activity ?? null, null);
+      });
+      it('leaves nothing behind for the deletion test that follows', async () => {
+        await db.query('delete from public.social_groups where id = $1', [gid]);
+        assert.equal((await as('efua')('friend/remove', { username: 'yaw_beats' })).status, 200);
+      });
+    });
+
     describe('limits, isolation and deletion', () => {
       it('rate limits a member who is going too fast, without affecting another member', async () => {
         const results = await Promise.all(

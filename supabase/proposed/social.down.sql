@@ -6,3 +6,4 @@ do $$ declare f record; begin
     execute format('drop function if exists %s cascade', f.sig);
   end loop;
 end $$;
+drop function if exists app.eligible_workouts(uuid, timestamptz);

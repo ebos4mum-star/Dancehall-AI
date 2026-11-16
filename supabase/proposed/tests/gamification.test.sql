@@ -1,3 +1,5 @@
+\set elig `cat supabase/tests/eligible-workout-cases.json`
+select set_config('test.elig', :'elig', false) is not null as loaded \gset
 -- Gamification + Apple Health import (proposed). Runs after community.up.sql, social.up.sql, health_sync.up.sql and gamification.up.sql on a throwaway database.
 -- The server is the only writer; the ledger is idempotent; the league shows only opted-in, unblocked friends and one number.
 do $$
@@ -101,4 +103,75 @@ begin
   a := (select id from auth.users where email = 'gm-a@example.test');
   delete from auth.users where id = a;
   perform test.assert(not exists (select 1 from public.gm_ledger where user_id = a) and not exists (select 1 from public.gm_league_optin where user_id = a), 'deleting the account removes the ledger and the opt-in');
+end $$;
+
+-- One physical workout counts once: the same cases the TypeScript rule is tested with (packages/shared/src/eligible-workouts.test.ts), in both insertion orders.
+do $$
+declare c jsonb; s jsonb; u uuid; got text[]; want text[]; n int := 0; pass int;
+begin
+  perform test.as_admin();
+  for c in select * from jsonb_array_elements(current_setting('test.elig')::jsonb -> 'cases') loop
+    for pass in 1 .. 2 loop
+      n := n + 1;
+      u := test.make_user('elig-' || n || '@example.test');
+      for s in select * from jsonb_array_elements(case when pass = 1 then c -> 'sessions' else (select jsonb_agg(x order by ord desc) from jsonb_array_elements(c -> 'sessions') with ordinality t(x, ord)) end) loop
+        insert into public.workout_sessions (user_id, title, style, minutes, status, completed_at, duration_s, planned_for, source, external_id)
+        values (u, s ->> 'title', s ->> 'id', (s ->> 'minutes')::int, s ->> 'status', (s ->> 'completedAt')::timestamptz,
+                (s ->> 'durationS')::int, case when s ->> 'status' = 'planned' then current_date + 1 end, s ->> 'source',
+                case when s ->> 'source' = 'apple_health' then 'hk-' || (s ->> 'id') end);
+      end loop;
+      select coalesce(array_agg(w.style order by w.style), '{}') into got from app.eligible_workouts(u) w;
+      select coalesce(array_agg(x order by x), '{}') into want from jsonb_array_elements_text(c -> 'keep') x;
+      perform test.assert(got = want, format('%s (insertion order %s): got %s, wanted %s', c ->> 'name', pass, got, want));
+    end loop;
+  end loop;
+end $$;
+
+-- Group Goals, the friend summary, XP inputs and the league see the same deduplicated activity, through delayed imports, edits and deletions.
+do $$
+declare a uuid; b uuid; g uuid; r jsonb; mins int; sid uuid; xp0 int; xp1 int;
+begin
+  perform test.as_admin();
+  a := test.make_user('elig-grp-a@example.test'); b := test.make_user('elig-grp-b@example.test');
+  perform app.community_claim_username(a, 'elig_ama'); perform app.community_claim_username(b, 'elig_kofi');
+  perform app.social_request(a, 'elig_kofi'); perform app.social_respond(b, 'elig_ama', true);
+  g := app.social_create_group(a, 'challenge', 'Same session', 'active_minutes', null, current_date - 3, current_date + 3, array['elig_kofi']);
+  perform app.social_respond_group(b, g, true);
+  perform app.social_set_share(a, 'elig_kofi', 'activity_summary', true);
+
+  -- Order 1: the watch workout is imported FIRST (days of delay do not matter, only the times), the guided session is saved afterwards.
+  insert into public.workout_sessions (user_id, title, minutes, status, completed_at, duration_s, source, external_id)
+  values (a, 'Apple Health: Dance', 31, 'completed', now() - interval '1 day' + interval '1 minute', 1860, 'apple_health', 'hk-a-1');
+  perform app.social_sync_group(a, g);
+  perform test.assert((select sum(value) from public.social_contributions where group_id = g and user_id = a) = 31, 'the import alone counts');
+  insert into public.workout_sessions (user_id, title, minutes, status, completed_at, duration_s) values (a, 'Guided class', 30, 'completed', now() - interval '1 day', 1800);
+  perform app.social_sync_group(a, g);
+  perform test.assert((select sum(value) from public.social_contributions where group_id = g and user_id = a) = 30, 'once the guided session is saved the same workout is not added twice (30, not 61)');
+  perform test.assert((app.social_view_friend(b, 'elig_ama') -> 'activity' ->> 'sessions')::int = 1, 'the friend summary sees one workout');
+
+  -- A legitimate separate workout the same day is kept.
+  insert into public.workout_sessions (user_id, title, minutes, status, completed_at, duration_s, source, external_id)
+  values (a, 'Apple Health: Run', 20, 'completed', now() - interval '1 day' + interval '6 hours', 1200, 'apple_health', 'hk-a-2');
+  perform app.social_sync_group(a, g);
+  perform test.assert((select sum(value) from public.social_contributions where group_id = g and user_id = a) = 50, 'a separate workout the same day still counts (30 + 20)');
+  perform test.assert((app.social_view_friend(b, 'elig_ama') -> 'activity' ->> 'sessions')::int = 2, 'the friend summary counts both');
+
+  -- Edit: the guided session is moved to another time, so the import is a separate workout and counts again.
+  update public.workout_sessions set completed_at = now() - interval '2 days', duration_s = 1800 where user_id = a and title = 'Guided class';
+  perform app.social_sync_group(a, g);
+  perform test.assert((select sum(value) from public.social_contributions where group_id = g and user_id = a) = 81, 'after an edit the records are separate workouts (30 + 31 + 20)');
+  -- Delete: the guided session is deleted and its overlapping import counts again.
+  update public.workout_sessions set completed_at = now() - interval '1 day', duration_s = 1800 where user_id = a and title = 'Guided class';
+  delete from public.workout_sessions where user_id = a and title = 'Guided class';
+  perform app.social_sync_group(a, g);
+  perform test.assert((select sum(value) from public.social_contributions where group_id = g and user_id = a) = 51, 'after the guided session is deleted the import counts alone (31 + 20)');
+
+  -- XP and the league use the same eligible set.
+  insert into public.workout_sessions (user_id, title, minutes, status, completed_at, duration_s) values (a, 'Guided class', 30, 'completed', now() - interval '1 day', 1800);
+  r := app.gm_inputs(a);
+  perform test.assert(jsonb_array_length(r -> 'sessions') = 2, 'XP inputs list two workouts, not three');
+  perform test.assert(not exists (select 1 from jsonb_array_elements(r -> 'sessions') x where x ->> 'source' = 'apple_health' and (x ->> 'completedAt')::timestamptz = (now() - interval '1 day' + interval '1 minute')),
+                      'the duplicate import is not among the XP inputs');
+  perform test.assert(not has_function_privilege('anon', 'app.eligible_workouts(uuid, timestamptz)', 'execute') and not has_function_privilege('authenticated', 'app.eligible_workouts(uuid, timestamptz)', 'execute')
+                      and has_function_privilege('service_role', 'app.eligible_workouts(uuid, timestamptz)', 'execute'), 'only the server can call the eligibility function');
 end $$;

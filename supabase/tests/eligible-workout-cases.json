@@ -1,0 +1,404 @@
+{
+  "cases": [
+    {
+      "name": "guided saved first, the watch workout imported later: counts once",
+      "sessions": [
+        {
+          "id": "g",
+          "status": "completed",
+          "completedAt": "2026-06-17T08:30:00Z",
+          "minutes": 30,
+          "durationS": 1800,
+          "source": "manual",
+          "workoutId": "w1",
+          "title": "Guided class"
+        },
+        {
+          "id": "h",
+          "status": "completed",
+          "completedAt": "2026-06-17T08:31:00Z",
+          "minutes": 31,
+          "durationS": 1860,
+          "source": "apple_health",
+          "workoutId": null,
+          "title": "h"
+        }
+      ],
+      "keep": ["g"]
+    },
+    {
+      "name": "the watch workout imported first, the guided session saved later: counts once (same answer, order never matters)",
+      "sessions": [
+        {
+          "id": "h",
+          "status": "completed",
+          "completedAt": "2026-06-17T08:31:00Z",
+          "minutes": 31,
+          "durationS": 1860,
+          "source": "apple_health",
+          "workoutId": null,
+          "title": "h"
+        },
+        {
+          "id": "g",
+          "status": "completed",
+          "completedAt": "2026-06-17T08:30:00Z",
+          "minutes": 30,
+          "durationS": 1800,
+          "source": "manual",
+          "workoutId": "w1",
+          "title": "Guided class"
+        }
+      ],
+      "keep": ["g"]
+    },
+    {
+      "name": "a morning class and an evening run on the same day are both kept",
+      "sessions": [
+        {
+          "id": "g",
+          "status": "completed",
+          "completedAt": "2026-06-17T07:30:00Z",
+          "minutes": 30,
+          "durationS": 1800,
+          "source": "manual",
+          "workoutId": "w1",
+          "title": "Guided class"
+        },
+        {
+          "id": "h",
+          "status": "completed",
+          "completedAt": "2026-06-17T18:30:00Z",
+          "minutes": 40,
+          "durationS": 2400,
+          "source": "apple_health",
+          "workoutId": null,
+          "title": "h"
+        }
+      ],
+      "keep": ["g", "h"]
+    },
+    {
+      "name": "an import that starts eight minutes before the guided session is the same workout",
+      "sessions": [
+        {
+          "id": "g",
+          "status": "completed",
+          "completedAt": "2026-06-17T09:00:00Z",
+          "minutes": 30,
+          "durationS": 1800,
+          "source": "manual",
+          "workoutId": "w1",
+          "title": "A"
+        },
+        {
+          "id": "h",
+          "status": "completed",
+          "completedAt": "2026-06-17T08:52:00Z",
+          "minutes": 30,
+          "durationS": 1800,
+          "source": "apple_health",
+          "workoutId": null,
+          "title": "h"
+        }
+      ],
+      "keep": ["g"]
+    },
+    {
+      "name": "an import that starts twelve minutes before the guided session and ends before it is separate",
+      "sessions": [
+        {
+          "id": "g",
+          "status": "completed",
+          "completedAt": "2026-06-17T09:00:00Z",
+          "minutes": 30,
+          "durationS": 1800,
+          "source": "manual",
+          "workoutId": "w1",
+          "title": "A"
+        },
+        {
+          "id": "h",
+          "status": "completed",
+          "completedAt": "2026-06-17T08:18:00Z",
+          "minutes": 30,
+          "durationS": 1800,
+          "source": "apple_health",
+          "workoutId": null,
+          "title": "h"
+        }
+      ],
+      "keep": ["g", "h"]
+    },
+    {
+      "name": "an import that starts during the guided session is the same workout",
+      "sessions": [
+        {
+          "id": "g",
+          "status": "completed",
+          "completedAt": "2026-06-17T09:00:00Z",
+          "minutes": 30,
+          "durationS": 1800,
+          "source": "manual",
+          "workoutId": "w1",
+          "title": "A"
+        },
+        {
+          "id": "h",
+          "status": "completed",
+          "completedAt": "2026-06-17T09:20:00Z",
+          "minutes": 40,
+          "durationS": 2400,
+          "source": "apple_health",
+          "workoutId": null,
+          "title": "h"
+        }
+      ],
+      "keep": ["g"]
+    },
+    {
+      "name": "two imports of one session (watch and phone) count once, the earliest start wins",
+      "sessions": [
+        {
+          "id": "h2",
+          "status": "completed",
+          "completedAt": "2026-06-17T10:31:00Z",
+          "minutes": 30,
+          "durationS": 1800,
+          "source": "apple_health",
+          "workoutId": null,
+          "title": "h2"
+        },
+        {
+          "id": "h1",
+          "status": "completed",
+          "completedAt": "2026-06-17T10:30:00Z",
+          "minutes": 30,
+          "durationS": 1800,
+          "source": "apple_health",
+          "workoutId": null,
+          "title": "h1"
+        }
+      ],
+      "keep": ["h1"]
+    },
+    {
+      "name": "two separate imports on the same day are both kept",
+      "sessions": [
+        {
+          "id": "h1",
+          "status": "completed",
+          "completedAt": "2026-06-17T08:30:00Z",
+          "minutes": 30,
+          "durationS": 1800,
+          "source": "apple_health",
+          "workoutId": null,
+          "title": "h1"
+        },
+        {
+          "id": "h2",
+          "status": "completed",
+          "completedAt": "2026-06-17T19:00:00Z",
+          "minutes": 45,
+          "durationS": 2700,
+          "source": "apple_health",
+          "workoutId": null,
+          "title": "h2"
+        }
+      ],
+      "keep": ["h1", "h2"]
+    },
+    {
+      "name": "the same guided workout saved twice within ten minutes counts once",
+      "sessions": [
+        {
+          "id": "g1",
+          "status": "completed",
+          "completedAt": "2026-06-17T12:00:00Z",
+          "minutes": 20,
+          "durationS": 1200,
+          "source": "manual",
+          "workoutId": "w9",
+          "title": "Same"
+        },
+        {
+          "id": "g2",
+          "status": "completed",
+          "completedAt": "2026-06-17T12:05:00Z",
+          "minutes": 20,
+          "durationS": 1200,
+          "source": "manual",
+          "workoutId": "w9",
+          "title": "Same"
+        }
+      ],
+      "keep": ["g1"]
+    },
+    {
+      "name": "two different guided workouts at the same time both count (only the same workout merges)",
+      "sessions": [
+        {
+          "id": "a",
+          "status": "completed",
+          "completedAt": "2026-06-17T12:00:00Z",
+          "minutes": 20,
+          "durationS": 1200,
+          "source": "manual",
+          "workoutId": "w1",
+          "title": "One"
+        },
+        {
+          "id": "b",
+          "status": "completed",
+          "completedAt": "2026-06-17T12:02:00Z",
+          "minutes": 20,
+          "durationS": 1200,
+          "source": "manual",
+          "workoutId": "w2",
+          "title": "Two"
+        }
+      ],
+      "keep": ["a", "b"]
+    },
+    {
+      "name": "after the guided session is deleted the import counts again",
+      "sessions": [
+        {
+          "id": "h",
+          "status": "completed",
+          "completedAt": "2026-06-17T08:31:00Z",
+          "minutes": 31,
+          "durationS": 1860,
+          "source": "apple_health",
+          "workoutId": null,
+          "title": "h"
+        }
+      ],
+      "keep": ["h"]
+    },
+    {
+      "name": "an import that overlaps only a repeated guided record is still the same workout",
+      "sessions": [
+        {
+          "id": "g1",
+          "status": "completed",
+          "completedAt": "2026-06-17T12:00:00Z",
+          "minutes": 20,
+          "durationS": 1200,
+          "source": "manual",
+          "workoutId": "w9",
+          "title": "Same"
+        },
+        {
+          "id": "g2",
+          "status": "completed",
+          "completedAt": "2026-06-17T12:08:00Z",
+          "minutes": 20,
+          "durationS": 1200,
+          "source": "manual",
+          "workoutId": "w9",
+          "title": "Same"
+        },
+        {
+          "id": "h",
+          "status": "completed",
+          "completedAt": "2026-06-17T12:08:00Z",
+          "minutes": 20,
+          "durationS": 1200,
+          "source": "apple_health",
+          "workoutId": null,
+          "title": "h"
+        }
+      ],
+      "keep": ["g1"]
+    },
+    {
+      "name": "planned and skipped sessions never count",
+      "sessions": [
+        {
+          "id": "p",
+          "status": "planned",
+          "completedAt": null,
+          "minutes": 30,
+          "durationS": 1800,
+          "source": "manual",
+          "workoutId": null,
+          "title": "P"
+        },
+        {
+          "id": "k",
+          "status": "skipped",
+          "completedAt": null,
+          "minutes": 30,
+          "durationS": 1800,
+          "source": "manual",
+          "workoutId": null,
+          "title": "K"
+        },
+        {
+          "id": "g",
+          "status": "completed",
+          "completedAt": "2026-06-17T08:30:00Z",
+          "minutes": 30,
+          "durationS": 1800,
+          "source": "manual",
+          "workoutId": "w1",
+          "title": "A"
+        }
+      ],
+      "keep": ["g"]
+    },
+    {
+      "name": "a record with no duration uses its planned minutes for the overlap",
+      "sessions": [
+        {
+          "id": "g",
+          "status": "completed",
+          "completedAt": "2026-06-17T09:00:00Z",
+          "minutes": 30,
+          "durationS": null,
+          "source": "manual",
+          "workoutId": "w1",
+          "title": "A"
+        },
+        {
+          "id": "h",
+          "status": "completed",
+          "completedAt": "2026-06-17T08:40:00Z",
+          "minutes": 20,
+          "durationS": 1200,
+          "source": "apple_health",
+          "workoutId": null,
+          "title": "h"
+        }
+      ],
+      "keep": ["g"]
+    },
+    {
+      "name": "an imported record never merges with a different day's session",
+      "sessions": [
+        {
+          "id": "g",
+          "status": "completed",
+          "completedAt": "2026-06-17T09:00:00Z",
+          "minutes": 30,
+          "durationS": 1800,
+          "source": "manual",
+          "workoutId": "w1",
+          "title": "A"
+        },
+        {
+          "id": "h",
+          "status": "completed",
+          "completedAt": "2026-06-17T21:00:00Z",
+          "minutes": 30,
+          "durationS": 1800,
+          "source": "apple_health",
+          "workoutId": null,
+          "title": "h"
+        }
+      ],
+      "keep": ["g", "h"]
+    }
+  ]
+}

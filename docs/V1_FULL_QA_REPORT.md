@@ -92,4 +92,14 @@ Defects found and fixed in this phase: (1) Apple Health switch and automatic imp
 
 Final automated run for this commit: format, typecheck, lint, edge-copy check and secret scan clean; shared 966, mobile 663, ai 116, admin 27, scripts 44 pass; `pnpm db:test` passes (including the new gamification dry run); Community integration 26/26; Friends + progression integration 14/14; browser suites as above; iOS bundle export compiles.
 
-Unresolved, in addition to section 6 above: Group Goals totals can count an Apple Health session and an in-app session at the same time twice if the import ran before the guided session was saved (proposed social SQL dedupes by title; the import's overlap check covers the usual order). Leagues and server-side XP need the staging migrations and redeploys listed in `docs/V1_VERIFICATION_PLAN.md` section 4. HealthKit has never run on a device.
+Resolved after this addendum was first written (final pre-deployment correction): the Group Goals double count. See below. Unresolved, in addition to section 6 above: Leagues and server-side XP need the staging migrations and redeploys listed in `docs/V1_VERIFICATION_PLAN.md` section 4. HealthKit has never run on a device.
+
+### Final pre-deployment correction: one physical workout counts once
+
+Defect: Group Goals (`social_sync_group`) and a friend's weekly summary deduplicated only by title within ten minutes, so an Apple Health workout and an in-app session of the same physical workout were both added (for example 61 minutes for a 30-minute class) when the guided session was saved AFTER the import. The client totals had the same blind spot except energy and period summaries.
+
+Fix: one rule, written once in TypeScript (`eligible-workouts.ts`) and once in SQL (`app.eligible_workouts`), driven by one shared case file (15 cases, each run in both insertion orders in both languages). Group Goals, the friend summary, XP inputs (so XP and the league) and every client total use it; import and export still see every record. Edits, deletions, retries and delayed imports work because nothing is stored; the answer is recomputed. A mutation check (breaking the SQL overlap window) makes the SQL test fail, so the test is effective.
+
+Tests: shared `eligible-workouts.test.ts` (18); mobile `duplicateWorkouts.test.ts` (6, mock store: both orders, retry and second device, separate same-day workouts, edit, delete, export keeps every record, group total 30 not 61); `gamification.test.sql` (the 15 cases twice, plus group, friend-summary and XP-input scenarios through a late import, an edit and a deletion); real Deno + Postgres `social-integration` (17, 3 new: import first then guided, separate same-day workout, edit, delete; XP paid once). Friends screen auto-sync when opened is covered by the browser journeys not breaking; it is a quiet call and has no dedicated test.
+
+Hosted effect needs `social.patch2_eligible_workouts.sql` on staging (not applied). The `social` Edge Function bundle also changed (it now carries `eligible-workouts.ts`), but it already had to be redeployed for the progression routes, so no extra deployment is added.

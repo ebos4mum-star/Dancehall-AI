@@ -74,7 +74,7 @@ export async function buildDataExport(
     store.listFoodLogs(),
     store.listSavedMeals(),
     store.listMealPlans(),
-    store.listSessions(),
+    store.listSessions({ includeDuplicates: true }),
     store.listChallenges(),
     store.listHabits(),
     store.listHabitCheckins('0000-01-01'),

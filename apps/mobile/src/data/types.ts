@@ -191,7 +191,8 @@ export interface DataStore {
   createMealPlan(input: NewMealPlan): Promise<MealPlan>;
   deleteMealPlan(id: string): Promise<void>;
 
-  listSessions(): Promise<WorkoutSession[]>;
+  /** Newest first. By default a workout recorded twice (an Apple Health copy of a session saved in the app, a repeat) appears once; `includeDuplicates` returns every record. */
+  listSessions(opts?: { includeDuplicates?: boolean }): Promise<WorkoutSession[]>;
   createSession(input: NewSession): Promise<WorkoutSession>;
   /** Creates several planned sessions at once (used to schedule a program). */
   createSessions(inputs: NewSession[]): Promise<WorkoutSession[]>;

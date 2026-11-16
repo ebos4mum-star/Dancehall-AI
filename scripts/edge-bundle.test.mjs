@@ -49,7 +49,12 @@ test('the social function bundles flat: only its own server layer, no Community 
   const names = buildBundle(out, 'social')
     .map((r) => r.name)
     .sort();
-  assert.deepEqual(names, ['gamification.ts', 'index.ts', 'social-server.ts']);
+  assert.deepEqual(names, [
+    'eligible-workouts.ts',
+    'gamification.ts',
+    'index.ts',
+    'social-server.ts',
+  ]);
   const idx = readFileSync(join(out, 'index.ts'), 'utf8');
   assert.match(idx, /from '\.\/social-server\.ts'/);
   assert.doesNotMatch(idx, /_shared|community-server/);

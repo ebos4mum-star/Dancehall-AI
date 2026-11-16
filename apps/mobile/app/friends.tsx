@@ -1,6 +1,6 @@
 import { withAccount } from '@/account/gate';
 import { GroupCoopNote, LeagueCard } from '@/gamification/ui';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, Switch, View } from 'react-native';
 import { MIN_TOUCH_TARGET } from '@/theme/tokens';
 import {
@@ -90,6 +90,18 @@ function Friends() {
   const [title, setTitle] = useState('');
   const [invite, setInvite] = useState<string[]>([]);
   const tz = profile?.timeZone ?? null;
+  // Group totals are recomputed from the person's current workouts (each physical workout once): do it when the screen opens, so an edit, a deletion or a late
+  // Apple Health import is reflected without pressing anything. Failures are quiet; the Sync button is still there.
+  const autoSynced = useRef(false);
+  useEffect(() => {
+    if (!data || autoSynced.current || !store.socialSyncGroup) return;
+    autoSynced.current = true;
+    const joined = data.groups.filter((g) => g.iAm === 'joined');
+    if (joined.length === 0) return;
+    void Promise.all(joined.map((g) => store.socialSyncGroup!(g.id)))
+      .then(() => reload())
+      .catch(() => undefined);
+  }, [data, store, reload]);
 
   const run = async (fn: () => Promise<SocialAck<object>>, ok?: string) => {
     try {

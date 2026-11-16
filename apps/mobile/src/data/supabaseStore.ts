@@ -8,6 +8,7 @@ import {
   isDuplicateGrocery,
   normalizeInviteCode,
 } from '../food/householdLogic';
+import { withoutDuplicateWorkouts } from './eligibleSessions';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import {
   consentPurposeSchema,
@@ -627,8 +628,8 @@ function createBaseStore(
       emit();
     },
 
-    async listSessions() {
-      return (
+    async listSessions(opts?: { includeDuplicates?: boolean }) {
+      const all = (
         ok(
           await db
             .from('workout_sessions')
@@ -637,6 +638,7 @@ function createBaseStore(
             .limit(1000),
         ) as Row[]
       ).map(fromSessionRow);
+      return opts?.includeDuplicates ? all : withoutDuplicateWorkouts(all);
     },
     async createSession(input: NewSession) {
       const r = fromSessionRow(

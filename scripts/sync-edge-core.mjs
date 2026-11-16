@@ -12,6 +12,7 @@ const FILES = [
   'community-media.ts',
   'community-server.ts',
   'community-alerts.ts',
+  'eligible-workouts.ts',
   'gamification.ts',
   'social-server.ts',
 ];

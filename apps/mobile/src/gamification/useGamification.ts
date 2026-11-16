@@ -89,6 +89,8 @@ export function useGamification(): Progression {
         source: x.source,
         style: x.style,
         lowImpact: x.lowImpact,
+        workoutId: x.workoutId,
+        title: x.title,
       })),
       mealLogDays: [...new Set(data.data.foodLogs.map((l) => localDateKey(l.loggedAt, tz)))],
       habitDays: data.data.checkins.map((c) => ({ day: c.day, habitId: c.habitId })),

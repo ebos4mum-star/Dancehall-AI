@@ -19,6 +19,7 @@ ok() { echo "PASS     $1"; }
 run() { local msg="$1"; shift; if "$@"; then ok "$msg"; else echo "FAIL     $msg" >&2; exit 1; fi; }
 run "apply: community.up.sql (prerequisite)" q -d "$DB" -f supabase/proposed/community.up.sql
 run "apply: social.up.sql" q -d "$DB" -f supabase/proposed/social.up.sql
+run "apply: social.patch2_eligible_workouts.sql (repeatable, already folded into social.up.sql)" q -d "$DB" -f supabase/proposed/social.patch2_eligible_workouts.sql
 run "social tests (privileges, sharing limits, friends, blocking, groups, deletion)" q -d "$DB" -f supabase/proposed/tests/social.test.sql
 run "structural RLS guard still holds" q -d "$DB" -f supabase/tests/01_rls_coverage.test.sql
 run "rollback: social.down.sql" q -d "$DB" -f supabase/proposed/social.down.sql
