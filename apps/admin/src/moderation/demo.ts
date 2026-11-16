@@ -1,5 +1,5 @@
 import type { ModerationApi } from './api';
-import type { Backlog, QueueItem } from './model';
+import type { Backlog, Mode, QueueItem } from './model';
 
 /** Made-up items for trying the console with no server. Nothing here is real: every name and sentence is invented. */
 export function demoQueue(): QueueItem[] {
@@ -50,6 +50,7 @@ export function demoQueue(): QueueItem[] {
 }
 export function createDemoModerationApi(): ModerationApi {
   let items = demoQueue();
+  let mode: Mode = 'open';
   const backlog = (): Backlog => ({
     open: items.length,
     urgent: items.filter((i) => i.urgent).length,
@@ -60,6 +61,8 @@ export function createDemoModerationApi(): ModerationApi {
     overTarget: items.filter((i) => !i.urgent && i.ageHours > 48).length,
     urgentTargetHours: 4,
     targetHours: 48,
+    mode,
+    effectiveMode: mode,
   });
   return {
     kind: 'demo',
@@ -73,5 +76,8 @@ export function createDemoModerationApi(): ModerationApi {
       items = items.filter((x) => x.id !== i.targetId);
     },
     async restrict() {},
+    async setMode(m) {
+      mode = m;
+    },
   };
 }

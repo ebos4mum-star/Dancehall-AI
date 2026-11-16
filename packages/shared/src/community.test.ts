@@ -481,5 +481,7 @@ describe('moderation targets', () => {
     expect(sql).toContain(
       `urgent_target numeric := ${MODERATION_TARGETS.urgentHours}; normal_target numeric := ${MODERATION_TARGETS.normalHours};`,
     );
+    expect(sql).toContain(`>= ${MODERATION_TARGETS.mediaPauseCount} \n`.trim());
+    expect(sql).toContain(`interval '${MODERATION_TARGETS.mediaPauseHours} hours'`);
   });
 });

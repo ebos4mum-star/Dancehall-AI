@@ -4,12 +4,14 @@ import { createLiveModerationApi, type ModerationApi } from './api';
 import { createDemoModerationApi } from './demo';
 import { ItemCard } from './ItemCard';
 import {
+  MODE_LABELS,
   RESTRICT_REASONS,
   backlogStatus,
   needsNote,
   sortQueue,
   validateRestriction,
   type Backlog,
+  type Mode,
   type QueueItem,
 } from './model';
 import { createStaffAuth } from './staffAuth';
@@ -192,6 +194,42 @@ function Queue({ api, onSignOut }: { api: ModerationApi; onSignOut: () => void }
             ? ` Open: ${backlog.open}. Urgent: ${backlog.urgent}. With photos or video: ${backlog.media}. Oldest waiting: ${Math.floor(backlog.oldestHours)} h.`
             : ''}
         </p>
+      ) : null}
+      {backlog ? (
+        <div style={{ display: 'grid', gap: 6 }}>
+          <label>
+            Community mode{' '}
+            <select
+              value={backlog.mode ?? 'open'}
+              onChange={(e) => {
+                const m = e.target.value as Mode;
+                if (
+                  m === 'open' ||
+                  window.confirm(
+                    `Switch Community to "${MODE_LABELS[m]}"? Members will see the pause immediately.`,
+                  )
+                )
+                  void api
+                    .setMode(m)
+                    .then(load, (x) =>
+                      setErr(x instanceof Error ? x.message : 'That did not work.'),
+                    );
+              }}
+            >
+              {(Object.keys(MODE_LABELS) as Mode[]).map((m) => (
+                <option key={m} value={m}>
+                  {MODE_LABELS[m]}
+                </option>
+              ))}
+            </select>
+          </label>
+          {backlog.effectiveMode && backlog.effectiveMode !== (backlog.mode ?? 'open') ? (
+            <p role="status" style={{ margin: 0 }}>
+              Photos and videos are paused automatically because review is behind. They reopen when
+              the queue clears.
+            </p>
+          ) : null}
+        </div>
       ) : null}
       {err ? (
         <p role="alert" style={{ color: '#B3261E' }}>

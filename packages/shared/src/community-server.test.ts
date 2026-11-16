@@ -86,7 +86,8 @@ function setup(
   ) => server.handle({ route, token, networkKey: 'net-hash', body, ...extra });
   return { send, calls, uploaded, removed };
 }
-const dbCalls = <T extends { fn: string }>(calls: T[]) => calls.filter((c) => c.fn !== 'community_burst');
+const dbCalls = <T extends { fn: string }>(calls: T[]) =>
+  calls.filter((c) => c.fn !== 'community_burst');
 
 describe('identity and access', () => {
   it('lets a guest browse and treats a bad token as a guest', async () => {
@@ -475,6 +476,35 @@ describe('uploads', () => {
     );
     expect((await t2.send('upload/commit', { path })).status).toBe(404);
     expect(t2.uploaded).toHaveLength(0);
+  });
+});
+
+describe('modes', () => {
+  it('tells anyone, even a guest, whether media or posting is paused', async () => {
+    const t = setup({ community_status: () => ({ mode: 'text_only' }) });
+    expect((await t.send('status', {}, null)).body).toMatchObject({ ok: true, mode: 'text_only' });
+    const u = setup({ community_status: () => ({ mode: 'weird' }) });
+    expect((await u.send('status', {}, null)).body.mode).toBe('open');
+  });
+  it('maps a pause to a clear, temporary refusal', async () => {
+    const t = setup({
+      community_create_post: () => {
+        throw new Error('media_paused');
+      },
+    });
+    const r = await t.send('post', { type: 'text', body: 'x', confirmed: true });
+    expect(r.status).toBe(503);
+    expect(r.body.message).toMatch(/paused/i);
+  });
+  it('only staff with a second factor can change the mode', async () => {
+    const t = setup({ community_set_mode: (a) => a.p_mode });
+    expect((await t.send('mod/mode', { mode: 'read_only' }, 'member')).status).toBe(403);
+    expect((await t.send('mod/mode', { mode: 'read_only' }, 'staff1')).status).toBe(403);
+    expect((await t.send('mod/mode', { mode: 'frozen' }, 'staff2')).status).toBe(400);
+    expect(
+      (await t.send('mod/mode', { mode: 'read_only', note: 'flood' }, 'staff2')).body,
+    ).toMatchObject({ ok: true, mode: 'read_only' });
+    expect(dbCalls(t.calls)[0]!.args).toMatchObject({ p_actor: STAFF, p_aal2: true });
   });
 });
 

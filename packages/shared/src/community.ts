@@ -473,7 +473,13 @@ export const withinDailyLimit = (action: CommunityAction, usedToday: number): bo
  * How quickly open items should be looked at, in hours. PROPOSED defaults for one part-time moderator, awaiting the owner's decision.
  * Mirrored in `app.community_backlog` (SQL). A target is a goal to measure against, not a promise to members.
  */
-export const MODERATION_TARGETS = { urgentHours: 4, normalHours: 48 } as const;
+export const MODERATION_TARGETS = {
+  urgentHours: 4,
+  normalHours: 48,
+  /** Photos and videos pause by themselves when this many are waiting for review, or the oldest has waited this long. */
+  mediaPauseCount: 20,
+  mediaPauseHours: 72,
+} as const;
 
 // ---------- Reports ----------
 export const REPORT_REASONS = [

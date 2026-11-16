@@ -122,6 +122,10 @@ export function createCommunityAdapter(d: CommunityAdapterDeps): Partial<DataSto
   }
 
   return {
+    async communityStatus() {
+      const r = await call('status', {});
+      return !isFail(r) && (r.mode === 'text_only' || r.mode === 'read_only') ? r.mode : 'open';
+    },
     async communityProfile() {
       const r = await call('profile');
       if (isFail(r) || typeof r.username !== 'string') return null;

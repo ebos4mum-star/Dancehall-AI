@@ -1,4 +1,4 @@
-import type { Backlog, QueueItem, RestrictInput } from './model';
+import type { Backlog, Mode, QueueItem, RestrictInput } from './model';
 
 /** What the console needs from the server. A real one talks to the `community` Edge Function; the demo one keeps everything in memory. */
 export interface ModerationApi {
@@ -12,6 +12,7 @@ export interface ModerationApi {
     note?: string;
   }): Promise<void>;
   restrict(input: { username: string } & RestrictInput): Promise<void>;
+  setMode(mode: Mode, note?: string): Promise<void>;
 }
 
 export class ModerationError extends Error {
@@ -77,6 +78,9 @@ export function createLiveModerationApi(cfg: {
     },
     async act(i) {
       await call('mod/act', { type: i.type, targetId: i.targetId, action: i.action, note: i.note });
+    },
+    async setMode(mode, note) {
+      await call('mod/mode', { mode, note });
     },
     async restrict(i) {
       await call('mod/restrict', {

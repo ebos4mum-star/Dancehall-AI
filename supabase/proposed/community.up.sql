@@ -41,6 +41,15 @@ create table public.community_retired_names (
 );
 create index community_retired_names_idx on public.community_retired_names (skeleton, until);
 
+-- One row: the current mode, set by a moderator. 'text_only' pauses photos and videos; 'read_only' pauses all new posts and comments. Reading, reporting and deleting always work.
+create table public.community_settings (
+  id boolean primary key default true check (id),
+  mode text not null default 'open' check (mode in ('open', 'text_only', 'read_only')),
+  changed_by uuid references auth.users (id) on delete set null,
+  changed_at timestamptz not null default now()
+);
+insert into public.community_settings (id) values (true);
+
 -- A verified server-side record for every uploaded file. A post can attach only a file the server itself checked.
 create table public.community_uploads (
   id uuid primary key default gen_random_uuid(),
@@ -154,7 +163,7 @@ create table public.community_blocks (
 create index community_blocks_blocked_idx on public.community_blocks (blocked_id);
 
 do $$ declare t text; begin
-  foreach t in array array['community_members', 'community_posts', 'community_media', 'community_comments', 'community_reactions', 'community_reports', 'community_blocks', 'community_retired_names', 'community_uploads', 'community_burst', 'community_report_resolutions'] loop
+  foreach t in array array['community_members', 'community_posts', 'community_media', 'community_comments', 'community_reactions', 'community_reports', 'community_blocks', 'community_retired_names', 'community_uploads', 'community_burst', 'community_report_resolutions', 'community_settings'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('revoke all on public.%I from anon, authenticated', t);
     -- A deny-all policy (the structural RLS tests require every table to carry one). Only the server (service role, which bypasses RLS) reads or writes.
@@ -241,6 +250,20 @@ create or replace function app.community_restriction(m public.community_members)
   select case when m.restriction is not null and (m.restricted_until is null or m.restricted_until > now()) then m.restriction end
 $$;
 
+-- Photos and videos pause by themselves when review cannot keep up (20 or more waiting, or the oldest waiting more than 72 hours), whatever the manual mode says.
+-- Mirrors MODERATION_TARGETS.mediaPauseCount / mediaPauseHours in TypeScript.
+create or replace function app.community_effective_mode() returns text language sql stable set search_path = '' as $$
+  select case
+    when (select mode from public.community_settings) = 'read_only' then 'read_only'
+    when (select mode from public.community_settings) = 'text_only' then 'text_only'
+    when (select count(*) from public.community_posts p where p.status = 'held' and exists (select 1 from public.community_media x where x.post_id = p.id)) >= 20
+      or exists (select 1 from public.community_posts p where p.status = 'held' and p.created_at < now() - interval '72 hours' and exists (select 1 from public.community_media x where x.post_id = p.id)) then 'text_only'
+    else 'open' end
+$$;
+create or replace function app.community_status() returns jsonb language sql stable security definer set search_path = '' as $$
+  select jsonb_build_object('mode', app.community_effective_mode())
+$$;
+
 -- Why a name cannot be used by this member: null when it can. Checks other members, look-alikes and recently released names.
 create or replace function app.community_name_problem(p_user uuid, p_name text) returns text language plpgsql stable set search_path = '' as $$
 begin
@@ -302,11 +325,13 @@ begin
   select * into m from public.community_members where user_id = p_user;
   if not found then raise exception 'needs_username'; end if;
   if app.community_restriction(m) is not null then raise exception '%', app.community_restriction(m); end if;
+  if app.community_effective_mode() = 'read_only' then raise exception 'paused'; end if;
   if app.community_used(p_user, 'post') >= app.community_limit('post') then raise exception 'rate_limited'; end if;
   if p_type not in ('text', 'story', 'milestone', 'photo', 'video') then raise exception 'invalid_type'; end if;
   if jsonb_typeof(media) <> 'array' then raise exception 'invalid_media'; end if;
   select count(*) filter (where e ->> 'kind' = 'photo'), count(*) filter (where e ->> 'kind' = 'video') into photos, videos from jsonb_array_elements(media) e;
   if (photos > 0 and videos > 0) or videos > 1 or photos > 2 then raise exception 'invalid_media'; end if;
+  if photos + videos > 0 and app.community_effective_mode() <> 'open' then raise exception 'media_paused'; end if;
   if (p_type = 'photo') <> (photos > 0) or (p_type = 'video') <> (videos > 0) then raise exception 'invalid_media'; end if;
   if photos = 2 then
     select array_agg(e ->> 'role' order by e ->> 'role') into roles from jsonb_array_elements(media) e;
@@ -386,6 +411,7 @@ begin
   select * into m from public.community_members where user_id = p_user;
   if not found then raise exception 'needs_username'; end if;
   if app.community_restriction(m) is not null then raise exception '%', app.community_restriction(m); end if;
+  if app.community_effective_mode() = 'read_only' then raise exception 'paused'; end if;
   if app.community_used(p_user, 'comment') >= app.community_limit('comment') then raise exception 'rate_limited'; end if;
   r := app.community_screen(p_body, 300);
   if r ->> 'decision' = 'block' then raise exception 'blocked'; end if;
@@ -549,6 +575,16 @@ begin
   perform app.community_audit(p_actor, 'community.restrict', lower(btrim(p_username)), jsonb_build_object('restriction', p_restriction, 'hours', p_hours, 'reason', p_reason));
 end $$;
 
+create or replace function app.community_set_mode(p_actor uuid, p_aal2 boolean, p_mode text, p_note text default null) returns text language plpgsql security definer set search_path = '' as $$
+begin
+  if not app.community_is_moderator(p_actor, p_aal2) then raise exception 'forbidden'; end if;
+  if p_mode not in ('open', 'text_only', 'read_only') then raise exception 'invalid_action'; end if;
+  update public.community_settings set mode = p_mode, changed_by = p_actor, changed_at = now();
+  insert into public.community_report_resolutions (target_id, action, actor_id, note) values (gen_random_uuid(), 'mode:' || p_mode, p_actor, left(btrim(p_note), 300));
+  perform app.community_audit(p_actor, 'community.mode', p_mode, jsonb_build_object('mode', p_mode));
+  return p_mode;
+end $$;
+
 -- How far behind is moderation? Counts and ages only, no content. Targets are PROPOSED defaults awaiting the owner's decision.
 create or replace function app.community_backlog(p_actor uuid, p_aal2 boolean) returns jsonb language plpgsql stable security definer set search_path = '' as $$
 declare urgent_target numeric := 4; normal_target numeric := 48; j jsonb;
@@ -562,7 +598,8 @@ begin
     'oldestUrgentHours', coalesce(max(age_hours) filter (where urgent), 0),
     'urgentOverTarget', count(*) filter (where urgent and age_hours > urgent_target),
     'overTarget', count(*) filter (where not urgent and age_hours > normal_target),
-    'urgentTargetHours', urgent_target, 'targetHours', normal_target) into j
+    'urgentTargetHours', urgent_target, 'targetHours', normal_target,
+    'mode', (select mode from public.community_settings), 'effectiveMode', app.community_effective_mode()) into j
   from app.community_moderation_queue(p_actor, p_aal2);
   return j;
 end $$;
@@ -574,6 +611,7 @@ begin
   select * into m from public.community_members where user_id = p_user;
   if not found then raise exception 'needs_username'; end if;
   if app.community_restriction(m) is not null then raise exception '%', app.community_restriction(m); end if;
+  if app.community_effective_mode() <> 'open' then raise exception 'media_paused'; end if;
   if p_kind not in ('photo', 'video') or (p_kind = 'photo') <> (p_mime like 'image/%') then raise exception 'invalid_media'; end if;
   ext := case p_mime when 'image/jpeg' then 'jpg' when 'image/png' then 'png' when 'image/webp' then 'webp' when 'video/mp4' then 'mp4' when 'video/quicktime' then 'mov' when 'video/webm' then 'webm' end;
   if ext is null then raise exception 'invalid_media'; end if;
@@ -660,7 +698,7 @@ declare
   allowed text[] := array['community_feed', 'community_comments', 'community_profile', 'community_claim_username', 'community_change_username', 'community_issue_upload', 'community_upload_ticket',
     'community_verify_upload', 'community_reject_upload', 'community_create_post', 'community_delete_post', 'community_add_comment', 'community_delete_comment', 'community_set_encourage',
     'community_report', 'community_block', 'community_unblock', 'community_blocked', 'community_leave', 'community_moderation_queue', 'community_moderate', 'community_restrict',
-    'community_backlog', 'community_burst', 'community_prune', 'community_user_media'];
+    'community_backlog', 'community_burst', 'community_prune', 'community_user_media', 'community_status', 'community_set_mode'];
   f record; call_args text := ''; i int; k text; t text; result jsonb;
 begin
   if fn is null or not (fn = any (allowed)) then raise exception 'not_found'; end if;

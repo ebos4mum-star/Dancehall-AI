@@ -189,6 +189,14 @@ describe('live API client', () => {
       ModerationError,
     );
   });
+  it('changes the mode through the server', async () => {
+    const t = mk({ ok: true });
+    await t.api.setMode('text_only', 'busy');
+    expect(t.calls[0]).toMatchObject({
+      url: expect.stringContaining('/mod/mode'),
+      body: { mode: 'text_only', note: 'busy' },
+    });
+  });
   it('sends actions with the target, not the author’s account', async () => {
     const t = mk({ ok: true });
     await t.api.act({ type: 'post', targetId: 'p1', action: 'remove', note: 'unsafe' });

@@ -691,6 +691,10 @@ export const en = {
     'This removes your username, posts, comments, photos and videos from Community. Your account and everything else in the app stay. You cannot undo it.',
   'community.me.leaveConfirm': 'Yes, remove my Community posts',
   'community.me.left': 'You have left Community. Your posts and username were removed.',
+  'community.paused.media':
+    'Photos and videos are paused for a short while so everything can be checked. You can still share text.',
+  'community.paused.all':
+    'Sharing and commenting are paused for a short while. You can still read, and report anything that worries you.',
   'community.encourage': 'Encourage',
   'community.encouraged': 'Encouraged',
   'community.comments': 'Comments ({n})',

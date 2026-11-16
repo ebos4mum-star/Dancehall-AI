@@ -25,7 +25,7 @@ do $$
 declare t text; f record;
 begin
   perform test.as_admin();
-  foreach t in array array['community_members', 'community_posts', 'community_media', 'community_comments', 'community_reactions', 'community_reports', 'community_blocks', 'community_retired_names', 'community_uploads', 'community_burst', 'community_report_resolutions'] loop
+  foreach t in array array['community_members', 'community_posts', 'community_media', 'community_comments', 'community_reactions', 'community_reports', 'community_blocks', 'community_retired_names', 'community_uploads', 'community_burst', 'community_report_resolutions', 'community_settings'] loop
     perform test.assert((select relrowsecurity from pg_class where oid = ('public.' || t)::regclass), t || ' has RLS enabled');
     perform test.assert(exists (select 1 from pg_policies where schemaname = 'public' and tablename = t), t || ' carries a policy');
     perform test.assert(not has_table_privilege('anon', 'public.' || t, 'select'), 'anon cannot read ' || t);
@@ -386,4 +386,47 @@ begin
   perform test.assert(public.community_rpc('community_burst', '{"p_key":"k","p_bucket":"b","p_max":1,"p_seconds":60}'::jsonb) = 'true'::jsonb, 'booleans work');
   perform test.assert(public.community_rpc('community_burst', '{"p_key":"k","p_bucket":"b","p_max":1,"p_seconds":60}'::jsonb) = 'false'::jsonb, 'and refuse over the limit');
   perform test.throws(format($q$select public.community_rpc('community_block', jsonb_build_object('p_user', %L::uuid, 'p_username', 'nobody_here_x'))$q$, a), 'not_found');
+end $$;
+
+-- 12. Modes and the automatic photo/video pause.
+do $$
+declare a uuid; m uuid; i int; rid uuid;
+begin
+  perform test.as_admin(); a := test.make_user('c-mode-a@example.test'); m := test.make_user('c-mode-m@example.test');
+  insert into public.staff_roles (user_id, role) values (m, 'moderator');
+  perform set_config('role', 'service_role', false);
+  perform app.community_claim_username(a, 'mode_tester');
+  perform test.assert(app.community_status() ->> 'mode' = 'open', 'Community starts open');
+  perform test.throws(format($q$select app.community_set_mode(%L, true, 'text_only')$q$, a), 'forbidden');
+  perform test.throws(format($q$select app.community_set_mode(%L, false, 'text_only')$q$, m), 'forbidden');
+  perform test.throws(format($q$select app.community_set_mode(%L, true, 'frozen')$q$, m), 'invalid_action');
+  -- text only: media paused, text and comments continue
+  perform app.community_set_mode(m, true, 'text_only', 'busy week');
+  perform test.assert(app.community_status() ->> 'mode' = 'text_only', 'the mode is visible to everyone');
+  perform test.throws(format($q$select app.community_issue_upload(%L, 'photo', 'image/jpeg')$q$, a), 'media_paused');
+  perform test.assert(app.community_create_post(a, 'text', 'text still works', null, null, true) ->> 'status' = 'published', 'text posting continues');
+  -- read only: nothing new, but deleting and reporting still work
+  perform app.community_set_mode(m, true, 'read_only');
+  perform test.throws(format($q$select app.community_create_post(%L, 'text', 'nope', null, null, true)$q$, a), 'paused');
+  perform test.throws(format($q$select app.community_add_comment(%L, %L, 'nope')$q$, a, (select id from public.community_posts limit 1)), 'paused');
+  perform app.community_delete_post(a, (select id from public.community_posts where author_id = a limit 1));
+  perform test.assert(exists (select 1 from public.audit_log where action = 'community.mode' and row_id = 'read_only' and actor = m), 'mode changes are audited');
+  perform app.community_set_mode(m, true, 'open');
+  perform test.assert(app.community_status() ->> 'mode' = 'open', 'and can be reopened');
+  -- automatic pause: 20 held photo posts waiting
+  delete from public.community_posts where status = 'held';
+  perform test.assert(app.community_status() ->> 'mode' = 'open', 'with an empty queue Community is open');
+  for i in 1..20 loop
+    insert into public.community_posts (author_id, type, body, status) values (a, 'photo', 'x', 'held') returning id into rid;
+  end loop;
+  insert into public.community_media (post_id, kind, role, storage_path, mime, bytes) select id, 'photo', 'single', 'm/auto-' || id::text || '.jpg', 'image/jpeg', 10 from public.community_posts where status = 'held';
+  perform test.assert(app.community_status() ->> 'mode' = 'text_only', 'photo and video posting pauses by itself when review cannot keep up');
+  perform test.assert(app.community_backlog(m, true) ->> 'mode' = 'open' and app.community_backlog(m, true) ->> 'effectiveMode' = 'text_only', 'the moderator sees both the setting and the effect');
+  perform test.throws(format($q$select app.community_issue_upload(%L, 'photo', 'image/jpeg')$q$, a), 'media_paused');
+  delete from public.community_posts where status = 'held';
+  perform test.assert(app.community_status() ->> 'mode' = 'open', 'it reopens when the queue clears');
+  -- one very old held media post also pauses
+  insert into public.community_posts (author_id, type, body, status, created_at) values (a, 'photo', 'old', 'held', now() - interval '73 hours') returning id into rid;
+  insert into public.community_media (post_id, kind, role, storage_path, mime, bytes) select id, 'photo', 'single', 'm/old.jpg', 'image/jpeg', 10 from public.community_posts where body = 'old';
+  perform test.assert(app.community_status() ->> 'mode' = 'text_only', 'a photo post waiting more than 72 hours pauses media');
 end $$;

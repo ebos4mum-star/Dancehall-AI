@@ -111,6 +111,8 @@ const STATUS: Record<string, number> = {
   already_set: 409,
   needs_username: 409,
   payload_too_large: 413,
+  paused: 503,
+  media_paused: 503,
   too_large: 422,
   too_long: 422,
   wrong_type: 422,
@@ -146,6 +148,8 @@ const MESSAGES: Record<string, string> = {
   already_set: 'You already have a username.',
   needs_username: 'Choose a username first.',
   payload_too_large: 'That request is too large.',
+  paused: 'Community is paused for new posts and comments for a short while. You can still read.',
+  media_paused: 'Photos and videos are paused for a short while. You can still share text.',
   not_confirmed: 'Please confirm you want this to be public.',
   blocked: 'That cannot be posted. Please change it and try again.',
   invalid_media: 'That photo or video could not be used.',
@@ -299,6 +303,14 @@ const ROUTES: Record<string, Route> = {
         isSample: false,
       }));
       return done({ comments });
+    },
+  },
+  status: {
+    auth: 'guest',
+    limit: READ,
+    async run(c) {
+      const s = (await rpc(c, 'community_status', {})) as { mode?: string } | null;
+      return done({ mode: s?.mode === 'text_only' || s?.mode === 'read_only' ? s.mode : 'open' });
     },
   },
   profile: {
@@ -600,6 +612,19 @@ const ROUTES: Record<string, Route> = {
       return done({
         backlog: await rpc(c, 'community_backlog', { p_actor: c.user, p_aal2: c.aal2 }),
       });
+    },
+  },
+  'mod/mode': {
+    auth: 'staff',
+    limit: ['mod', 120, 60],
+    async run(c) {
+      const mode = await rpc(c, 'community_set_mode', {
+        p_actor: c.user,
+        p_aal2: c.aal2,
+        p_mode: oneOf(c.body, 'mode', ['open', 'text_only', 'read_only'] as const),
+        p_note: str(c.body, 'note', 300, true) || null,
+      });
+      return done({ mode });
     },
   },
   'mod/act': {

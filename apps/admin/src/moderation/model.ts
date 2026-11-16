@@ -32,7 +32,16 @@ export interface Backlog {
   overTarget: number;
   urgentTargetHours: number;
   targetHours: number;
+  /** What a moderator set, and what is in effect (photos and videos also pause by themselves when review cannot keep up). */
+  mode?: Mode;
+  effectiveMode?: Mode;
 }
+export type Mode = 'open' | 'text_only' | 'read_only';
+export const MODE_LABELS: Record<Mode, string> = {
+  open: 'Open',
+  text_only: 'Text only (photos and videos paused)',
+  read_only: 'Read only (no new posts or comments)',
+};
 
 export type Level = 'clear' | 'ok' | 'attention' | 'overdue';
 /** One plain headline for the top of the console. Overdue urgent items always win. */
