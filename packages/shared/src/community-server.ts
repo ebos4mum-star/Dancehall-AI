@@ -54,6 +54,11 @@ export interface CommunityDeps {
   onError?: (e: unknown) => void;
   /** How many photo checks may hold a file in memory at once in this function instance (default 2). Keeps worst-case memory bounded. */
   maxConcurrentMedia?: number;
+  /**
+   * Comments are OFF for V1 (the code is kept for later). Writing a comment is refused here before any database call, and the database refuses it too.
+   * Set only by an approved, reviewed change to the function's configuration together with the database setting.
+   */
+  commentsEnabled?: boolean;
 }
 export type Mode = 'open' | 'text_only' | 'read_only';
 const MODE_RANK: Record<Mode, number> = { open: 0, text_only: 1, read_only: 2 };
@@ -132,6 +137,7 @@ const STATUS: Record<string, number> = {
   busy: 503,
   media_paused: 503,
   video_disabled: 503,
+  comments_disabled: 403,
   too_large: 422,
   too_long: 422,
   wrong_type: 422,
@@ -170,6 +176,7 @@ const MESSAGES: Record<string, string> = {
   busy: 'That is busy right now. Please try again in a moment.',
   paused: 'Community is paused for new posts and comments for a short while. You can still read.',
   media_paused: 'Photos and videos are paused for a short while. You can still share text.',
+  comments_disabled: 'Comments are not available yet.',
   video_disabled: 'Video sharing is not available yet. You can share text and photos.',
   not_confirmed: 'Please confirm you want this to be public.',
   blocked: 'That cannot be posted. Please change it and try again.',
@@ -377,6 +384,7 @@ const ROUTES: Record<string, Route> = {
     auth: 'guest',
     limit: READ,
     async run(c) {
+      if (c.deps.commentsEnabled !== true) return done({ comments: [] }); // comments are off for V1
       const list = rows(
         await rpc(c, 'community_comments', { p_viewer: c.user, p_post: uuid(c.body, 'postId') }),
       );
@@ -400,11 +408,13 @@ const ROUTES: Record<string, Route> = {
       const s = (await rpc(c, 'community_status', {})) as {
         mode?: string;
         videoEnabled?: boolean;
+        commentsEnabled?: boolean;
       } | null;
       const db: Mode = s?.mode === 'text_only' || s?.mode === 'read_only' ? s.mode : 'open';
       return done({
         mode: stricter(db, c.deps.floorMode ?? 'open'),
         videoEnabled: s?.videoEnabled === true,
+        commentsEnabled: c.deps.commentsEnabled === true && s?.commentsEnabled === true,
       });
     },
   },
@@ -577,6 +587,7 @@ const ROUTES: Record<string, Route> = {
     auth: 'member',
     limit: WRITE,
     async run(c) {
+      if (c.deps.commentsEnabled !== true) return fail('comments_disabled'); // before any database call
       const text = str(c.body, 'body', COMMUNITY_LIMITS.commentChars + 100);
       try {
         const r = await rpc(c, 'community_add_comment', {

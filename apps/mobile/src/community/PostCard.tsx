@@ -35,7 +35,16 @@ function PostVideo({ uri }: { uri: string }) {
 }
 
 /** One post: author's username, time, text, milestone, media, one Encourage, flat comments, and report / block / delete. Guests can read; acting needs an account. */
-export function PostCard({ post, onChanged }: { post: PublicPost; onChanged: () => void }) {
+export function PostCard({
+  post,
+  onChanged,
+  commentsEnabled = false,
+}: {
+  post: PublicPost;
+  onChanged: () => void;
+  /** Comments are off for V1 (the code is kept for later). The server refuses them too. */
+  commentsEnabled?: boolean;
+}) {
   const { store } = useApp();
   const gate = useAccountGate();
   const { colors, spacing, radius } = useTheme();
@@ -165,7 +174,7 @@ export function PostCard({ post, onChanged }: { post: PublicPost; onChanged: () 
             />
           </View>
         ) : null}
-        {post.status === 'published' ? (
+        {commentsEnabled && post.status === 'published' ? (
           <View style={{ flexBasis: '47%', flexGrow: 1 }}>
             <IconChoice
               icon="chatbubble"
@@ -177,7 +186,7 @@ export function PostCard({ post, onChanged }: { post: PublicPost; onChanged: () 
         ) : null}
       </View>
 
-      {showComments ? (
+      {commentsEnabled && showComments ? (
         <View style={{ gap: spacing.sm }}>
           {comments && comments.length === 0 ? (
             <AppText variant="caption" muted>

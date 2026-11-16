@@ -47,6 +47,8 @@ create table public.community_settings (
   mode text not null default 'open' check (mode in ('open', 'text_only', 'read_only')),
   -- Video uploads stay OFF until metadata removal, safe processing and review requirements are met. There is deliberately no API to turn this on: it is changed by an approved migration.
   video_enabled boolean not null default false,
+  -- Comments are OFF for V1: the code is kept for later, but no comment can be written until an approved migration sets this. There is deliberately no API to turn it on.
+  comments_enabled boolean not null default false,
   changed_by uuid references auth.users (id) on delete set null,
   changed_at timestamptz not null default now()
 );
@@ -269,7 +271,7 @@ create or replace function app.community_effective_mode() returns text language 
     else 'open' end
 $$;
 create or replace function app.community_status() returns jsonb language sql stable security definer set search_path = '' as $$
-  select jsonb_build_object('mode', app.community_effective_mode(), 'videoEnabled', (select video_enabled from public.community_settings))
+  select jsonb_build_object('mode', app.community_effective_mode(), 'videoEnabled', (select video_enabled from public.community_settings), 'commentsEnabled', (select comments_enabled from public.community_settings))
 $$;
 
 -- Why a name cannot be used by this member: null when it can. Checks other members, look-alikes and recently released names.
@@ -407,7 +409,7 @@ language sql stable security definer set search_path = '' as $$
     from public.community_comments c
     join public.community_members m on m.user_id = c.author_id
     join public.community_posts p on p.id = c.post_id
-   where c.post_id = p_post and app.community_visible_post(p, p_viewer)
+   where (select comments_enabled from public.community_settings) and c.post_id = p_post and app.community_visible_post(p, p_viewer)
      and ((c.status = 'published' and not app.community_blocked_between(p_viewer, c.author_id)) or (c.author_id = p_viewer and c.status <> 'removed'))
    order by c.created_at, c.id
 $$;
@@ -415,6 +417,7 @@ $$;
 create or replace function app.community_add_comment(p_user uuid, p_post uuid, p_body text) returns jsonb language plpgsql security definer set search_path = '' as $$
 declare m public.community_members; p public.community_posts; r jsonb; v_status text := 'published'; v_id uuid;
 begin
+  if not (select comments_enabled from public.community_settings) then raise exception 'comments_disabled'; end if;
   select * into p from public.community_posts where id = p_post;
   if not found or not app.community_visible_post(p, p_user) then raise exception 'not_found'; end if;
   select * into m from public.community_members where user_id = p_user;

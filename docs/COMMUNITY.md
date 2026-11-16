@@ -2,6 +2,10 @@
 
 Status: **built locally, off in production.** Nothing here is applied to a hosted project. The public feed must not be enabled until the launch checklist below is complete and the owner approves.
 
+## V1 scope note: comments are OFF
+
+Comments are disabled for V1 and the code is preserved for later. Enforcement is layered: the app hides comment controls (it asks the server's `status`); the Edge Function refuses `comment` before any database call and returns no comments to read; and the database refuses `community_add_comment` (`comments_disabled`) because `community_settings.comments_enabled` defaults to false. There is no API to turn it on: re-enabling needs `COMMUNITY_COMMENTS=1` on the function **and** an approved migration that sets the database column, plus a fresh moderation and abuse review (comments add harassment and spam surface). Reporting and deleting comments stay in place. Test coverage: SQL (default off, no function can change it), the server unit tests, and the real-Deno end-to-end test.
+
 ## What exists
 
 - One chronological feed (`/community`); guests browse, members post, comment and Encourage. One Share Progress action, one Encourage reaction, flat comments.

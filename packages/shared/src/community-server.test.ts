@@ -78,6 +78,7 @@ function setup(
     files?: Record<string, Uint8Array>;
     alerts?: Alerter;
     floorMode?: 'open' | 'text_only' | 'read_only';
+    commentsEnabled?: boolean;
     burst?: () => boolean;
   } = {},
 ) {
@@ -128,6 +129,7 @@ function setup(
     maintenanceKeyOk: (k) => k === 'secret-key',
     alerts: opts.alerts,
     floorMode: opts.floorMode,
+    commentsEnabled: opts.commentsEnabled,
   };
   const server = createCommunityServer(deps);
   const send = (
@@ -359,11 +361,11 @@ describe('validation', () => {
   });
   it('never leaks unexpected database errors', async () => {
     const t = setup({
-      community_comments: () => {
+      community_feed: () => {
         throw new Error('relation "public.community_posts" does not exist at character 14');
       },
     });
-    const r = await t.send('comments', { postId: POST }, null);
+    const r = await t.send('feed', {}, null);
     expect(r.status).toBe(500);
     expect(JSON.stringify(r.body)).not.toMatch(/relation|community_posts|character/);
   });
@@ -541,6 +543,77 @@ describe('uploads', () => {
     );
     expect((await t2.send('upload/commit', { path })).status).toBe(404);
     expect(t2.uploaded).toHaveLength(0);
+  });
+});
+
+describe('comments are off for V1', () => {
+  const body = { postId: POST, body: 'nice one' };
+  it('refuses writing a comment before any database call, by default', async () => {
+    const t = setup({ community_add_comment: () => ({ id: POST, status: 'published' }) });
+    const r = await t.send('comment', body);
+    expect(r.status).toBe(403);
+    expect(r.body.code).toBe('comments_disabled');
+    expect(dbCalls(t.calls)).toHaveLength(0);
+    expect((await setup({}, { commentsEnabled: false }).send('comment', body)).body.code).toBe(
+      'comments_disabled',
+    );
+  });
+  it('returns no comments to read and makes no database call', async () => {
+    const t = setup({
+      community_comments: () => [
+        {
+          id: POST,
+          post_id: POST,
+          author: 'a_b',
+          body: 'x',
+          created_at: '2026-12-01T10:00:00Z',
+          is_mine: false,
+          status: 'published',
+        },
+      ],
+    });
+    const r = await t.send('comments', { postId: POST }, null);
+    expect(r.body).toEqual({ ok: true, comments: [] });
+    expect(dbCalls(t.calls)).toHaveLength(0);
+  });
+  it('still lets members delete a comment and report anything', async () => {
+    const t = setup({ community_delete_comment: () => undefined });
+    expect((await t.send('comment/delete', { commentId: POST })).status).toBe(200);
+  });
+  it('says so in the status, and needs BOTH the function setting and the database setting', async () => {
+    const dbOn = {
+      community_status: () => ({ mode: 'open', videoEnabled: false, commentsEnabled: true }),
+    };
+    expect((await setup(dbOn).send('status', {}, null)).body.commentsEnabled).toBe(false);
+    expect(
+      (
+        await setup(
+          { community_status: () => ({ mode: 'open', commentsEnabled: false }) },
+          { commentsEnabled: true },
+        ).send('status', {}, null)
+      ).body.commentsEnabled,
+    ).toBe(false);
+    expect(
+      (await setup(dbOn, { commentsEnabled: true }).send('status', {}, null)).body.commentsEnabled,
+    ).toBe(true);
+  });
+  it('the preserved code works when both settings are on, including the explanation of a refused comment', async () => {
+    const t = setup(
+      { community_add_comment: () => ({ id: POST, status: 'published' }) },
+      { commentsEnabled: true },
+    );
+    expect((await t.send('comment', body)).status).toBe(200);
+    const blocked = setup(
+      {
+        community_add_comment: () => {
+          throw new Error('blocked');
+        },
+      },
+      { commentsEnabled: true },
+    );
+    const r = await blocked.send('comment', { postId: POST, body: 'call 0201234567' });
+    expect(r.body.code).toBe('blocked');
+    expect(JSON.stringify(r.body)).not.toContain('0201234567');
   });
 });
 

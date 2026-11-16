@@ -31,6 +31,7 @@ export default function CommunityScreen() {
   const [err, setErr] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);
   const [blocked, setBlocked] = useState<string[]>([]);
+  const [commentsEnabled, setCommentsEnabled] = useState(false);
 
   const load = useCallback(async () => {
     if (!available) return;
@@ -39,6 +40,7 @@ export default function CommunityScreen() {
       setPosts(r.posts);
       setNext(r.next);
       setBlocked(session ? await store.communityBlocked!() : []);
+      setCommentsEnabled((await store.communityStatus?.())?.commentsEnabled === true);
       setErr(null);
     } catch (e) {
       setErr(errorMessage(e));
@@ -104,7 +106,12 @@ export default function CommunityScreen() {
       {loaded && posts.length === 0 ? <AppText muted>{t('community.empty')}</AppText> : null}
       <View style={{ gap: spacing.md }}>
         {posts.map((p) => (
-          <PostCard key={p.id} post={p} onChanged={() => void load()} />
+          <PostCard
+            key={p.id}
+            post={p}
+            commentsEnabled={commentsEnabled}
+            onChanged={() => void load()}
+          />
         ))}
       </View>
       {next ? (

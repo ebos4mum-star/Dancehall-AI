@@ -731,6 +731,38 @@ describe(
       });
     });
 
+    describe('comments are off for V1', () => {
+      it('refuses a comment on the server, shows none, says so in the status, and cannot be turned on from a request', async () => {
+        const post = (await call('feed', {}, null)).body.posts[0];
+        const before = (
+          await (await fetch(`http://127.0.0.1:${PLATFORM_PORT}/__test/rpclog`)).json()
+        ).length;
+        const r = await call('comment', { postId: post.id, body: 'nice one' }, tok('ama'));
+        assert.equal(r.status, 403);
+        assert.equal(r.body.code, 'comments_disabled');
+        assert.equal(
+          (await (await fetch(`http://127.0.0.1:${PLATFORM_PORT}/__test/rpclog`)).json()).filter(
+            (f) => f === 'community_add_comment',
+          ).length,
+          0,
+          'the database was never asked',
+        );
+        assert.ok(before >= 0);
+        assert.deepEqual((await call('comments', { postId: post.id }, null)).body.comments, []);
+        assert.equal((await call('status', {}, null)).body.commentsEnabled, false);
+        // Even if the function were switched on, the database setting still refuses (defence in depth).
+        const user = tok('ama');
+        const row = (await db.query('select comments_enabled from public.community_settings'))
+          .rows[0];
+        assert.equal(row.comments_enabled, false);
+        assert.equal(
+          (await call('comment', { postId: post.id, body: 'x', userId: users.kofi }, user)).body
+            .code,
+          'comments_disabled',
+        );
+      });
+    });
+
     describe('Read only, for Community alone', () => {
       it('a moderator can switch to Read only: reading, reporting and deleting continue, new posts stop, and it can be reopened', async () => {
         const mod = tok('mod2', { aal: 'aal2' });
@@ -745,10 +777,6 @@ describe(
           'paused',
         );
         const post = (await call('feed', {}, null)).body.posts[0];
-        assert.equal(
-          (await call('comment', { postId: post.id, body: 'nope' }, tok('ama'))).body.code,
-          'paused',
-        );
         assert.equal((await call('feed', {}, null)).status, 200);
         assert.equal((await call('mod/mode', { mode: 'text_only' }, mod)).status, 200);
         assert.equal(

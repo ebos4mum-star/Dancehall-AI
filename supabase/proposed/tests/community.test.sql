@@ -89,6 +89,9 @@ begin
   perform test.as_admin(); a := test.make_user('c-video@example.test'); perform set_config('role', 'service_role', false);
   perform app.community_claim_username(a, 'video_tester');
   perform test.assert((app.community_status() ->> 'videoEnabled')::boolean = false, 'video uploads are disabled by default and the status says so');
+  perform test.assert((app.community_status() ->> 'commentsEnabled')::boolean = false, 'comments are disabled by default and the status says so');
+  perform test.throws(format($q$select app.community_add_comment(%L, (select id from public.community_posts limit 1), 'hello')$q$, a), 'comments_disabled');
+  perform test.assert(not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname in ('app', 'public') and p.proname like 'community%' and pg_get_functiondef(p.oid) ilike '%set comments_enabled%'), 'no function can change the comments setting');
   perform test.throws(format($q$select app.community_issue_upload(%L, 'video', 'video/mp4')$q$, a), 'video_disabled');
   perform test.throws(format($q$select app.community_create_post(%L, 'video', 'x', null, '[{"kind":"video","role":"single","path":"m/x.mp4"}]'::jsonb, true)$q$, a), 'video_disabled');
   perform test.assert(app.community_issue_upload(a, 'photo', 'image/jpeg') is not null, 'photos still work');
@@ -100,7 +103,7 @@ do $$
 declare a uuid; b uuid; c uuid; d uuid; m uuid; r jsonb; pa uuid; pb uuid; pm uuid; n int; cols text[]; p1 text; p2 text; p3 text; paths text[];
 begin
   perform test.as_admin();
-  update public.community_settings set video_enabled = true; -- as an approved migration would, for the behaviour tests below
+  update public.community_settings set video_enabled = true, comments_enabled = true; -- as an approved migration would, for the behaviour tests below
   a := test.make_user('c-a@example.test'); b := test.make_user('c-b@example.test'); c := test.make_user('c-c@example.test'); d := test.make_user('c-d@example.test'); m := test.make_user('c-mod@example.test');
   insert into public.staff_roles (user_id, role) values (m, 'moderator');
   perform set_config('role', 'service_role', false);

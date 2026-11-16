@@ -124,10 +124,11 @@ export function createCommunityAdapter(d: CommunityAdapterDeps): Partial<DataSto
   return {
     async communityStatus() {
       const r = await call('status', {});
-      if (isFail(r)) return { mode: 'open' as const, videoEnabled: false };
+      if (isFail(r)) return { mode: 'open' as const, videoEnabled: false, commentsEnabled: false };
       return {
         mode: r.mode === 'text_only' || r.mode === 'read_only' ? r.mode : ('open' as const),
         videoEnabled: r.videoEnabled === true,
+        commentsEnabled: r.commentsEnabled === true,
       };
     },
     async communityProfile() {

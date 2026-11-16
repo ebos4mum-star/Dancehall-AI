@@ -218,6 +218,8 @@ export interface DataStore {
     mode: 'open' | 'text_only' | 'read_only';
     /** Video uploads stay off until processing and review requirements are met. */
     videoEnabled: boolean;
+    /** Comments are off for V1; the code is kept for later. */
+    commentsEnabled: boolean;
   }>;
   communityChangeUsername?(raw: string): Promise<{ ok: true; username: string } | CommunityFail>;
   /** Leave Community: removes the username, posts, comments, reactions and files. The account itself stays. */

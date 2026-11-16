@@ -154,10 +154,28 @@ describe('Community over the Edge Function', () => {
     expect(r.ok && r.post.author).toBe('ama_moves');
   });
   it('reads the status, and fails open for reading but closed for video', async () => {
-    const s = setup({ status: { ok: true, mode: 'text_only', videoEnabled: false } });
-    expect(await s.a.communityStatus!()).toEqual({ mode: 'text_only', videoEnabled: false });
+    const s = setup({
+      status: { ok: true, mode: 'text_only', videoEnabled: false },
+    });
+    expect(await s.a.communityStatus!()).toEqual({
+      mode: 'text_only',
+      videoEnabled: false,
+      commentsEnabled: false,
+    });
     const down = setup({ status: { ok: false, code: 'server_error' } });
-    expect(await down.a.communityStatus!()).toEqual({ mode: 'open', videoEnabled: false });
+    expect(await down.a.communityStatus!()).toEqual({
+      mode: 'open',
+      videoEnabled: false,
+      commentsEnabled: false,
+    });
+  });
+  it('treats comments as off unless the server says otherwise', async () => {
+    const on = setup({
+      status: { ok: true, mode: 'open', videoEnabled: false, commentsEnabled: true },
+    });
+    expect((await on.a.communityStatus!()).commentsEnabled).toBe(true);
+    const off = setup({ status: { ok: true, mode: 'open' } });
+    expect((await off.a.communityStatus!()).commentsEnabled).toBe(false);
   });
   it('leaves Community through the server', async () => {
     const s = setup({ leave: { ok: true } });

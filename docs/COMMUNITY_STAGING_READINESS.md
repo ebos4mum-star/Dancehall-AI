@@ -4,7 +4,7 @@
 
 > Do **not** use the Supabase connection attached to the assistant's session. It belongs to a different product's organization (see `docs/LIVE_INTEGRATION.md`). Staging must be a new project in DanceHall Fit AI's own organization, **separate from the development project and from production**.
 
-Decisions this package assumes (from you): invite-only first test, internal test accounts, synthetic content only; text and photos in scope; **video stays disabled**; every photo reviewed before publication; one primary moderator plus one backup, both with authenticator MFA; internal targets of 4 hours (urgent) and 48 hours (ordinary), not public promises; urgent alerts through the existing email provider if its terms allow, no paid service; appeals through a dedicated support mailbox (address to be confirmed); no public access.
+Decisions this package assumes (from you): invite-only first test, internal test accounts, synthetic content only; text and photos in scope; **video and comments stay disabled**; every photo reviewed before publication; one primary moderator plus one backup, both with authenticator MFA; internal targets of 4 hours (urgent) and 48 hours (ordinary), not public promises; urgent alerts through the existing email provider if its terms allow, no paid service; appeals through a dedicated support mailbox (address to be confirmed); no public access.
 
 Facts about vendor limits and prices below came from search snippets, because `supabase.com` and `resend.com` are not reachable from the assistant's session. **Treat every figure marked (verify) as unconfirmed** and check the vendor page before relying on it.
 
@@ -181,6 +181,7 @@ Run in order, record each result (pass / fail / not applicable) in a copy of thi
 - D3. Photo: upload, check, post; it is held; guests and other members cannot see it; its author sees it; the signed link works, expires and fails when altered.
 - D4. The stored file has no location or camera metadata (inspect an uploaded test image that contained them).
 - D5. A disguised file (for example an HTML file named `.jpg`) is rejected and deleted; a 9 MB file is refused.
+- D5b. Comments are off: `comment` returns `comments_disabled`, the status reports `commentsEnabled: false`, and the app shows no comment controls.
 - D6. Video upload is refused (`video_disabled`); status reports `videoEnabled: false`.
 - D7. Primary moderator: password-only sign-in is refused; with the authenticator code the queue loads; approve publishes; remove deletes the file from the bucket.
 - D8. Backup moderator can do the same; the audit log names each separately.

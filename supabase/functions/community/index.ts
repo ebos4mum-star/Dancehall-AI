@@ -107,6 +107,8 @@ const server = createCommunityServer({
             e instanceof Error ? `${e.name}: ${e.message.slice(0, 120)}` : 'unknown',
           )
       : undefined,
+  // Comments are off for V1. They stay refused unless this is set AND the database setting is changed by an approved migration.
+  commentsEnabled: Deno.env.get('COMMUNITY_COMMENTS') === '1',
   alerts: createAlerter({
     enabled: Deno.env.get('COMMUNITY_ALERTS'),
     recipients: Deno.env.get('COMMUNITY_ALERT_RECIPIENTS'),
