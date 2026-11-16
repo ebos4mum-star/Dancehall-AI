@@ -10,14 +10,70 @@
 --  * Deleting an account (auth.users) removes everything the person made or did, by cascade.
 
 -- ========== Tables (RLS on, no client access) ==========
+-- Look-alike spellings collapse to one skeleton (adm1n, rn/m, 0/o, 1/l/i, underscores). Mirrors usernameSkeleton in TypeScript.
+create or replace function app.community_skeleton(p text) returns text language sql immutable set search_path = '' as $$
+  select replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(lower(coalesce(p, '')),
+    '_', ''), 'rn', 'm'), 'vv', 'w'), '1', 'l'), 'i', 'l'), '|', 'l'), '0', 'o'), '3', 'e'), '4', 'a'), '@', 'a'), '5', 's'), '$', 's'), '7', 't'), '8', 'b')
+$$;
+
 create table public.community_members (
   user_id uuid primary key references auth.users (id) on delete cascade,
   username text not null,
-  suspended boolean not null default false,
+  -- Staff restriction: 'muted' cannot post, comment or upload; 'suspended' cannot take any member action. Optional end time.
+  restriction text check (restriction in ('muted', 'suspended')),
+  restricted_until timestamptz,
+  restriction_reason text check (restriction_reason in ('harassment', 'unsafe_content', 'spam', 'impersonation', 'other')),
+  changed_at timestamptz,
+  skeleton text generated always as (app.community_skeleton(username)) stored,
   created_at timestamptz not null default now(),
   constraint community_username_format check (username ~ '^[a-z][a-z0-9_]{2,19}$' and username !~ '__' and username !~ '_$')
 );
 create unique index community_members_username_key on public.community_members (username);
+create unique index community_members_skeleton_key on public.community_members (skeleton);
+
+-- Released names are held so nobody can take over a name people may still recognise.
+create table public.community_retired_names (
+  username text not null,
+  skeleton text not null,
+  owner_id uuid not null references auth.users (id) on delete cascade,
+  until timestamptz not null,
+  primary key (username, owner_id)
+);
+create index community_retired_names_idx on public.community_retired_names (skeleton, until);
+
+-- A verified server-side record for every uploaded file. A post can attach only a file the server itself checked.
+create table public.community_uploads (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  storage_path text not null unique check (storage_path ~ '^[A-Za-z0-9/_.-]{1,200}$' and storage_path !~ '\.\.'),
+  kind text not null check (kind in ('photo', 'video')),
+  mime text not null check (mime in ('image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime', 'video/webm')),
+  state text not null default 'issued' check (state in ('issued', 'verified', 'attached', 'rejected')),
+  bytes bigint check (bytes is null or bytes between 1 and 26214400),
+  duration_s numeric check (duration_s is null or duration_s between 0.1 and 30),
+  created_at timestamptz not null default now(),
+  constraint community_uploads_kind_mime check ((kind = 'photo') = (mime like 'image/%'))
+);
+create index community_uploads_user_idx on public.community_uploads (user_id, created_at desc);
+
+-- Short-window request counters (burst limits). Rows are pruned by community_prune.
+create table public.community_burst (
+  key text not null,
+  bucket text not null,
+  window_start timestamptz not null,
+  n int not null default 0,
+  primary key (key, bucket, window_start)
+);
+
+-- One row per staff action. The tamper-evident record is the shared audit log; this keeps the moderator's note next to the target.
+create table public.community_report_resolutions (
+  id bigint generated always as identity primary key,
+  target_id uuid not null,
+  action text not null,
+  actor_id uuid references auth.users (id) on delete set null,
+  note text check (note is null or char_length(note) <= 300),
+  at timestamptz not null default now()
+);
 
 create or replace function app.community_milestone_ok(m jsonb) returns boolean language sql immutable set search_path = '' as $$
   select m is null or (
@@ -83,6 +139,7 @@ create table public.community_reports (
   reason text not null check (reason in ('harassment', 'unsafe_advice', 'body_shaming_or_eating_concern', 'spam', 'private_information', 'self_harm', 'other')),
   note text check (note is null or char_length(note) <= 200),
   created_at timestamptz not null default now(),
+  resolved_at timestamptz,
   unique (reporter_id, target_id)
 );
 create index community_reports_target_idx on public.community_reports (target_id);
@@ -97,7 +154,7 @@ create table public.community_blocks (
 create index community_blocks_blocked_idx on public.community_blocks (blocked_id);
 
 do $$ declare t text; begin
-  foreach t in array array['community_members', 'community_posts', 'community_media', 'community_comments', 'community_reactions', 'community_reports', 'community_blocks'] loop
+  foreach t in array array['community_members', 'community_posts', 'community_media', 'community_comments', 'community_reactions', 'community_reports', 'community_blocks', 'community_retired_names', 'community_uploads', 'community_burst', 'community_report_resolutions'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('revoke all on public.%I from anon, authenticated', t);
     -- A deny-all policy (the structural RLS tests require every table to carry one). Only the server (service role, which bypasses RLS) reads or writes.
@@ -115,6 +172,8 @@ begin
   if u ~ '[0-9]{6,}' or u ~ '[0-9a-f]{16,}' then return 'invalid_username'; end if;
   flat := replace(u, '_', '');
   if u = any (array['admin','administrator','moderator','mod','staff','support','official','system','root','null','undefined','anonymous','everyone','deleted','pulse','coach','team','help'])
+     or app.community_skeleton(u) = any (select app.community_skeleton(x) from unnest(array['admin','administrator','moderator','mod','staff','support','official','system','root','null','undefined','anonymous','everyone','deleted','pulse','coach','team','help']) x)
+     or exists (select 1 from unnest(array['dancehallfit', 'dancehall_fit', 'dhfit', 'dancehallai']) b where app.community_skeleton(flat) like '%' || app.community_skeleton(b) || '%')
      or flat ~ '(dancehallfit|dhfit|dancehallai)'
      or flat ~ '(idiot|stupid|ugly|fatty|loser|hate)'
      or flat ~ '(thinspo|proana|promia|bonespo|meanspo|edtwt|anorexiatips|purgetips)' then
@@ -178,11 +237,26 @@ create or replace function app.community_is_moderator(p_actor uuid, p_aal2 boole
 $$;
 
 -- ========== Server-only operations (verified user id passed in by the server) ==========
+create or replace function app.community_restriction(m public.community_members) returns text language sql stable set search_path = '' as $$
+  select case when m.restriction is not null and (m.restricted_until is null or m.restricted_until > now()) then m.restriction end
+$$;
+
+-- Why a name cannot be used by this member: null when it can. Checks other members, look-alikes and recently released names.
+create or replace function app.community_name_problem(p_user uuid, p_name text) returns text language plpgsql stable set search_path = '' as $$
+begin
+  if app.community_username_problem(p_name) is not null then return 'invalid_username'; end if;
+  if exists (select 1 from public.community_members where username = p_name and user_id <> p_user) then return 'taken'; end if;
+  if exists (select 1 from public.community_members where skeleton = app.community_skeleton(p_name) and user_id <> p_user) then return 'too_similar'; end if;
+  if exists (select 1 from public.community_retired_names where owner_id <> p_user and until > now() and (username = p_name or skeleton = app.community_skeleton(p_name))) then return 'taken'; end if;
+  return null;
+end $$;
+
 create or replace function app.community_claim_username(p_user uuid, p_name text) returns text language plpgsql security definer set search_path = '' as $$
-declare u text := lower(btrim(coalesce(p_name, '')));
+declare u text := lower(btrim(coalesce(p_name, ''))); problem text;
 begin
   if exists (select 1 from public.community_members where user_id = p_user) then raise exception 'already_set'; end if;
-  if app.community_username_problem(u) is not null then raise exception 'invalid_username'; end if;
+  problem := app.community_name_problem(p_user, u);
+  if problem is not null then raise exception '%', problem; end if;
   begin
     insert into public.community_members (user_id, username) values (p_user, u);
   exception when unique_violation then raise exception 'taken';
@@ -190,16 +264,44 @@ begin
   return u;
 end $$;
 
+-- Changing a name: the first change is free, then one every 30 days. The old name is held for 90 days. Posts follow the new name (they join on the member).
+create or replace function app.community_change_username(p_user uuid, p_name text) returns text language plpgsql security definer set search_path = '' as $$
+declare u text := lower(btrim(coalesce(p_name, ''))); m public.community_members; problem text;
+begin
+  select * into m from public.community_members where user_id = p_user for update;
+  if not found then raise exception 'needs_username'; end if;
+  if app.community_restriction(m) = 'suspended' then raise exception 'suspended'; end if;
+  if m.changed_at is not null and m.changed_at + interval '30 days' > now() then raise exception 'cooldown'; end if;
+  if u = m.username then raise exception 'unchanged'; end if;
+  problem := app.community_name_problem(p_user, u);
+  if problem is not null then raise exception '%', problem; end if;
+  insert into public.community_retired_names (username, skeleton, owner_id, until)
+  values (m.username, app.community_skeleton(m.username), p_user, now() + interval '90 days')
+  on conflict (username, owner_id) do update set until = excluded.until;
+  begin
+    update public.community_members set username = u, changed_at = now() where user_id = p_user;
+  exception when unique_violation then raise exception 'taken';
+  end;
+  return u;
+end $$;
+
+create or replace function app.community_profile(p_user uuid) returns jsonb language sql stable security definer set search_path = '' as $$
+  select coalesce((select jsonb_build_object('username', m.username,
+           'canChangeAt', case when m.changed_at is not null and m.changed_at + interval '30 days' > now() then m.changed_at + interval '30 days' end,
+           'restriction', app.community_restriction(m))
+         from public.community_members m where m.user_id = p_user), jsonb_build_object('username', null))
+$$;
+
 create or replace function app.community_create_post(p_user uuid, p_type text, p_body text, p_milestone jsonb, p_media jsonb, p_confirmed boolean)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
   m public.community_members; media jsonb := coalesce(p_media, '[]'::jsonb); photos int; videos int; r jsonb; flags text[] := '{}'; v_status text := 'published';
-  v_body text := btrim(coalesce(p_body, '')); v_ms jsonb := null; v_id uuid; it jsonb; roles text[];
+  v_body text := btrim(coalesce(p_body, '')); v_ms jsonb := null; v_id uuid; it jsonb; roles text[]; up public.community_uploads;
 begin
   if p_confirmed is not true then raise exception 'not_confirmed'; end if;
   select * into m from public.community_members where user_id = p_user;
   if not found then raise exception 'needs_username'; end if;
-  if m.suspended then raise exception 'suspended'; end if;
+  if app.community_restriction(m) is not null then raise exception '%', app.community_restriction(m); end if;
   if app.community_used(p_user, 'post') >= app.community_limit('post') then raise exception 'rate_limited'; end if;
   if p_type not in ('text', 'story', 'milestone', 'photo', 'video') then raise exception 'invalid_type'; end if;
   if jsonb_typeof(media) <> 'array' then raise exception 'invalid_media'; end if;
@@ -231,9 +333,13 @@ begin
   -- Photos and videos cannot be scanned: a person reviews every one before anyone else sees it.
   if photos + videos > 0 then v_status := 'held'; flags := flags || array['media_review']; end if;
   insert into public.community_posts (author_id, type, body, milestone, status, flags) values (p_user, p_type, v_body, v_ms, v_status, flags) returning id into v_id;
+  -- Only files the server itself received and checked can be attached, and only the member's own, once. Size and type come from that record, not the caller.
   for it in select * from jsonb_array_elements(media) loop
+    select * into up from public.community_uploads where user_id = p_user and storage_path = it ->> 'path' and state = 'verified' for update;
+    if not found or up.kind <> it ->> 'kind' then raise exception 'invalid_media'; end if;
     insert into public.community_media (post_id, kind, role, storage_path, mime, bytes, duration_s)
-    values (v_id, it ->> 'kind', it ->> 'role', it ->> 'path', it ->> 'mime', (it ->> 'bytes')::bigint, nullif(it ->> 'durationS', '')::numeric);
+    values (v_id, up.kind, it ->> 'role', up.storage_path, up.mime, up.bytes, up.duration_s);
+    update public.community_uploads set state = 'attached' where id = up.id;
   end loop;
   return jsonb_build_object('id', v_id, 'status', v_status);
 end $$;
@@ -279,7 +385,7 @@ begin
   if not found or not app.community_visible_post(p, p_user) then raise exception 'not_found'; end if;
   select * into m from public.community_members where user_id = p_user;
   if not found then raise exception 'needs_username'; end if;
-  if m.suspended then raise exception 'suspended'; end if;
+  if app.community_restriction(m) is not null then raise exception '%', app.community_restriction(m); end if;
   if app.community_used(p_user, 'comment') >= app.community_limit('comment') then raise exception 'rate_limited'; end if;
   r := app.community_screen(p_body, 300);
   if r ->> 'decision' = 'block' then raise exception 'blocked'; end if;
@@ -288,10 +394,14 @@ begin
   return jsonb_build_object('id', v_id, 'status', v_status);
 end $$;
 
-create or replace function app.community_delete_post(p_user uuid, p_post uuid) returns void language plpgsql security definer set search_path = '' as $$
+create or replace function app.community_delete_post(p_user uuid, p_post uuid) returns text[] language plpgsql security definer set search_path = '' as $$
+declare paths text[];
 begin
+  select coalesce(array_agg(x.storage_path), '{}') into paths from public.community_media x join public.community_posts p on p.id = x.post_id where p.id = p_post and p.author_id = p_user;
   delete from public.community_posts where id = p_post and author_id = p_user;
   if not found then raise exception 'not_found'; end if;
+  delete from public.community_uploads where storage_path = any (paths);
+  return paths; -- the server deletes these files
 end $$;
 
 create or replace function app.community_delete_comment(p_user uuid, p_comment uuid) returns void language plpgsql security definer set search_path = '' as $$
@@ -307,7 +417,7 @@ begin
   select * into p from public.community_posts where id = p_post;
   if not found or not app.community_visible_post(p, p_user) then raise exception 'not_found'; end if;
   if p.author_id = p_user then raise exception 'own_post'; end if;
-  if exists (select 1 from public.community_members where user_id = p_user and suspended) then raise exception 'suspended'; end if;
+  if exists (select 1 from public.community_members mm where mm.user_id = p_user and app.community_restriction(mm) = 'suspended') then raise exception 'suspended'; end if;
   select exists (select 1 from public.community_reactions where post_id = p_post and user_id = p_user) into had;
   if p_on = had then return had; end if;
   if p_on then
@@ -337,7 +447,7 @@ begin
   if exists (select 1 from public.community_reports where reporter_id = p_user and target_id = p_target) then return; end if; -- quiet
   if app.community_used(p_user, 'report') >= app.community_limit('report') then raise exception 'rate_limited'; end if;
   insert into public.community_reports (target_type, target_id, reporter_id, reason, note) values (p_type, p_target, p_user, p_reason, left(btrim(p_note), 200));
-  select count(distinct reporter_id)::int, array_agg(reason) into n, reasons from public.community_reports where target_id = p_target;
+  select count(distinct reporter_id)::int, array_agg(reason) into n, reasons from public.community_reports where target_id = p_target and resolved_at is null;
   if n >= 3 or reasons && array['private_information', 'self_harm'] then
     if p_type = 'post' then
       update public.community_posts set status = 'hidden', flags = case when p_reason in ('private_information', 'self_harm') and not (flags @> array[p_reason]) then flags || p_reason else flags end
@@ -366,39 +476,156 @@ $$;
 
 -- ========== Moderation (a verified moderator with a second factor; sees usernames, content and flags only) ==========
 create or replace function app.community_moderation_queue(p_actor uuid, p_aal2 boolean)
-returns table (id uuid, target_type text, author text, body text, status text, flags text[], report_count int, has_media boolean, created_at timestamptz)
+returns table (id uuid, target_type text, author text, body text, status text, flags text[], reasons text[], report_count int, urgent boolean, media jsonb, age_hours numeric, created_at timestamptz)
 language plpgsql stable security definer set search_path = '' as $$
 begin
   if not app.community_is_moderator(p_actor, p_aal2) then raise exception 'forbidden'; end if;
   return query
-    select q.id, q.target_type, q.author, q.body, q.status, q.flags, q.report_count, q.has_media, q.created_at from (
+    select q.id, q.target_type, q.author, q.body, q.status, q.flags, q.reasons, q.report_count,
+           (q.flags && array['self_harm', 'private_information'] or q.reasons && array['self_harm', 'private_information']),
+           q.media, round(extract(epoch from (now() - q.created_at)) / 3600, 1), q.created_at from (
       select p.id, 'post'::text as target_type, m.username as author, p.body, p.status, p.flags,
-             (select count(*)::int from public.community_reports r where r.target_id = p.id) as report_count,
-             exists (select 1 from public.community_media x where x.post_id = p.id) as has_media, p.created_at
-        from public.community_posts p join public.community_members m on m.user_id = p.author_id where p.status in ('held', 'hidden')
+             coalesce((select array_agg(distinct r.reason) from public.community_reports r where r.target_id = p.id and r.resolved_at is null), '{}'::text[]) as reasons,
+             (select count(*)::int from public.community_reports r where r.target_id = p.id and r.resolved_at is null) as report_count,
+             coalesce((select jsonb_agg(jsonb_build_object('kind', x.kind, 'role', x.role, 'path', x.storage_path, 'durationS', x.duration_s) order by x.role) from public.community_media x where x.post_id = p.id), '[]'::jsonb) as media,
+             p.created_at
+        from public.community_posts p join public.community_members m on m.user_id = p.author_id
+       where p.status in ('held', 'hidden') or (p.status = 'published' and exists (select 1 from public.community_reports r where r.target_id = p.id and r.resolved_at is null))
       union all
       select c.id, 'comment', m.username, c.body, c.status, '{}'::text[],
-             (select count(*)::int from public.community_reports r where r.target_id = c.id), false, c.created_at
-        from public.community_comments c join public.community_members m on m.user_id = c.author_id where c.status = 'hidden') q
-    order by case when q.flags && array['self_harm', 'private_information'] then 0 when q.report_count > 0 then 1 else 2 end, q.created_at, q.id;
+             coalesce((select array_agg(distinct r.reason) from public.community_reports r where r.target_id = c.id and r.resolved_at is null), '{}'::text[]),
+             (select count(*)::int from public.community_reports r where r.target_id = c.id and r.resolved_at is null), '[]'::jsonb, c.created_at
+        from public.community_comments c join public.community_members m on m.user_id = c.author_id
+       where c.status = 'hidden' or (c.status = 'published' and exists (select 1 from public.community_reports r where r.target_id = c.id and r.resolved_at is null))) q
+    order by case when q.flags && array['self_harm', 'private_information'] or q.reasons && array['self_harm', 'private_information'] then 0 when q.report_count > 0 then 1 else 2 end, q.created_at, q.id;
 end $$;
 
-create or replace function app.community_moderate(p_actor uuid, p_aal2 boolean, p_type text, p_target uuid, p_action text) returns void language plpgsql security definer set search_path = '' as $$
-declare v_status text := case p_action when 'remove' then 'removed' when 'approve' then 'published' when 'restore' then 'published' end;
+-- Tamper-evident record in the shared audit log. The acting moderator is passed in (the server verified them). Never records content or health data.
+create or replace function app.community_audit(p_actor uuid, p_action text, p_row text, p_detail jsonb) returns void language plpgsql security definer set search_path = '' as $$
+declare v_prev text; v_at timestamptz := clock_timestamp();
+begin
+  perform pg_advisory_xact_lock(727001);
+  select hash into v_prev from public.audit_log order by id desc limit 1;
+  v_prev := coalesce(v_prev, repeat('0', 64));
+  insert into public.audit_log (at, actor, action, table_name, row_id, detail, prev_hash, hash)
+  values (v_at, p_actor, p_action, 'community', p_row, p_detail, v_prev, app.audit_stamp(v_prev, p_actor, p_action, 'community', p_row, p_detail, v_at));
+end $$;
+
+-- approve / restore: publish; remove: take down for everyone including its author. Open reports are resolved, never deleted. Returns the media files to delete.
+create or replace function app.community_moderate(p_actor uuid, p_aal2 boolean, p_type text, p_target uuid, p_action text, p_note text default null) returns text[] language plpgsql security definer set search_path = '' as $$
+declare v_status text := case p_action when 'remove' then 'removed' when 'approve' then 'published' when 'restore' then 'published' end; paths text[] := '{}';
 begin
   if not app.community_is_moderator(p_actor, p_aal2) then raise exception 'forbidden'; end if;
-  if v_status is null then raise exception 'invalid_action'; end if;
+  if v_status is null or p_type not in ('post', 'comment') then raise exception 'invalid_action'; end if;
   if p_type = 'post' then update public.community_posts set status = v_status where id = p_target;
   else update public.community_comments set status = v_status where id = p_target; end if;
   if not found then raise exception 'not_found'; end if;
-  if p_action = 'approve' then delete from public.community_reports where target_id = p_target; end if;
+  if p_action = 'remove' and p_type = 'post' then
+    select coalesce(array_agg(storage_path), '{}') into paths from public.community_media where post_id = p_target;
+    delete from public.community_media where post_id = p_target;
+    delete from public.community_uploads where storage_path = any (paths);
+  end if;
+  update public.community_reports set resolved_at = now() where target_id = p_target and resolved_at is null;
+  insert into public.community_report_resolutions (target_id, action, actor_id, note) values (p_target, p_action, p_actor, left(btrim(p_note), 300));
+  perform app.community_audit(p_actor, 'community.' || p_action, p_target::text, jsonb_build_object('type', p_type));
+  return paths;
 end $$;
 
-create or replace function app.community_suspend(p_actor uuid, p_aal2 boolean, p_username text, p_on boolean) returns void language plpgsql security definer set search_path = '' as $$
+-- Restrict or release a member. 'muted' stops posting, commenting and uploading; 'suspended' stops every member action. Optional end after p_hours.
+create or replace function app.community_restrict(p_actor uuid, p_aal2 boolean, p_username text, p_restriction text, p_hours int, p_reason text, p_note text default null) returns void language plpgsql security definer set search_path = '' as $$
+declare v_id uuid;
 begin
   if not app.community_is_moderator(p_actor, p_aal2) then raise exception 'forbidden'; end if;
-  update public.community_members set suspended = p_on where username = lower(btrim(p_username));
+  if p_restriction not in ('none', 'muted', 'suspended') then raise exception 'invalid_action'; end if;
+  if p_restriction <> 'none' and p_reason not in ('harassment', 'unsafe_content', 'spam', 'impersonation', 'other') then raise exception 'invalid_action'; end if;
+  if p_hours is not null and (p_hours < 1 or p_hours > 8760) then raise exception 'invalid_action'; end if;
+  update public.community_members set
+    restriction = nullif(p_restriction, 'none'),
+    restricted_until = case when p_restriction = 'none' or p_hours is null then null else now() + make_interval(hours => p_hours) end,
+    restriction_reason = case when p_restriction = 'none' then null else p_reason end
+   where username = lower(btrim(p_username)) returning user_id into v_id;
+  if v_id is null then raise exception 'not_found'; end if;
+  insert into public.community_report_resolutions (target_id, action, actor_id, note) values (v_id, 'restrict:' || p_restriction, p_actor, left(btrim(p_note), 300));
+  perform app.community_audit(p_actor, 'community.restrict', lower(btrim(p_username)), jsonb_build_object('restriction', p_restriction, 'hours', p_hours, 'reason', p_reason));
+end $$;
+
+-- How far behind is moderation? Counts and ages only, no content. Targets are PROPOSED defaults awaiting the owner's decision.
+create or replace function app.community_backlog(p_actor uuid, p_aal2 boolean) returns jsonb language plpgsql stable security definer set search_path = '' as $$
+declare urgent_target numeric := 4; normal_target numeric := 48; j jsonb;
+begin
+  if not app.community_is_moderator(p_actor, p_aal2) then raise exception 'forbidden'; end if;
+  select jsonb_build_object(
+    'open', count(*),
+    'urgent', count(*) filter (where urgent),
+    'media', count(*) filter (where jsonb_array_length(media) > 0),
+    'oldestHours', coalesce(max(age_hours), 0),
+    'oldestUrgentHours', coalesce(max(age_hours) filter (where urgent), 0),
+    'urgentOverTarget', count(*) filter (where urgent and age_hours > urgent_target),
+    'overTarget', count(*) filter (where not urgent and age_hours > normal_target),
+    'urgentTargetHours', urgent_target, 'targetHours', normal_target) into j
+  from app.community_moderation_queue(p_actor, p_aal2);
+  return j;
+end $$;
+
+-- ========== Uploads: private storage, verified by the server before a post can use them ==========
+create or replace function app.community_issue_upload(p_user uuid, p_kind text, p_mime text) returns jsonb language plpgsql security definer set search_path = '' as $$
+declare m public.community_members; v_id uuid := gen_random_uuid(); ext text; v_path text;
+begin
+  select * into m from public.community_members where user_id = p_user;
+  if not found then raise exception 'needs_username'; end if;
+  if app.community_restriction(m) is not null then raise exception '%', app.community_restriction(m); end if;
+  if p_kind not in ('photo', 'video') or (p_kind = 'photo') <> (p_mime like 'image/%') then raise exception 'invalid_media'; end if;
+  ext := case p_mime when 'image/jpeg' then 'jpg' when 'image/png' then 'png' when 'image/webp' then 'webp' when 'video/mp4' then 'mp4' when 'video/quicktime' then 'mov' when 'video/webm' then 'webm' end;
+  if ext is null then raise exception 'invalid_media'; end if;
+  if (select count(*) from public.community_uploads where user_id = p_user and created_at > now() - interval '1 day') >= 10 then raise exception 'rate_limited'; end if;
+  v_path := 'u/' || p_user::text || '/' || v_id::text || '.' || ext;
+  insert into public.community_uploads (id, user_id, storage_path, kind, mime) values (v_id, p_user, v_path, p_kind, p_mime);
+  return jsonb_build_object('id', v_id, 'path', v_path);
+end $$;
+
+-- The server measured the stored file (after checking its real type and removing hidden metadata) and reports what it found.
+create or replace function app.community_verify_upload(p_user uuid, p_path text, p_bytes bigint, p_duration numeric) returns void language plpgsql security definer set search_path = '' as $$
+declare u public.community_uploads;
+begin
+  select * into u from public.community_uploads where user_id = p_user and storage_path = p_path and state = 'issued' for update;
   if not found then raise exception 'not_found'; end if;
+  if p_bytes is null or p_bytes < 1 or (u.kind = 'photo' and p_bytes > 8388608) or (u.kind = 'video' and p_bytes > 26214400) then
+    update public.community_uploads set state = 'rejected' where id = u.id; raise exception 'too_large';
+  end if;
+  if u.kind = 'video' and (p_duration is null or p_duration < 0.1 or p_duration > 30) then
+    update public.community_uploads set state = 'rejected' where id = u.id; raise exception 'too_long';
+  end if;
+  update public.community_uploads set state = 'verified', bytes = p_bytes, duration_s = case when u.kind = 'video' then p_duration end where id = u.id;
+end $$;
+
+create or replace function app.community_reject_upload(p_user uuid, p_path text) returns void language sql security definer set search_path = '' as $$
+  update public.community_uploads set state = 'rejected' where user_id = p_user and storage_path = p_path and state in ('issued', 'verified');
+$$;
+
+-- Files to delete when someone deletes their account (call BEFORE deleting the auth user: the rows cascade away with it).
+create or replace function app.community_user_media(p_user uuid) returns setof text language sql stable security definer set search_path = '' as $$
+  select storage_path from public.community_uploads where user_id = p_user
+$$;
+
+-- ========== Burst limits and housekeeping ==========
+-- True while the caller is within `p_max` requests per `p_seconds` for this key (a user id or a hashed network address) and bucket.
+create or replace function app.community_burst(p_key text, p_bucket text, p_max int, p_seconds int) returns boolean language plpgsql security definer set search_path = '' as $$
+declare w timestamptz := to_timestamp(floor(extract(epoch from now()) / greatest(p_seconds, 1)) * greatest(p_seconds, 1)); c int;
+begin
+  insert into public.community_burst (key, bucket, window_start, n) values (left(p_key, 80), left(p_bucket, 40), w, 1)
+  on conflict (key, bucket, window_start) do update set n = public.community_burst.n + 1 returning n into c;
+  return c <= p_max;
+end $$;
+
+-- Scheduled by the server. Returns stale upload files to delete.
+create or replace function app.community_prune() returns text[] language plpgsql security definer set search_path = '' as $$
+declare paths text[];
+begin
+  delete from public.community_burst where window_start < now() - interval '1 day';
+  delete from public.community_retired_names where until < now();
+  select coalesce(array_agg(storage_path), '{}') into paths from public.community_uploads where state <> 'attached' and created_at < now() - interval '1 day';
+  delete from public.community_uploads where state <> 'attached' and created_at < now() - interval '1 day';
+  return paths;
 end $$;
 
 -- ========== Privileges: the server (service role) only ==========

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   CommunityEngine,
+  USERNAME_COOLDOWN_DAYS,
+  USERNAME_HOLD_DAYS,
   COMMUNITY_LIMITS,
   buildAchievementShare,
   emptyCommunity,
@@ -480,5 +482,62 @@ describe('the engine never leaks internal identifiers', () => {
     ]);
     for (const secret of ['"A"', '"B"', '"C"', 'authorId', 'userId', 'user_id'])
       expect(out, secret).not.toContain(secret);
+  });
+});
+
+describe('username changes', () => {
+  const t0 = new Date('2026-12-01T10:00:00Z');
+  const mk = () => {
+    let now = t0;
+    const e = new CommunityEngine(emptyCommunity(), () => now);
+    return { e, advance: (days: number) => (now = new Date(now.getTime() + days * 86_400_000)) };
+  };
+  it('lets a member change their name, and posts follow the new name', () => {
+    const { e } = mk();
+    e.claimUsername('u1', 'ama_dances');
+    e.createPost('u1', { type: 'text', body: 'hello there' }, { confirmed: true });
+    expect(e.changeUsername('u1', 'Ama_Moves')).toMatchObject({ ok: true, username: 'ama_moves' });
+    expect(JSON.stringify(e.feed(null))).toContain('ama_moves');
+    expect(JSON.stringify(e.feed(null))).not.toContain('ama_dances');
+  });
+  it('enforces a cooldown after a change, the first change is free', () => {
+    const { e, advance } = mk();
+    e.claimUsername('u1', 'ama_dances');
+    expect(e.changeUsername('u1', 'ama_one').ok).toBe(true);
+    expect(e.changeUsername('u1', 'ama_two')).toMatchObject({ ok: false, code: 'cooldown' });
+    advance(USERNAME_COOLDOWN_DAYS - 1);
+    expect(e.changeUsername('u1', 'ama_two').ok).toBe(false);
+    advance(2);
+    expect(e.changeUsername('u1', 'ama_two').ok).toBe(true);
+  });
+  it('refuses taken, look-alike and unchanged names', () => {
+    const { e } = mk();
+    e.claimUsername('u1', 'ama_dances');
+    e.claimUsername('u2', 'kofi_moves');
+    expect(e.changeUsername('u1', 'KOFI_MOVES')).toMatchObject({ ok: false, code: 'taken' });
+    expect(e.changeUsername('u1', 'kofimoves')).toMatchObject({ ok: false, code: 'too_similar' });
+    expect(e.changeUsername('u1', 'k0fi_m0ves')).toMatchObject({ ok: false, code: 'too_similar' });
+    expect(e.changeUsername('u1', 'ama_dances')).toMatchObject({ ok: false, code: 'unchanged' });
+    expect(e.claimUsername('u3', 'kofi_rnoves')).toMatchObject({ ok: false, code: 'too_similar' });
+  });
+  it('refuses names that pass as staff or the app', () => {
+    const { e } = mk();
+    e.claimUsername('u1', 'ama_dances');
+    for (const n of ['adm1n', 'm0derator', 'dancehal1_fit', 'supp0rt', 'adrnin'])
+      expect(e.changeUsername('u1', n).ok).toBe(false);
+  });
+  it('holds a released name so nobody else can take it over', () => {
+    const { e, advance } = mk();
+    e.claimUsername('u1', 'ama_dances');
+    e.claimUsername('u2', 'kofi_moves');
+    e.changeUsername('u1', 'ama_moves');
+    expect(e.claimUsername('u3', 'ama_dances')).toMatchObject({ ok: false });
+    expect(e.changeUsername('u2', 'ama_dances')).toMatchObject({ ok: false });
+    advance(USERNAME_HOLD_DAYS + 1);
+    expect(e.changeUsername('u2', 'ama_dances').ok).toBe(true);
+  });
+  it('needs a username first, and a suspended member cannot change it', () => {
+    const { e } = mk();
+    expect(e.changeUsername('u1', 'ama_dances')).toMatchObject({ code: 'needs_username' });
   });
 });

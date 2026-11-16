@@ -27,6 +27,9 @@ import {
   type StoredComment,
   type StoredPost,
   type Viewer,
+  USERNAME_COOLDOWN_DAYS,
+  USERNAME_HOLD_DAYS,
+  usernameSkeleton,
 } from './community';
 import { hasPermission, type StaffRole } from './roles';
 
@@ -37,7 +40,18 @@ import { hasPermission, type StaffRole } from './roles';
  * Every method takes the acting person's INTERNAL id. Nothing it returns contains one: readers get only `PublicPost` / `PublicComment` (usernames and opaque content ids).
  */
 export interface CommunityState {
-  profiles: Record<string, { username: string; createdAt: string; suspended?: boolean }>;
+  profiles: Record<
+    string,
+    {
+      username: string;
+      createdAt: string;
+      suspended?: boolean;
+      /** When the name was last changed (the first claim does not count). */
+      changedAt?: string;
+    }
+  >;
+  /** Names released by a change. Unavailable to others until `until`, so nobody can take over a name people may still recognise. */
+  retired?: Array<{ username: string; owner: string; until: string }>;
   posts: StoredPost[];
   comments: StoredComment[];
   reactions: Array<{ postId: string; userId: string }>;
@@ -104,14 +118,72 @@ export class CommunityEngine {
     const u = username.trim().toLowerCase();
     return Object.entries(this.state.profiles).find(([, p]) => p.username === u)?.[0] ?? null;
   }
+  /** Why a name cannot be used by this member, or null. Looks at taken names, look-alikes and recently released names. */
+  private nameProblem(userId: string, username: string): CommunityFail | null {
+    const now = this.now().getTime();
+    const skel = usernameSkeleton(username);
+    for (const [id, p] of Object.entries(this.state.profiles)) {
+      if (id === userId) continue;
+      if (p.username === username) return fail('taken', 'That name is taken. Try a different one.');
+      if (usernameSkeleton(p.username) === skel)
+        return fail(
+          'too_similar',
+          'That name is too close to another member’s name. Try a different one.',
+        );
+    }
+    for (const r of this.state.retired ?? []) {
+      if (r.owner === userId) continue;
+      if (
+        new Date(r.until).getTime() > now &&
+        (r.username === username || usernameSkeleton(r.username) === skel)
+      )
+        return fail('taken', 'That name is not available right now. Try a different one.');
+    }
+    return null;
+  }
   claimUsername(userId: string, raw: string): Ok<{ username: string }> | CommunityFail {
     if (this.state.profiles[userId])
-      return fail('already_set', 'You already have a username. It cannot be changed.');
+      return fail('already_set', 'You already have a username. You can change it from Community.');
     const v = validateUsername(raw);
     if (!v.ok) return fail('invalid_username', v.reason);
-    if (this.idOfUsername(v.username))
-      return fail('taken', 'That name is taken. Try a different one.');
+    const problem = this.nameProblem(userId, v.username);
+    if (problem) return problem;
     this.state.profiles[userId] = { username: v.username, createdAt: this.now().toISOString() };
+    return { ok: true, username: v.username };
+  }
+  /** When this member may next change their name (ISO), or null if they can change it now. */
+  usernameChangeAvailableAt(userId: string): string | null {
+    const p = this.state.profiles[userId];
+    if (!p?.changedAt) return null;
+    const at = new Date(p.changedAt).getTime() + USERNAME_COOLDOWN_DAYS * 86_400_000;
+    return at > this.now().getTime() ? new Date(at).toISOString() : null;
+  }
+  changeUsername(userId: string, raw: string): Ok<{ username: string }> | CommunityFail {
+    const p = this.state.profiles[userId];
+    if (!p) return fail('needs_username', 'Choose a username first.');
+    if (p.suspended) return fail('suspended', 'This account cannot change its username right now.');
+    const wait = this.usernameChangeAvailableAt(userId);
+    if (wait)
+      return fail('cooldown', `You can change your username again after ${wait.slice(0, 10)}.`);
+    const v = validateUsername(raw);
+    if (!v.ok) return fail('invalid_username', v.reason);
+    if (v.username === p.username) return fail('unchanged', 'That is already your username.');
+    const problem = this.nameProblem(userId, v.username);
+    if (problem) return problem;
+    const now = this.now();
+    this.state.retired = [
+      ...(this.state.retired ?? []).filter((r) => new Date(r.until).getTime() > now.getTime()),
+      {
+        username: p.username,
+        owner: userId,
+        until: new Date(now.getTime() + USERNAME_HOLD_DAYS * 86_400_000).toISOString(),
+      },
+    ];
+    p.username = v.username;
+    p.changedAt = now.toISOString();
+    // Posts and comments show whoever wrote them under the current name.
+    for (const x of this.state.posts) if (x.authorId === userId) x.authorUsername = v.username;
+    for (const x of this.state.comments) if (x.authorId === userId) x.authorUsername = v.username;
     return { ok: true, username: v.username };
   }
 

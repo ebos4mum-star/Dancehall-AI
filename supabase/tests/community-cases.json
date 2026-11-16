@@ -369,6 +369,38 @@
     {
       "name": "coach_k",
       "ok": true
+    },
+    {
+      "name": "adm1n",
+      "ok": false
+    },
+    {
+      "name": "m0derator",
+      "ok": false
+    },
+    {
+      "name": "dancehal1_fit",
+      "ok": false
+    },
+    {
+      "name": "supp0rt",
+      "ok": false
+    },
+    {
+      "name": "adrnin",
+      "ok": false
+    },
+    {
+      "name": "ama_rnoves",
+      "ok": true
+    },
+    {
+      "name": "he1p",
+      "ok": false
+    },
+    {
+      "name": "kofi_moves",
+      "ok": true
     }
   ]
 }

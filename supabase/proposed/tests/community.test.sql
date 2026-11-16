@@ -2,12 +2,22 @@
 \set cases `cat supabase/tests/community-cases.json`
 select set_config('test.cases', :'cases', false) is not null as loaded \gset
 
+create or replace function test.upload(p_user uuid, p_kind text, p_mime text, p_bytes bigint, p_dur numeric default null) returns text language plpgsql as $$
+declare r jsonb;
+begin
+  r := app.community_issue_upload(p_user, p_kind, p_mime);
+  perform app.community_verify_upload(p_user, r ->> 'path', p_bytes, p_dur);
+  return r ->> 'path';
+end $$;
+grant usage on schema test to service_role;
+grant execute on function test.upload(uuid, text, text, bigint, numeric) to service_role;
+
 -- 1. Structure and privileges.
 do $$
 declare t text; f record;
 begin
   perform test.as_admin();
-  foreach t in array array['community_members', 'community_posts', 'community_media', 'community_comments', 'community_reactions', 'community_reports', 'community_blocks'] loop
+  foreach t in array array['community_members', 'community_posts', 'community_media', 'community_comments', 'community_reactions', 'community_reports', 'community_blocks', 'community_retired_names', 'community_uploads', 'community_burst', 'community_report_resolutions'] loop
     perform test.assert((select relrowsecurity from pg_class where oid = ('public.' || t)::regclass), t || ' has RLS enabled');
     perform test.assert(exists (select 1 from pg_policies where schemaname = 'public' and tablename = t), t || ' carries a policy');
     perform test.assert(not has_table_privilege('anon', 'public.' || t, 'select'), 'anon cannot read ' || t);
@@ -66,7 +76,7 @@ end $$;
 
 -- 4. Behaviour.
 do $$
-declare a uuid; b uuid; c uuid; d uuid; m uuid; r jsonb; pa uuid; pb uuid; pm uuid; n int; cols text[];
+declare a uuid; b uuid; c uuid; d uuid; m uuid; r jsonb; pa uuid; pb uuid; pm uuid; n int; cols text[]; p1 text; p2 text; p3 text; paths text[];
 begin
   perform test.as_admin();
   a := test.make_user('c-a@example.test'); b := test.make_user('c-b@example.test'); c := test.make_user('c-c@example.test'); d := test.make_user('c-d@example.test'); m := test.make_user('c-mod@example.test');
@@ -101,13 +111,26 @@ begin
   -- risky text is held, media is always held
   r := app.community_create_post(b, 'text', 'I lost 12 kg in 3 weeks', null, null, true);
   perform test.assert(r ->> 'status' = 'held', 'a weight-loss claim is held for review');
-  r := app.community_create_post(b, 'photo', 'My journey', null, '[{"kind":"photo","role":"before","path":"u/a.jpg","mime":"image/jpeg","bytes":1000},{"kind":"photo","role":"after","path":"u/b.jpg","mime":"image/jpeg","bytes":1000}]'::jsonb, true);
+  -- uploads: only a file the server received and verified can be attached, once, and only by its owner
+  perform test.throws(format($q$select app.community_create_post(%L, 'photo', 'x', null, '[{"kind":"photo","role":"single","path":"u/forged.jpg"}]'::jsonb, true)$q$, b), 'invalid_media');
+  perform test.throws(format($q$select app.community_issue_upload(%L, 'photo', 'application/x-msdownload')$q$, b), 'invalid_media');
+  perform test.throws(format($q$select app.community_issue_upload(%L, 'video', 'image/jpeg')$q$, b), 'invalid_media');
+  perform test.throws(format($q$select app.community_issue_upload(%L, 'photo', 'image/jpeg')$q$, d), 'needs_username');
+  p1 := test.upload(b, 'photo', 'image/jpeg', 1000); p2 := test.upload(b, 'photo', 'image/png', 2000);
+  perform test.assert(p1 ~ ('^u/' || b::text || '/[0-9a-f-]{36}\.jpg$'), 'the path is server-chosen and private to the owner');
+  perform test.throws(format($q$select app.community_create_post(%L, 'photo', 'x', null, jsonb_build_array(jsonb_build_object('kind','photo','role','single','path',%L)), true)$q$, a, p1), 'invalid_media'); -- somebody else's file
+  perform test.throws(format($q$select app.community_create_post(%L, 'photo', 'x', null, jsonb_build_array(jsonb_build_object('kind','photo','role','before','path',%L)), true)$q$, b, p1), 'invalid_media'); -- one photo cannot be a before
+  perform test.throws(format($q$select app.community_create_post(%L, 'video', 'x', null, jsonb_build_array(jsonb_build_object('kind','video','role','single','path',%L)), true)$q$, b, p1), 'invalid_media'); -- wrong kind
+  r := app.community_create_post(b, 'photo', 'My journey', null, jsonb_build_array(jsonb_build_object('kind','photo','role','before','path',p1), jsonb_build_object('kind','photo','role','after','path',p2)), true);
   perform test.assert(r ->> 'status' = 'held', 'a photo post is held');
-  perform test.throws(format($q$select app.community_create_post(%L, 'photo', 'x', null, '[{"kind":"photo","role":"before","path":"a.jpg","mime":"image/jpeg","bytes":1000}]'::jsonb, true)$q$, b), 'invalid_media');
-  perform test.throws(format($q$select app.community_create_post(%L, 'photo', 'x', null, '[{"kind":"photo","role":"single","path":"../etc/passwd","mime":"image/jpeg","bytes":1000}]'::jsonb, true)$q$, b), 'violates check|invalid');
-  perform test.throws(format($q$select app.community_create_post(%L, 'video', 'x', null, '[{"kind":"video","role":"single","path":"a.mp4","mime":"video/mp4","bytes":1000,"durationS":99}]'::jsonb, true)$q$, b), 'violates check');
-  perform test.throws(format($q$select app.community_create_post(%L, 'video', 'x', null, '[{"kind":"video","role":"single","path":"a.exe","mime":"application/x-msdownload","bytes":1000,"durationS":9}]'::jsonb, true)$q$, b), 'violates check');
-  r := app.community_create_post(b, 'video', '', null, '[{"kind":"video","role":"single","path":"u/v.mp4","mime":"video/mp4","bytes":2000,"durationS":12}]'::jsonb, true);
+  perform test.assert((select count(*) = 2 and bool_and(bytes in (1000, 2000)) from public.community_media where storage_path in (p1, p2)), 'size and type come from the server record');
+  perform test.throws(format($q$select app.community_create_post(%L, 'photo', 'x', null, jsonb_build_array(jsonb_build_object('kind','photo','role','single','path',%L)), true)$q$, b, p1), 'invalid_media'); -- already used
+  -- the server rejects oversize photos and long videos
+  perform test.throws(format($q$select test.upload(%L, 'photo', 'image/jpeg', 9000000)$q$, b), 'too_large');
+  perform test.throws(format($q$select test.upload(%L, 'video', 'video/mp4', 1000, 99)$q$, b), 'too_long');
+  perform test.throws(format($q$select test.upload(%L, 'video', 'video/mp4', 1000, null)$q$, b), 'too_long');
+  p3 := test.upload(b, 'video', 'video/mp4', 2000, 12);
+  r := app.community_create_post(b, 'video', '', null, jsonb_build_array(jsonb_build_object('kind','video','role','single','path',p3)), true);
   perform test.assert(r ->> 'status' = 'held', 'a video post is held');
 
   -- the feed: guests see published only; the author sees held; nothing identifies a person except the username
@@ -173,24 +196,51 @@ begin
   perform test.throws(format($q$select * from app.community_moderation_queue(%L, true)$q$, a), 'forbidden');
   perform test.throws(format($q$select * from app.community_moderation_queue(%L, false)$q$, m), 'forbidden');
   perform test.throws(format($q$select app.community_moderate(%L, true, 'post', %L, 'approve')$q$, a, pa), 'forbidden');
-  perform test.throws(format($q$select app.community_suspend(%L, false, 'ama_dances', true)$q$, m), 'forbidden');
+  perform test.throws(format($q$select app.community_restrict(%L, false, 'ama_dances', 'muted', 24, 'spam')$q$, m), 'forbidden');
+  perform test.throws(format($q$select app.community_backlog(%L, true)$q$, a), 'forbidden');
   select count(*) into n from app.community_moderation_queue(m, true);
   perform test.assert(n >= 4, format('the queue lists held and hidden items (got %s)', n));
   perform test.assert((select (q.flags && array['self_harm']) from app.community_moderation_queue(m, true) q limit 1), 'urgent items come first');
   perform test.assert(not exists (select 1 from jsonb_each(to_jsonb((select q from app.community_moderation_queue(m, true) q limit 1))) e where e.key ~* '(user|author_id|email|account)'), 'the queue shows no user id or email');
-  perform app.community_moderate(m, true, 'post', pa, 'approve');
-  perform test.assert((select status = 'published' from public.community_posts where id = pa) and not exists (select 1 from public.community_reports where target_id = pa), 'approve republishes and clears the reports');
+  -- backlog and urgency
+  perform test.assert((select (app.community_backlog(m, true) ->> 'urgent')::int >= 1 and (app.community_backlog(m, true) ->> 'open')::int >= 4), 'the backlog counts open and urgent items');
+  perform test.assert(not (app.community_backlog(m, true)::text ~* '(body|email|user_id)'), 'the backlog carries counts only');
+  perform test.assert((select urgent and report_count >= 1 and 'self_harm' = any (reasons) from app.community_moderation_queue(m, true) q where q.id = pb), 'a self-harm report is urgent and shows its reason');
+  perform test.assert((select jsonb_array_length(media) > 0 from app.community_moderation_queue(m, true) q where q.id = (select id from public.community_posts where type = 'photo' limit 1)), 'the moderator sees the media paths to review');
+  perform app.community_moderate(m, true, 'post', pa, 'approve', 'Looks fine');
+  perform test.assert((select status = 'published' from public.community_posts where id = pa) and not exists (select 1 from public.community_reports where target_id = pa and resolved_at is null), 'approve republishes and resolves the reports');
+  perform test.assert(exists (select 1 from public.community_reports where target_id = pa), 'resolved reports are kept for the record');
+  perform test.assert(exists (select 1 from public.audit_log where actor = m and action = 'community.approve' and row_id = pa::text), 'the action is in the audit log');
+  perform test.assert(not exists (select 1 from public.audit_log where action like 'community.%' and (detail::text ~* 'Looks fine|First class')), 'the audit log holds no content or notes');
+  perform test.assert((select count(*) from public.audit_log) = (select count(*) from public.audit_log where hash = app.audit_stamp(prev_hash, actor, action, table_name, row_id, detail, at)), 'the audit chain stays valid');
+  paths := app.community_moderate(m, true, 'post', (select id from public.community_posts where type = 'photo' limit 1), 'remove');
+  perform test.assert(paths @> array[p1, p2], 'removal returns the files to delete');
+  perform test.assert(not exists (select 1 from public.community_media where storage_path = p1) and not exists (select 1 from public.community_uploads where storage_path = p1), 'removal drops the media records');
   perform app.community_moderate(m, true, 'post', pb, 'remove');
   perform test.assert(not exists (select 1 from app.community_feed(b, null, null, 30) f where f.id = pb), 'removed is gone even for its author');
   perform test.throws(format($q$select app.community_moderate(%L, true, 'post', %L, 'banish')$q$, m, pa), 'invalid_action');
-  perform app.community_suspend(m, true, 'efua_fit', true);
+  -- restrictions: muted stops posting but not reacting; suspended stops everything; both can end on a timer or be lifted
+  perform app.community_restrict(m, true, 'efua_fit', 'muted', 24, 'spam', 'noted');
+  perform test.throws(format($q$select app.community_create_post(%L, 'text', 'again', null, null, true)$q$, c), 'muted');
+  perform test.throws(format($q$select app.community_issue_upload(%L, 'photo', 'image/jpeg')$q$, c), 'muted');
+  perform test.assert(app.community_profile(c) ->> 'restriction' = 'muted', 'the member can see they are muted');
+  perform app.community_restrict(m, true, 'efua_fit', 'none', null, null);
+  perform test.assert(app.community_create_post(c, 'text', 'back again', null, null, true) ->> 'status' = 'published', 'lifting a restriction restores posting');
+  perform app.community_restrict(m, true, 'efua_fit', 'suspended', 1, 'harassment');
+  update public.community_members set restricted_until = now() - interval '1 minute' where username = 'efua_fit';
+  perform test.assert(app.community_profile(c) ->> 'restriction' is null, 'a restriction ends by itself');
+  perform app.community_restrict(m, true, 'efua_fit', 'suspended', null, 'harassment');
+  perform test.throws(format($q$select app.community_restrict(%L, true, 'efua_fit', 'banished', null, 'spam')$q$, m), 'invalid_action');
+  perform test.throws(format($q$select app.community_restrict(%L, true, 'efua_fit', 'muted', 0, 'spam')$q$, m), 'invalid_action');
+  perform test.assert(exists (select 1 from public.audit_log where action = 'community.restrict' and row_id = 'efua_fit'), 'restrictions are audited');
   perform test.throws(format($q$select app.community_create_post(%L, 'text', 'again', null, null, true)$q$, c), 'suspended');
   perform test.throws(format($q$select app.community_add_comment(%L, %L, 'hi')$q$, c, pa), 'suspended');
   perform test.throws(format($q$select app.community_set_encourage(%L, %L, true)$q$, c, pb), 'suspended|not_found');
 
   -- deleting your own post removes its comments, reactions and media
-  perform app.community_delete_post(b, (select id from public.community_posts where author_id = b and type = 'photo' limit 1));
-  perform test.assert(not exists (select 1 from public.community_media where storage_path = 'u/a.jpg'), 'media rows go with the post');
+  paths := app.community_delete_post(b, (select id from public.community_posts where author_id = b and type = 'video' limit 1));
+  perform test.assert(paths = array[p3], 'deleting returns the video file to delete');
+  perform test.assert(not exists (select 1 from public.community_media where storage_path = p3), 'media rows go with the post');
   perform test.throws(format($q$select app.community_delete_post(%L, %L)$q$, b, pa), 'not_found');
 end $$;
 
@@ -224,4 +274,64 @@ begin
   perform test.assert(not exists (select 1 from public.community_comments where post_id = p), 'comments on their posts are gone');
   perform test.assert(not exists (select 1 from public.community_reactions where user_id = a) and not exists (select 1 from public.community_blocks where blocker_id = a), 'their reactions and blocks are gone');
   perform test.assert(exists (select 1 from public.community_posts where id = q), 'other people’s content is untouched');
+end $$;
+
+-- 7. Username changes.
+do $$
+declare a uuid; b uuid; c uuid; r text;
+begin
+  perform test.as_admin();
+  a := test.make_user('c-un-a@example.test'); b := test.make_user('c-un-b@example.test'); c := test.make_user('c-un-c@example.test');
+  perform set_config('role', 'service_role', false);
+  perform test.throws(format($q$select app.community_change_username(%L, 'new_name')$q$, a), 'needs_username');
+  perform app.community_claim_username(a, 'nia_dances'); perform app.community_claim_username(b, 'yaw_moves');
+  perform test.throws(format($q$select app.community_claim_username(%L, 'yaw_m0ves')$q$, c), 'too_similar');
+  perform test.throws(format($q$select app.community_claim_username(%L, 'adm1n')$q$, c), 'invalid_username');
+  perform test.throws(format($q$select app.community_claim_username(%L, 'dancehal1_fit')$q$, c), 'invalid_username');
+  perform test.throws(format($q$select app.community_change_username(%L, 'yaw_moves')$q$, a), 'taken');
+  perform test.throws(format($q$select app.community_change_username(%L, 'yawmoves')$q$, a), 'too_similar');
+  perform test.throws(format($q$select app.community_change_username(%L, 'nia_dances')$q$, a), 'unchanged');
+  perform test.throws(format($q$select app.community_change_username(%L, 'support')$q$, a), 'invalid_username');
+  perform app.community_create_post(a, 'text', 'before the change', null, null, true);
+  r := app.community_change_username(a, 'Nia_Moves');
+  perform test.assert(r = 'nia_moves', 'the first change is free, stored lowercase');
+  perform test.assert((select count(*) = 1 and bool_and(author = 'nia_moves') from app.community_feed(null, null, null, 30) f where f.body = 'before the change'), 'earlier posts show the new name');
+  perform test.assert(app.community_profile(a) ->> 'canChangeAt' is not null, 'the profile says when the next change is allowed');
+  perform test.throws(format($q$select app.community_change_username(%L, 'nia_again')$q$, a), 'cooldown');
+  perform test.throws(format($q$select app.community_claim_username(%L, 'nia_dances')$q$, c), 'taken'); -- released names are held
+  perform test.throws(format($q$select app.community_change_username(%L, 'nia_dances')$q$, b), 'taken');
+  update public.community_members set changed_at = now() - interval '31 days' where user_id = a;
+  perform test.assert(app.community_change_username(a, 'nia_again') = 'nia_again', 'allowed again after the cooldown');
+  update public.community_members set changed_at = now() - interval '31 days' where user_id = a;
+  perform test.assert(app.community_change_username(a, 'nia_dances') is not null, 'the owner may take their own held name back');
+  update public.community_retired_names set until = now() - interval '1 day';
+  perform app.community_prune();
+  perform test.assert(not exists (select 1 from public.community_retired_names where until < now()), 'expired holds are pruned');
+end $$;
+
+-- 8. Burst limits and housekeeping.
+do $$
+declare i int; ok boolean;
+begin
+  perform test.as_admin(); perform set_config('role', 'service_role', false);
+  for i in 1..3 loop ok := app.community_burst('ip-hash-1', 'feed', 3, 60); perform test.assert(ok, 'within the burst limit'); end loop;
+  perform test.assert(not app.community_burst('ip-hash-1', 'feed', 3, 60), 'the next request in the window is refused');
+  perform test.assert(app.community_burst('ip-hash-2', 'feed', 3, 60), 'another caller is unaffected');
+  perform test.assert(app.community_burst('ip-hash-1', 'post', 3, 60), 'another bucket is unaffected');
+  perform test.assert(cardinality(app.community_prune()) >= 0, 'prune runs');
+end $$;
+
+-- 9. Stale and rejected uploads are pruned; account deletion lists a member's files first.
+do $$
+declare a uuid; pth text; stale text; mine text[];
+begin
+  perform test.as_admin(); a := test.make_user('c-up@example.test'); perform set_config('role', 'service_role', false);
+  perform app.community_claim_username(a, 'upload_tester');
+  pth := (app.community_issue_upload(a, 'photo', 'image/jpeg') ->> 'path');
+  perform test.assert(not exists (select 1 from app.community_user_media(a) m where m is null), 'a member files can be listed');
+  update public.community_uploads set created_at = now() - interval '2 days' where storage_path = pth;
+  perform test.assert(pth = any (app.community_prune()), 'stale unverified uploads are returned for deletion');
+  perform test.assert(not exists (select 1 from public.community_uploads where storage_path = pth), 'and removed');
+  pth := (app.community_issue_upload(a, 'photo', 'image/jpeg') ->> 'path'); perform app.community_reject_upload(a, pth);
+  perform test.throws(format($q$select app.community_verify_upload(%L, %L, 10, null)$q$, a, pth), 'not_found');
 end $$;

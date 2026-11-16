@@ -85,6 +85,31 @@ const SELF_HARM = [
   'want to die',
 ];
 
+/** Days a member must wait between username changes. Their first change is free. */
+export const USERNAME_COOLDOWN_DAYS = 30;
+/** Days a released name stays unavailable to anyone else, so it cannot be used to pass as the previous owner. */
+export const USERNAME_HOLD_DAYS = 90;
+
+/**
+ * Collapses look-alike spellings (adm1n, rn/m, 0/o, 1/l/i, underscores) so "dancehall_fit" and "dancehal1fit" count as the same name.
+ * Used to refuse names that would let someone pass as staff, the app or another member.
+ */
+export function usernameSkeleton(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/_/g, '')
+    .replace(/rn/g, 'm')
+    .replace(/vv/g, 'w')
+    .replace(/[1i|]/g, 'l')
+    .replace(/0/g, 'o')
+    .replace(/3/g, 'e')
+    .replace(/[4@]/g, 'a')
+    .replace(/[5$]/g, 's')
+    .replace(/7/g, 't')
+    .replace(/8/g, 'b');
+}
+const RESERVED_SKELETONS = [...RESERVED].map(usernameSkeleton);
+
 export function validateUsername(raw: string): UsernameResult {
   const u = raw.trim().toLowerCase();
   if (u.length < 3 || u.length > 20) return { ok: false, reason: 'Use 3 to 20 characters.' };
@@ -101,6 +126,8 @@ export function validateUsername(raw: string): UsernameResult {
   const flat = u.replace(/_/g, '');
   if (
     RESERVED.has(u) ||
+    RESERVED_SKELETONS.includes(usernameSkeleton(u)) ||
+    BRAND_PARTS.some((b) => usernameSkeleton(flat).includes(usernameSkeleton(b))) ||
     BRAND_PARTS.some((b) => flat.includes(b.replace(/_/g, ''))) ||
     ABUSIVE_NAME.some((b) => flat.includes(b)) ||
     ED_TERMS.some((b) => flat.includes(b.replace(/[ _]/g, '')))
