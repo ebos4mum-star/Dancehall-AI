@@ -285,3 +285,38 @@ describe('meal plans', () => {
     expect(await s.listMealPlans()).toHaveLength(0);
   });
 });
+
+describe('repeat and copy through the store', () => {
+  it('repeating yesterday adds new entries, leaves the original, and the totals add up', async () => {
+    const { copyDay } = await import('../food/copy');
+    const store = await setup();
+    await store.createFoodLog({
+      mealType: 'breakfast',
+      source: 'manual',
+      loggedAt: '2026-06-14T08:00:00Z',
+      items: [rice(150)],
+    });
+    await store.createFoodLog({
+      mealType: 'dinner',
+      source: 'manual',
+      loggedAt: '2026-06-14T18:00:00Z',
+      items: [rice(200)],
+    });
+    const before = await store.listFoodLogs();
+    for (const input of copyDay(before, '2026-06-14', '2026-06-15', 'UTC', clock.t))
+      await store.createFoodLog(input);
+    const after = await store.listFoodLogs();
+    expect(after).toHaveLength(4);
+    const today = after.filter((l) => l.loggedAt.startsWith('2026-06-15'));
+    const yesterday = after.filter((l) => l.loggedAt.startsWith('2026-06-14'));
+    expect(today).toHaveLength(2);
+    expect(totals(today.flatMap((l) => l.items)).kcal).toBe(
+      totals(yesterday.flatMap((l) => l.items)).kcal,
+    );
+    // Editing the copy does not change the original.
+    await store.deleteFoodLog(today[0]!.id);
+    expect(
+      (await store.listFoodLogs()).filter((l) => l.loggedAt.startsWith('2026-06-14')),
+    ).toHaveLength(2);
+  });
+});

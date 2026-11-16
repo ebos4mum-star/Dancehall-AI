@@ -1,5 +1,10 @@
 import { withAccount } from '@/account/gate';
+import { useState } from 'react';
 import { View } from 'react-native';
+import { useApp } from '@/data/AppProvider';
+import { errorMessage } from '@/data/hooks';
+import { Button } from '@/ui/Button';
+import { copyDay, repeatLog } from '@/food/copy';
 import { Disclosure, IconBadge, SectionTitle, type IconName } from '@/ui/kit';
 import { FoodHero } from '@/food/kit';
 import { brand } from '@/theme/tokens';
@@ -29,7 +34,20 @@ const MEAL_ICON: Record<string, IconName> = {
 
 function History() {
   const hideNumbers = useNumbersHidden();
-  const { logs, timeZone, error, loading } = useFoodData();
+  const { logs, timeZone, error, loading, todayKey } = useFoodData();
+  const { store } = useApp();
+  const [note, setNote] = useState<string | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
+  const run = async (fn: () => Promise<unknown>, done: string) => {
+    try {
+      setFailure(null);
+      await fn();
+      setNote(done);
+    } catch (e) {
+      setNote(null);
+      setFailure(errorMessage(e));
+    }
+  };
   const { spacing } = useTheme();
   const days = new Map<string, typeof logs>();
   for (const l of logs) {
@@ -55,6 +73,8 @@ function History() {
         }
       />
       {error ? <Notice tone="warning">{error}</Notice> : null}
+      {failure ? <Notice tone="warning">{failure}</Notice> : null}
+      {note ? <Notice tone="info">{note}</Notice> : null}
       {loading && logs.length === 0 ? <SkeletonList label={t('common.loading')} /> : null}
       {!loading && keys.length === 0 ? (
         <EmptyState
@@ -94,8 +114,29 @@ function History() {
                 {l.items.map((i) => (
                   <DiaryItem key={i.id} item={i} />
                 ))}
+                {k !== todayKey ? (
+                  <Button
+                    variant="secondary"
+                    label={t('copy.again')}
+                    onPress={() =>
+                      void run(() => store.createFoodLog(repeatLog(l)), t('copy.done'))
+                    }
+                  />
+                ) : null}
               </View>
             ))}
+            {k !== todayKey ? (
+              <Button
+                variant="secondary"
+                label={t('copy.day')}
+                onPress={() =>
+                  void run(async () => {
+                    for (const input of copyDay(logs, k, todayKey, timeZone))
+                      await store.createFoodLog(input);
+                  }, t('copy.dayDone'))
+                }
+              />
+            ) : null}
           </Disclosure>
         );
       })}
