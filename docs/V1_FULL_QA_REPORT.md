@@ -1,0 +1,71 @@
+# V1 full QA report (Linux only: nothing here ran on an iPhone)
+
+Branch `claude/ecstatic-meitner-8you9v`. Test levels used, from weakest to strongest: **unit** (pure logic), **mock** (the app's real store/adapters with in-memory data, no network), **browser** (the real web export driven by Playwright in mock mode, 320 to 390 px wide), **local integration** (the real Edge Functions under real Deno against real Postgres with the real migrations), **hosted staging** (earlier HTTP checks against `bxhnrjulksganzydgrgm`, see `docs/STAGING_STATUS.md`), **native** (none). Source inspection alone is never counted as testing.
+
+## 1. Defects found and fixed
+
+| #   | Defect (how found)                                                                                                                                                    | Severity                      | Fix                                                                                 | Regression test                                  |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------ |
+| 1   | A missing or stale workout (`/dance/<unknown>`, program, session) showed text with no button: a dead end on a cold deep link (browser route sweep)                    | Medium                        | Shared `NotFound` screen with a "Go to Today" button                                | `src/ui/notFound.test.ts`; `e2e/routes.cjs`      |
+| 2   | Any unknown address showed the router's developer "Unmatched Route / Sitemap" screen (route sweep)                                                                    | Medium                        | `app/+not-found.tsx` uses the friendly screen                                       | same                                             |
+| 3   | An empty Schedule had no action (route sweep)                                                                                                                         | Low                           | "Choose a workout" button                                                           | same                                             |
+| 4   | Coach minor detection: "I'm 12 weeks pregnant", "I'm 5 kg down", "I'm 12 reps in" were refused as under-18; "I'm sixteen" and "im 17yo" were not caught (probe table) | Medium (safety and usability) | Age must be stated as an age; units excluded; spelled-out ages and "yo" handled     | `packages/shared/src/coach.test.ts` (17 phrases) |
+| 5   | "I don't want to be here anymore", "no reason to live", "better off without me", "end it all", self-harm, "thinspo" and "pro-ana" were not screened (probe table)     | High (safety)                 | Extended the first-line risk screen, keeping "I don't want to go on a run" clear    | `packages/shared/src/safety.test.ts`             |
+| 6   | Recipe portions or plan arguments of NaN produced NaN grams and calories (probe)                                                                                      | Low                           | Non-finite or non-positive portions fall back to 1, NaN target to the calorie floor | `apps/mobile/src/food/hostileFood.test.ts`       |
+| 7   | The in-progress workout recovery point is device-wide and survived sign-out, so the next person on the phone would be offered it (code path traced, then fixed)       | Medium (privacy)              | `signOutDevice` clears it                                                           | `notFound.test.ts` (source-level)                |
+| 8   | Mock store reported Community video as available (earlier batch)                                                                                                      | Low (dev only)                | Reports off                                                                         | `nutritionFlow.test.ts` batch                    |
+| 9   | Stale photo-library permission text said Community photos are reviewed by a person (earlier batch)                                                                    | Medium (App Store text)       | Reworded to match immediate publishing                                              | n/a (config text)                                |
+
+Not defects (checked): validation rejected every hostile input tried (weights 0, negative, NaN, 1000; empty, negative, NaN, absurd food items; zero, negative and absurd workout durations; exertion 11; future and under-18 birth dates; absurd height).
+
+## 2. What was actually tested, and how
+
+| Area                                                                                                                                    | Method and level                                                                                                                                                                                            | Result                        |
+| --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| Onboarding, account creation, PIN lock/unlock, recovery key, sign-out, session lost, crafted return address                             | `e2e/regression.cjs` (36 steps) and `e2e/account.cjs` (17 steps), browser, mock/dev-cloud simulator                                                                                                         | All pass                      |
+| Guest vs signed-in boundaries                                                                                                           | Same browser suites ("guest", "gates"); `journeys.test.ts` (signed-out store refuses reads)                                                                                                                 | Pass                          |
+| Nutrition: log, edit, portion change, delete, restart persistence, export, deletion request and cancel                                  | `journeys.test.ts` (mock), `nutritionFlow.test.ts` (mock), regression browser steps                                                                                                                         | Pass                          |
+| Fridge-to-Meal, recipes, 3 and 7-day plans, grocery list, diet and allergy filters, odd inputs                                          | `hostileFood.test.ts`, `nutritionFlow.test.ts` (unit/mock)                                                                                                                                                  | Pass after fix 6              |
+| Workouts and energy double-count protection                                                                                             | Existing `crossFeature.test.ts` and `calorieNeedsStore.test.ts` (mock); `journeys.test.ts`                                                                                                                  | Pass                          |
+| Friends, group goals: usernames, requests, consent, revoke, block, groups, server totals, deletion, no private data in any response     | `scripts/social-integration` (real Deno + Postgres, 11/11); earlier hosted suite 95/95 + 5/5                                                                                                                | Pass                          |
+| Community: photo publish, likes, report, block, delete, rejected text, video/comments/messaging off, read-only, floor, deletion         | `scripts/community-integration` (real Deno + Postgres, 26/26); hosted staging 40/40 + 44/44                                                                                                                 | Pass                          |
+| Barcode and Open Food Facts: bad codes, network errors, 429, hanging server, bad JSON, hostile payloads, rate cap, off by default       | `hostileBarcode.test.ts` (unit, injected fetch; live OFF never contacted)                                                                                                                                   | Pass                          |
+| AI coach fallback and safety screening                                                                                                  | `packages/ai` gateway tests, `coach.test.ts`, probe tables (unit/mock); no provider is configured                                                                                                           | Pass after fixes 4 and 5      |
+| Navigation: all 35 routes plus 8 hostile deep links at 320 px, no blank page, no raw `undefined`/`NaN`, no page error, always a way out | `e2e/routes.cjs` (browser)                                                                                                                                                                                  | 35/35 pass after fixes 1 to 3 |
+| Accessibility sweep, reduced motion, light/dark, today screen                                                                           | `e2e/a11y.cjs`, `reduced-motion.cjs`, `redesign.cjs`, `today-phase1.cjs` (browser)                                                                                                                          | No findings, no page errors   |
+| Security and release                                                                                                                    | `db:test` (RLS, account isolation, 44 script tests), secret scan, edge-copy check, `check-ci-config`, production flag guards in `buildConfig.test.ts` and `cloudBoundary.test.ts`, iOS Hermes bundle export | Pass                          |
+
+## 3. Final automated run (this commit)
+
+format, typecheck and lint clean. Tests: shared 947, mobile 644, ai 116, admin 27, scripts 44, all passing (skipped tests are the live/opt-in ones). `db:test` exit 0. Community integration 26/26, Friends integration 11/11. Edge copies current, secret scan clean (1084 files). Browser: regression 36, account 17, routes 35, a11y no findings. `expo export --platform ios` compiles the Hermes bundle. `expo-doctor`: 18 of 20 pass; the 2 failures need the Expo API (blocked here), not code.
+
+## 4. Untested or only partly tested
+
+- Everything native (section 5).
+- Offline-then-reconnect synchronisation against a real network: only on-device persistence across restart was exercised (mock); hosted sync was not.
+- Email delivery and verification against a real mail provider; push notifications; Apple Health (excluded by decision).
+- Household sharing against the hosted backend (mock and unit only).
+- Hosted guest rate limit from one address and expired-token check against staging (scripts exist, need your machine and an old token).
+- Live Open Food Facts and live AI provider (both off by decision).
+- `e2e/walkthrough.cjs` workout-detail step needs the content-fixtures export; not a defect.
+
+## 5. Native iPhone tests still required
+
+Keychain session and PIN storage, Face ID and PIN lock flow, VoiceOver, true Dynamic Type, camera barcode scanning, photo and camera permission prompts, haptics, notification permission, background/foreground lock timing, offline behaviour on device, Friends and Community against staging on a phone. Runbooks: `docs/NATIVE_IOS_TEST.md`, `docs/FRIENDS_IPHONE_TEST.md`; launcher `scripts/friends-staging-ios.sh [--device] [--community]`.
+
+## 6. Unresolved items
+
+| Item                                                                                                          | Severity                 | Note                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Community text screen (server) has its own, shorter self-harm phrase list; fix 5 covered the coach input only | Medium                   | Extending it changes the deployed `community` Edge Function and needs a redeploy (hosted change, needs approval) |
+| `pnpm audit --prod`: one moderate advisory (minimatch DoS) via `expo > @expo/fingerprint`, build tooling only | Low                      | Not shipped in the app; resolves with an Expo SDK update                                                         |
+| On-device saved products are kept per user on the phone after sign-out                                        | Low                      | By design and warned (`sec.signOutWarn`); wiped by "reset" in dev, and by uninstall                              |
+| Account deletion is a request with a grace period; the purge executor is not scheduled                        | Release blocker (config) | Needs owner approval with production migrations                                                                  |
+
+## 7. External approvals still blocking release
+
+Support email and privacy/support URLs, legal and dietitian review, image moderation decision (App Store 1.2), production migrations and the deletion executor schedule, Friends and Open Food Facts enablement decisions, App Store items, cleared instructional video, Apple signing and an EAS project. See `docs/V1_VERIFICATION_PLAN.md` sections 4 and 5.
+
+## 8. Readiness for the first staging-only iPhone build
+
+**Ready, with the usual owner prerequisites.** No known code defect remains in approved V1 scope, the iOS bundle compiles, and the staging-preview profile is isolated from production (`docs/V1_VERIFICATION_PLAN.md` section 4). The build itself needs your Expo project, Apple team and device registration, and your explicit go-ahead. Expect native-only issues to surface in the first device pass; nothing in this report predicts them.
