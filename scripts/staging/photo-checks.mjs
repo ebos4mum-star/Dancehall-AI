@@ -40,7 +40,13 @@ async function http(url, { method = 'POST', token, body, headers = {}, raw } = {
     } catch {
       /* binary */
     }
-    return { status: r.status, j, buf, type: r.headers.get('content-type') ?? '' };
+    return {
+      status: r.status,
+      j,
+      buf,
+      type: r.headers.get('content-type') ?? '',
+      hdr: `cache-control=${r.headers.get('cache-control')} cf-cache-status=${r.headers.get('cf-cache-status')} age=${r.headers.get('age')}`,
+    };
   } catch {
     return { status: 0, j: null, buf: Buffer.alloc(0), type: '' };
   }
@@ -340,10 +346,12 @@ const id2 = post2.j?.id ?? post2.j?.post?.id;
 await fn('mod/act', { type: 'post', targetId: id2, action: 'approve' }, mod);
 const pub2 = ((await fn('feed', { limit: 30 })).j?.posts ?? []).find((p) => p.id === id2);
 const link2 = pub2?.media?.[0]?.uri;
+const first = link2 ? await http(link2, { method: 'GET' }) : null;
+const second = link2 ? await http(link2, { method: 'GET' }) : null;
 record(
   'P10 a second published photo exists with a working link',
-  !!link2 && (await http(link2, { method: 'GET' })).status === 200,
-  '',
+  first?.status === 200,
+  `1st: ${first?.hdr}; 2nd: ${second?.hdr}`,
 );
 const delOther = await fn('post/delete', { postId: id2 }, m3);
 const stillThere = ((await fn('feed', { limit: 30 })).j?.posts ?? []).some((p) => p.id === id2);
@@ -356,7 +364,7 @@ const afterDel = link2 ? await http(link2, { method: 'GET' }) : null;
 record(
   'P10e its photo file is removed (the old signed link no longer serves it)',
   !!afterDel && afterDel.status >= 400,
-  `status ${afterDel?.status}`,
+  `status ${afterDel?.status}; ${afterDel?.hdr}`,
 );
 
 // Refusals
