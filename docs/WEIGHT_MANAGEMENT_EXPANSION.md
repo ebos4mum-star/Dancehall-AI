@@ -2,7 +2,7 @@
 
 Status: **proposal for owner approval. Nothing in this document has been implemented, migrated, deployed or activated.** No hosted change, no new migration, no paid AI, no build.
 Audit date: 2026-11-15, against `integration/live-prep` (commit `490c66a` plus the open PR for auth refresh, photo upload and the household trigger revoke).
-Hosted facts were read **read-only** from project `vvwjhbsyxetnktimgaxg`. Nothing was verified on a native iOS device, and no HTTP or Storage live suite has been run.
+Hosted facts were read **read-only** from project `<development-ref>`. Nothing was verified on a native iOS device, and no HTTP or Storage live suite has been run.
 
 > All health thresholds, screening wording and content in this plan are **provisional until a registered dietitian and a clinician review them** (existing gates S1, N3, F1). No clinical approval is claimed anywhere here.
 

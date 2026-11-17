@@ -13,8 +13,8 @@ export const EXTRA = [
   ['20261216000300_account_deletion_purge.sql', 'supabase/proposed/account_deletion_purge.up.sql'],
 ];
 
-export function buildBundle(out, { ref, confirm }) {
-  assertStagingRef(ref, confirm);
+export function buildBundle(out, { ref, confirm, pins }) {
+  assertStagingRef(ref, confirm, pins);
   rmSync(out, { recursive: true, force: true });
   const dir = join(out, 'supabase', 'migrations');
   mkdirSync(dir, { recursive: true });

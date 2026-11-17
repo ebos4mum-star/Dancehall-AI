@@ -2,7 +2,7 @@
 
 Date: 2026-11-16. Every check below was read-only. Neither existing Supabase project was modified, paused, upgraded or deployed to. Supabase's own Terms page could not be fetched from this environment, so the terms findings come from search results and must be confirmed with Supabase before you rely on them.
 
-## 1. Can `bxhnrjulksganzydgrgm` ("DanceHall project.") serve as staging?
+## 1. Can `<staging-ref>` ("DanceHall project.") serve as staging?
 
 **What the read-only checks show**
 

@@ -51,7 +51,7 @@ Branch `feature/overnight-nutrition-fitness`. Verified on Linux only (unit, inte
 
 ## Verified staging status (handoff)
 
-- Staging `bxhnrjulksganzydgrgm`: Community patch 2 applied (SHA-256 `70fb1a2d…`), Edge Function `community` v10 deployed, stored mode `read_only`, video and comments off, clean of synthetic data, audit chain valid (10/10). Details and remaining HTTP tests: `docs/CLAUDE_HANDOFF.md`.
+- Staging `<staging-ref>`: Community patch 2 applied (SHA-256 `70fb1a2d…`), Edge Function `community` v10 deployed, stored mode `read_only`, video and comments off, clean of synthetic data, audit chain valid (10/10). Details and remaining HTTP tests: `docs/CLAUDE_HANDOFF.md`.
 - Verified: 18/18 live staging function checks (rolled-back transaction); read-only HTTP subset; local end-to-end 26/26. Not yet run: open-mode HTTP suite (needs the owner to set the floor secret), hosted guest burst, expired-token check.
 - Production and development Supabase: untouched. No native iPhone testing has happened.
 
@@ -73,7 +73,7 @@ See "Blocked by external approval or configuration".
 
 ## 5. Staging vs production
 
-Staging (`bxhnrjulksganzydgrgm`) has `community` v6, `social` v1, `account` v1 and the social migrations; Community `read_only`, Friends available only in staging builds. Production has none of these applied; Friends, Open Food Facts and Community posting are off.
+Staging (`<staging-ref>`) has `community` v6, `social` v1, `account` v1 and the social migrations; Community `read_only`, Friends available only in staging builds. Production has none of these applied; Friends, Open Food Facts and Community posting are off.
 
 ## 6. Blockers before TestFlight
 

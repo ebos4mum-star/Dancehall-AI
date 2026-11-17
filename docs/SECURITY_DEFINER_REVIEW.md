@@ -1,4 +1,4 @@
-# SECURITY DEFINER review (development project `vvwjhbsyxetnktimgaxg`)
+# SECURITY DEFINER review (development project `<development-ref>`)
 
 Reviewed against the actual function definitions (identical on the hosted project and in the repository, per the catalog fingerprint), their grants, owners and search paths. Nothing was changed on the hosted project.
 

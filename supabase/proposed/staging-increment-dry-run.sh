@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # LOCAL rehearsal of the staging upgrade, on throwaway Postgres databases only. It never touches a hosted project.
-# It rebuilds what staging (bxhnrjulksganzydgrgm) holds TODAY from the pinned commits recorded in docs/STAGING_STATUS.md and docs/CLAUDE_HANDOFF.md (hash-checked), then applies ONLY the
+# It rebuilds what staging holds TODAY from the pinned commits recorded in docs/STAGING_STATUS.md and docs/CLAUDE_HANDOFF.md (hash-checked), then applies ONLY the
 # remaining increments in the order of docs/STAGING_DEPLOYMENT_CHECKLIST.md:
 #     social.patch2_eligible_workouts -> health_sync.up -> gamification.up -> community.patch3_safety_phrases      (the owner's order; patch 3 only replaces one Community function, so it can go anywhere:
 #     section 7 proves the other placement gives the identical result)

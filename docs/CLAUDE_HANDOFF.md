@@ -22,13 +22,13 @@ Account/auth/PIN/privacy/export/deletion; nutrition diary, copy/repeat meals, sa
 - Friends off in production/shared builds (`EXPO_PUBLIC_SOCIAL`); Community public feed default off; Apple Health excluded; Open Food Facts off until owner approves; no paid services; no invented support email.
 - Instructional workout video is a separate requirement (none cleared; YouTube embed plan awaits terms/permissions).
 
-## Staging (project `bxhnrjulksganzydgrgm` ONLY)
+## Staging (project `<staging-ref>` ONLY)
 
 - Community stored mode: **`read_only`** (verified again at handoff), video off, comments off. `COMMUNITY_FLOOR_MODE` secret is owner-set to `read_only`. Never switch to open without the owner.
 - Patch 2 **APPLIED**: `supabase/proposed/community.patch2_photo_immediate.sql` (SHA-256 `70fb1a2d6cca5694f169bf2ee6ede9d31cf0d3664c25e76852f09ee904b9c1de`, pinned commit `887b7801ab50d5471dd5f2f15d2b99f81ea76387`, hash-verified loader; temporary `http` extension dropped). Replaces exactly `app.community_screen`, `app.community_create_post`, `app.community_feed`; staging definitions match a fresh local build. Rollback: `community.patch2_photo_immediate.down.sql` (verified locally).
 - Edge Function `community` **v10** (hash `c6debb97e9d8e9541c723f336acaa07b28cade6f4a2861a852180a168fbf6940`, shared code pinned to `887b7801…`). `social` v4 (hash `09f95127…`), `account` v1 (hash `ac596a31…`).
 - Applied on staging: all repository migrations, `community.up.sql` (earlier version) + `community.storage.sql`, `account_deletion_purge`, `social_up`, `social_patch1_view_dedupe`, `community_patch2_photo_immediate`.
-- NOT applied anywhere else: production and development Supabase (`vvwjhbsyxetnktimgaxg`) have none of the proposed SQL. Production needs `community.up.sql` (current, includes patch 2), `community.storage.sql`, `social.up.sql`, `account_deletion_purge.up.sql`, each with explicit owner approval. The account-deletion executor is not scheduled.
+- NOT applied anywhere else: production and development Supabase (`<development-ref>`) have none of the proposed SQL. Production needs `community.up.sql` (current, includes patch 2), `community.storage.sql`, `social.up.sql`, `account_deletion_purge.up.sql`, each with explicit owner approval. The account-deletion executor is not scheduled.
 - Audit log chain: 10 of 10 valid. Staging is clean of synthetic data (users, identities, sessions, staff, members, posts all 0). Temporary network host removed from the Default environment. Scratch credentials shredded. Unused environment `dancehall-ai-staging-http` still exists (no delete tool).
 
 ## Verified on staging
@@ -42,7 +42,7 @@ Account/auth/PIN/privacy/export/deletion; nutrition diary, copy/repeat meals, sa
 1. Open-mode HTTP suite `scripts/staging/community-v1-checks.mjs` (upload, immediate publish, likes, video refusal, report, block, auth). Needs stored mode AND the floor secret `open`. The tool to set the floor secret was denied by the auto-mode classifier; the owner must set `COMMUNITY_FLOOR_MODE=open` in the dashboard (or allow the tool), then restore `read_only`. Also `PHOTO_MODE=published node scripts/staging/photo-checks.mjs`.
 2. Guest rate limit from one machine: `guest-limit-and-expiry.mjs guest-burst` showed 100x HTTP 200 here (rotating egress address); proven locally only.
 3. Expired token: `guest-limit-and-expiry.mjs expired` needs a member token more than an hour old. Not run. Proven locally (tokens expired seconds ago refused on every member route).
-   Needed to run these: add host `bxhnrjulksganzydgrgm.supabase.co` to the Default environment, set `NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt`, use the publishable key from `get_publishable_keys` only, create synthetic accounts with bcrypt hashes (never put clear passwords in SQL), delete them and remove the host afterwards.
+   Needed to run these: add host `<staging-ref>.supabase.co` to the Default environment, set `NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt`, use the publishable key from `get_publishable_keys` only, create synthetic accounts with bcrypt hashes (never put clear passwords in SQL), delete them and remove the host afterwards.
 
 ## Launch blockers and approvals needed
 

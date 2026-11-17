@@ -1,6 +1,6 @@
 # Community patch 2: staging application and rollback plan
 
-**Status: prepared only. Nothing has been applied to any hosted project.** Needs the owner's explicit authorization. Target: staging project `bxhnrjulksganzydgrgm` only. Never production, never development.
+**Status: prepared only. Nothing has been applied to any hosted project.** Needs the owner's explicit authorization. Target: staging project `<staging-ref>` only. Never production, never development.
 
 ## Exact scope (verified locally)
 
@@ -20,7 +20,7 @@ No tables, columns, policies, settings, storage buckets, secrets or data are tou
 
 ## Proposed order (when authorized)
 
-0. Confirm the reference is `bxhnrjulksganzydgrgm` (guard script). Confirm Community mode is `read_only` and `COMMUNITY_FLOOR_MODE=read_only` (record both).
+0. Confirm the reference is `<staging-ref>` (guard script). Confirm Community mode is `read_only` and `COMMUNITY_FLOOR_MODE=read_only` (record both).
 1. Apply `community.patch2_photo_immediate.sql` with the hash-verified loader (the same method used for the social migrations). Record the file hash first.
 2. Verify the function definitions on staging equal the reviewed ones (hash of `pg_get_functiondef`), grants unchanged.
 3. Redeploy the `community` function from the pinned commit; compare the deployed hash with the reviewed one.

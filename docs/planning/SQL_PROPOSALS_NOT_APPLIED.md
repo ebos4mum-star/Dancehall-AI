@@ -1,6 +1,6 @@
 # SQL proposals (NOT APPLIED, NOT MIGRATIONS)
 
-**Status: proposal for review.** None of this SQL is in `supabase/migrations/`, none has been applied to the hosted project `vvwjhbsyxetnktimgaxg`, and no migration file exists for it. Each proposal needs its own explicit approval before it becomes a migration.
+**Status: proposal for review.** None of this SQL is in `supabase/migrations/`, none has been applied to the hosted project `<development-ref>`, and no migration file exists for it. Each proposal needs its own explicit approval before it becomes a migration.
 
 ## How this was checked (locally only)
 

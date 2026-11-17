@@ -5,22 +5,34 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   CONFIRM_PHRASE,
-  DESIGNATED_STAGING_REF,
-  DEVELOPMENT_REF,
-  FORBIDDEN_REFS,
+  DESIGNATED_STAGING_REF_SHA256,
+  DEVELOPMENT_REF_SHA256,
   assertStagingRef,
+  isDesignatedStagingRef,
+  refDigest,
 } from './guard.mjs';
 import { buildBundle } from './prepare-bundle.mjs';
 
-const NEW_REF = DESIGNATED_STAGING_REF;
+// The real references are not in the repository (public): the guard is pinned to their SHA-256 digests. These tests use synthetic references and
+// their own pins, so every rule is exercised without naming a real project.
+const NEW_REF = 'aaaaaaaaaaaaaaaaaaaa';
+const DEVELOPMENT_REF = 'bbbbbbbbbbbbbbbbbbbb';
 const UNKNOWN_REF = 'abcdefghijklmnopqrst';
+const PINS = { staging: refDigest(NEW_REF), development: refDigest(DEVELOPMENT_REF) };
 
 test('the guard allows only the designated staging project, and refuses development, unknown and malformed references', () => {
-  assert.equal(DESIGNATED_STAGING_REF, 'bxhnrjulksganzydgrgm');
-  assert.ok(!FORBIDDEN_REFS.includes(DESIGNATED_STAGING_REF));
-  assert.throws(() => assertStagingRef(DEVELOPMENT_REF, CONFIRM_PHRASE), /DEVELOPMENT project/);
+  assert.match(DESIGNATED_STAGING_REF_SHA256, /^[0-9a-f]{64}$/);
+  assert.match(DEVELOPMENT_REF_SHA256, /^[0-9a-f]{64}$/);
+  assert.notEqual(DESIGNATED_STAGING_REF_SHA256, DEVELOPMENT_REF_SHA256);
+  assert.equal(isDesignatedStagingRef(NEW_REF, PINS.staging), true);
+  assert.equal(isDesignatedStagingRef(UNKNOWN_REF, PINS.staging), false);
+  assert.equal(isDesignatedStagingRef(undefined, PINS.staging), false);
   assert.throws(
-    () => assertStagingRef(UNKNOWN_REF, CONFIRM_PHRASE),
+    () => assertStagingRef(DEVELOPMENT_REF, CONFIRM_PHRASE, PINS),
+    /DEVELOPMENT project/,
+  );
+  assert.throws(
+    () => assertStagingRef(UNKNOWN_REF, CONFIRM_PHRASE, PINS),
     /not the designated staging project/,
   );
   for (const r of [
@@ -31,27 +43,27 @@ test('the guard allows only the designated staging project, and refuses developm
     'abcdefghijklmnopqrst1',
     'abc-defghijklmnopqrs',
   ])
-    assert.throws(() => assertStagingRef(r, CONFIRM_PHRASE), /20-letter/);
-  assert.throws(() => assertStagingRef(NEW_REF, undefined), /STAGING_CONFIRM/);
-  assert.throws(() => assertStagingRef(NEW_REF, 'yes'), /STAGING_CONFIRM/);
-  assert.equal(assertStagingRef(NEW_REF, CONFIRM_PHRASE), NEW_REF);
+    assert.throws(() => assertStagingRef(r, CONFIRM_PHRASE, PINS), /20-letter/);
+  assert.throws(() => assertStagingRef(NEW_REF, undefined, PINS), /STAGING_CONFIRM/);
+  assert.throws(() => assertStagingRef(NEW_REF, 'yes', PINS), /STAGING_CONFIRM/);
+  assert.equal(assertStagingRef(NEW_REF, CONFIRM_PHRASE, PINS), NEW_REF);
 });
 
 test('the bundle refuses to build for the development project or any unknown reference', () => {
   const out = join(mkdtempSync(join(tmpdir(), 'stg-')), 'b');
   assert.throws(
-    () => buildBundle(out, { ref: DEVELOPMENT_REF, confirm: CONFIRM_PHRASE }),
+    () => buildBundle(out, { ref: DEVELOPMENT_REF, confirm: CONFIRM_PHRASE, pins: PINS }),
     /DEVELOPMENT project/,
   );
   assert.throws(
-    () => buildBundle(out, { ref: UNKNOWN_REF, confirm: CONFIRM_PHRASE }),
+    () => buildBundle(out, { ref: UNKNOWN_REF, confirm: CONFIRM_PHRASE, pins: PINS }),
     /not the designated/,
   );
 });
 
 test('the bundle holds every repository migration then the three staging additions, in order, with a manifest', () => {
   const out = join(mkdtempSync(join(tmpdir(), 'stg-')), 'b');
-  const m = buildBundle(out, { ref: NEW_REF, confirm: CONFIRM_PHRASE });
+  const m = buildBundle(out, { ref: NEW_REF, confirm: CONFIRM_PHRASE, pins: PINS });
   const files = readdirSync(join(out, 'supabase', 'migrations'));
   const repo = readdirSync('supabase/migrations').filter((f) => f.endsWith('.sql'));
   assert.equal(files.length, repo.length + 3);
@@ -71,13 +83,11 @@ test('the bundle holds every repository migration then the three staging additio
 
 test('no secret or hosted address is written into the bundle files', () => {
   const out = join(mkdtempSync(join(tmpdir(), 'stg-')), 'b');
-  buildBundle(out, { ref: NEW_REF, confirm: CONFIRM_PHRASE });
+  buildBundle(out, { ref: NEW_REF, confirm: CONFIRM_PHRASE, pins: PINS });
   const text = readdirSync(join(out, 'supabase', 'migrations'))
     .map((f) => readFileSync(join(out, 'supabase', 'migrations', f), 'utf8'))
     .join('\n');
-  assert.ok(
-    !/sb_secret_|eyJ[A-Za-z0-9_-]{20,}|vvwjhbsyxetnktimgaxg|bxhnrjulksganzydgrgm/.test(text),
-  );
+  assert.ok(!/sb_secret_|eyJ[A-Za-z0-9_-]{20,}|\b[a-z]{20}\.supabase\.co/.test(text));
 });
 
 import { runChecks } from './check-access.mjs';
@@ -194,4 +204,8 @@ test('the checker never prints or returns the key and refuses secret keys at the
     fetchImpl: fake(() => ({ status: 401 })),
   });
   assert.ok(!JSON.stringify(out).includes('UNIQUE123'));
+});
+
+test('with the real pins, a synthetic reference is refused (the production pins are the ones in force)', () => {
+  assert.throws(() => assertStagingRef(NEW_REF, CONFIRM_PHRASE), /not the designated|DEVELOPMENT/);
 });

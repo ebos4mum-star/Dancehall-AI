@@ -1,7 +1,14 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { APPROVED_URL, resolveLiveConfig } from './liveGuard';
+import { createHash } from 'node:crypto';
+import { APPROVED_REF_SHA256, resolveLiveConfig as resolveWithPin } from './liveGuard';
+
+// Synthetic reference with its own pin: the real project reference is not in the public repository.
+const REF = 'a'.repeat(20);
+const PIN = createHash('sha256').update(REF).digest('hex');
+const APPROVED_URL = `https://${REF}.supabase.co`;
+const resolveLiveConfig = (env: Parameters<typeof resolveWithPin>[0]) => resolveWithPin(env, PIN);
 
 const good = {
   LIVE_SUPABASE: '1',
@@ -23,7 +30,7 @@ describe('live verification guard', () => {
       true,
     );
     for (const url of [
-      `https://${'a'.repeat(20)}.supabase.co`,
+      `https://${'b'.repeat(20)}.supabase.co`,
       `${APPROVED_URL}.evil.test`,
       APPROVED_URL.replace('https://', 'http://'),
       '',
@@ -62,5 +69,12 @@ describe('live verification guard', () => {
         /console\.|writeFile|appendFile|JSON\.stringify\((cfg|live|env|process\.env)/,
       );
     }
+  });
+});
+
+describe('the pin in force', () => {
+  it('is a digest, and a synthetic project is refused by it', () => {
+    expect(APPROVED_REF_SHA256).toMatch(/^[0-9a-f]{64}$/);
+    expect(resolveWithPin({ ...good }).enabled).toBe(false);
   });
 });

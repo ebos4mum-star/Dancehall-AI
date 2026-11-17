@@ -38,7 +38,8 @@ permissions:
 
 concurrency:
   group: ios-testflight-upload
-  cancel-in-progress: true
+  # Never cancel a running release job when another is dispatched: a cancelled upload or signing step could be left half done. A new run waits.
+  cancel-in-progress: false
 
 env:
   XCODE_APP: /Applications/Xcode_26.6.app
@@ -67,7 +68,7 @@ jobs:
           [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "release_sha must be a full 40-character SHA."; exit 1; }
           [[ "$BUILD" =~ ^[1-9][0-9]{0,8}$ ]] || { echo "build_number must be a whole number."; exit 1; }
           [[ "$HASH" =~ ^[0-9a-f]{64}$ ]] || { echo "ipa_sha256 must be 64 hex characters."; exit 1; }
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ inputs.release_sha }}
       - name: Confirm the checked-out commit is the requested one
@@ -75,7 +76,7 @@ jobs:
           SHA: ${{ inputs.release_sha }}
         run: test "$(git rev-parse HEAD)" = "$SHA"
       - name: Download the encrypted build artifact from the build run
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: testflight-ipa-encrypted
           run-id: ${{ inputs.build_run_id }}
@@ -100,14 +101,18 @@ jobs:
           set -euo pipefail
           sudo xcode-select -s "$XCODE_APP/Contents/Developer"
           xcodebuild -version
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
       - name: Inspect the IPA again
         env:
           STAGING_SUPABASE_URL: ${{ vars.STAGING_SUPABASE_URL }}
           BUILD: ${{ inputs.build_number }}
         run: |
           set -euo pipefail
-          EXPECT_REF="$(sed -E 's#^https://([a-z]{20})\.supabase\.co/?$#\1#' <<<"$STAGING_SUPABASE_URL")"
-          [ "$EXPECT_REF" = "$(node -e "import('./scripts/staging/guard.mjs').then(m=>console.log(m.DESIGNATED_STAGING_REF))")" ] || { echo "STAGING_SUPABASE_URL is not the designated staging project."; exit 1; }
+          # Succeeds only for the designated staging project (checked against the pinned digest) and prints its reference for the IPA check.
+          EXPECT_REF="$(node scripts/release/release-env.mjs --check-url)"
           EXPECT_REF="$EXPECT_REF" bash scripts/release/verify-ipa.sh "$RUNNER_TEMP/ipa/app.ipa" "$APP_VERSION" "$BUILD"
       - name: Install the App Store Connect API key (temporary)
         env:
@@ -137,11 +142,16 @@ jobs:
           xcrun altool --upload-app -f "$RUNNER_TEMP/ipa/app.ipa" -t ios --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
       - name: Summary
         if: always()
+        env:
+          DRY: ${{ inputs.dry_run }}
+          SHA: ${{ inputs.release_sha }}
+          BUILD: ${{ inputs.build_number }}
+          RUN_ID: ${{ inputs.build_run_id }}
         run: |
           {
-            echo "### TestFlight ${{ inputs.dry_run && 'VALIDATION only (nothing uploaded)' || 'UPLOAD requested' }}"
-            echo "- commit: \`${{ inputs.release_sha }}\`, version \`$APP_VERSION\`, build \`${{ inputs.build_number }}\`"
-            echo "- build run: \`${{ inputs.build_run_id }}\`"
+            echo "### TestFlight mode: dry_run=$DRY (true means validation only, nothing uploaded)"
+            echo "- commit: \`$SHA\`, version \`$APP_VERSION\`, build \`$BUILD\`"
+            echo "- build run: \`$RUN_ID\`"
           } | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Remove the API key
         if: always()

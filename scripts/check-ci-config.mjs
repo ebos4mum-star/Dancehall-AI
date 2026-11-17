@@ -134,7 +134,15 @@ for (const f of files) {
   }
   if (!/^permissions:\s*\n\s+contents:\s*read\s*$/m.test(t))
     at('must declare top-level least-privilege permissions (contents: read)');
-  if (!/concurrency:/.test(t) || !/cancel-in-progress:\s*true/.test(t))
+  if (rel) {
+    if (!/concurrency:/.test(t) || !/cancel-in-progress:\s*false/.test(t))
+      at(
+        'release workflows must queue, never cancel a running release job (cancel-in-progress: false)',
+      );
+    for (const m of t.matchAll(/^\s*-?\s*uses:\s*(\S+)/gm))
+      if (!/@[0-9a-f]{40}$/.test(m[1]))
+        at(`action ${m[1]} must be pinned to a full commit SHA in a release workflow`);
+  } else if (!/concurrency:/.test(t) || !/cancel-in-progress:\s*true/.test(t))
     at('must cancel superseded runs (concurrency + cancel-in-progress)');
   if (/^\s*schedule:/m.test(t))
     at('scheduled workflows are not allowed without a documented requirement');

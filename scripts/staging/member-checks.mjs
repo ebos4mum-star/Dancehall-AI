@@ -1,6 +1,6 @@
 // Signed-in checks against the STAGING Community function, run on the owner's machine (this sandbox cannot reach the API).
 // Needs two throwaway STAGING test members created in the Supabase dashboard (Auth > Add user, auto-confirm). Secrets come from the environment only and are never printed.
-//   STAGING_REF=bxhnrjulksganzydgrgm STAGING_CONFIRM=I-AM-USING-THE-STAGING-PROJECT STAGING_PUBLISHABLE_KEY=... \
+//   STAGING_REF=<staging ref> STAGING_CONFIRM=I-AM-USING-THE-STAGING-PROJECT STAGING_PUBLISHABLE_KEY=... \
 //   STAGING_MEMBER_EMAIL=... STAGING_MEMBER_PASSWORD=... node scripts/staging/member-checks.mjs
 // The project is in Read only mode: every write must be refused. Stops with a non-zero exit if anything that should be refused is accepted.
 import { assertStagingRef } from './guard.mjs';

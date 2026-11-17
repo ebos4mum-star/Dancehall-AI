@@ -1,6 +1,6 @@
 # V1 verification plan (nothing here has been run on hosted staging beyond what `docs/CLAUDE_HANDOFF.md` records)
 
-Staging project: `bxhnrjulksganzydgrgm` only. Every staging script calls `assertStagingRef` and needs `STAGING_REF`, `STAGING_CONFIRM=I-AM-USING-THE-STAGING-PROJECT` and `STAGING_PUBLISHABLE_KEY` (publishable key only). Never use production or development.
+Staging project: `<staging-ref>` only. Every staging script calls `assertStagingRef` and needs `STAGING_REF`, `STAGING_CONFIRM=I-AM-USING-THE-STAGING-PROJECT` and `STAGING_PUBLISHABLE_KEY` (publishable key only). Never use production or development.
 
 ## 1. What can run while staging stays `read_only`
 
@@ -10,7 +10,7 @@ Staging project: `bxhnrjulksganzydgrgm` only. Every staging script calls `assert
 | Guest rate limit (expect HTTP 429 to start)                                                                                            | `node scripts/staging/guest-limit-and-expiry.mjs guest-burst`                       | Run from the owner's own single-address connection. Not provable from this container (rotating egress address)                                  |
 | Expired token refused on member routes                                                                                                 | `EXPIRED_TOKEN_FILE=<file> node scripts/staging/guest-limit-and-expiry.mjs expired` | One synthetic member token older than 1 hour (needs one synthetic account, see section 2)                                                       |
 
-These are read-only. The first two need no synthetic account. Claude's container can run only the first, and only after a network-host approval for `bxhnrjulksganzydgrgm.supabase.co`.
+These are read-only. The first two need no synthetic account. Claude's container can run only the first, and only after a network-host approval for `<staging-ref>.supabase.co`.
 
 ## 2. What needs temporary open mode
 
@@ -45,7 +45,7 @@ One profile, `staging-preview` in `apps/mobile/eas.json`, contains everything: F
 Requirements before the build (owner actions; none started):
 
 1. Expo account, `eas-cli` login, `eas init` in `apps/mobile` (no EAS project exists yet).
-2. EAS environment `staging` with `EXPO_PUBLIC_SUPABASE_URL=https://bxhnrjulksganzydgrgm.supabase.co` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (publishable key only).
+2. EAS environment `staging` with `EXPO_PUBLIC_SUPABASE_URL=https://<staging-ref>.supabase.co` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (publishable key only).
 3. Apple Developer team, your iPhone registered (`eas device:create`). **New for Apple Health:** the HealthKit capability must be enabled on the app's App ID (EAS can do this when you log in to Apple during credentials setup). That is a signing/identity step, so it is yours to approve; Claude changed nothing.
 4. Staging backend, so progression is recorded server-side and the league works. Needs your approval (hosted changes): apply `social.patch2_eligible_workouts.sql`, `health_sync.up.sql`, `gamification.up.sql` (in that order) and `community.patch3_safety_phrases.sql` to staging, redeploy `social`, `community` and `account`. Without them the build still runs: Apple Health import in a Supabase build needs `health_sync.up.sql` (the database refuses `source = apple_health` until then, and the import counts that as a failure), and progression falls back to the on-device engine.
 5. Community posting only inside an approved open window; otherwise the feed reads and posting shows as paused.

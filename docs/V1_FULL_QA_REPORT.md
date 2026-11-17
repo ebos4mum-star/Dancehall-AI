@@ -1,6 +1,6 @@
 # V1 full QA report (Linux only: nothing here ran on an iPhone)
 
-Branch `claude/ecstatic-meitner-8you9v`. Test levels used, from weakest to strongest: **unit** (pure logic), **mock** (the app's real store/adapters with in-memory data, no network), **browser** (the real web export driven by Playwright in mock mode, 320 to 390 px wide), **local integration** (the real Edge Functions under real Deno against real Postgres with the real migrations), **hosted staging** (earlier HTTP checks against `bxhnrjulksganzydgrgm`, see `docs/STAGING_STATUS.md`), **native** (none). Source inspection alone is never counted as testing.
+Branch `claude/ecstatic-meitner-8you9v`. Test levels used, from weakest to strongest: **unit** (pure logic), **mock** (the app's real store/adapters with in-memory data, no network), **browser** (the real web export driven by Playwright in mock mode, 320 to 390 px wide), **local integration** (the real Edge Functions under real Deno against real Postgres with the real migrations), **hosted staging** (earlier HTTP checks against `<staging-ref>`, see `docs/STAGING_STATUS.md`), **native** (none). Source inspection alone is never counted as testing.
 
 ## 1. Defects found and fixed
 

@@ -1,6 +1,6 @@
 # Staging status
 
-Staging project: `bxhnrjulksganzydgrgm` (designated by the owner). Development `vvwjhbsyxetnktimgaxg` was not touched. Production does not exist yet. `main` is unchanged.
+Staging project: `<staging-ref>` (designated by the owner). Development `<development-ref>` was not touched. Production does not exist yet. `main` is unchanged.
 
 ## Guard
 
@@ -27,14 +27,14 @@ HTTP checks, the Edge Function, real MFA tokens, signed links, concurrency. The 
 ## Unresolved
 
 - EAS variables could not be read (no Expo credentials here).
-- Owner to run on their own machine: `STAGING_REF=bxhnrjulksganzydgrgm STAGING_CONFIRM=I-AM-USING-THE-STAGING-PROJECT STAGING_PUBLISHABLE_KEY=<publishable key> node scripts/staging/check-access.mjs db`
+- Owner to run on their own machine: `STAGING_REF=<staging-ref> STAGING_CONFIRM=I-AM-USING-THE-STAGING-PROJECT STAGING_PUBLISHABLE_KEY=<publishable key> node scripts/staging/check-access.mjs db`
 - Function deployment needs owner-entered secrets.
 
 ---
 
 # Phase 2: Community Edge Function in staging (2026-11-16)
 
-Project reference verified (`get_project` returned `bxhnrjulksganzydgrgm`) before the mode change and before the deployment. Development project untouched. `main` untouched. No PR.
+Project reference verified (`get_project` returned `<staging-ref>`) before the mode change and before the deployment. Development project untouched. `main` untouched. No PR.
 
 ## Actions taken
 
@@ -49,7 +49,7 @@ Project reference verified (`get_project` returned `bxhnrjulksganzydgrgm`) befor
 
 ## Results
 
-**Not one HTTP test could be run from this environment**: the egress proxy refuses `bxhnrjulksganzydgrgm.supabase.co` (`connect_rejected`), so none of the function's endpoints were called. I am not reporting any of them as passed.
+**Not one HTTP test could be run from this environment**: the egress proxy refuses `<staging-ref>.supabase.co` (`connect_rejected`), so none of the function's endpoints were called. I am not reporting any of them as passed.
 
 | #   | Check                                          | Status                                                                              | Evidence / what is needed                                                                                                                           |
 | --- | ---------------------------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -71,7 +71,7 @@ Project reference verified (`get_project` returned `bxhnrjulksganzydgrgm`) befor
 ## Commands for your machine (staging only; secrets in your environment, never pasted into chat)
 
 ```bash
-export STAGING_REF=bxhnrjulksganzydgrgm
+export STAGING_REF=<staging-ref>
 export STAGING_CONFIRM=I-AM-USING-THE-STAGING-PROJECT
 export STAGING_PUBLISHABLE_KEY=<staging publishable key>
 node scripts/staging/check-access.mjs db
@@ -99,9 +99,9 @@ Moderator MFA over HTTP (manual): add a second throwaway member as a moderator (
 
 # Phase 3: staging HTTP and security tests (2026-11-16)
 
-This phase supersedes the BLOCKED entries in the Phase 2 table where it gives a result. Everything below ran against `bxhnrjulksganzydgrgm` only, through the real HTTPS API, with synthetic accounts (`*@staging-test.example`, passwords random, kept only in a local scratch file, never printed or committed). Development and production were not touched. No PR, no merge, no `main` change.
+This phase supersedes the BLOCKED entries in the Phase 2 table where it gives a result. Everything below ran against `<staging-ref>` only, through the real HTTPS API, with synthetic accounts (`*@staging-test.example`, passwords random, kept only in a local scratch file, never printed or committed). Development and production were not touched. No PR, no merge, no `main` change.
 
-**Network access:** the owner approved it. The host `bxhnrjulksganzydgrgm.supabase.co` (nothing else) was added to the owner's Default environment (an extra, unused environment named `dancehall-ai-staging-http` also exists and can be deleted). Remove the host from Default when testing is finished.
+**Network access:** the owner approved it. The host `<staging-ref>.supabase.co` (nothing else) was added to the owner's Default environment (an extra, unused environment named `dancehall-ai-staging-http` also exists and can be deleted). Remove the host from Default when testing is finished.
 
 **Baseline recorded before any change:** database mode `read_only`, video off, comments off. `COMMUNITY_FLOOR_MODE` was set by the owner in the dashboard; its effective value was confirmed over HTTP as `read_only` (C1b). **I changed neither the mode nor the floor in this phase.**
 
@@ -141,7 +141,7 @@ This phase supersedes the BLOCKED entries in the Phase 2 table where it gives a 
 ## Reproduce on your Mac
 
 ```bash
-export STAGING_REF=bxhnrjulksganzydgrgm STAGING_CONFIRM=I-AM-USING-THE-STAGING-PROJECT STAGING_PUBLISHABLE_KEY=<staging publishable key>
+export STAGING_REF=<staging-ref> STAGING_CONFIRM=I-AM-USING-THE-STAGING-PROJECT STAGING_PUBLISHABLE_KEY=<staging publishable key>
 node scripts/staging/check-access.mjs db && node scripts/staging/check-access.mjs function
 STAGING_MEMBER_EMAIL=<throwaway> STAGING_MEMBER_PASSWORD=<throwaway> node scripts/staging/member-checks.mjs
 STAGING_MOD_EMAIL=<moderator> STAGING_MOD_PASSWORD=<pw> STAGING_MEMBER_EMAIL=<non-staff> STAGING_MEMBER_PASSWORD=<pw> node scripts/staging/mfa-checks.mjs
@@ -160,7 +160,7 @@ Community must stay off in the App Store build (it is). Still open from `docs/AP
 
 # Phase 4: photo security tests (2026-11-16)
 
-Project `bxhnrjulksganzydgrgm` only (reference verified before opening). Synthetic accounts and generated test images only. Development and production untouched.
+Project `<staging-ref>` only (reference verified before opening). Synthetic accounts and generated test images only. Development and production untouched.
 
 **Settings recorded before change:** database mode `read_only`, video off, comments off, `COMMUNITY_FLOOR_MODE` = `read_only` (owner-entered; not readable by me).
 **Accepted value that allows photos:** `open`. The function treats only `text_only` and `read_only` as restrictions; anything else is `open` (index.ts lines 120-122). `text_only` does not allow photos (server refuses all upload routes and photo posts with `media_paused` unless the floor is `open`).
@@ -231,7 +231,7 @@ The first run failed 8 checks; 7 were because the moderator's second factor coul
 
 ## Environment cleanup
 
-- Staging host `bxhnrjulksganzydgrgm.supabase.co` **removed from the Default environment** (allowed hosts are back to the original four).
+- Staging host `<staging-ref>.supabase.co` **removed from the Default environment** (allowed hosts are back to the original four).
 - The unused environment `dancehall-ai-staging-http` could **not** be deleted by me: no tool for deleting environments is available here. Delete it in Settings, Environments.
 
 ## Final staging security status
@@ -264,7 +264,7 @@ Staging holds no test data, is in Read-only mode (database and floor), with comm
 
 # Phase 7: cache-fix deployment and live delete-then-fetch test (2026-11-16)
 
-Project `bxhnrjulksganzydgrgm` only (reference verified before each step). Development and production untouched. No PR. Friends was NOT deployed and its migration was NOT applied.
+Project `<staging-ref>` only (reference verified before each step). Development and production untouched. No PR. Friends was NOT deployed and its migration was NOT applied.
 
 ## Deployment
 
@@ -314,7 +314,7 @@ The previously fetched link stopped serving at once after deletion (400, BYPASS)
 
 # Phase 8: Friends and Group Goals on staging (2026-11-16)
 
-Project `bxhnrjulksganzydgrgm` only (reference verified before each hosted change). Development and production untouched. No PR. Public Community left in Read only; no Community secret or floor setting was changed.
+Project `<staging-ref>` only (reference verified before each hosted change). Development and production untouched. No PR. Public Community left in Read only; no Community secret or floor setting was changed.
 
 ## What was applied and deployed
 
@@ -380,7 +380,7 @@ The first run was cut short by my own rate-limit pacing (a legitimate member hit
 
 # Phase 9: Friends final verification (2026-11-16)
 
-Project `bxhnrjulksganzydgrgm` only. Development and production untouched. No PR, no build uploaded. Community floor and every Community setting left as they were (database `read_only`, comments and video off).
+Project `<staging-ref>` only. Development and production untouched. No PR, no build uploaded. Community floor and every Community setting left as they were (database `read_only`, comments and video off).
 
 ## 1. Review of `social_patch1_view_dedupe`
 
@@ -447,7 +447,7 @@ All synthetic users, public names, friendships, blocks, shares, groups, invitati
 
 # Phase 10: staging account integration, Friends with the app's real code, live barcode (2026-11-16)
 
-Project `bxhnrjulksganzydgrgm` only (reference verified before each hosted change). Development Supabase, production, `main` and `integration/live-prep` untouched. No PR, no EAS build, no TestFlight. Public Community stayed Read only throughout (database `read_only`, comments and video off; no Community secret or floor setting touched).
+Project `<staging-ref>` only (reference verified before each hosted change). Development Supabase, production, `main` and `integration/live-prep` untouched. No PR, no EAS build, no TestFlight. Public Community stayed Read only throughout (database `read_only`, comments and video off; no Community secret or floor setting touched).
 
 ## 1. `account` function deployed to staging
 
@@ -529,7 +529,7 @@ Nothing was uploaded; no EAS build, TestFlight or App Store; no production, deve
 
 ## Open-mode verification window (2026-11-16)
 
-Staging `bxhnrjulksganzydgrgm` only. Baseline: stored mode `read_only`, video/comments off, `community` v10 (`c6debb97…`), `social` v4, `account` v1, 0 users/posts. Owner set floor secret `open`; stored mode opened through `app.community_set_mode` (audited) with 3 synthetic accounts (2 members, 1 moderator).
+Staging `<staging-ref>` only. Baseline: stored mode `read_only`, video/comments off, `community` v10 (`c6debb97…`), `social` v4, `account` v1, 0 users/posts. Owner set floor secret `open`; stored mode opened through `app.community_set_mode` (audited) with 3 synthetic accounts (2 members, 1 moderator).
 
 - `community-v1-checks.mjs`: 40 PASS, 0 FAIL (immediate photo publish, public like counts, no self-like, report hides at once, blocking, diet-drug/dangerous-claim/harassment rejected and not echoed, video and comments refused, no messaging route, author delete removes the file).
 - `PHOTO_MODE=published photo-checks.mjs`: 44 PASS, 0 FAIL ("All checks passed").

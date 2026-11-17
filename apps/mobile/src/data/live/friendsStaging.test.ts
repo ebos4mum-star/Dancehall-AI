@@ -9,6 +9,7 @@
  */
 import { createClient } from '@supabase/supabase-js';
 import { describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createEdgeAccountApi } from '../../account/cloud/accountApi';
 import {
@@ -19,8 +20,10 @@ import {
 import { createSupabaseStore } from '../supabaseStore';
 import type { DataStore } from '../types';
 
-const STAGING_REF = 'bxhnrjulksganzydgrgm';
-const DEV_REF = 'vvwjhbsyxetnktimgaxg';
+// The public repository does not name the projects: the guard compares SHA-256 digests of the project reference.
+const STAGING_REF_SHA256 = 'd746b80bdfbb24b3ec62411f77f4100858df5ff0ff1c3f3925ddc0ea70120ce6';
+const DEV_REF_SHA256 = '28b12271d516972144edb9c494362ef7b1bb6fc2fe26a9ee49aa9d404c69bafb';
+const digestOf = (ref: string) => createHash('sha256').update(ref).digest('hex');
 const phase = process.env.DH_STAGING_FRIENDS ?? '';
 const url = (process.env.DH_STAGING_URL ?? '').replace(/\/+$/, '');
 const key = process.env.DH_STAGING_PUBLISHABLE_KEY ?? '';
@@ -73,8 +76,9 @@ const ans = (): Answers => [
 
 describe.skipIf(!on)('Friends on staging with the real app code', () => {
   it('guard: only the staging project is ever contacted', () => {
-    expect(url).toBe(`https://${STAGING_REF}.supabase.co`);
-    expect(url).not.toContain(DEV_REF);
+    const ref = /^https:\/\/([a-z]{20})\.supabase\.co$/.exec(url)?.[1] ?? '';
+    expect(digestOf(ref)).toBe(STAGING_REF_SHA256);
+    expect(digestOf(ref)).not.toBe(DEV_REF_SHA256);
     expect(key.startsWith('sb_publishable_')).toBe(true);
     expect(stateFile.length).toBeGreaterThan(0);
   });

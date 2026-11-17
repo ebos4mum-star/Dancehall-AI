@@ -1,6 +1,6 @@
 // READ-ONLY boundary probe of the gamification routes on the STAGING `social` function, through the real HTTPS API. It uses only the PUBLISHABLE key, signs in as nobody,
 // creates and changes nothing, and reads no data: it checks that every gamification route refuses callers who are not signed in.
-//   STAGING_REF=bxhnrjulksganzydgrgm STAGING_CONFIRM=I-AM-USING-THE-STAGING-PROJECT STAGING_PUBLISHABLE_KEY=<publishable key> node scripts/staging/gm-boundary-checks.mjs [before|after]
+//   STAGING_REF=<staging ref> STAGING_CONFIRM=I-AM-USING-THE-STAGING-PROJECT STAGING_PUBLISHABLE_KEY=<publishable key> node scripts/staging/gm-boundary-checks.mjs [before|after]
 // "before" (default) is informational: run it BEFORE deploying the new `social` function to record how the old one answers. "after" must pass in full.
 // The functional checks (what a signed-in person's XP, league and deletion look like) are the 17 social-integration tests locally and the app checklist on staging.
 import { assertStagingRef } from './guard.mjs';

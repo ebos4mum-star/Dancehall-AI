@@ -18,7 +18,7 @@ pnpm install
 
 ```bash
 cp scripts/friends-staging.env.example .friends-staging.env      # git-ignored
-# edit .friends-staging.env: paste the STAGING publishable key (Supabase dashboard, project bxhnrjulksganzydgrgm, Settings, API). Never a secret key.
+# edit .friends-staging.env: paste the STAGING publishable key (Supabase dashboard, project <staging-ref>, Settings, API). Never a secret key.
 bash scripts/friends-staging-ios.sh            # iOS Simulator
 bash scripts/friends-staging-ios.sh --device   # a connected iPhone (needs your own signing set up in Xcode; the script does not touch it)
 ```

@@ -6,7 +6,7 @@ Status as of this document: **read-only inspection done; nothing was applied, cr
 
 ## 1. Project access status
 
-- Project ID `vvwjhbsyxetnktimgaxg`, region `us-east-2`, Postgres 17, status `ACTIVE_HEALTHY`, created 2026-11-14.
+- Project ID `<development-ref>`, region `us-east-2`, Postgres 17, status `ACTIVE_HEALTHY`, created 2026-11-14.
 - The Supabase connection available to the development environment **can reach this exact project ID**. Only calls naming this ID were made (project details, migration list, table list, edge-function list, catalog queries, security advisors). No other project was listed or accessed, and no project was created.
 - **Discrepancy to confirm:** the project is named `ebos4mum@gmail.com's Project` in organization slug `kzvcczbyzgxuwugwnscx`, not `dancehall-fit-ai-dev`. Its contents are unambiguously DanceHall (see below), so it is treated as the intended project, but the owner should confirm the organization and may want to rename it.
 - Real sign-in (email one-time code), SMTP and the app's `.env.local` have not been configured against it.

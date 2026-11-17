@@ -28,7 +28,7 @@ $PB -c 'Print :com.apple.developer.healthkit' "$W/ent.plist" >/dev/null 2>&1 || 
 BUNDLE="$(find "$APP" -maxdepth 1 \( -name 'main.jsbundle' -o -name '*.hbc' \) | head -n 1)"
 [ -n "$BUNDLE" ] || fail "JavaScript bundle not found"
 grep -a -q "$EXPECT_REF" "$BUNDLE" || fail "staging project reference not found in the bundle"
-for BAD in vvwjhbsyxetnktimgaxg placeholder.invalid; do
+for BAD in placeholder.invalid; do
   if grep -a -q "$BAD" "$BUNDLE"; then fail "the bundle contains a forbidden string ($BAD)"; fi
 done
 OTHER="$(grep -a -o '[a-z]\{20\}\.supabase\.co' "$BUNDLE" | sort -u | grep -v "^$EXPECT_REF" || true)"

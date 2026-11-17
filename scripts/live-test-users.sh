@@ -3,21 +3,23 @@
 #   1. Generates two strong random passwords and two synthetic `.test` emails (unique per run).
 #   2. Writes apps/mobile/.env.live (mode 600) with the approved project URL and the publishable key you supply.
 #   3. Tells you to create the two users in the Supabase dashboard (the passwords are shown only by `show-passwords`, on request).
-# Usage:  LIVE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_... bash scripts/live-test-users.sh [init|show-passwords|clean]
+# Usage:  LIVE_SUPABASE_URL=https://<development ref>.supabase.co LIVE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_... bash scripts/live-test-users.sh [init|show-passwords|clean]
+#   The public repository does not name the project: the URL is yours to supply, and the live test guard refuses anything but the approved development project.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 ENVFILE="${LIVE_ENV_FILE:-apps/mobile/.env.live}"
-REF="vvwjhbsyxetnktimgaxg"
 case "${1:-init}" in
   init)
     [ ! -e "$ENVFILE" ] || { echo "$ENVFILE already exists. Run 'clean' first (it deletes it)." >&2; exit 1; }
+    url="${LIVE_SUPABASE_URL:-}"
+    case "$url" in https://*.supabase.co) ;; *) echo "Set LIVE_SUPABASE_URL to the development project URL (https://<ref>.supabase.co)." >&2; exit 2 ;; esac
     key="${LIVE_SUPABASE_PUBLISHABLE_KEY:-}"
     case "$key" in sb_publishable_*) ;; *) echo "Set LIVE_SUPABASE_PUBLISHABLE_KEY to the publishable key (sb_publishable_...). Never use a secret/service key." >&2; exit 2 ;; esac
     id="$(od -An -N4 -tx1 /dev/urandom | tr -d ' \n')"
     pw() { head -c 24 /dev/urandom | base64 | tr -d '/+=\n' | head -c 28; }
     umask 077
     {
-      echo "LIVE_SUPABASE_URL=https://$REF.supabase.co"
+      echo "LIVE_SUPABASE_URL=$url"
       echo "LIVE_SUPABASE_PUBLISHABLE_KEY=$key"
       echo "LIVE_USER_A_EMAIL=live-a-$id@example.test"
       echo "LIVE_USER_A_PASSWORD=$(pw)"

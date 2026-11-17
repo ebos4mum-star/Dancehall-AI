@@ -1,6 +1,6 @@
 # Cloud accounts: controlled hosted activation proposal
 
-**Status: a proposal. Nothing below has been done.** No hosted migration, Edge Function, secret or Auth setting has been applied or changed, no account exists, and M3 v2 and `20261213000100_household_trigger_revoke.sql` are not touched. Every gate needs the owner's explicit approval **for that gate**, and a later gate never starts because an earlier one passed. Target: the approved development project `vvwjhbsyxetnktimgaxg` only. Until Gate 5 passes, say "implemented and tested locally", nothing stronger.
+**Status: a proposal. Nothing below has been done.** No hosted migration, Edge Function, secret or Auth setting has been applied or changed, no account exists, and M3 v2 and `20261213000100_household_trigger_revoke.sql` are not touched. Every gate needs the owner's explicit approval **for that gate**, and a later gate never starts because an earlier one passed. Target: the approved development project `<development-ref>` only. Until Gate 5 passes, say "implemented and tested locally", nothing stronger.
 
 ## What ships in the code
 
@@ -42,8 +42,8 @@ Approve each setting separately; record the previous value first.
 ## Gate 3: Edge Function deployment (flag still off, no app can reach it)
 
 ```bash
-supabase secrets set ACCOUNT_PEPPER="$(openssl rand -base64 48)" MAINTENANCE_KEY="$(openssl rand -hex 32)" --project-ref vvwjhbsyxetnktimgaxg
-supabase functions deploy account --no-verify-jwt --project-ref vvwjhbsyxetnktimgaxg
+supabase secrets set ACCOUNT_PEPPER="$(openssl rand -base64 48)" MAINTENANCE_KEY="$(openssl rand -hex 32)" --project-ref <development-ref>
+supabase functions deploy account --no-verify-jwt --project-ref <development-ref>
 ```
 
 - `--no-verify-jwt` is required: create and start-recovery carry only the publishable key, which is not a JWT. The function itself authenticates the signed-in user (`auth.getUser`) for `status`, `rotate` and `recover/cancel`, and refuses anything else with 401.

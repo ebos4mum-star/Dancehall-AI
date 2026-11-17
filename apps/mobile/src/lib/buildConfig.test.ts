@@ -221,7 +221,7 @@ describe('the staging-testflight build, as the app will see it', () => {
   // The two values EAS supplies from its "staging" environment (placeholders here: no real project value is in the repository).
   const withBackend = {
     ...profileEnv,
-    EXPO_PUBLIC_SUPABASE_URL: 'https://bxhnrjulksganzydgrgm.supabase.co',
+    EXPO_PUBLIC_SUPABASE_URL: 'https://staging-placeholder.supabase.co',
     EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_placeholder',
   };
   it('starts with the staging backend and the intended features, and nothing synthetic', () => {
@@ -236,7 +236,7 @@ describe('the staging-testflight build, as the app will see it', () => {
       barcodeProvider: 'off',
       contentFixtures: false,
     });
-    expect(c.supabaseUrl).toBe('https://bxhnrjulksganzydgrgm.supabase.co');
+    expect(c.supabaseUrl).toBe('https://staging-placeholder.supabase.co');
     expect(c.aiApiUrl).toBeUndefined(); // the AI gateway is not deployed: the Coach says it is unavailable, never a simulation
   });
   it('refuses to start without the backend values (it can never fall back to the mock)', () => {

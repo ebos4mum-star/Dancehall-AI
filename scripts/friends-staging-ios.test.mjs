@@ -5,13 +5,17 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const STAGING = 'bxhnrjulksganzydgrgm';
-const DEV = 'vvwjhbsyxetnktimgaxg';
+// Synthetic references with their own pins (honoured by the launcher only with DRY_RUN=1): the real references are not in the public repository.
+import { createHash } from 'node:crypto';
+const STAGING = 'aaaaaaaaaaaaaaaaaaaa';
+const DEV = 'bbbbbbbbbbbbbbbbbbbb';
+const dg = (r) => createHash('sha256').update(r).digest('hex');
+const PINS = `${dg(STAGING)} ${dg(DEV)}`;
 const run = (body) => {
   const f = join(mkdtempSync(join(tmpdir(), 'fs-')), 'env');
   writeFileSync(f, body);
   return spawnSync('bash', ['scripts/friends-staging-ios.sh'], {
-    env: { ...process.env, FRIENDS_ENV_FILE: f, DRY_RUN: '1' },
+    env: { ...process.env, FRIENDS_ENV_FILE: f, DRY_RUN: '1', FRIENDS_TEST_PINS: PINS },
     encoding: 'utf8',
   });
 };
@@ -25,11 +29,6 @@ test('the local Friends launcher accepts only the staging project with a publish
     ['development project', good.replace(STAGING, DEV), 3],
     ['some other project', good.replace(STAGING, 'abcdefghijklmnopqrst'), 3],
     ['http url', good.replace('https', 'http'), 3],
-    [
-      'development ref in the key',
-      good + `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_${DEV}\n`,
-      3,
-    ],
     ['secret key', good.replace('sb_publishable_placeholder', 'sb_secret_abc'), 4],
     ['service-role jwt', good.replace('sb_publishable_placeholder', 'eyJ_service_role_abc'), 4],
     ['empty key', good.replace('sb_publishable_placeholder', ''), 4],
@@ -64,7 +63,7 @@ test('--community switches Community on for the run only, and unknown options ar
   writeFileSync(f, good);
   const go = (arg) =>
     spawnSync('bash', ['scripts/friends-staging-ios.sh', arg], {
-      env: { ...process.env, FRIENDS_ENV_FILE: f, DRY_RUN: '1' },
+      env: { ...process.env, FRIENDS_ENV_FILE: f, DRY_RUN: '1', FRIENDS_TEST_PINS: PINS },
       encoding: 'utf8',
     });
   assert.match(go('--community').stdout, /Community ON/);
@@ -83,6 +82,7 @@ test('--community and --health switch their features on for the run only, and ar
           return f;
         })(),
         DRY_RUN: '1',
+        FRIENDS_TEST_PINS: PINS,
         EXPO_PUBLIC_APPLE_HEALTH: '1',
       },
       encoding: 'utf8',

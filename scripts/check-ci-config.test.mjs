@@ -198,3 +198,16 @@ test('release: the build workflow holds no App Store Connect secrets and the upl
   assert.doesNotMatch(wf(B), /ASC_API|altool|environment: testflight-upload/);
   assert.doesNotMatch(wf(U), /IOS_DISTRIBUTION_CERT|IOS_APPSTORE_PROFILE/);
 });
+test('release: actions are pinned to full commit SHAs and a running release job is never cancelled', () => {
+  for (const [n, t] of [
+    [B, wf(B)],
+    [U, wf(U)],
+  ]) {
+    assert.notEqual(runNamed(n, t.replace(/@[0-9a-f]{40} # v4/, '@v4')).status, 0, `${n} unpinned`);
+    assert.notEqual(
+      runNamed(n, t.replace('cancel-in-progress: false', 'cancel-in-progress: true')).status,
+      0,
+      `${n} cancel`,
+    );
+  }
+});

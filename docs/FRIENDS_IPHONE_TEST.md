@@ -53,7 +53,7 @@ Needs, in this order, each with your explicit yes: (1) deploy the `account` func
 
 ```bash
 EXPO_PUBLIC_APP_ENV=preview EXPO_PUBLIC_AUTH_MODE=supabase EXPO_PUBLIC_CLOUD_ACCOUNTS=1 EXPO_PUBLIC_SOCIAL=1 \
-EXPO_PUBLIC_SUPABASE_URL=https://bxhnrjulksganzydgrgm.supabase.co EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<staging publishable key> \
+EXPO_PUBLIC_SUPABASE_URL=https://<staging-ref>.supabase.co EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<staging publishable key> \
 npx expo run:ios --device
 ```
 
