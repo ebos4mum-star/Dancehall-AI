@@ -52,7 +52,7 @@ Identifiers, **+** (or open the existing one): App IDs, App, **Explicit**, bundl
 
 ## 4. App Store provisioning profile (must include HealthKit)
 
-Profiles, **+**, Distribution, **App Store Connect**, choose the App ID from step 3, choose the certificate from step 2, name it `DanceHall Fit AI App Store`, Generate, **Download** the `.mobileprovision`. The build refuses a profile that is not App Store type, does not include HealthKit, belongs to another team or bundle ID, is expired, or does not list the imported certificate.
+Profiles, **+**, Distribution, **App Store Connect**, choose the App ID from step 3, choose the certificate from step 2, name it as you like (yours is `MyWeightLossPal_AppStore`; the workflow reads the name from the profile file, so it is not a variable), Generate, **Download** the `.mobileprovision`. The build refuses a profile that is not App Store type, does not include HealthKit, belongs to another team or bundle ID, is expired, or does not list the imported certificate.
 
 ## 5. App Store Connect app record
 
@@ -87,7 +87,7 @@ gh secret set RELEASE_ARTIFACT_PASSPHRASE --env testflight-upload --repo OWNER/R
 gh secret set ASC_API_KEY_P8 --env testflight-upload --repo OWNER/REPO < AuthKey_XXXXXXXXXX.p8
 
 # Variables (not secrets)
-gh variable set APPLE_TEAM_ID --env testflight-build --repo OWNER/REPO --body "<Team ID>"
+gh variable set APPLE_TEAM_ID --env testflight-build --repo OWNER/REPO --body "9RA6G4GC6Q"
 gh variable set STAGING_SUPABASE_URL --env testflight-build --repo OWNER/REPO --body "https://<staging project ref>.supabase.co"
 gh variable set STAGING_SUPABASE_PUBLISHABLE_KEY --env testflight-build --repo OWNER/REPO       # prompts; publishable key only (sb_publishable_...)
 gh variable set STAGING_SUPABASE_URL --env testflight-upload --repo OWNER/REPO --body "https://<staging project ref>.supabase.co"
@@ -103,6 +103,24 @@ gh variable set ASC_API_ISSUER_ID --env testflight-upload --repo OWNER/REPO --bo
 | `testflight-upload` | `ASC_API_KEY_P8`, `RELEASE_ARTIFACT_PASSPHRASE` (same value)                                                                       | `ASC_API_KEY_ID`, `ASC_API_ISSUER_ID`, `STAGING_SUPABASE_URL`               |
 
 When done, delete `distribution.p12`, the `.p8` and the profile from loose folders (keep the `.p12` and its password in a password manager or keychain as your backup), and never commit them.
+
+## 8a. Pre-flight checks on your Mac before you enter anything (read only; nothing is printed that is secret)
+
+```bash
+# The profile: team, bundle ID, HealthKit, not a development/ad hoc profile, expiry
+security cms -D -i ~/Downloads/MyWeightLossPal_AppStore.mobileprovision > /tmp/p.plist
+for k in Name TeamIdentifier:0 Entitlements:application-identifier Entitlements:com.apple.developer.healthkit Entitlements:get-task-allow ExpirationDate; do
+  printf '%s = ' "$k"; /usr/libexec/PlistBuddy -c "Print :$k" /tmp/p.plist 2>&1 | head -n 1; done
+/usr/libexec/PlistBuddy -c "Print :ProvisionedDevices" /tmp/p.plist >/dev/null 2>&1 && echo "HAS A DEVICE LIST: wrong profile type" || echo "no device list (good: App Store type)"
+rm -f /tmp/p.plist
+# Expected: TeamIdentifier 9RA6G4GC6Q; application-identifier 9RA6G4GC6Q.com.dancehallfit.app; healthkit = true; get-task-allow = false; a future ExpirationDate
+
+# The .p12: certificate type, team, expiry (asks for the .p12 password locally; the password is never printed)
+openssl pkcs12 -in /path/to/your.p12 -nokeys -clcerts | openssl x509 -noout -subject -enddate
+# Expected: subject contains "Apple Distribution: FlexApp software Inc. (9RA6G4GC6Q)"
+```
+
+If the healthkit line says the key does not exist, the profile was made before HealthKit was ticked on the App ID: edit the profile (or the App ID, then the profile), Save, Download again.
 
 ## 9. Internal testers
 
