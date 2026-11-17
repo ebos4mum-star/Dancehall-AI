@@ -2,19 +2,20 @@
 # LOCAL rehearsal of the staging upgrade, on throwaway Postgres databases only. It never touches a hosted project.
 # It rebuilds what staging (bxhnrjulksganzydgrgm) holds TODAY from the pinned commits recorded in docs/STAGING_STATUS.md and docs/CLAUDE_HANDOFF.md (hash-checked), then applies ONLY the
 # remaining increments in the order of docs/STAGING_DEPLOYMENT_CHECKLIST.md:
-#     community.patch3_safety_phrases -> social.patch2_eligible_workouts -> health_sync.up -> gamification.up
+#     social.patch2_eligible_workouts -> health_sync.up -> gamification.up -> community.patch3_safety_phrases      (the owner's order; patch 3 only replaces one Community function, so it can go anywhere:
+#     section 7 proves the other placement gives the identical result)
 # and proves: (1) the result is catalog-identical to a fresh build of the current files, (2) the proposed tests pass on it, (3) the rollback files return it to exactly today's staging
 # state (and it can be applied again).   GEN_DOWN=1 regenerates supabase/proposed/social.patch2_eligible_workouts.down.sql from the baseline instead of checking it.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-BASE="${DH_STG_BASE_DB:-dh_stg_base}"; FRESH="${DH_STG_FRESH_DB:-dh_stg_fresh}"
+BASE="${DH_STG_BASE_DB:-dh_stg_base}"; FRESH="${DH_STG_FRESH_DB:-dh_stg_fresh}"; ALT="${DH_STG_ALT_DB:-dh_stg_alt}"
 q() { psql -X -q -v ON_ERROR_STOP=1 "$@"; }
 if ! pg_isready -q 2>/dev/null && command -v pg_lsclusters >/dev/null && pg_lsclusters -h | grep -q down; then
   ver=$(pg_lsclusters -h | awk 'NR==1{print $1}'); name=$(pg_lsclusters -h | awk 'NR==1{print $2}'); pg_ctlcluster "$ver" "$name" start; for _ in 1 2 3 4 5 6 7 8 9 10; do pg_isready -q && break; sleep 1; done
 fi
 pg_isready -q || { echo "No Postgres server reachable (see docs/DEVELOPMENT.md)." >&2; exit 2; }
 TMP="$(mktemp -d)"
-cleanup() { q -d postgres -c "drop database if exists $BASE" -c "drop database if exists $FRESH" >/dev/null 2>&1 || true; rm -rf "$TMP"; }
+cleanup() { q -d postgres -c "drop database if exists $BASE" -c "drop database if exists $FRESH" -c "drop database if exists $ALT" >/dev/null 2>&1 || true; rm -rf "$TMP"; }
 trap cleanup EXIT
 ok() { echo "PASS     $1"; }
 run() { local msg="$1"; shift; if "$@"; then ok "$msg"; else echo "FAIL     $msg" >&2; exit 1; fi; }
@@ -75,10 +76,10 @@ step() { local n="$1" f="$2"; run "increment $n: $(basename "$f")" q -d "$BASE" 
   diff "$PREV" "$TMP/step$n.txt" | grep '^[<>] F ' | sed -E 's/^([<>]) F ([^ (]+)\(.*/           \1 function \2/' | sort -u | sed 's/^/        /' || true
   diff "$PREV" "$TMP/step$n.txt" | grep '^> [CKIPT] ' | awk '{print $2" "$3}' | cut -d. -f1-2 | sort -u | head -12 | sed 's/^/           + /' || true
   PREV="$TMP/step$n.txt"; }
-step 1 supabase/proposed/community.patch3_safety_phrases.sql
-step 2 supabase/proposed/social.patch2_eligible_workouts.sql
-step 3 supabase/proposed/health_sync.up.sql
-step 4 supabase/proposed/gamification.up.sql
+step 1 supabase/proposed/social.patch2_eligible_workouts.sql
+step 2 supabase/proposed/health_sync.up.sql
+step 3 supabase/proposed/gamification.up.sql
+step 4 supabase/proposed/community.patch3_safety_phrases.sql
 snap "$BASE" > "$TMP/after.txt"
 run "every increment is repeatable (applying the two function patches again changes nothing)" bash -c "psql -X -q -v ON_ERROR_STOP=1 -d $BASE -f supabase/proposed/community.patch3_safety_phrases.sql && psql -X -q -v ON_ERROR_STOP=1 -d $BASE -f supabase/proposed/social.patch2_eligible_workouts.sql && [ \"\$(psql -X -At -d $BASE -c \"select count(*) from pg_proc where proname='eligible_workouts'\")\" = 1 ]"
 
@@ -93,14 +94,21 @@ for t in community social gamification account_deletion community.storage; do ru
 run "structural RLS guard still holds" q -d "$BASE" -f supabase/tests/01_rls_coverage.test.sql
 
 echo "== 5. rollback in reverse order returns staging's current state exactly"
-run "rollback 4: gamification.down.sql" q -d "$BASE" -f supabase/proposed/gamification.down.sql
-run "rollback 3: health_sync.down.sql" q -d "$BASE" -f supabase/proposed/health_sync.down.sql
-run "rollback 2: social.patch2_eligible_workouts.down.sql" q -d "$BASE" -f "$DOWN"
-run "rollback 1: community.patch2_photo_immediate.sql (restores the previous app.community_screen)" q -d "$BASE" -f "$TMP/community.patch2.sql"
+run "rollback of 4: community.patch2_photo_immediate.sql (restores the previous app.community_screen)" q -d "$BASE" -f "$TMP/community.patch2.sql"
+run "rollback of 3: gamification.down.sql" q -d "$BASE" -f supabase/proposed/gamification.down.sql
+run "rollback of 2: health_sync.down.sql" q -d "$BASE" -f supabase/proposed/health_sync.down.sql
+run "rollback of 1: social.patch2_eligible_workouts.down.sql" q -d "$BASE" -f "$DOWN"
 snap "$BASE" > "$TMP/rolled.txt"
 if diff -u "$TMP/before.txt" "$TMP/rolled.txt" > "$TMP/diff2.txt"; then ok "after rollback the catalog equals staging's state before the increments ($(wc -l < "$TMP/before.txt") objects)"; else echo "FAIL     rollback did not restore the previous state:" >&2; head -40 "$TMP/diff2.txt" >&2; exit 1; fi
 echo "== 6. apply again after rollback"
-for f in community.patch3_safety_phrases.sql social.patch2_eligible_workouts.sql health_sync.up.sql gamification.up.sql; do q -d "$BASE" -f supabase/proposed/$f; done
+for f in social.patch2_eligible_workouts.sql health_sync.up.sql gamification.up.sql community.patch3_safety_phrases.sql; do q -d "$BASE" -f supabase/proposed/$f; done
 snap "$BASE" > "$TMP/again.txt"
 diff -q "$TMP/after.txt" "$TMP/again.txt" >/dev/null && ok "applying again after rollback gives the same result" || { echo "FAIL     re-apply differs" >&2; exit 1; }
+echo "== 7. patch 3 is independent: applying it FIRST gives the identical result"
+prep "$ALT"
+for f in "$TMP/community.up.sql" "$TMP/community.storage.sql" "$TMP/purge.up.sql" "$TMP/social.up.sql" "$TMP/social.patch1.sql" "$TMP/community.patch2.sql"; do q -d "$ALT" -f "$f"; done
+# Applied exactly as the command sheet in docs/STAGING_DEPLOYMENT_CHECKLIST.md does: psql --single-transaction (health_sync and gamification have no transaction of their own).
+for f in community.patch3_safety_phrases.sql social.patch2_eligible_workouts.sql health_sync.up.sql gamification.up.sql; do q -d "$ALT" --single-transaction -f supabase/proposed/$f 2>"$TMP/stderr.txt" || { cat "$TMP/stderr.txt" >&2; exit 1; }; done
+snap "$ALT" > "$TMP/alt.txt"
+diff -q "$TMP/after.txt" "$TMP/alt.txt" >/dev/null && ok "patch 3 first (then patch 2, health, gamification), applied with psql --single-transaction as the command sheet does, is catalog-identical to the owner's order" || { echo "FAIL     the order of patch 3 changes the result" >&2; exit 1; }
 echo "Staging increment dry run passed (local throwaway databases only; no hosted project was contacted)."

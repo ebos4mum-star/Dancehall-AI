@@ -7,12 +7,19 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "ios": { "simulator": false },
-      "env": { "EXPO_PUBLIC_APP_ENV": "development" }
+      "ios": {
+        "simulator": false
+      },
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "development"
+      }
     },
     "preview": {
       "distribution": "internal",
-      "env": { "EXPO_PUBLIC_APP_ENV": "preview", "EXPO_PUBLIC_AUTH_MODE": "supabase" }
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "preview",
+        "EXPO_PUBLIC_AUTH_MODE": "supabase"
+      }
     },
     "preview-cloud": {
       "distribution": "internal",
@@ -35,12 +42,32 @@
         "EXPO_PUBLIC_APPLE_HEALTH": "1"
       }
     },
+    "staging-testflight": {
+      "distribution": "store",
+      "environment": "staging",
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "preview",
+        "EXPO_PUBLIC_AUTH_MODE": "supabase",
+        "EXPO_PUBLIC_CLOUD_ACCOUNTS": "1",
+        "EXPO_PUBLIC_SOCIAL": "1",
+        "EXPO_PUBLIC_COMMUNITY": "1",
+        "EXPO_PUBLIC_APPLE_HEALTH": "1",
+        "EXPO_PUBLIC_BARCODE_PROVIDER": "off"
+      }
+    },
     "production": {
       "autoIncrement": true,
-      "env": { "EXPO_PUBLIC_APP_ENV": "production", "EXPO_PUBLIC_AUTH_MODE": "supabase" }
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "production",
+        "EXPO_PUBLIC_AUTH_MODE": "supabase"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {},
+    "staging-testflight": {
+      "ios": {}
+    }
   }
 }

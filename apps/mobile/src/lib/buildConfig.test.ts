@@ -29,12 +29,13 @@ describe('app.json', () => {
 describe('eas.json', () => {
   const eas = readJson('eas.json');
   const text = readFileSync(join(root, 'eas.json'), 'utf8');
-  it('defines development, preview, preview-cloud, staging-preview and production build profiles', () => {
+  it('defines development, preview, preview-cloud, staging-preview, staging-testflight and production build profiles', () => {
     expect(Object.keys(eas.build)).toEqual([
       'development',
       'preview',
       'preview-cloud',
       'staging-preview',
+      'staging-testflight',
       'production',
     ]);
   });
@@ -44,13 +45,15 @@ describe('eas.json', () => {
     expect(eas.build.preview.env.EXPO_PUBLIC_AUTH_MODE).toBe('supabase');
     expect(eas.build.development.env.EXPO_PUBLIC_APP_ENV).toBe('development');
   });
-  it('cloud accounts are on in the preview-cloud and staging-preview profiles ONLY: development, preview and production stay off', () => {
+  it('cloud accounts are on in the preview-cloud, staging-preview and staging-testflight profiles ONLY: development, preview and production stay off', () => {
     for (const [name, profile] of Object.entries(eas.build) as [
       string,
       { env?: Record<string, string> },
     ][])
       expect(profile.env?.EXPO_PUBLIC_CLOUD_ACCOUNTS, name).toBe(
-        name === 'preview-cloud' || name === 'staging-preview' ? '1' : undefined,
+        name === 'preview-cloud' || name === 'staging-preview' || name === 'staging-testflight'
+          ? '1'
+          : undefined,
       );
   });
   it('preview-cloud is an isolated internal preview build: it extends nothing, is not a store or release profile, and is never submitted', () => {
@@ -62,7 +65,8 @@ describe('eas.json', () => {
     expect(p).not.toHaveProperty('extends');
     expect(p).not.toHaveProperty('autoIncrement');
     expect(p).not.toHaveProperty('channel');
-    expect(Object.keys(eas.submit ?? {})).toEqual(['production']);
+    // Only the production and the dedicated staging-testflight profiles can ever be submitted; no preview profile can.
+    expect(Object.keys(eas.submit ?? {})).toEqual(['production', 'staging-testflight']);
     expect(JSON.stringify(eas.submit)).not.toMatch(/preview/);
   });
   it('staging-preview is an isolated internal staging build: preview environment only, never submitted, never production', () => {
@@ -74,6 +78,27 @@ describe('eas.json', () => {
     expect(p).not.toHaveProperty('extends');
     expect(p).not.toHaveProperty('autoIncrement');
     expect(p).not.toHaveProperty('channel');
+  });
+  it('staging-testflight is the ONLY staging profile that can be uploaded to TestFlight: store distribution, staging backend, preview app environment, never production', () => {
+    const p = eas.build['staging-testflight'];
+    const stagingPreview = eas.build['staging-preview'];
+    // An internal-distribution (ad hoc) build cannot be uploaded to TestFlight; a store-distribution one can.
+    expect(stagingPreview.distribution).toBe('internal');
+    expect(p.distribution).toBe('store');
+    expect(p.environment).toBe('staging'); // URL and publishable key from the EAS "staging" environment, never from git
+    expect(p.autoIncrement).toBe(true); // build numbers come from EAS (appVersionSource: remote), so a re-upload never collides
+    expect(p.env.EXPO_PUBLIC_APP_ENV).toBe('preview'); // never 'production': the production guards stay out of its way and it can never be mistaken for a release build
+    expect(p.env.EXPO_PUBLIC_AUTH_MODE).toBe('supabase'); // never mock
+    expect(p).not.toHaveProperty('extends');
+    expect(p).not.toHaveProperty('channel');
+    // The same switches as staging-preview, so the two cannot drift, plus the synthetic barcode sample list explicitly OFF (a preview build would otherwise default to it).
+    const { EXPO_PUBLIC_BARCODE_PROVIDER: barcode, ...rest } = p.env;
+    expect(rest).toEqual(stagingPreview.env);
+    expect(barcode).toBe('off');
+    expect(Object.keys(eas.submit['staging-testflight'])).toEqual(['ios']);
+    expect(JSON.stringify(eas.submit['staging-testflight'])).not.toMatch(
+      /apple|asc|key|password|token|@/i,
+    ); // no Apple credential can live here
   });
   it('the existing profiles are unchanged by the cloud-account work', () => {
     expect(eas.build.development).toEqual({
@@ -157,7 +182,7 @@ describe('Friends is never switched on by a shared build profile', () => {
   };
   it('only the staging-preview profile sets EXPO_PUBLIC_SOCIAL or EXPO_PUBLIC_COMMUNITY, and the production profile cannot reach either', () => {
     for (const [name, p] of Object.entries(eas.build)) {
-      const staging = name === 'staging-preview';
+      const staging = name === 'staging-preview' || name === 'staging-testflight';
       expect(p.env?.EXPO_PUBLIC_SOCIAL, name).toBe(staging ? '1' : undefined);
       expect(p.env?.EXPO_PUBLIC_COMMUNITY, name).toBe(staging ? '1' : undefined);
       expect(p.env?.EXPO_PUBLIC_APPLE_HEALTH, name).toBe(staging ? '1' : undefined);
@@ -187,5 +212,39 @@ describe('Friends is never switched on by a shared build profile', () => {
         EXPO_PUBLIC_SOCIAL: '1',
       }),
     ).toThrow(/production/);
+  });
+});
+
+describe('the staging-testflight build, as the app will see it', () => {
+  const eas = readJson('eas.json');
+  const profileEnv = eas.build['staging-testflight'].env as Record<string, string>;
+  // The two values EAS supplies from its "staging" environment (placeholders here: no real project value is in the repository).
+  const withBackend = {
+    ...profileEnv,
+    EXPO_PUBLIC_SUPABASE_URL: 'https://bxhnrjulksganzydgrgm.supabase.co',
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_placeholder',
+  };
+  it('starts with the staging backend and the intended features, and nothing synthetic', () => {
+    const c = resolveConfig(withBackend);
+    expect(c).toMatchObject({
+      appEnv: 'preview',
+      authMode: 'supabase',
+      cloudAccounts: true,
+      social: true,
+      community: true,
+      appleHealth: true,
+      barcodeProvider: 'off',
+      contentFixtures: false,
+    });
+    expect(c.supabaseUrl).toBe('https://bxhnrjulksganzydgrgm.supabase.co');
+    expect(c.aiApiUrl).toBeUndefined(); // the AI gateway is not deployed: the Coach says it is unavailable, never a simulation
+  });
+  it('refuses to start without the backend values (it can never fall back to the mock)', () => {
+    expect(() => resolveConfig(profileEnv)).toThrow(/Supabase mode needs/);
+  });
+  it('refuses a secret key in the app', () => {
+    expect(() =>
+      resolveConfig({ ...withBackend, EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_secret_abc' }),
+    ).toThrow(/secret or service-role key/);
   });
 });
