@@ -170,7 +170,7 @@ Locally: `bash scripts/friends-staging-ios.sh --community --health` (Simulator; 
 - In the app (two staging accounts): progression shows; completing a workout raises XP once and a retry or a second device does not pay twice (covered locally by the integration tests); the league appears only after both people opt in and shows a username and one number; deleting an account removes its ledger rows.
 - The 17 social-integration tests (real Deno, real SQL) are the reference for expected behaviour.
   **Catalog diffs:** after each SQL step run `catalog-snapshot.sql` again and `diff` against the previous snapshot: the changed lines must be exactly those in section 4.
-  **Not testable on staging today:** the AI Coach (the AI gateway is not deployed: the app says so honestly), and workout content (staging has none; see `TESTFLIGHT_RELEASE_READINESS.md`).
+  **Not testable on staging today:** the AI Coach (the AI gateway is not deployed: the app says so honestly), and a live Coach (the optional `ai` function, secret `AI_PROVIDER=mock`, deploy with `--no-verify-jwt`, EAS variable `EXPO_PUBLIC_AI_API_URL`, is an approval-gated option; see `TESTFLIGHT_RELEASE_READINESS.md`). Workouts are bundled samples and need no staging content.
 
 ## 10. Apple Health build configuration
 

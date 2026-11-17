@@ -8,3 +8,4 @@ export * from './coach-mock';
 export * from './prompts';
 export * from './server';
 export * from './supabase-ports';
+export * from './edge';
