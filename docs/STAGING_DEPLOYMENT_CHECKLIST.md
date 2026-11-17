@@ -54,6 +54,8 @@ Record each output in `STAGING_STATUS.md` and **stop if anything differs from se
 7. Data is synthetic: read-only counts of `auth.users`, `community_members`, posts, uploads and `workout_sessions` match what was last recorded. **If real person data is present, take the full backup in section 5 first.**
 8. Security advisors: record today's findings so new ones can be recognised.
 
+**Read-only observation on 2026-11-17 (before this round's approval request, nothing changed):** the staging project is the intended one and has Edge Functions `community` (version 12), `social` (version 6) and `account` (version 3), all with JWT verification off as designed; none of the increments is applied (no `gm_ledger` or `gm_league_optin` tables, no `gm_rpc`, no health-import objects); `auth.users` holds 0 rows, so there is no existing person data to preserve. These version numbers differ from the ones recorded earlier in this document's history, so repeat steps 1 to 7 above immediately before applying anything. The `ai` function is not present and is not to be deployed.
+
 ## 3. Local gates (passing today; rerun on the final commit before asking for approval)
 
 ```bash
@@ -170,7 +172,7 @@ Locally: `bash scripts/friends-staging-ios.sh --community --health` (Simulator; 
 - In the app (two staging accounts): progression shows; completing a workout raises XP once and a retry or a second device does not pay twice (covered locally by the integration tests); the league appears only after both people opt in and shows a username and one number; deleting an account removes its ledger rows.
 - The 17 social-integration tests (real Deno, real SQL) are the reference for expected behaviour.
   **Catalog diffs:** after each SQL step run `catalog-snapshot.sql` again and `diff` against the previous snapshot: the changed lines must be exactly those in section 4.
-  **Not testable on staging today:** the AI Coach (the AI gateway is not deployed: the app says so honestly), and a live Coach (the optional `ai` function, secret `AI_PROVIDER=mock`, deploy with `--no-verify-jwt`, EAS variable `EXPO_PUBLIC_AI_API_URL`, is an approval-gated option; see `TESTFLIGHT_RELEASE_READINESS.md`). Workouts are bundled samples and need no staging content.
+  **Not testable on staging today:** the AI Coach (decided: unavailable for the first internal round; the dormant `ai` function is **not** deployed and no AI secret or `EXPO_PUBLIC_AI_API_URL` is set). Workouts are bundled samples and need no staging content.
 
 ## 10. Apple Health build configuration
 

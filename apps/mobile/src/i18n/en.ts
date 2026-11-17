@@ -1688,6 +1688,11 @@ export const en = {
   'coach.mockBanner':
     'Simulated coach (development build): replies come from a rule-based simulation, not a live AI. Nothing is sent to any AI service.',
   'coach.simulated': 'Simulated reply',
+  'coach.soonTitle': 'Your AI Coach is getting ready',
+  'coach.soonBody':
+    "This feature isn't available in this test version yet. Your Daily Fit Plan, workouts and food logging all work as usual.",
+  'coach.soonStatus': 'Coming soon',
+  'coach.soonPlaceholder': 'Coach messages are not available yet',
   'coach.placeholder': 'Ask your coach…',
   'coach.send': 'Send',
   'coach.thinking': 'Thinking…',

@@ -24,6 +24,7 @@ import { useProgression } from '@/gamification/progressionStore';
 import { errorMessage, useLoad } from '@/data/hooks';
 import type { CoachAction, Conversation } from '@/data/types';
 import { Bubble, TypingBubble } from '@/coach/ui';
+import { coachAvailable } from '@/coach/availability';
 import { t, type StringKey } from '@/i18n';
 import { MIN_TOUCH_TARGET, radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -70,12 +71,16 @@ function Coach() {
   const pulse = usePulse();
   const params = useLocalSearchParams<{ prompt?: string }>();
   const supported = typeof store.sendCoachMessage === 'function';
+  // Not available in this build (no AI gateway configured): show the friendly state, and make no request of any kind.
+  const unavailable = supported && !coachAvailable(config);
   const { data: convs } = useLoad(async (st) =>
-    st.listConversations ? st.listConversations() : [],
+    !unavailable && st.listConversations ? st.listConversations() : [],
   );
-  const { data: usage } = useLoad(async (st) => (st.getAiUsage ? st.getAiUsage() : null));
+  const { data: usage } = useLoad(async (st) =>
+    !unavailable && st.getAiUsage ? st.getAiUsage() : null,
+  );
   const { data: summary } = useLoad(async (st) =>
-    st.getCoachContextSummary ? st.getCoachContextSummary() : [],
+    !unavailable && st.getCoachContextSummary ? st.getCoachContextSummary() : [],
   );
   const [activeId, setActiveId] = useState<string | null>(null);
   const [startedNew, setStartedNew] = useState(false);
@@ -110,7 +115,7 @@ function Coach() {
   const send = useCallback(
     async (raw: string) => {
       const msg = raw.trim();
-      if (!msg || busy || !store.sendCoachMessage) return;
+      if (!msg || busy || unavailable || !store.sendCoachMessage) return;
       setBusy(true);
       setErr(null);
       setText('');
@@ -132,15 +137,15 @@ function Coach() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeId, busy, store],
+    [activeId, busy, store, unavailable],
   );
 
   useEffect(() => {
-    if (params.prompt && !sentParam.current && supported) {
+    if (params.prompt && !sentParam.current && supported && !unavailable) {
       sentParam.current = true;
       void send(String(params.prompt));
     }
-  }, [params.prompt, send, supported]);
+  }, [params.prompt, send, supported, unavailable]);
   useEffect(() => {
     // Only follow a conversation; an empty chat stays at the top so the welcome scene is visible.
     if (chat.length > 0 || busy) scroll.current?.scrollToEnd({ animated: false });
@@ -174,6 +179,73 @@ function Coach() {
           {t('coach.title')}
         </AppText>
         <Notice>{t('coach.paused')}</Notice>
+      </View>
+    );
+  }
+
+  if (unavailable) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
+        <DevBanner />
+        <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md }}>
+          <AppText variant="title" accessibilityRole="header">
+            {t('coach.title')}
+          </AppText>
+          <HeroCard world="coach">
+            <LinearGradient
+              pointerEvents="none"
+              colors={['rgba(26,14,46,0.9)', 'rgba(26,14,46,0.7)', 'rgba(26,14,46,0.15)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}
+            />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <View style={{ flex: 1, gap: spacing.sm }}>
+                <AppText variant="label" style={{ color: colors.onHero }}>
+                  {t('coach.soonStatus')}
+                </AppText>
+                <AppText
+                  variant="title"
+                  style={{ color: colors.onHero }}
+                  accessibilityRole="header"
+                >
+                  {t('coach.soonTitle')}
+                </AppText>
+                <AppText style={{ color: colors.onHero }}>{t('coach.soonBody')}</AppText>
+              </View>
+              <CharacterStage size={96} />
+            </View>
+          </HeroCard>
+        </ScrollView>
+        <View
+          style={{
+            padding: spacing.md,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+            backgroundColor: colors.surface,
+          }}
+        >
+          <TextInput
+            accessibilityLabel={t('coach.soonPlaceholder')}
+            accessibilityState={{ disabled: true }}
+            placeholder={t('coach.soonPlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            editable={false}
+            style={[
+              typography.body,
+              {
+                minHeight: MIN_TOUCH_TARGET,
+                color: colors.textMuted,
+                borderRadius: radius.lg,
+                borderWidth: 1,
+                borderColor: colors.border,
+                paddingHorizontal: spacing.md,
+                backgroundColor: colors.background,
+                opacity: 0.6,
+              },
+            ]}
+          />
+        </View>
       </View>
     );
   }

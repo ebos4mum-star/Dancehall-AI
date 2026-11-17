@@ -15,18 +15,23 @@ import { DepthCard } from '@/ui/Depth';
 import { Notice } from '@/ui/Banner';
 import { Reveal } from '@/ui/motion';
 import { Screen } from '@/ui/Screen';
+import { coachAvailable } from '@/coach/availability';
 import { haptics } from '@/ui/haptics';
 
 function WeeklyReview() {
-  const { store } = useApp();
+  const { store, config } = useApp();
+  const unavailable = !coachAvailable(config);
   const { data: reviews } = useLoad(async (s) =>
-    s.listWeeklyReviews ? s.listWeeklyReviews() : [],
+    !unavailable && s.listWeeklyReviews ? s.listWeeklyReviews() : [],
   );
-  const { data: usage } = useLoad(async (s) => (s.getAiUsage ? s.getAiUsage() : null));
+  const { data: usage } = useLoad(async (s) =>
+    !unavailable && s.getAiUsage ? s.getAiUsage() : null,
+  );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const u = usage?.features.find((f) => f.feature === 'weekly_review');
   const generate = async () => {
+    if (unavailable) return;
     setBusy(true);
     setErr(null);
     try {
@@ -49,12 +54,20 @@ function WeeklyReview() {
         pulse: 'idle',
       }}
     >
+      {unavailable ? (
+        <DepthCard>
+          <AppText variant="heading" accessibilityRole="header">
+            {t('coach.soonTitle')}
+          </AppText>
+          <AppText muted>{t('coach.soonBody')}</AppText>
+        </DepthCard>
+      ) : null}
       <AppText muted>{t('wr.intro')}</AppText>
-      <Notice tone="warning">{t('coach.mockBanner')}</Notice>
+      {unavailable ? null : <Notice tone="warning">{t('coach.mockBanner')}</Notice>}
       {usage && !usage.personalization ? <Notice>{t('wr.needConsent')}</Notice> : null}
       <Button
         label={(reviews ?? []).length ? t('wr.regenerate') : t('wr.generate')}
-        disabled={busy}
+        disabled={busy || unavailable}
         onPress={generate}
       />
       {u ? (
