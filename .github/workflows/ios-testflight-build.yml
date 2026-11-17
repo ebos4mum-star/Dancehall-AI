@@ -1,0 +1,252 @@
+name: iOS TestFlight build (signed IPA, no upload)
+
+# Manual only. Produces a SIGNED App Store IPA and STOPS. It never contacts App Store Connect and cannot upload: uploading is a different
+# workflow (ios-testflight-upload.yml) with its own protected environment and its own approval.
+#
+# Gates, in order: explicit commit input and branch ancestry check; confirmation phrase; the protected GitHub environment
+# "testflight-build" (required reviewers); release validation; environment guard (staging project only, no AI gateway, no fixtures);
+# signing material checks; IPA inspection. The signed IPA is encrypted before it is stored as an artifact, because this repository is
+# public and artifacts of a public repository are readable by anyone who can see it.
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: 'Full 40-character commit SHA to build (an explicit commit, never a branch name)'
+        required: true
+        type: string
+      release_branch:
+        description: 'Branch the commit must be on'
+        required: true
+        default: 'claude/ecstatic-meitner-8you9v'
+        type: string
+      build_number:
+        description: 'Build number (CFBundleVersion): a whole number higher than every build already uploaded for version 0.1.0'
+        required: true
+        type: string
+      confirm:
+        description: 'Type BUILD-SIGNED-IPA to confirm'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-testflight-build
+  cancel-in-progress: true
+
+env:
+  # Same pinned toolchain as the unsigned compile workflow (proven on macos-26 with Xcode 26.6).
+  XCODE_APP: /Applications/Xcode_26.6.app
+  APP_VERSION: '0.1.0'
+  BUNDLE_ID: com.dancehallfit.app
+
+jobs:
+  validate:
+    name: Release validation (no secrets)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check the inputs
+        env:
+          SHA: ${{ inputs.release_sha }}
+          BUILD: ${{ inputs.build_number }}
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          set -euo pipefail
+          [ "$CONFIRM" = "BUILD-SIGNED-IPA" ] || { echo "Confirmation phrase is wrong. Nothing was built."; exit 1; }
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "release_sha must be a full 40-character commit SHA."; exit 1; }
+          [[ "$BUILD" =~ ^[1-9][0-9]{0,8}$ ]] || { echo "build_number must be a whole number of 1 to 9 digits, without leading zeros."; exit 1; }
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+      - name: The commit must be on the named release branch (and never only on another branch)
+        env:
+          SHA: ${{ inputs.release_sha }}
+          BRANCH: ${{ inputs.release_branch }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+          git merge-base --is-ancestor "$SHA" "origin/$BRANCH" || { echo "$SHA is not on $BRANCH."; exit 1; }
+          echo "Release commit $SHA is on $BRANCH."
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:secrets
+      - run: pnpm check:workspace
+      - run: pnpm check:ci
+      - run: pnpm check:seed
+      - run: pnpm check:edge
+      - run: pnpm test:scripts
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  build:
+    name: Archive and export (signed IPA)
+    needs: validate
+    runs-on: macos-26
+    timeout-minutes: 90
+    # Protected environment: required reviewers, deployment branch rules, and the only place the signing secrets exist.
+    environment: testflight-build
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+      - name: Confirm the checked-out commit is the requested one
+        env:
+          SHA: ${{ inputs.release_sha }}
+        run: test "$(git rev-parse HEAD)" = "$SHA"
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Select the pinned Xcode and print the toolchain
+        run: |
+          set -euo pipefail
+          test -d "$XCODE_APP"
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          xcodebuild -version
+          sw_vers
+          echo "node $(node -v), pnpm $(pnpm -v), ruby $(ruby -v | cut -d' ' -f2), CocoaPods $(pod --version)"
+
+      - name: Environment guard (staging project only, no AI gateway, no fixtures)
+        env:
+          STAGING_SUPABASE_URL: ${{ vars.STAGING_SUPABASE_URL }}
+          STAGING_SUPABASE_PUBLISHABLE_KEY: ${{ vars.STAGING_SUPABASE_PUBLISHABLE_KEY }}
+        run: node scripts/release/release-env.mjs --github-env "$GITHUB_ENV"
+
+      - name: Generate the iOS project (app.json and app.config.js are the source; ios/ is not committed)
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform ios --no-install --clean
+
+      - name: Set the build number (generated project only)
+        env:
+          BUILD: ${{ inputs.build_number }}
+        run: |
+          set -euo pipefail
+          PLIST="$(ls apps/mobile/ios/*/Info.plist | head -n 1)"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD" "$PLIST"
+
+      - name: Verify the generated project (version, HealthKit entitlement, privacy manifest, permissions)
+        env:
+          BUILD: ${{ inputs.build_number }}
+        run: node scripts/release/verify-ios-project.mjs apps/mobile/ios --version "$APP_VERSION" --build "$BUILD"
+
+      - name: Install pods
+        working-directory: apps/mobile/ios
+        run: pod install
+
+      - name: Import the distribution certificate and profile
+        id: signing
+        env:
+          P12_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERT_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERT_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.IOS_APPSTORE_PROFILE_BASE64 }}
+          TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+        run: bash scripts/release/signing-import.sh
+
+      - name: Apply manual App Store signing to the app target (generated project only)
+        env:
+          TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          PROFILE_NAME: ${{ steps.signing.outputs.profile_name }}
+        run: |
+          set -euo pipefail
+          ruby scripts/release/set-signing.rb apps/mobile/ios "$TEAM_ID" "$PROFILE_NAME"
+
+      - name: Archive
+        working-directory: apps/mobile/ios
+        run: |
+          set -o pipefail
+          WS="$(ls -d *.xcworkspace | head -n 1)"
+          SCHEME="${WS%.xcworkspace}"
+          xcodebuild -workspace "$WS" -scheme "$SCHEME" -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/app.xcarchive" \
+            archive 2>&1 | tee "$RUNNER_TEMP/archive.log" | tail -n 40
+
+      - name: Export the App Store IPA
+        env:
+          TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          PROFILE_NAME: ${{ steps.signing.outputs.profile_name }}
+        run: |
+          set -eo pipefail
+          cat > "$RUNNER_TEMP/export.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>signingCertificate</key><string>Apple Distribution</string>
+            <key>provisioningProfiles</key>
+            <dict><key>$BUNDLE_ID</key><string>$PROFILE_NAME</string></dict>
+            <key>uploadSymbols</key><false/>
+            <key>destination</key><string>export</string>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/app.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" -exportOptionsPlist "$RUNNER_TEMP/export.plist" \
+            2>&1 | tee "$RUNNER_TEMP/export.log" | tail -n 30
+          ls "$RUNNER_TEMP/export"/*.ipa
+
+      - name: Inspect the signed IPA
+        env:
+          BUILD: ${{ inputs.build_number }}
+        run: |
+          set -euo pipefail
+          EXPECT_REF="$(sed -E 's#^https://([a-z]{20})\.supabase\.co/?$#\1#' <<<"$EXPO_PUBLIC_SUPABASE_URL")" \
+            bash scripts/release/verify-ipa.sh "$(ls "$RUNNER_TEMP"/export/*.ipa | head -n 1)" "$APP_VERSION" "$BUILD"
+
+      - name: Package the artifact (encrypted)
+        id: pack
+        env:
+          ARTIFACT_PASSPHRASE: ${{ secrets.RELEASE_ARTIFACT_PASSPHRASE }}
+          BUILD: ${{ inputs.build_number }}
+        run: |
+          set -euo pipefail
+          : "${ARTIFACT_PASSPHRASE:?RELEASE_ARTIFACT_PASSPHRASE is not set in the environment}"
+          IPA="$(ls "$RUNNER_TEMP"/export/*.ipa | head -n 1)"
+          SHA256="$(shasum -a 256 "$IPA" | cut -d' ' -f1)"
+          mkdir -p "$RUNNER_TEMP/pack/out"
+          cp "$IPA" "$RUNNER_TEMP/pack/app.ipa"
+          cp "$RUNNER_TEMP/archive.log" "$RUNNER_TEMP/export.log" "$RUNNER_TEMP/pack/"
+          tar -C "$RUNNER_TEMP/pack" -czf "$RUNNER_TEMP/pack/bundle.tgz" app.ipa archive.log export.log
+          openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -pass env:ARTIFACT_PASSPHRASE \
+            -in "$RUNNER_TEMP/pack/bundle.tgz" -out "$RUNNER_TEMP/pack/out/release-$BUILD.tgz.enc"
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+
+      - name: Keep the encrypted artifact (short retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: testflight-ipa-encrypted
+          path: ${{ runner.temp }}/pack/out/release-${{ inputs.build_number }}.tgz.enc
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Summary (what to hand to the upload workflow)
+        run: |
+          {
+            echo "### Signed IPA built (NOT uploaded)"
+            echo "- commit: \`${{ inputs.release_sha }}\`"
+            echo "- version / build: \`$APP_VERSION\` / \`${{ inputs.build_number }}\`"
+            echo "- IPA sha256: \`${{ steps.pack.outputs.sha256 }}\`"
+            echo "- run id for the upload workflow: \`${{ github.run_id }}\`"
+            echo "- Xcode: \`$(xcodebuild -version | tr '\n' ' ')\`"
+            echo "Nothing was sent to App Store Connect."
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove signing material
+        if: always()
+        run: bash scripts/release/signing-cleanup.sh

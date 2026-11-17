@@ -98,3 +98,103 @@ test('native: archive, export and upload are rejected', () => {
 });
 test('native: eas build is still rejected', () =>
   assert.notEqual(runNamed(N, NATIVE + '      - run: eas build\n').status, 0));
+
+// The two release workflows (build, then separately upload): the real files must pass, and each safety rule must bite.
+import { readFileSync } from 'node:fs';
+const wf = (n) => readFileSync(resolve(import.meta.dirname, '../.github/workflows', n), 'utf8');
+const B = 'ios-testflight-build.yml';
+const U = 'ios-testflight-upload.yml';
+test('release: the real build and upload workflows pass', () => {
+  assert.equal(runNamed(B, wf(B)).status, 0);
+  assert.equal(runNamed(U, wf(U)).status, 0);
+});
+test('release: the same content under another name is judged by the strict generic rules', () => {
+  assert.notEqual(runNamed('other.yml', wf(B)).status, 0);
+});
+test('release build: can never upload or touch App Store Connect', () => {
+  for (const bad of [
+    'xcrun altool --upload-app',
+    'xcrun altool --validate-app',
+    'xcrun iTMSTransporter',
+    'fastlane pilot',
+    'eas submit',
+    'eas build',
+    'echo ASC_API_KEY',
+  ])
+    assert.notEqual(runNamed(B, wf(B) + `      - run: ${bad}\n`).status, 0, bad);
+});
+test('release build: no automatic trigger, the environment, the phrase, the explicit commit and ancestry check are required', () => {
+  const t = wf(B);
+  assert.notEqual(
+    runNamed(
+      B,
+      t.replace('workflow_dispatch:', 'push:\n    branches: [main]\n  workflow_dispatch:'),
+    ).status,
+    0,
+  );
+  assert.notEqual(
+    runNamed(B, t.replace('environment: testflight-build', 'environment: other')).status,
+    0,
+  );
+  assert.notEqual(runNamed(B, t.replaceAll('BUILD-SIGNED-IPA', 'GO')).status, 0);
+  assert.notEqual(
+    runNamed(B, t.replaceAll('ref: ${{ inputs.release_sha }}', 'ref: main')).status,
+    0,
+  );
+  assert.notEqual(runNamed(B, t.replace('merge-base --is-ancestor', 'true')).status, 0);
+  assert.notEqual(runNamed(B, t.replace('runs-on: macos-26', 'runs-on: macos-latest')).status, 0);
+  assert.notEqual(runNamed(B, t.replace(/XCODE_APP:.*/, 'FOO: 1')).status, 0);
+});
+test('release: only allow-listed secrets and variables, only after the protected environment, never production or service-role', () => {
+  const t = wf(B);
+  assert.notEqual(
+    runNamed(B, t.replace('RELEASE_ARTIFACT_PASSPHRASE', 'SOME_OTHER_SECRET')).status,
+    0,
+  );
+  assert.notEqual(
+    runNamed(B, t.replace('vars.APPLE_TEAM_ID', 'vars.PRODUCTION_SUPABASE_URL')).status,
+    0,
+  );
+  assert.notEqual(
+    runNamed(B, t + '      - run: echo ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}\n').status,
+    0,
+  );
+  assert.notEqual(
+    runNamed(
+      B,
+      t.replace(
+        'jobs:',
+        'jobs:\n  early:\n    runs-on: ubuntu-latest\n    timeout-minutes: 5\n    steps:\n      - run: echo ${{ secrets.IOS_DISTRIBUTION_CERT_PASSWORD }}',
+      ),
+    ).status,
+    0,
+  );
+});
+test('release upload: dry run by default, upload only when dry_run is false, exactly once, hash checked, own environment and phrase', () => {
+  const t = wf(U);
+  assert.notEqual(runNamed(U, t.replace('default: true', 'default: false')).status, 0);
+  assert.notEqual(
+    runNamed(U, t.replace('if: ${{ inputs.dry_run == false }}', 'if: always()')).status,
+    0,
+  );
+  assert.notEqual(runNamed(U, t + '      - run: xcrun altool --upload-app -f x.ipa\n').status, 0);
+  assert.notEqual(runNamed(U, t.replace('shasum -a 256', 'true')).status, 0);
+  assert.notEqual(
+    runNamed(U, t.replace('environment: testflight-upload', 'environment: testflight-build'))
+      .status,
+    0,
+  );
+  assert.notEqual(runNamed(U, t.replaceAll('UPLOAD-TO-TESTFLIGHT', 'GO')).status, 0);
+  assert.notEqual(
+    runNamed(
+      U,
+      t.replace('workflow_dispatch:', 'schedule:\n    - cron: "0 * * * *"\n  workflow_dispatch:'),
+    ).status,
+    0,
+  );
+  assert.notEqual(runNamed(U, t.replace('ASC_API_KEY_P8', 'ASC_OTHER')).status, 0);
+});
+test('release: the build workflow holds no App Store Connect secrets and the upload workflow holds no signing certificate', () => {
+  assert.doesNotMatch(wf(B), /ASC_API|altool|environment: testflight-upload/);
+  assert.doesNotMatch(wf(U), /IOS_DISTRIBUTION_CERT|IOS_APPSTORE_PROFILE/);
+});

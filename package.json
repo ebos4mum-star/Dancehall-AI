@@ -16,7 +16,7 @@
     "check:secrets": "node scripts/check-secrets.mjs",
     "check:workspace": "node scripts/check-workspace.mjs",
     "check:ci": "node scripts/check-ci-config.mjs",
-    "test:scripts": "node --test scripts/*.test.mjs scripts/staging/*.test.mjs",
+    "test:scripts": "node --test scripts/*.test.mjs scripts/staging/*.test.mjs scripts/release/*.test.mjs",
     "verify": "pnpm check:secrets && pnpm check:workspace && pnpm check:ci && pnpm check:seed && pnpm check:edge && pnpm test:scripts && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm db:test",
     "db:test": "bash supabase/tests/run.sh && bash supabase/tests/account-pg.sh",
     "check:seed": "node scripts/gen-seed.mjs --check",
