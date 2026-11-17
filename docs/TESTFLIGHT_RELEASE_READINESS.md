@@ -4,7 +4,7 @@ Status: **local preparation complete; nothing built, uploaded, submitted, applie
 
 ## 0. Final release report
 
-**Branch and commit.** Branch `claude/ecstatic-meitner-8you9v` (never merged to `main`; nothing pushed to `feature/overnight-nutrition-fitness`). Final code and configuration commit: `@@FINAL@@`.
+**Branch and commit.** Branch `claude/ecstatic-meitner-8you9v` (never merged to `main`; nothing pushed to `feature/overnight-nutrition-fitness`). Final code and configuration commit: `6e11c55`.
 
 **READY FOR FIRST EAS BUILD: NO, only because of account-side steps that need you** (none is a code problem):
 
