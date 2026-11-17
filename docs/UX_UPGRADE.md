@@ -284,3 +284,42 @@ See `docs/NATIVE_TEST_PLAN.md` (every screen, keyboard, art, Pulse, haptics, cha
 2. **Haptics, camera and barcode scanning, real Apple Watch workouts, real VoiceOver feel and real performance can only be proven on a physical iPhone.** The Simulator cannot cover them.
 3. **Server-side items cannot be tested on staging until you approve staging changes** (they are not applied or deployed there): the friends league and server XP total (`gamification.up.sql`, `health_sync.up.sql`, `social` function), the server-side one-workout-counts-once rule for Group Goals (`social.patch2`), the newer Community safety phrases (`community.patch3`), and Community photos (needs `text_only`/`open`). They do not block the client-side round; decide whether to include them or defer them.
    Not blockers: the earlier art and product decisions (production illustration, a Pulse pose beyond thinking), which are polish.
+
+---
+
+# Round 5: badge-date accuracy and final native-testing preparation (after f030e93)
+
+## First: badge date accuracy (a real weakness, now fixed)
+
+**The problem.** Round 4 labelled a badge "Earned <date>" by replaying the XP engine with the person's _current_ rest days and weekly goal. Those settings are not stored over time, so if they had been different earlier the true date could differ. "Earned" over-claimed.
+**Which badges depend on which setting** (read from the engine and then checked against real engine replays in the tests):
+
+| Badge                                                        | Depends on        | Why                                                                                |
+| ------------------------------------------------------------ | ----------------- | ---------------------------------------------------------------------------------- |
+| Seven or thirty active days in a row; rest respected         | planned rest days | a rest day is neutral in the streak walk                                           |
+| Level 5, level 10, ten quests                                | weekly goal       | the weekly "active days" quest completes at the goal and its XP counts toward both |
+| Season finisher                                              | nothing           | fixed seasonal goal                                                                |
+| **The fix (client only, no engine, SQL or storage change).** |
+
+- For each badge the day is worked out under the current settings **and the range it could take under any setting the person could have had** (every possible set of rest days, 99 in all; weekly goal from 1 to 5, bounded by the extremes because a lower goal can only complete weekly quests sooner and a higher one only later).
+- **Earned <date>** only when that range is a single day (no setting could change it). **Recorded <date>** is kept exactly as before (it is a fact about this phone). **Estimated <date>**, shown with its range and the name of the setting ("it depends on your rest days ... anywhere from X to Y"), only when the history is complete and the range is at most 14 days. Otherwise **Earlier** with no date. Order of certainty: Earned, Recorded, Estimated, Earlier.
+- Weekly quests are now dated on the day they were completed, as a live engine would have awarded them, instead of the last day of their week.
+- The footnote no longer claims every date is exact; it describes only what is shown.
+  **Performance finding while verifying.** The first version replayed the engine dozens of times and took about **3 seconds** for a 60-day history on a fast desktop, which would have frozen a phone. It now reuses the engine events the app already computed and takes about **15 to 40 ms**. Every date it produces is checked against real engine replays in the tests.
+  **Evidence.** Browser, normal and Reduce Motion, three seeded accounts: a weekday-only account shows **Estimated** dates with ranges and a dashed rail; a young daily account shows **Earned** dates; a long-history account shows **Earlier** and no dates (`story-milestones-gappy-*.png`, `story-milestones-young-*.png`, `story-milestones-long-*.png`, `results-analytics.json`).
+  **Regression tests added (history.test.ts, 58 tests in the gamification folder in total):** the dependence table is true on the real engine (rest days never move level, quest or season badges; the goal never moves streak, rest-respected or season badges); the fast streak walk equals the engine for several rest-day choices; the goal-based days equal real engine replays for goals 1 to 5; the bound a lower goal is never later and a higher never earlier; "exact" really means exact (no goal and no rest-day choice moves it, on the real engine); a rest-day-dependent date is not exact and carries its range and cause; a too-wide range becomes Earlier; precedence (Earned over Recorded over Estimated over nothing); Recorded preserved when history is incomplete; "earlier" never carries a date, only "estimated" has a range; a speed guard (60-day history under 300 ms); 99 rest-day choices.
+
+## Second: staging readiness (documentation and local rehearsal only; nothing executed on staging)
+
+`docs/STAGING_DEPLOYMENT_CHECKLIST.md`: authorizations needed; what staging holds today; read-only verification first; the four migrations in dependency order with their exact expected effects; backup and a rollback decision table; the three Edge Function redeployments and their order; feature flags and secrets; account-deletion maintenance scheduling; Friends, Community and gamification smoke tests; Apple Health build configuration; production isolation safeguards; a sign-off table.
+New, all local: `supabase/proposed/staging-increment-dry-run.sh` rebuilds staging's _actual_ current state from the pinned commits (each file's hash checked against the hash recorded when it was applied), applies only the four remaining increments and proves they equal a fresh build of the current files (1,445 catalog objects), the proposed tests pass, and the rollback returns staging's exact prior state (1,406 objects) and re-applies cleanly. It also produced a reviewed rollback file that did not exist (`social.patch2_eligible_workouts.down.sql`; previously only described in prose) and a read-only catalog snapshot (`supabase/staging/catalog-snapshot.sql`) to prove a hosted rollback by an empty diff. A read-only probe for the new gamification routes (`scripts/staging/gm-boundary-checks.mjs`, 5 tests) is ready for before and after the `social` redeploy. The rehearsal is part of `pnpm db:test`.
+
+## Third: native testing
+
+`docs/NATIVE_TEST_PLAN.md` is restructured into Part 2 Simulator, Part 3 physical iPhone and Part 4 staging integration, with minimum Mac requirements (60 GB free minimum, 80 to 100 GB recommended (estimates); Xcode 26.4+, iOS 16.4+, Node 22.13+ as reported for Expo SDK 58 by a web search I could not confirm on Expo's own page from this environment; confirm there). It includes a watch item found while preparing: one full engine computation takes about 260 ms for a 60-day heavy history on a desktop (the shared `localDateKey` builds a new `Intl.DateTimeFormat` per call). Unmeasured on a device, possibly fine. A result-identical fix was measured here (one cached formatter: 243 ms to 28 ms, about 8.5 times faster, identical output), but it touches the shared engine and its Edge copies, so it needs your approval and I did not make it. The same cache is applied inside `history.test.ts` only, which is why the engine cross-checks now run in about 6 seconds.
+
+## What needs your authorization (consolidated)
+
+**Before staging deployment** (`STAGING_DEPLOYMENT_CHECKLIST.md` section 0): A1 apply four migrations to staging; A2 redeploy `social`, `community`, `account` to staging; A3 (only if Claude runs HTTP checks) add the staging host to the network allow list, then remove it; A4 (optional) synthetic staging accounts and cleanup; A5 schedule the account-deletion maintenance call (choose the mechanism; enabling `pg_cron` and `pg_net` is itself a hosted change); A6 confirm no secret changes and Community stays Read only.
+**Before native testing:** a Mac with Xcode and a Simulator runtime (Part 0), your staging publishable key in your local `.friends-staging.env`, and for a physical iPhone your own signing. No EAS or TestFlight build is needed or requested. Simulator testing needs **no** staging change.
+**Optional decisions:** the engine performance fix above (only if a device shows a stall); temporary Community open mode to re-test photos; production remains untouched.

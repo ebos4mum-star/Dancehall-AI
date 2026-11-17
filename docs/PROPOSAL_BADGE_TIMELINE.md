@@ -4,6 +4,8 @@ Status: **proposal; partly implemented, see the update below.** Nothing is imple
 
 **Update (Round 4):** the owner approved the three-way model (Earned/qualified, Recorded, Earlier) and that a first-sync timestamp is never an achievement date. Implemented device-only with no database change: qualified dates come from replaying the engine on the records and are shown only when the history is complete; the recorded day is kept in the existing per-account seen ledger. The server column and `gm_milestones` function in this proposal are NOT built and need separate approval. See `UX_UPGRADE.md` Round 4.
 
+**Update (Round 5):** the "qualified" date was tightened. Settings are not stored historically, so a date is now "Earned" only when no possible rest-day or weekly-goal setting could change it; otherwise it is "Estimated" (shown with its range and the setting it depends on) or "Earlier". See `UX_UPGRADE.md` Round 5.
+
 ## 1. What is wanted
 
 A "milestones" timeline (badges, streak milestones, a completed season) showing **when** each was earned, accurate or honestly undated.

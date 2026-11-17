@@ -35,6 +35,8 @@ if bash supabase/proposed/community-dry-run.sh; then :; else fail=1; fi
 if bash supabase/proposed/social-dry-run.sh; then :; else fail=1; fi
 # The proposed Apple Health columns and gamification ledger/league, rehearsed the same way.
 if bash supabase/proposed/gamification-dry-run.sh; then :; else fail=1; fi
+# The staging upgrade (what staging holds today, plus only the remaining increments, then rollback), rehearsed on throwaway databases.
+if bash supabase/proposed/staging-increment-dry-run.sh; then :; else fail=1; fi
 # The proposed account-deletion executor (App Review 5.1.1(v)), rehearsed the same way.
 if bash supabase/proposed/deletion-dry-run.sh; then :; else fail=1; fi
 [ "$fail" = 0 ] && echo "Database tests passed." || { echo "Database tests FAILED." >&2; exit 1; }

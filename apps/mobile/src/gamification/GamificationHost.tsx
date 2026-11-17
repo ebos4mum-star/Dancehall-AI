@@ -209,6 +209,7 @@ export function GamificationHost() {
         events,
         localActivityXp: events.reduce((a, e) => a + e.xp, 0),
         firstRecord: firstRecordDay(engineInput, workoutDays),
+        engineEvents: local.events,
         input: engineInput,
       },
     });

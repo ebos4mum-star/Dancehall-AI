@@ -2,6 +2,7 @@
 /*
  * Browser verification of the XP history card and the badge timeline on Progress (real web export, MOCK mode, synthetic records shifted to end today).
  *  - "long": a long history (older than the 60-day window): must show partial coverage and NO qualified badge dates.
+ *  - "gappy": 18 days of weekday-only activity: a streak badge depends on the planned rest days, so it must be Estimated (with a range) or Earlier, never Earned.
  *  - "young": 11 days of records: must show where history starts and qualified badge dates.
  * Run in normal and Reduce Motion modes. Browser only: not a native check.
  * Usage: pnpm export:web && node e2e/analytics.cjs   Output: docs/review-shots/story-xp-*.png, story-milestones-*.png, results-analytics.json
@@ -11,7 +12,11 @@ const fs = require('node:fs');
 const { enterPin } = require('./auth.cjs');
 const OUT = process.env.REVIEW_OUT || '../../docs/review-shots';
 const base = 'http://127.0.0.1:8099';
-const SEEDS = { long: '/tmp/seeds/veteran-now.json', young: '/tmp/seeds/young-now.json' };
+const SEEDS = {
+  long: '/tmp/seeds/veteran-now.json',
+  young: '/tmp/seeds/young-now.json',
+  gappy: '/tmp/seeds/gappy-now.json',
+};
 const results = {};
 const text = (p) => p.evaluate(() => document.body.innerText);
 (async () => {
@@ -85,9 +90,12 @@ const text = (p) => p.evaluate(() => document.body.innerText);
         await p.screenshot({ path: `${OUT}/story-milestones-${tag}.png` });
         const t2 = await text(p);
         r.earnedDates = (t2.match(/Earned \d{1,2} [A-Z][a-z]{2} \d{4}/g) ?? []).length;
+        r.estimatedDates = (t2.match(/Estimated \d{1,2} [A-Z][a-z]{2} \d{4}/g) ?? []).length;
         r.recorded = /Recorded \d/.test(t2);
-        r.undated = /The date is not known/.test(t2);
-        r.completeSentence = /Your records cover your whole history/.test(t2);
+        r.undated = /date cannot be known/.test(t2);
+        r.exactNote = /Earned dates are exact/.test(t2);
+        r.estimateNote = /Estimated dates depend on a setting/.test(t2);
+        r.noLegacyClaim = !/each date is the day the app/.test(t2);
         r.hasMilestones = /Milestones/.test(t2);
         r.pageErrors = errors;
       } catch (e) {

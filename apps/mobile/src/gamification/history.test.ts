@@ -1,11 +1,21 @@
-import { describe, expect, it } from 'vitest';
-import { computeGamification, DEFAULT_GM_PREFS, type GmInput } from '@dancehall/shared';
+import { afterAll, describe, expect, it } from 'vitest';
+import {
+  activeDaySet,
+  BADGE_IDS,
+  computeGamification,
+  DEFAULT_GM_PREFS,
+  type BadgeId,
+  type GmInput,
+} from '@dancehall/shared';
 import {
   activityEventsOf,
   badgeMilestones,
   firstRecordDay,
   historyIsComplete,
-  qualifiedBadgeDays,
+  badgeDayAnalysis,
+  restSubsets,
+  SETTING_DEPENDENCE,
+  streakReachDays,
   recordsUpTo,
   WINDOW_DAYS,
   xpHistory,
@@ -13,6 +23,27 @@ import {
 } from './history';
 import { cleanRecorded } from './prefs';
 import { diffRewards, EMPTY_SEEN, snapshotOf } from './rewards';
+
+// TEST-ONLY speed-up. The shared `localDateKey` builds a new Intl.DateTimeFormat on every call and the engine calls it thousands of times per computation, so replaying the engine
+// day by day for the cross-checks below takes minutes. Reusing one formatter per locale and options gives the identical result about 8x faster (measured: 243 ms to 28 ms for a 60-day
+// history). It is applied to this test file only and restored afterwards; the app and the shared engine are unchanged.
+const RealDateTimeFormat = Intl.DateTimeFormat;
+const formatterCache = new Map<string, Intl.DateTimeFormat>();
+(Intl as unknown as { DateTimeFormat: unknown }).DateTimeFormat = function (
+  locales?: string | string[],
+  options?: Intl.DateTimeFormatOptions,
+) {
+  const key = JSON.stringify([locales, options]);
+  let f = formatterCache.get(key);
+  if (!f) {
+    f = new RealDateTimeFormat(locales, options);
+    formatterCache.set(key, f);
+  }
+  return f;
+};
+afterAll(() => {
+  (Intl as unknown as { DateTimeFormat: unknown }).DateTimeFormat = RealDateTimeFormat;
+});
 
 const TODAY = '2026-11-16';
 const DAY = 86_400_000;
@@ -57,7 +88,6 @@ const daily = (back: number, mealBack = 75): Rec => ({
   mealDays: span(0, Math.min(back, mealBack)),
   habitDays: [],
 });
-const upTo = recordsUpTo;
 const histOf = (i: GmInput, opts: Partial<Parameters<typeof xpHistory>[0]> = {}) => {
   const g = computeGamification(i);
   const events = activityEventsOf(g.events);
@@ -218,24 +248,251 @@ describe('offline and delayed synchronization', () => {
   });
 });
 
-describe('badge dates', () => {
-  const full = build(daily(59));
-  const g = computeGamification(full);
-  const q = qualifiedBadgeDays(full, g.badges);
+const dowOf = (k: string) => new Date(`${k}T00:00:00Z`).getUTCDay();
+const daysBack = (n: number) => span(0, n - 1);
+type Awards = Partial<Record<BadgeId, string>>;
+/** Independent of the code under test: the real engine, run on the records known by each day from the first record forward, all badges in one pass. */
+const linearAwards = (input: GmInput): Awards => {
+  const days = [
+    ...input.sessions.map((x) => x.completedAt!.slice(0, 10)),
+    ...input.mealLogDays,
+    ...input.habitDays.map((h) => h.day),
+  ].sort();
+  const out: Awards = {};
+  for (let d = days[0]!; d <= input.today; d = addDays(d, 1))
+    for (const id of computeGamification(recordsUpTo(input, d)).badges) out[id] ??= d;
+  return out;
+};
+const withPrefs = (i: GmInput, p: Partial<GmInput['prefs']>): GmInput => ({
+  ...i,
+  prefs: { ...i.prefs, ...p },
+});
+const analyse = (i: GmInput) => {
+  const g = computeGamification(i);
+  return { g, a: badgeDayAnalysis(i, g.badges, g.events) };
+};
+/** Mon to Fri active, weekends off: whether the streak survives depends on which weekdays are planned rest days. */
+const weekdayOnly = (n: number): GmInput => ({
+  ...build({
+    workoutDays: daysBack(n).filter((d) => dowOf(d) >= 1 && dowOf(d) <= 5),
+    mealDays: [],
+    habitDays: [],
+  }),
+  prefs: { ...DEFAULT_GM_PREFS, restWeekdays: [0, 6] },
+});
+const LONG = 120_000;
 
-  it('every qualified date is the exact day the engine first awards that badge (replayed on the records up to that day)', () => {
-    const awarded = Object.keys(q) as Array<keyof typeof q>;
-    expect(awarded.length).toBeGreaterThanOrEqual(3);
-    for (const id of awarded) {
-      const d = q[id]!;
-      expect(computeGamification(upTo(full, d)).badges).toContain(id);
-      expect(computeGamification(upTo(full, addDays(d, -1))).badges).not.toContain(id);
-    }
+describe('which settings a badge date depends on (checked against the real engine)', () => {
+  const everyDay = build(daily(24));
+  const sparse = build({
+    workoutDays: daysBack(26).filter((_, k) => k % 3 !== 0),
+    mealDays: daysBack(26).filter((_, k) => k % 2 === 0),
+    habitDays: daysBack(26).filter((_, k) => k % 4 === 0),
   });
-  it('streak and level dates are plausible and ordered (7-day streak before the 30-day streak)', () => {
-    expect(q.streak_7 && q.streak_30 && q.streak_7 < q.streak_30).toBe(true);
-    expect(q.level_5).toBeTruthy();
+  const REST_FREE: BadgeId[] = ['level_5', 'level_10', 'quests_10', 'season_finisher'];
+  const GOAL_FREE: BadgeId[] = ['streak_7', 'streak_30', 'rest_respected', 'season_finisher'];
+  it(
+    'level, quest-count and season badges do not move when the rest days change',
+    () => {
+      for (const i of [everyDay, sparse]) {
+        const base = linearAwards(withPrefs(i, { restWeekdays: [0] }));
+        for (const rest of [[], [0, 3, 5, 6]]) {
+          const other = linearAwards(withPrefs(i, { restWeekdays: rest }));
+          for (const id of REST_FREE) expect(other[id], `${id} rest ${rest}`).toBe(base[id]);
+        }
+      }
+    },
+    LONG,
+  );
+  it(
+    'streak, rest-respected and season badges do not move when the weekly goal changes',
+    () => {
+      for (const i of [everyDay, sparse]) {
+        const base = linearAwards(withPrefs(i, { targetDaysPerWeek: 3 }));
+        for (const goal of [1, 5]) {
+          const other = linearAwards(withPrefs(i, { targetDaysPerWeek: goal }));
+          for (const id of GOAL_FREE) expect(other[id], `${id} goal ${goal}`).toBe(base[id]);
+        }
+      }
+    },
+    LONG,
+  );
+  it(
+    'the streak walk reproduced for fast search equals the engine for several rest-day choices',
+    () => {
+      for (const i of [everyDay, weekdayOnly(26)]) {
+        const active = activeDaySet(i);
+        for (const rest of [[], [0, 6], [1, 3, 5]]) {
+          const fast = streakReachDays(active, new Set(rest), i.today, [7, 14, 30]);
+          const real = linearAwards({ ...i, prefs: { ...i.prefs, restWeekdays: rest } });
+          expect(fast[7] ?? undefined, `rest ${rest} streak_7`).toBe(real.streak_7);
+          expect(fast[30] ?? undefined, `rest ${rest} streak_30`).toBe(real.streak_30);
+          if (rest.length > 0) expect(fast[14] ?? undefined).toBe(real.rest_respected);
+        }
+      }
+    },
+    LONG,
+  );
+  it(
+    'weekly-goal badge days worked out from the engine events equal real engine replays, for every goal',
+    () => {
+      for (const i of [everyDay, sparse]) {
+        const g = computeGamification(i);
+        for (const goal of [1, 2, 3, 4, 5]) {
+          const real = linearAwards(withPrefs(i, { targetDaysPerWeek: goal }));
+          const mine = badgeDayAnalysis(
+            withPrefs(i, { targetDaysPerWeek: goal }),
+            [...BADGE_IDS],
+            g.events,
+          );
+          for (const id of ['level_5', 'level_10', 'quests_10', 'season_finisher'] as const)
+            expect(mine[id]?.day, `${id} goal ${goal}`).toBe(real[id]);
+        }
+      }
+    },
+    LONG,
+  );
+  it(
+    'a lower weekly goal never makes a badge later, and a higher one never earlier (the bound the estimate relies on)',
+    () => {
+      const g = computeGamification(sparse);
+      for (const id of ['level_5', 'quests_10'] as const) {
+        const days = [1, 2, 3, 4, 5].map(
+          (goal) =>
+            badgeDayAnalysis(withPrefs(sparse, { targetDaysPerWeek: goal }), [id], g.events)[id]
+              ?.day ?? null,
+        );
+        const real = days.filter((d): d is string => d !== null);
+        for (let k = 1; k < real.length; k++) expect(real[k]! >= real[k - 1]!).toBe(true);
+        const firstNull = days.indexOf(null);
+        if (firstNull >= 0) expect(days.slice(firstNull).every((d) => d === null)).toBe(true);
+      }
+    },
+    LONG,
+  );
+});
+
+describe('badge dates: exact only when no setting could change them', () => {
+  const robust = build(daily(24));
+  const { g: gR, a: aR } = analyse(robust);
+
+  it('a history where no rest day or goal matters gives exact dates, and they are the real first-award days', () => {
+    expect(gR.badges).toContain('streak_7');
+    const s7 = aR.streak_7!;
+    expect(s7.exact).toBe(true);
+    expect(s7.from).toBe(s7.day);
+    expect(s7.to).toBe(s7.day);
   });
+  it(
+    'exact really means exact: no weekly goal and no rest-day choice moves it (checked on the real engine)',
+    () => {
+      const exactIds = (Object.keys(aR) as BadgeId[]).filter((id) => aR[id]!.exact);
+      expect(exactIds.length).toBeGreaterThan(0);
+      for (const goal of [1, 5]) {
+        const real = linearAwards(withPrefs(robust, { targetDaysPerWeek: goal }));
+        for (const id of exactIds) expect(real[id], `${id} goal ${goal}`).toBe(aR[id]!.day);
+      }
+      for (const rest of [[], [0, 6]]) {
+        const real = linearAwards(withPrefs(robust, { restWeekdays: rest }));
+        for (const id of exactIds)
+          if (id !== 'rest_respected' || rest.length)
+            expect(real[id], `${id} rest ${rest}`).toBe(aR[id]!.day);
+      }
+    },
+    LONG,
+  );
+  it('a date that depends on rest days is NOT exact: it carries the range and what it depends on', () => {
+    const i = weekdayOnly(21);
+    const { g, a: an } = analyse(i);
+    expect(g.badges).toContain('streak_7');
+    const a = an.streak_7!;
+    expect(a.exact).toBe(false);
+    expect(a.dependsOn).toBe('rest days');
+    expect(a.from <= a.day && a.day <= a.to).toBe(true);
+    expect(a.to).toBe(i.today); // with no planned rest days the run would never have reached 7
+    const m = badgeMilestones({
+      badges: g.badges,
+      analysis: { streak_7: a },
+      complete: true,
+      recorded: {},
+      maxSpreadDays: 100,
+    });
+    const s = m.find((x) => x.id === 'streak_7')!;
+    expect(s.basis).toBe('estimated');
+    expect(s.day).toBe(a.day);
+    expect(s.range).toEqual({ from: a.from, to: a.to });
+    expect(s.dependsOn).toBe('rest days');
+  });
+  it('an estimate whose range is too wide becomes "earlier" with no date', () => {
+    const i = weekdayOnly(50);
+    const { g, a: an } = analyse(i);
+    const a = an.streak_7!;
+    const wide = Math.round(
+      (Date.parse(`${a.to}T00:00:00Z`) - Date.parse(`${a.from}T00:00:00Z`)) / DAY,
+    );
+    expect(wide).toBeGreaterThan(14);
+    const m = badgeMilestones({
+      badges: g.badges.filter((b) => b === 'streak_7'),
+      analysis: { streak_7: a },
+      complete: true,
+      recorded: {},
+    });
+    expect(m[0]).toEqual({ id: 'streak_7', basis: 'earlier', day: null });
+    // the same badge with a wide enough limit would be an estimate, so the limit (not the data) is what decides
+    expect(
+      badgeMilestones({
+        badges: ['streak_7'],
+        analysis: { streak_7: a },
+        complete: true,
+        recorded: {},
+        maxSpreadDays: wide,
+      })[0]!.basis,
+    ).toBe('estimated');
+  });
+  it(
+    'weekly-goal badges: the range comes from the lowest and highest goal and contains the date at every goal',
+    () => {
+      const i = build({
+        workoutDays: daysBack(30).filter((_, k) => k % 3 !== 0),
+        mealDays: daysBack(30),
+        habitDays: [],
+      });
+      const { g, a: an } = analyse(i);
+      let checked = 0;
+      for (const id of ['level_5', 'quests_10'] as const) {
+        if (!g.badges.includes(id)) continue;
+        const a = an[id]!;
+        checked += 1;
+        expect(a.dependsOn).toBe('weekly goal');
+        expect(a.from <= a.day && a.day <= a.to).toBe(true);
+        for (const goal of [1, 2, 3, 4, 5]) {
+          const d = linearAwards(withPrefs(i, { targetDaysPerWeek: goal }))[id] ?? i.today;
+          expect(d >= a.from && d <= a.to, `${id} goal ${goal}`).toBe(true);
+        }
+      }
+      expect(checked).toBeGreaterThan(0);
+    },
+    LONG,
+  );
+  it('the season badge never depends on a setting', () => {
+    expect(SETTING_DEPENDENCE.season_finisher).toBeNull();
+    const i = build({ workoutDays: span(0, 30), mealDays: [], habitDays: [] });
+    const { g, a: an } = analyse(i);
+    if (g.badges.includes('season_finisher'))
+      expect(an.season_finisher).toMatchObject({ exact: true, dependsOn: null });
+  });
+  it('the work is small enough to run on a phone while drawing the screen (a 60-day history, no engine replays)', () => {
+    const i = build(daily(59));
+    const g = computeGamification(i);
+    const t0 = Date.now();
+    badgeDayAnalysis(i, g.badges, g.events);
+    const ms = Date.now() - t0;
+    console.info(`badgeDayAnalysis, ${g.badges.length} badges, 60-day history: ${ms} ms`);
+    expect(ms).toBeLessThan(300);
+  });
+});
+
+describe('history completeness and first records', () => {
   it('history that starts before the window, or does not match the confirmed total, is not complete', () => {
     const base = { today: TODAY, localActivityXp: 500, confirmedActivityXp: 500 };
     expect(historyIsComplete({ ...base, firstRecord: addDays(TODAY, -10) })).toBe(true);
@@ -263,19 +520,40 @@ describe('badge dates', () => {
     expect(firstRecordDay(i, [addDays(TODAY, -3)])).toBe(addDays(TODAY, -8));
     expect(firstRecordDay(build({ workoutDays: [], mealDays: [], habitDays: [] }), [])).toBe(null);
   });
+});
 
-  it('complete history shows qualified dates', () => {
-    const m = badgeMilestones({ badges: g.badges, qualified: q, complete: true, recorded: {} });
-    expect(m.every((x) => x.basis === 'qualified' && x.day)).toBe(true);
+describe('the timeline order of certainty', () => {
+  const exact = {
+    day: '2026-11-05',
+    from: '2026-11-05',
+    to: '2026-11-05',
+    exact: true,
+    dependsOn: null,
+  } as const;
+  const soft = {
+    day: '2026-11-08',
+    from: '2026-11-06',
+    to: '2026-11-12',
+    exact: false,
+    dependsOn: 'rest days',
+  } as const;
+  it('exact beats recorded; recorded beats an estimate; an estimate beats nothing', () => {
+    const m = badgeMilestones({
+      badges: ['level_5', 'streak_7', 'streak_30', 'level_10'],
+      analysis: { level_5: exact, streak_7: soft, streak_30: soft },
+      complete: true,
+      recorded: { level_5: '2026-11-14', streak_7: '2026-11-10' },
+    });
+    const by = (id: string) => m.find((x) => x.id === id)!;
+    expect(by('level_5')).toMatchObject({ basis: 'qualified', day: '2026-11-05' });
+    expect(by('streak_7')).toMatchObject({ basis: 'recorded', day: '2026-11-10' });
+    expect(by('streak_30')).toMatchObject({ basis: 'estimated', day: '2026-11-08' });
+    expect(by('level_10')).toEqual({ id: 'level_10', basis: 'earlier', day: null });
   });
-  it('incomplete history IGNORES candidate dates: nothing is qualified', () => {
-    const m = badgeMilestones({ badges: g.badges, qualified: q, complete: false, recorded: {} });
-    expect(m.every((x) => x.basis === 'earlier' && x.day === null)).toBe(true);
-  });
-  it('a recorded date is used only when no qualified date is trusted, and is labelled recorded', () => {
+  it('recorded dates are preserved when the history is incomplete (no analysis is trusted)', () => {
     const m = badgeMilestones({
       badges: ['streak_7', 'level_5'],
-      qualified: q,
+      analysis: { streak_7: exact, level_5: soft },
       complete: false,
       recorded: { streak_7: '2026-11-10' },
     });
@@ -290,29 +568,35 @@ describe('badge dates', () => {
       day: null,
     });
   });
-  it('unknown dates are never invented: "earlier" never carries a day, whatever the inputs', () => {
-    for (const complete of [true, false])
-      for (const withQ of [true, false])
-        for (const withR of [true, false]) {
-          const m = badgeMilestones({
-            badges: g.badges,
-            qualified: withQ ? q : null,
-            complete,
-            recorded: withR ? { streak_7: '2026-11-01' } : {},
-          });
-          for (const x of m) if (x.basis === 'earlier') expect(x.day).toBeNull();
-          for (const x of m)
-            if (x.basis !== 'earlier') expect(x.day).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-        }
-  });
-  it('dated items come first, newest first; undated last', () => {
+  it('dated rows come first (newest first); undated rows last', () => {
     const m = badgeMilestones({
       badges: ['level_5', 'streak_7', 'streak_30'],
-      qualified: { level_5: '2026-10-01', streak_7: '2026-10-20' },
+      analysis: {
+        level_5: { ...exact, day: '2026-10-01', from: '2026-10-01', to: '2026-10-01' },
+        streak_7: { ...exact, day: '2026-10-20', from: '2026-10-20', to: '2026-10-20' },
+      },
       complete: true,
       recorded: {},
     });
     expect(m.map((x) => x.id)).toEqual(['streak_7', 'level_5', 'streak_30']);
+  });
+  it('only "earlier" is undated; every other basis carries a real day; only "estimated" has a range', () => {
+    const recs: Record<string, string>[] = [{}, { streak_7: '2026-11-01', level_5: '2026-11-02' }];
+    for (const complete of [true, false])
+      for (const an of [null, { streak_7: exact, streak_30: soft }])
+        for (const rec of recs) {
+          const m = badgeMilestones({
+            badges: ['streak_7', 'streak_30', 'level_5', 'level_10'],
+            analysis: an,
+            complete,
+            recorded: rec,
+          });
+          for (const x of m) {
+            if (x.basis === 'earlier') expect(x.day).toBeNull();
+            else expect(x.day).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+            expect(x.range !== undefined).toBe(x.basis === 'estimated');
+          }
+        }
   });
 });
 
@@ -334,7 +618,7 @@ describe('the first sync is never an achievement date', () => {
     expect(d1.seen.badgeRecorded).toEqual({});
     const m = badgeMilestones({
       badges: ['streak_7', 'level_5'],
-      qualified: null,
+      analysis: null,
       complete: false,
       recorded: d1.seen.badgeRecorded,
     });
@@ -376,5 +660,14 @@ describe('weekly quest dating is disclosed', () => {
   it('no weekly quest in the window, no such note', () => {
     const { h } = histOf(build({ workoutDays: [addDays(TODAY, -2)], mealDays: [], habitDays: [] }));
     expect(h.notes.join(' ')).not.toMatch(/Weekly quest/);
+  });
+});
+
+describe('rest-day subsets', () => {
+  it('are every choice the engine allows: 0 to 4 weekdays, 99 in total, no duplicates', () => {
+    const all = restSubsets();
+    expect(all).toHaveLength(99);
+    expect(new Set(all.map((r) => r.join(','))).size).toBe(99);
+    expect(all.every((r) => r.length <= 4 && r.every((d) => d >= 0 && d <= 6))).toBe(true);
   });
 });

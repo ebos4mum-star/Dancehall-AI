@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { BadgeId, CosmeticId, GmInput, GmState, Quest } from '@dancehall/shared';
+import type { BadgeId, CosmeticId, GmEvent, GmInput, GmState, Quest } from '@dancehall/shared';
 import type { GmDevicePrefs } from './prefs';
 import { DEFAULT_DEVICE_PREFS } from './prefs';
 import { celebrationPolicy, type CelebrationPolicy } from './policy';
@@ -36,6 +36,8 @@ export interface DerivedHistory {
   localActivityXp: number;
   /** The earliest record the XP engine reads, or null. */
   firstRecord: string | null;
+  /** The engine's own events for these records (dated and capped by the engine), so badge dates can be worked out without replaying it. */
+  engineEvents: GmEvent[];
   /** The engine input behind this answer, so the Progress screen can replay it for badge dates when (and only when) the history is complete. */
   input: GmInput;
 }

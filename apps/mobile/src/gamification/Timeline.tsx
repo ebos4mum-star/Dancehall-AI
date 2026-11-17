@@ -13,17 +13,19 @@ import {
   badgeMilestones,
   formatDay,
   historyIsComplete,
-  qualifiedBadgeDays,
+  badgeDayAnalysis,
   type BadgeBasis,
   type BadgeMilestone,
 } from './history';
 import { useProgression } from './progressionStore';
 
-const SENTENCE: Record<BadgeBasis, (day: string | null) => string> = {
-  qualified: (d) => `Earned ${formatDay(d!)}`,
-  recorded: (d) =>
-    `Recorded ${formatDay(d!)}. This is the day this phone first saw it; it may have been earned earlier.`,
-  earlier: () => 'Earned before this phone started tracking. The date is not known.',
+const SENTENCE: Record<BadgeBasis, (m: BadgeMilestone) => string> = {
+  qualified: (m) => `Earned ${formatDay(m.day!)}`,
+  estimated: (m) =>
+    `Estimated ${formatDay(m.day!)}. It depends on your ${m.dependsOn}, which may have been different earlier, so it could be anywhere from ${formatDay(m.range!.from)} to ${formatDay(m.range!.to)}.`,
+  recorded: (m) =>
+    `Recorded ${formatDay(m.day!)}. This is the day this phone first saw it; it may have been earned earlier.`,
+  earlier: () => 'Earned before this phone started tracking, or the date cannot be known.',
 };
 
 /**
@@ -43,21 +45,43 @@ export function BadgeTimelineCard() {
       localActivityXp: p.history.localActivityXp,
     });
   }, [p.history, p.state, badges.length]);
-  const qualified = useMemo(
-    () => (complete && p.history ? qualifiedBadgeDays(p.history.input, badges) : null),
+  const analysis = useMemo(
+    () =>
+      complete && p.history
+        ? badgeDayAnalysis(p.history.input, badges, p.history.engineEvents)
+        : null,
     [complete, p.history, badges],
   );
   const items = useMemo(
-    () => badgeMilestones({ badges, qualified, complete, recorded: p.badgeRecorded }),
-    [badges, qualified, complete, p.badgeRecorded],
+    () =>
+      badgeMilestones({
+        badges,
+        analysis,
+        complete,
+        recorded: p.badgeRecorded,
+      }),
+    [badges, analysis, complete, p.badgeRecorded],
   );
   if (!p.ready || !p.enabled || !p.state) return null;
+  const hasExact = items.some((m) => m.basis === 'qualified');
+  const hasEstimate = items.some((m) => m.basis === 'estimated');
+  const footnote = [
+    hasExact ? 'Earned dates are exact: no setting you could have used would change them.' : '',
+    hasEstimate
+      ? 'Estimated dates depend on a setting that is not stored over time, so they show the range they could fall in.'
+      : '',
+    !hasExact && !hasEstimate
+      ? 'Dates are shown only when they can be known. Where they cannot, the badge is listed without one.'
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
   const dated = items.filter((x) => x.day);
   const undated = items.filter((x) => !x.day);
 
   const row = (m: BadgeMilestone, last: boolean) => {
     const name = t(`gm.b.${m.id}` as StringKey);
-    const sentence = SENTENCE[m.basis](m.day);
+    const sentence = SENTENCE[m.basis](m);
     return (
       <View
         key={m.id}
@@ -75,6 +99,7 @@ export function BadgeTimelineCard() {
               backgroundColor: m.basis === 'qualified' ? brand.lime : 'transparent',
               borderWidth: 3,
               borderColor: m.basis === 'earlier' ? colors.border : brand.violet,
+              borderStyle: m.basis === 'estimated' ? 'dashed' : 'solid',
             }}
           />
           {last ? null : (
@@ -127,10 +152,7 @@ export function BadgeTimelineCard() {
         </>
       )}
       <AppText variant="caption" muted>
-        {complete
-          ? 'Your records cover your whole history, so each date is the day the app’s rules first gave you the badge.'
-          : 'Dates are shown only when they can be known. Where they cannot, the badge is listed without one.'}{' '}
-        {BADGE_IDS.length} badges exist; none are ever taken away.
+        {footnote} {BADGE_IDS.length} badges exist; none are ever taken away.
       </AppText>
     </Card>
   );
