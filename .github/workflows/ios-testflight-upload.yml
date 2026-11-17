@@ -1,0 +1,158 @@
+name: iOS TestFlight upload (separate approval)
+
+# Manual only, and separate from the build on purpose. It takes the encrypted signed IPA produced by "iOS TestFlight build" (run id),
+# re-checks it, and by default only VALIDATES it with App Store Connect (dry_run: true). A real upload needs dry_run set to false,
+# the confirmation phrase, and approval of the protected environment "testflight-upload" by its required reviewers.
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: 'Run id of the "iOS TestFlight build" run that produced the IPA'
+        required: true
+        type: string
+      release_sha:
+        description: 'The same full commit SHA that was built'
+        required: true
+        type: string
+      build_number:
+        description: 'The same build number that was built'
+        required: true
+        type: string
+      ipa_sha256:
+        description: 'IPA sha256 from the build run summary'
+        required: true
+        type: string
+      dry_run:
+        description: 'true = validate with App Store Connect only (default); false = upload to TestFlight'
+        required: true
+        default: true
+        type: boolean
+      confirm:
+        description: 'Type UPLOAD-TO-TESTFLIGHT to confirm (checked even for a dry run)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ios-testflight-upload
+  # Never cancel a running release job when another is dispatched: a cancelled upload or signing step could be left half done. A new run waits.
+  cancel-in-progress: false
+
+env:
+  XCODE_APP: /Applications/Xcode_26.6.app
+  APP_VERSION: '0.1.0'
+  BUNDLE_ID: com.dancehallfit.app
+
+jobs:
+  upload:
+    name: Validate or upload the signed IPA
+    runs-on: macos-26
+    timeout-minutes: 45
+    # Protected environment with its own required reviewers: the second approval. The App Store Connect key exists only here.
+    environment: testflight-upload
+    steps:
+      - name: Check the inputs
+        env:
+          RUN_ID: ${{ inputs.build_run_id }}
+          SHA: ${{ inputs.release_sha }}
+          BUILD: ${{ inputs.build_number }}
+          HASH: ${{ inputs.ipa_sha256 }}
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          set -euo pipefail
+          [ "$CONFIRM" = "UPLOAD-TO-TESTFLIGHT" ] || { echo "Confirmation phrase is wrong. Nothing was sent."; exit 1; }
+          [[ "$RUN_ID" =~ ^[0-9]{1,20}$ ]] || { echo "build_run_id must be a number."; exit 1; }
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "release_sha must be a full 40-character SHA."; exit 1; }
+          [[ "$BUILD" =~ ^[1-9][0-9]{0,8}$ ]] || { echo "build_number must be a whole number."; exit 1; }
+          [[ "$HASH" =~ ^[0-9a-f]{64}$ ]] || { echo "ipa_sha256 must be 64 hex characters."; exit 1; }
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.release_sha }}
+      - name: Confirm the checked-out commit is the requested one
+        env:
+          SHA: ${{ inputs.release_sha }}
+        run: test "$(git rev-parse HEAD)" = "$SHA"
+      - name: Download the encrypted build artifact from the build run
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: testflight-ipa-encrypted
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/in
+      - name: Decrypt, and check the IPA is exactly what the build run reported
+        env:
+          ARTIFACT_PASSPHRASE: ${{ secrets.RELEASE_ARTIFACT_PASSPHRASE }}
+          BUILD: ${{ inputs.build_number }}
+          HASH: ${{ inputs.ipa_sha256 }}
+        run: |
+          set -euo pipefail
+          : "${ARTIFACT_PASSPHRASE:?RELEASE_ARTIFACT_PASSPHRASE is not set in the environment}"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -pass env:ARTIFACT_PASSPHRASE \
+            -in "$RUNNER_TEMP/in/release-$BUILD.tgz.enc" -out "$RUNNER_TEMP/in/bundle.tgz"
+          mkdir -p "$RUNNER_TEMP/ipa"
+          tar -C "$RUNNER_TEMP/ipa" -xzf "$RUNNER_TEMP/in/bundle.tgz" app.ipa
+          test "$(shasum -a 256 "$RUNNER_TEMP/ipa/app.ipa" | cut -d' ' -f1)" = "$HASH" || { echo "IPA hash differs from the build run's hash. Nothing was sent."; exit 1; }
+          echo "IPA hash matches the build run."
+      - name: Select the pinned Xcode
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          xcodebuild -version
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      - name: Inspect the IPA again
+        env:
+          STAGING_SUPABASE_URL: ${{ vars.STAGING_SUPABASE_URL }}
+          BUILD: ${{ inputs.build_number }}
+        run: |
+          set -euo pipefail
+          # Succeeds only for the designated staging project (checked against the pinned digest) and prints its reference for the IPA check.
+          EXPECT_REF="$(node scripts/release/release-env.mjs --check-url)"
+          EXPECT_REF="$EXPECT_REF" bash scripts/release/verify-ipa.sh "$RUNNER_TEMP/ipa/app.ipa" "$APP_VERSION" "$BUILD"
+      - name: Install the App Store Connect API key (temporary)
+        env:
+          KEY_ID: ${{ vars.ASC_API_KEY_ID }}
+          KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          set -euo pipefail
+          [[ "$KEY_ID" =~ ^[A-Z0-9]{10}$ ]] || { echo "ASC_API_KEY_ID must be 10 letters or digits."; exit 1; }
+          : "${KEY_P8:?ASC_API_KEY_P8 is not set in the environment}"
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          umask 077
+          printf '%s\n' "$KEY_P8" > "$HOME/.appstoreconnect/private_keys/AuthKey_$KEY_ID.p8"
+      - name: Validate with App Store Connect (always)
+        env:
+          KEY_ID: ${{ vars.ASC_API_KEY_ID }}
+          ISSUER_ID: ${{ vars.ASC_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          xcrun altool --validate-app -f "$RUNNER_TEMP/ipa/app.ipa" -t ios --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
+      - name: Upload to TestFlight (only when dry_run is false)
+        if: ${{ inputs.dry_run == false }}
+        env:
+          KEY_ID: ${{ vars.ASC_API_KEY_ID }}
+          ISSUER_ID: ${{ vars.ASC_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          xcrun altool --upload-app -f "$RUNNER_TEMP/ipa/app.ipa" -t ios --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
+      - name: Summary
+        if: always()
+        env:
+          DRY: ${{ inputs.dry_run }}
+          SHA: ${{ inputs.release_sha }}
+          BUILD: ${{ inputs.build_number }}
+          RUN_ID: ${{ inputs.build_run_id }}
+        run: |
+          {
+            echo "### TestFlight mode: dry_run=$DRY (true means validation only, nothing uploaded)"
+            echo "- commit: \`$SHA\`, version \`$APP_VERSION\`, build \`$BUILD\`"
+            echo "- build run: \`$RUN_ID\`"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Remove the API key
+        if: always()
+        run: bash scripts/release/signing-cleanup.sh
