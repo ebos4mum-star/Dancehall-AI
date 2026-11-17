@@ -171,6 +171,8 @@ export function BarChart({
       useNativeDriver: true,
     }).start();
   }, [motion, grow, points.length]);
+  // Many points (a 60-day series): thin bars that fit the card, and a label only every few bars. Every bar is still reachable by touch, by drag and by the values list.
+  const dense = points.length > 16;
   const top = niceMax(points.map((p) => p.value));
   const select = (i: number) => {
     if (i !== selected) feedback('select');
@@ -179,7 +181,7 @@ export function BarChart({
   const handlers = useScrub(points.length, width, select);
   return (
     <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)} {...handlers}>
-      <View style={{ height, flexDirection: 'row', alignItems: 'flex-end', gap: 4 }}>
+      <View style={{ height, flexDirection: 'row', alignItems: 'flex-end', gap: dense ? 1 : 4 }}>
         {points.map((p, i) => {
           const h =
             p.value === null ? 0 : Math.max(p.value > 0 ? 4 : 0, (p.value / top) * (height - 8));
@@ -192,7 +194,7 @@ export function BarChart({
               accessibilityLabel={`${p.full}: ${fmt(p.value, unit)}${p.note ? `, ${p.note}` : ''}`}
               accessibilityState={{ selected: on }}
               onPress={() => select(i)}
-              style={{ flex: 1, height, justifyContent: 'flex-end', minWidth: 20 }}
+              style={{ flex: 1, height, justifyContent: 'flex-end', minWidth: dense ? 0 : 20 }}
             >
               <Animated.View
                 style={{
@@ -212,24 +214,34 @@ export function BarChart({
           );
         })}
       </View>
-      <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
-        {points.map((p, i) => (
-          <AppText
-            key={p.key}
-            variant="caption"
-            muted
-            style={{
-              flex: 1,
-              textAlign: 'center',
-              fontWeight: selected === i ? '800' : '400',
-              color: selected === i ? colors.text : undefined,
-            }}
-            numberOfLines={1}
-          >
-            {p.label}
-          </AppText>
-        ))}
-      </View>
+      {dense ? (
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+          {[0, Math.floor((points.length - 1) / 2), points.length - 1].map((k) => (
+            <AppText key={k} variant="caption" muted>
+              {points[k]?.label}
+            </AppText>
+          ))}
+        </View>
+      ) : (
+        <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
+          {points.map((p, i) => (
+            <AppText
+              key={p.key}
+              variant="caption"
+              muted
+              style={{
+                flex: 1,
+                textAlign: 'center',
+                fontWeight: selected === i ? '800' : '400',
+                color: selected === i ? colors.text : undefined,
+              }}
+              numberOfLines={1}
+            >
+              {p.label}
+            </AppText>
+          ))}
+        </View>
+      )}
     </View>
   );
 }

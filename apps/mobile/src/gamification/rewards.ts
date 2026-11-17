@@ -23,6 +23,11 @@ export interface SeenState {
   xpSeen: number;
   levelSeen: number;
   badgesSeen: string[];
+  /**
+   * The local day this phone first saw each badge, ONLY for badges that appeared after this phone's baseline. A badge already present at the baseline has no entry,
+   * because the baseline day says nothing about when it was earned.
+   */
+  badgeRecorded: Record<string, string>;
   cosmeticsSeen: string[];
   questsSeen: string[];
   streakMilestoneSeen: number;
@@ -36,6 +41,7 @@ export const EMPTY_SEEN: SeenState = {
   xpSeen: 0,
   levelSeen: 1,
   badgesSeen: [],
+  badgeRecorded: {},
   cosmeticsSeen: [],
   questsSeen: [],
   streakMilestoneSeen: 0,
@@ -108,6 +114,8 @@ const asSeen = (n: ProgressSnapshot, prev: SeenState): SeenState => ({
 export function diffRewards(
   next: ProgressSnapshot,
   seen: SeenState,
+  /** The local day of this confirmation; used only to record when a NEW badge was first seen. */
+  today?: string,
 ): { summary: RewardSummary; seen: SeenState } {
   if (!seen.baselined) return { summary: NO_REWARD, seen: asSeen(next, seen) };
   const newBadges = next.badges.filter((b) => !seen.badgesSeen.includes(b));
@@ -131,6 +139,10 @@ export function diffRewards(
     // A milestone is never lowered by a quiet week (it would be celebrated again on the way back up).
     streakMilestoneSeen: Math.max(seen.streakMilestoneSeen, milestone),
     badgesSeen: [...new Set([...seen.badgesSeen, ...next.badges])],
+    badgeRecorded: {
+      ...seen.badgeRecorded,
+      ...(today ? Object.fromEntries(newBadges.map((b) => [b, today])) : {}),
+    },
     cosmeticsSeen: [...new Set([...seen.cosmeticsSeen, ...next.cosmetics])],
     levelSeen: Math.max(seen.levelSeen, next.level),
   };

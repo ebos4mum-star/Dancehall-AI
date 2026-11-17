@@ -1,5 +1,11 @@
 import { withAccount } from '@/account/gate';
-import { ActivityCalendar, MovementTrends, NutritionTrends } from '@/charts/sections';
+import {
+  ActivityCalendar,
+  MovementTrends,
+  NutritionTrends,
+  XpHistoryCard,
+} from '@/charts/sections';
+import { BadgeTimelineCard } from '@/gamification/Timeline';
 import { ProgressRewards, RewardBanner } from '@/gamification/ui';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -86,6 +92,8 @@ function Progress() {
       <RecapCard />
       <RewardBanner />
       <ProgressRewards />
+      <XpHistoryCard />
+      <BadgeTimelineCard />
       <PeriodCard />
       <MovementTrends />
       <ActivityCalendar />

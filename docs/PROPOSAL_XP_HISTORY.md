@@ -1,6 +1,8 @@
 # Proposal: capped XP history for progression charts
 
-Status: **proposal only.** Nothing here is implemented. No persistence, no SQL, no migration, no Edge Function change. It needs owner approval before any of it is built.
+Status: **proposal; partly implemented, see the update below.** Nothing here is implemented. No persistence, no SQL, no migration, no Edge Function change. It needs owner approval before any of it is built.
+
+**Update (Round 4):** the owner approved option A (derive on the device from existing authoritative records, no new persistence, no engine change, no database change). It is implemented; options B and C remain not built. See `UX_UPGRADE.md` Round 4 for what the records could and could not support.
 
 ## 1. What is wanted
 

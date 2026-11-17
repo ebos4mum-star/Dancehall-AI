@@ -1,9 +1,10 @@
 import { useSyncExternalStore } from 'react';
-import type { BadgeId, CosmeticId, GmState, Quest } from '@dancehall/shared';
+import type { BadgeId, CosmeticId, GmInput, GmState, Quest } from '@dancehall/shared';
 import type { GmDevicePrefs } from './prefs';
 import { DEFAULT_DEVICE_PREFS } from './prefs';
 import { celebrationPolicy, type CelebrationPolicy } from './policy';
 import type { RewardSummary } from './rewards';
+import type { ActivityEvent } from './history';
 
 /** The confirmed progression every screen shows (Home, Workouts, Nutrition, Progress, Friends, Settings). One copy, so they can never disagree. */
 export interface ConfirmedState {
@@ -26,6 +27,18 @@ export interface RewardEvent {
   groupGoal?: string;
 }
 export type WeekDot = 'active' | 'rest' | 'open' | 'missed' | 'future';
+/** What this phone derived from the person's own records, for the XP history chart and the badge timeline. In memory only; nothing here is stored. */
+export interface DerivedHistory {
+  today: string;
+  /** Dated, non-badge events from the engine. */
+  events: ActivityEvent[];
+  /** Sum of those events (all ages). */
+  localActivityXp: number;
+  /** The earliest record the XP engine reads, or null. */
+  firstRecord: string | null;
+  /** The engine input behind this answer, so the Progress screen can replay it for badge dates when (and only when) the history is complete. */
+  input: GmInput;
+}
 export interface ProgressionView {
   ready: boolean;
   enabled: boolean;
@@ -38,6 +51,10 @@ export interface ProgressionView {
   wearing: CosmeticId[];
   /** Monday to Sunday of this week, from the person's own records (display only; the counts come from the confirmed state). */
   weekDots: WeekDot[];
+  /** Derived from the person's records on this phone; null until the records are loaded. */
+  history: DerivedHistory | null;
+  /** The day this phone first saw each badge that appeared after its baseline (persisted in the existing per-account seen ledger). */
+  badgeRecorded: Record<string, string>;
   reward: RewardEvent | null;
   policy: CelebrationPolicy;
 }
@@ -62,6 +79,8 @@ const IDLE: ProgressionView = {
   prefs: DEFAULT_DEVICE_PREFS,
   wearing: [],
   weekDots: ['future', 'future', 'future', 'future', 'future', 'future', 'future'],
+  history: null,
+  badgeRecorded: {},
   reward: null,
   policy: celebrationPolicy('full', false),
 };

@@ -8,6 +8,7 @@ import {
   type CosmeticId,
 } from '@dancehall/shared';
 import { useReducedMotion } from '@/a11y/useReducedMotion';
+import { activityEventsOf, firstRecordDay } from './history';
 import { useApp } from '@/data/AppProvider';
 import { useLoad } from '@/data/hooks';
 import type { GmServerState } from '@/data/types';
@@ -128,6 +129,7 @@ export function GamificationHost() {
       ([p, s]) => {
         if (!alive) return;
         seenRef.current = s;
+        setProgression({ badgeRecorded: s.badgeRecorded });
         setPrefsState(p);
         setPrefsReady(true);
       },
@@ -193,6 +195,24 @@ export function GamificationHost() {
   useEffect(() => {
     if (weekDots) setProgression({ weekDots });
   }, [weekDots]);
+  // The XP history and badge dates are derived in memory from the same records and the same engine result. Nothing is stored for them.
+  useEffect(() => {
+    if (!local || !engineInput) {
+      setProgression({ history: null });
+      return;
+    }
+    const events = activityEventsOf(local.events);
+    const workoutDays = local.events.filter((e) => e.kind === 'workout').map((e) => e.day);
+    setProgression({
+      history: {
+        today: engineInput.today,
+        events,
+        localActivityXp: events.reduce((a, e) => a + e.xp, 0),
+        firstRecord: firstRecordDay(engineInput, workoutDays),
+        input: engineInput,
+      },
+    });
+  }, [local, engineInput]);
   const localRef = useRef(local);
   localRef.current = local;
 
@@ -232,7 +252,11 @@ export function GamificationHost() {
       });
       return;
     }
-    const d = diffRewards(snapshotOf({ ...c, seasonal: c.seasonal }), seenRef.current);
+    const d = diffRewards(
+      snapshotOf({ ...c, seasonal: c.seasonal }),
+      seenRef.current,
+      localDateKey(new Date(), tz),
+    );
     let nextSeen = d.seen;
     const summary = {
       ...d.summary,
@@ -259,6 +283,7 @@ export function GamificationHost() {
     seenRef.current = nextSeen;
     void writeSeen(deviceRaw, userId, nextSeen).catch(() => undefined);
     setProgression({
+      badgeRecorded: nextSeen.badgeRecorded,
       ready: true,
       enabled: true,
       pending: false,

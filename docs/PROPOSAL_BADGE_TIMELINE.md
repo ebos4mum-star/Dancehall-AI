@@ -1,6 +1,8 @@
 # Proposal: accurate badge-earned timestamps and milestone timelines
 
-Status: **proposal only.** Nothing is implemented. No database or storage change, and no date is invented. It needs owner approval before any build.
+Status: **proposal; partly implemented, see the update below.** Nothing is implemented. No database or storage change, and no date is invented. It needs owner approval before any build.
+
+**Update (Round 4):** the owner approved the three-way model (Earned/qualified, Recorded, Earlier) and that a first-sync timestamp is never an achievement date. Implemented device-only with no database change: qualified dates come from replaying the engine on the records and are shown only when the history is complete; the recorded day is kept in the existing per-account seen ledger. The server column and `gm_milestones` function in this proposal are NOT built and need separate approval. See `UX_UPGRADE.md` Round 4.
 
 ## 1. What is wanted
 

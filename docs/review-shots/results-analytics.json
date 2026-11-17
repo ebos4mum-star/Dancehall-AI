@@ -1,0 +1,62 @@
+{
+  "long-normal": {
+    "ok": true,
+    "xpCard": true,
+    "partialNote": true,
+    "youngNote": false,
+    "weeklyNote": true,
+    "badgeNote": true,
+    "dailyMode": true,
+    "earnedDates": 0,
+    "recorded": false,
+    "undated": true,
+    "completeSentence": false,
+    "hasMilestones": true,
+    "pageErrors": []
+  },
+  "long-reduced": {
+    "ok": true,
+    "xpCard": true,
+    "partialNote": true,
+    "youngNote": false,
+    "weeklyNote": true,
+    "badgeNote": true,
+    "dailyMode": true,
+    "earnedDates": 0,
+    "recorded": false,
+    "undated": true,
+    "completeSentence": false,
+    "hasMilestones": true,
+    "pageErrors": []
+  },
+  "young-normal": {
+    "ok": true,
+    "xpCard": true,
+    "partialNote": false,
+    "youngNote": true,
+    "weeklyNote": true,
+    "badgeNote": true,
+    "dailyMode": true,
+    "earnedDates": 2,
+    "recorded": false,
+    "undated": false,
+    "completeSentence": true,
+    "hasMilestones": true,
+    "pageErrors": []
+  },
+  "young-reduced": {
+    "ok": true,
+    "xpCard": true,
+    "partialNote": false,
+    "youngNote": true,
+    "weeklyNote": true,
+    "badgeNote": true,
+    "dailyMode": true,
+    "earnedDates": 2,
+    "recorded": false,
+    "undated": false,
+    "completeSentence": true,
+    "hasMilestones": true,
+    "pageErrors": []
+  }
+}

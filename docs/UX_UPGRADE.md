@@ -222,3 +222,65 @@ Everything in the earlier checklist (keyboard matrix on a real iPhone, haptics, 
 - [ ] Parallax sparkle layer, ridges and fog: frame rate on an older iPhone, and that nothing flickers at the scene edges.
 - [ ] The thinking pose in the Coach header on a device at the largest Dynamic Type, with Reduce Motion on, and with celebrations Off.
 - [ ] Friends and Community 200 px banners: text legibility and Pulse overlap on the smallest supported iPhone.
+
+---
+
+# Round 4: analytics and readiness (after eae3472)
+
+Evidence (real running app, web export, mock mode, synthetic records shifted to end today): `story-xp-long-*.png`, `story-xp-young-*.png`, `story-milestones-long-*.png`, `story-milestones-young-*.png` (normal and Reduce Motion), `results-analytics.json`; script `e2e/analytics.cjs`. Baselines untouched.
+
+## Decisions applied
+
+1. XP history is derived on the phone from the engine's own events. **No new XP persistence, no engine change, no database change, no migration.**
+2. Historical XP is never invented: where coverage is incomplete the card says so in plain words.
+3. Badge dates use the approved three-way model. **A first-sync timestamp is never shown as an achievement date.**
+
+## Feasibility check (done before building)
+
+The engine already returns dated events (`GmState.events`) from the person's records. Verified limits that shaped the design:
+
+- Workout, meal and habit XP carry the real record day. Quest XP is replayed by the engine for 60 days. So **the last 60 days are complete for every kind of XP**; older XP is real but cannot be dated by day on the phone.
+- **Badge XP is stamped with the day the engine ran** (`day: input.today`), so putting it on the chart would put every badge on the sync day. It is therefore kept off the daily line and disclosed ("Badge bonuses (N XP) are not placed on a day").
+- **Weekly quests are dated on the last day of their week** by the engine's replay. This is shown as a note under the chart.
+- A quest replay uses today's habit count for the "tick a habit" quest. That is the engine's own rule (and the server's); it was not changed.
+  Both improvements were feasible without schema changes, so both were implemented.
+
+## What was built
+
+- `src/gamification/history.ts` (pure): `xpHistory` (running total and daily series), `historyIsComplete`, `qualifiedBadgeDays`, `badgeMilestones`.
+- **XP over time** card on Progress (existing `ChartCard`, `LineChart`, `BarChart`): Running total / Each day, last 60 days, touch exploration, Previous/Next, Show values, spoken description, Reduce Motion respected.
+  - Coverage states shown in words: complete, **young** ("History starts on ..."; days before the first record are gaps, never zero), **partial** ("N XP earned before then is included in the starting total but is not shown day by day"; never spread over days), **syncing** (the server total is behind this phone's records), **offline** (no confirmed total).
+  - The running total ends at exactly the engine total minus badge bonuses (tested).
+- **Milestones** (badge timeline) on Progress:
+  - **Earned <date>** (qualified): only when the records cover the whole history (first record inside the 60-day window and the confirmed activity XP equals what the phone derives) and the app's own rules, replayed on the records known by each day, first award the badge on that day. Exact by construction (tested for every badge).
+  - **Recorded <date>**: only for a badge that appeared _after_ this phone's baseline; the day this phone first saw it, with the sentence "it may have been earned earlier".
+  - **Earlier**: no date. The default for anything else, including every badge present at a phone's first sync.
+  - Rows are text-first, with a rail (lime = earned, violet ring = recorded, grey ring = earlier), no colour-only meaning.
+- **One device-storage addition (not a database change, not a new store):** the existing per-account "seen" ledger gained `badgeRecorded` (badge id to local day) to remember when this phone first saw a badge. It is optional, backward compatible with older saves, cleaned on read, and written only for badges appearing after the baseline. Everything else is in memory only.
+- Chart fix found while verifying: a 60-bar chart overflowed its card with unreadable labels. Dense charts now use thin bars and three axis labels.
+
+## Verification
+
+- 28 new unit tests (`history.test.ts`): accuracy against the engine total at several lengths; monotonic running total; badge XP never on a day; partial coverage (180-day history, server ahead by 400 XP); young account gap; empty; syncing; offline; a late import lands on its real day not the arrival day (and the engine's retroactive quest XP is accounted for); determinism; qualified dates equal the first engine award day for every badge (replayed on records up to that day and up to the day before); `historyIsComplete` boundaries; "earlier" never carries a date over all combinations; first-sync badges get no recorded date; a later badge is recorded once; a badge removed and returned keeps its first day; saved data is cleaned.
+- Browser (normal and Reduce Motion): long-history seed shows the partial-coverage note and **zero** earned dates with "date is not known"; young seed shows "History starts on", earned dates, and the "records cover your whole history" sentence.
+- Bugs found and fixed during verification: cumulative-event date derivation disagreed with the engine (replaced by an engine replay); a 60-bar chart overflowed; a screenshot scrolled to the wrong heading.
+
+## Limits stated plainly (also on screen)
+
+- Daily detail is 60 days. XP earlier than that is included in the starting total, not charted by day.
+- Qualified badge dates use today's settings (planned rest days, weekly target) because the engine does not store settings history.
+- Recorded dates exist only from the day this build is installed; badges earned before that are Earned (if provable) or Earlier.
+- Weekly quest XP is dated on the last day of its week.
+
+## Simulator and native readiness
+
+See `docs/NATIVE_TEST_PLAN.md` (every screen, keyboard, art, Pulse, haptics, charts, VoiceOver and Dynamic Type, gamification, Apple Health, Friends/Community/Group Goals, account and privacy, offline; Mac requirements; staging configuration). The local launcher gained an optional `--health` flag (tested); without it a launcher build contained no Apple Health.
+
+### Is the app ready for one consolidated native iPhone round?
+
+**Yes for the client-side app.** No known code defect blocks it. Genuine remaining blockers, and only these:
+
+1. **A Mac with Xcode and an iOS Simulator runtime (plus ideally a physical iPhone) is needed.** Nothing native can run in this environment. This is an owner action, not a code gap.
+2. **Haptics, camera and barcode scanning, real Apple Watch workouts, real VoiceOver feel and real performance can only be proven on a physical iPhone.** The Simulator cannot cover them.
+3. **Server-side items cannot be tested on staging until you approve staging changes** (they are not applied or deployed there): the friends league and server XP total (`gamification.up.sql`, `health_sync.up.sql`, `social` function), the server-side one-workout-counts-once rule for Group Goals (`social.patch2`), the newer Community safety phrases (`community.patch3`), and Community photos (needs `text_only`/`open`). They do not block the client-side round; decide whether to include them or defer them.
+   Not blockers: the earlier art and product decisions (production illustration, a Pulse pose beyond thinking), which are polish.

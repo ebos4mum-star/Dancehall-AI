@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { localDateKey } from '@dancehall/shared';
 import { useApp } from '@/data/AppProvider';
+import { WINDOW_DAYS, xpHistory } from '@/gamification/history';
 import { useLoad } from '@/data/hooks';
 import { useProgression } from '@/gamification/progressionStore';
 import { useTheme } from '@/theme/useTheme';
@@ -183,5 +184,68 @@ export function ActivityCalendar() {
           : `${n} active ${n === 1 ? 'day' : 'days'} in the last 5 weeks. Moons are your planned rest days.`}
       </AppText>
     </Card>
+  );
+}
+
+/**
+ * XP over time, from the XP the engine awarded for the person's own records (see gamification/history.ts). Badge bonuses are not placed on a day, older XP is not spread over
+ * days, and every limit is written under the chart. Hidden when rewards are off or nothing has been earned yet.
+ */
+export function XpHistoryCard() {
+  const p = useProgression();
+  const { spacing } = useTheme();
+  const [mode, setMode] = useState<'total' | 'daily'>('total');
+  const [sel, setSel] = useState<number | null>(null);
+  const hist = useMemo(
+    () =>
+      p.ready && p.enabled && p.state && p.history
+        ? xpHistory({
+            events: p.history.events,
+            today: p.history.today,
+            confirmedTotalXp: p.state.totalXp,
+            badgeCount: p.state.badges.length,
+            pending: p.pending,
+          })
+        : null,
+    [p.ready, p.enabled, p.state, p.history, p.pending],
+  );
+  if (!hist || hist.state === 'empty') return null;
+  const points = mode === 'total' ? hist.total : hist.daily;
+  const summary =
+    mode === 'total'
+      ? `XP from activity, last ${WINDOW_DAYS} days, running total`
+      : `XP earned each day, last ${WINDOW_DAYS} days`;
+  return (
+    <ChartCard
+      icon="sparkles"
+      title="Your XP over time"
+      summary={summary}
+      points={points}
+      unit="XP"
+      zeroMeansNone={mode === 'daily'}
+      selected={sel === null ? null : (points[sel] ?? null)}
+      footnote={hist.notes.join(' ')}
+      control={
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          {(['total', 'daily'] as const).map((m) => (
+            <Button
+              key={m}
+              variant={mode === m ? 'primary' : 'secondary'}
+              label={m === 'total' ? 'Running total' : 'Each day'}
+              onPress={() => {
+                setMode(m);
+                setSel(null);
+              }}
+            />
+          ))}
+        </View>
+      }
+    >
+      {mode === 'total' ? (
+        <LineChart points={points} unit="XP" selected={sel} onSelect={setSel} />
+      ) : (
+        <BarChart points={points} unit="XP" selected={sel} onSelect={setSel} />
+      )}
+    </ChartCard>
   );
 }

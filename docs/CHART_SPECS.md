@@ -25,8 +25,8 @@ Code: `apps/mobile/src/charts/` (`data.ts` pure builders, `ui.tsx` components, `
 
 ### Documented gaps (not faked)
 
-- **XP progression line:** `xpSeries` is implemented and tested, but the app keeps only the confirmed totals on the device, not the event history, so no XP chart is shown. It needs the engine to expose capped events (a product/engine decision).
-- **Milestone timeline with dates:** badges and cosmetics carry no earned-on date today.
+- **XP progression (implemented, Round 4):** derived on the phone from the engine's dated events for the last 60 days, with older XP shown only as a starting total. Badge bonuses are never placed on a day. See `UX_UPGRADE.md` Round 4.
+- **Milestone timeline (implemented, Round 4):** Earned (replayed, only when the history is complete) / Recorded (first seen on this phone after its baseline) / Earlier (no date). A first-sync day is never an achievement date.
 - **Fibre:** not part of the food model.
 
 ## Habit Journeys: reusable chart specs (NOT implemented; for the future feature)

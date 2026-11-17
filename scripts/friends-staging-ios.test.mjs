@@ -71,3 +71,27 @@ test('--community switches Community on for the run only, and unknown options ar
   assert.equal(go('--bogus').status, 2);
   assert.doesNotMatch(run(good).stdout, /Community ON/);
 });
+
+test('--community and --health switch their features on for the run only, and are off by default', () => {
+  const dry = (args) =>
+    spawnSync('bash', ['scripts/friends-staging-ios.sh', ...args], {
+      env: {
+        ...process.env,
+        FRIENDS_ENV_FILE: (() => {
+          const f = join(mkdtempSync(join(tmpdir(), 'fs-')), 'env');
+          writeFileSync(f, good);
+          return f;
+        })(),
+        DRY_RUN: '1',
+        EXPO_PUBLIC_APPLE_HEALTH: '1',
+      },
+      encoding: 'utf8',
+    });
+  const none = dry([]);
+  assert.equal(none.status, 0, none.stderr);
+  assert.doesNotMatch(none.stdout, /Apple Health ON|Community ON/);
+  const both = dry(['--community', '--health']);
+  assert.equal(both.status, 0, both.stderr);
+  assert.match(both.stdout, /Community ON, Apple Health ON for this local run/);
+  assert.equal(dry(['--bogus']).status, 2);
+});

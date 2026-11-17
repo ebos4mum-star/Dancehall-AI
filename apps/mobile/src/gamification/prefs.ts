@@ -1,4 +1,5 @@
 import {
+  BADGE_IDS,
   COSMETICS,
   DEFAULT_GM_PREFS,
   normalizePrefs,
@@ -64,6 +65,15 @@ export async function writeGmPrefs(raw: PrefsRaw, userId: string, p: GmDevicePre
   );
 }
 
+/** Keeps only `badgeId: YYYY-MM-DD` pairs for real badge ids; anything else (an older save, a hand-edited value) is dropped, never guessed. */
+export const cleanRecorded = (v: unknown): Record<string, string> => {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
+  const ids = new Set<string>(BADGE_IDS);
+  const out: Record<string, string> = {};
+  for (const [k, d] of Object.entries(v as Record<string, unknown>))
+    if (ids.has(k) && typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) out[k] = d;
+  return out;
+};
 export const gmSeenKey = (userId: string) => `dh.gm.seen.v1.${userId}`;
 export async function readSeen(raw: PrefsRaw, userId: string): Promise<SeenState> {
   try {
@@ -77,6 +87,7 @@ export async function readSeen(raw: PrefsRaw, userId: string): Promise<SeenState
       xpSeen: num(p.xpSeen, 0),
       levelSeen: Math.max(1, num(p.levelSeen, 1)),
       badgesSeen: arr(p.badgesSeen),
+      badgeRecorded: cleanRecorded(p.badgeRecorded),
       cosmeticsSeen: arr(p.cosmeticsSeen),
       questsSeen: arr(p.questsSeen),
       streakMilestoneSeen: num(p.streakMilestoneSeen, 0),
