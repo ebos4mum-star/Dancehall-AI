@@ -182,6 +182,7 @@ function Friends() {
       top={false}
       banner={{
         world: 'friends',
+        height: 200,
         title: t('ban.friends.title'),
         line: t('ban.friends.line'),
         pulse: 'idle',

@@ -19,6 +19,8 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '@/data/AppProvider';
+import { useReview } from '@/preview/review';
+import { useProgression } from '@/gamification/progressionStore';
 import { errorMessage, useLoad } from '@/data/hooks';
 import type { CoachAction, Conversation } from '@/data/types';
 import { Bubble, TypingBubble } from '@/coach/ui';
@@ -79,6 +81,13 @@ function Coach() {
   const [startedNew, setStartedNew] = useState(false);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
+  const review = useReview();
+  const celebrations = useProgression().policy.level;
+  // While the coach works on a reply Pulse thinks (still pose with Reduce Motion). With Pulse celebrations Off it stays at rest.
+  const sendPulse = pulse.send;
+  useEffect(() => {
+    sendPulse(busy && celebrations !== 'off' ? 'thinking' : 'thoughtEnded');
+  }, [busy, celebrations, sendPulse]);
   const [err, setErr] = useState<string | null>(null);
   const scroll = useRef<ScrollViewInstance>(null);
   const sentParam = useRef(false);
@@ -178,7 +187,7 @@ function Coach() {
       >
         <View style={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm }}>
           {chat.length > 0 ? (
-            <HeroScene world="coach" height={88}>
+            <HeroScene world="coach" height={116}>
               <LinearGradient
                 pointerEvents="none"
                 colors={['rgba(26,14,46,0.88)', 'rgba(26,14,46,0.5)', 'rgba(26,14,46,0)']}
@@ -196,12 +205,12 @@ function Coach() {
                   position: 'absolute',
                   right: 0,
                   bottom: 0,
-                  width: 84,
-                  height: 78,
+                  width: 116,
+                  height: 108,
                   overflow: 'hidden',
                 }}
               >
-                <PulseStage state={busy ? 'idle' : pulse.state} size={84} />
+                <PulseStage state={review.pulse ?? pulse.state} size={116} />
               </View>
             </HeroScene>
           ) : (

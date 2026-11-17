@@ -70,6 +70,7 @@ export default function CommunityScreen() {
       top={false}
       banner={{
         world: 'community',
+        height: 200,
         title: t('ban.community.title'),
         line: t('ban.community.line'),
         pulse: 'idle',

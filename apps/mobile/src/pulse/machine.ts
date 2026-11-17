@@ -2,7 +2,14 @@
  * Pulse state machine (docs/CHARACTER_BRIEF_PULSE.md section 2). Pure and renderer-independent: the renderer decides how a state looks,
  * including reduced-motion stills. One-shot states return to idle on `settled`; dance lasts until the workout ends.
  */
-export const PULSE_STATES = ['idle', 'welcome', 'dance', 'celebrate', 'encourage'] as const;
+export const PULSE_STATES = [
+  'idle',
+  'welcome',
+  'dance',
+  'celebrate',
+  'encourage',
+  'think',
+] as const;
 export type PulseState = (typeof PULSE_STATES)[number];
 export type PulseEvent =
   | 'appOpened'
@@ -14,12 +21,16 @@ export type PulseEvent =
   | 'tapped'
   /** A planned rest day with nothing recorded: a calm, gentle acknowledgement (never pressure). */
   | 'restDay'
+  /** The AI Coach is working on a reply: Pulse thinks until it ends. */
+  | 'thinking'
+  | 'thoughtEnded'
   | 'settled';
 
 /** Higher number wins. A lower-priority request while a higher one-shot is playing is dropped, never queued. */
 const PRIORITY: Record<PulseState, number> = {
   idle: 0,
   dance: 1,
+  think: 1,
   welcome: 2,
   encourage: 3,
   celebrate: 4,
@@ -42,6 +53,10 @@ export function pulseReduce(cur: PulseState, e: PulseEvent): PulseState {
     case 'comeback':
     case 'restDay':
       return go(cur, 'encourage');
+    case 'thinking':
+      return go(cur, 'think');
+    case 'thoughtEnded':
+      return cur === 'think' ? 'idle' : cur;
     case 'tapped':
       return cur === 'idle' ? 'welcome' : cur;
     case 'settled':
@@ -63,6 +78,7 @@ export const PULSE_DESCRIPTION: Record<PulseState, string> = {
   dance: 'Pulse, your guide, is dancing along.',
   celebrate: 'Pulse, your guide, is celebrating with you.',
   encourage: 'Pulse, your guide, is cheering you on gently.',
+  think: 'Pulse, your guide, is thinking it over.',
 };
 
 /**

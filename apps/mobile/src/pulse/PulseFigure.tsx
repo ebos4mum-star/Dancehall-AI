@@ -27,6 +27,7 @@ const POSES: Record<PulseState, { l: number; r: number }> = {
   dance: { l: 150, r: -38 },
   celebrate: { l: 158, r: -158 },
   encourage: { l: 22, r: -72 },
+  think: { l: 12, r: -146 },
 };
 /** The second dance pose; the stage alternates between the two at a slow, fixed beat. */
 export const DANCE_ALT = { l: 38, r: -150 };
@@ -41,6 +42,7 @@ const PULSE_LINE: Record<PulseState, string> = {
   dance: 'M68 134 H80 L88 120 L96 146 L104 122 L112 144 L118 134 H132',
   celebrate: 'M66 134 H78 L88 108 L100 158 L112 112 L122 134 H134',
   encourage: 'M68 134 H86 L93 126 L100 140 L107 130 L112 134 H132',
+  think: 'M68 134 H84 L90 129 L96 138 L102 131 L108 136 H132',
 };
 
 export function PulseFigure({
@@ -50,6 +52,7 @@ export function PulseFigure({
   flourish,
   cosmetics,
   blink = false,
+  dots = 3,
 }: {
   state: PulseState;
   size?: number;
@@ -61,6 +64,8 @@ export function PulseFigure({
   beat?: 0 | 1;
   /** A momentary blink: the eyes close for an instant. Driven by the stage, idle only. */
   blink?: boolean;
+  /** Thinking only: how many of the three thought dots show (0 to 3). Animated by the stage; 3 when still. */
+  dots?: number;
 }) {
   // SVG ids are document-global: every instance needs its own, or hidden tabs' gradients shadow the visible figure.
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
@@ -69,7 +74,8 @@ export function PulseFigure({
   const pose = state === 'dance' && beat === 1 ? DANCE_ALT : POSES[state];
   const celebrate = state === 'celebrate';
   const encourage = state === 'encourage';
-  const eyeRy = blink ? 1.6 : state === 'welcome' ? 14 : encourage ? 9.5 : 12.5;
+  const think = state === 'think';
+  const eyeRy = blink ? 1.6 : state === 'welcome' ? 14 : encourage ? 9.5 : think ? 10.5 : 12.5;
   return (
     <Svg width={size} height={size * (262 / 280)} viewBox="-40 -12 280 262">
       <Defs>
@@ -129,9 +135,11 @@ export function PulseFigure({
       <G transform={`translate(48 116) rotate(${pose.l})`}>
         <Path d={ARM} fill={`url(#${uid}-arm)`} />
       </G>
-      <G transform={`translate(152 116) rotate(${pose.r})`}>
-        <Path d={ARM} fill={`url(#${uid}-arm)`} />
-      </G>
+      {think ? null : (
+        <G transform={`translate(152 116) rotate(${pose.r})`}>
+          <Path d={ARM} fill={`url(#${uid}-arm)`} />
+        </G>
+      )}
 
       {/* body: satin resin, volume shading, specular highlight, rim light */}
       {celebrate ? (
@@ -191,14 +199,70 @@ export function PulseFigure({
         <>
           <G transform={encourage ? 'rotate(-6 83 82)' : undefined}>
             <Ellipse cx="83" cy="82" rx="10" ry={eyeRy} fill={brand.lime} />
-            <Circle cx="80" cy={82 - eyeRy * 0.42} r="3.2" fill={brand.ivory} />
+            <Circle
+              cx={think ? 85 : 80}
+              cy={82 - eyeRy * (think ? 0.62 : 0.42)}
+              r="3.2"
+              fill={brand.ivory}
+            />
           </G>
           <G transform={encourage ? 'rotate(6 117 82)' : undefined}>
             <Ellipse cx="117" cy="82" rx="10" ry={eyeRy} fill={brand.lime} />
-            <Circle cx="114" cy={82 - eyeRy * 0.42} r="3.2" fill={brand.ivory} />
+            <Circle
+              cx={think ? 119 : 114}
+              cy={82 - eyeRy * (think ? 0.62 : 0.42)}
+              r="3.2"
+              fill={brand.ivory}
+            />
           </G>
+          {think ? (
+            <>
+              {/* one brow lifted: a considering look */}
+              <Path
+                d="M72 64 Q83 62 94 64"
+                stroke={brand.lime}
+                strokeWidth={3}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.65}
+              />
+              <Path
+                d="M106 58 Q117 52 128 58"
+                stroke={brand.lime}
+                strokeWidth={3}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.65}
+              />
+            </>
+          ) : null}
         </>
       )}
+
+      {think ? (
+        <>
+          {/* one hand raised beside the head, scratching it; three thought dots rising on the other side */}
+          <G transform={`translate(152 116) rotate(${pose.r})`}>
+            <Path d={ARM} fill={`url(#${uid}-arm)`} />
+            <Circle cx="0" cy="62" r="9" fill="#6B4BB8" />
+            <Ellipse cx="-3" cy="58" rx="4" ry="2.5" fill={brand.ivory} opacity={0.3} />
+          </G>
+          {[
+            { x: 34, y: 38, r: 3.5 },
+            { x: 20, y: 20, r: 5 },
+            { x: 2, y: 2, r: 7 },
+          ].map((d, k) => (
+            <Circle
+              key={k}
+              cx={d.x}
+              cy={d.y}
+              r={d.r}
+              fill={brand.ivory}
+              opacity={k < dots ? 0.85 : 0.12}
+            />
+          ))}
+        </>
+      ) : null}
 
       {/* chest pulse line: the main carrier of emotion */}
       <Path

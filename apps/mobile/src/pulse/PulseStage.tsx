@@ -102,6 +102,14 @@ export function PulseStage({
         Animated.delay(900),
         Animated.timing(rot, { toValue: 0, duration: 520, easing: ease, ...nat }),
       ]);
+    } else if (state === 'think') {
+      // A slow, small sway: Pulse is mulling, not performing.
+      anim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(rot, { toValue: 0.7, duration: 1600, easing: ease, ...nat }),
+          Animated.timing(rot, { toValue: -0.2, duration: 1600, easing: ease, ...nat }),
+        ]),
+      );
     } else {
       anim = Animated.loop(
         Animated.sequence([
@@ -154,7 +162,19 @@ export function PulseStage({
     return () => clearTimeout(h);
   }, [state, reduced]);
 
-  const lean = state === 'encourage' ? 7 : 4;
+  // Thinking: the three thought dots appear one after another (all three, still, with Reduce Motion).
+  const [dots, setDots] = useState(3);
+  useEffect(() => {
+    if (state !== 'think' || reduced) {
+      setDots(3);
+      return;
+    }
+    setDots(1);
+    const h = setInterval(() => setDots((d) => (d >= 3 ? 1 : d + 1)), 600);
+    return () => clearInterval(h);
+  }, [state, reduced]);
+
+  const lean = state === 'encourage' ? 7 : state === 'think' ? 3 : 4;
   return (
     <View
       accessible
@@ -185,6 +205,7 @@ export function PulseStage({
           flourish={flourish}
           cosmetics={cosmetics}
           blink={blink}
+          dots={dots}
         />
       </Animated.View>
     </View>

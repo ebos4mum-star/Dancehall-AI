@@ -40,3 +40,4 @@ apps/mobile/android/
 dist-staging/
 .friends-staging.env
 dist-off/
+dist-review/

@@ -507,6 +507,119 @@ function Props({ world, chapter }: { world: World; chapter: number }) {
 }
 
 /**
+ * The far layer: two soft ridges for depth, then a few world-specific silhouettes on the horizon (rooftops for the village, trees for friends, speaker stacks for dance,
+ * a skyline for today). Silhouettes are dark and low-contrast on purpose, so they add depth without competing with text or controls.
+ */
+function Horizon({ world }: { world: World }) {
+  const far = '#3B2A7E';
+  return (
+    <G>
+      <Path
+        d="M0 212 Q50 186 112 204 T232 196 T360 206 V258 H0 Z"
+        fill={brand.violet}
+        opacity={0.16}
+      />
+      <Path d="M0 228 Q70 204 140 222 T290 214 T360 226 V258 H0 Z" fill={far} opacity={0.42} />
+      {world === 'community' ? (
+        <G>
+          {(
+            [
+              [150, 208, 30, 24],
+              [186, 198, 38, 34],
+              [232, 208, 30, 24],
+              [4, 208, 28, 24],
+            ] as Array<[number, number, number, number]>
+          ).map(([x, y, w, h], k) => (
+            <G key={k}>
+              <Rect x={x} y={y} width={w} height={h} fill="#2A1850" opacity={0.95} />
+              <Polygon
+                points={`${x - 4},${y} ${x + w / 2},${y - 14} ${x + w + 4},${y}`}
+                fill="#3E2A78"
+              />
+              <Rect
+                x={x + w / 2 - 3}
+                y={y + 8}
+                width="6"
+                height="8"
+                rx="1"
+                fill={brand.lime}
+                opacity={0.75}
+              />
+            </G>
+          ))}
+        </G>
+      ) : null}
+      {world === 'friends' ? (
+        <G>
+          {[18, 54, 96, 250, 292, 334].map((x, k) => (
+            <G key={x}>
+              <Rect x={x - 2} y={218} width="4" height="14" fill="#2A1850" />
+              <Path
+                d={`M${x} ${190 - (k % 2) * 8} L${x + 16} 222 L${x - 16} 222 Z`}
+                fill="#2F1D63"
+                opacity={0.95}
+              />
+              <Path
+                d={`M${x} ${176 - (k % 2) * 8} L${x + 12} 204 L${x - 12} 204 Z`}
+                fill="#3A2878"
+                opacity={0.95}
+              />
+            </G>
+          ))}
+        </G>
+      ) : null}
+      {world === 'dance' ? (
+        <G>
+          {[10, 330].map((x) => (
+            <G key={x}>
+              <Rect x={x} y={176} width="22" height="54" rx="4" fill="#24143D" opacity={0.95} />
+              <Circle cx={x + 11} cy={192} r="6" fill={brand.violet} opacity={0.55} />
+              <Circle cx={x + 11} cy={214} r="8" fill={brand.violet} opacity={0.55} />
+            </G>
+          ))}
+        </G>
+      ) : null}
+      {world === 'today' ? (
+        <G>
+          {(
+            [
+              [250, 190, 22, 46],
+              [276, 176, 26, 60],
+              [306, 196, 20, 40],
+              [330, 184, 24, 52],
+            ] as Array<[number, number, number, number]>
+          ).map(([x, y, w, h], k) => (
+            <G key={k}>
+              <Rect x={x} y={y} width={w} height={h} rx="3" fill="#24143D" opacity={0.9} />
+              {[0, 1, 2].map((r) => (
+                <Rect
+                  key={r}
+                  x={x + 5}
+                  y={y + 8 + r * 14}
+                  width="5"
+                  height="5"
+                  rx="1"
+                  fill={brand.lime}
+                  opacity={0.35}
+                />
+              ))}
+            </G>
+          ))}
+        </G>
+      ) : null}
+    </G>
+  );
+}
+
+/** Deterministic twinkles for the sky, so the same screen always looks the same. */
+const STARS = Array.from({ length: 26 }, (_, k) => ({
+  x: (k * 97 + 23) % 350,
+  y: (k * 53 + 11) % 150,
+  r: 0.9 + ((k * 7) % 3) * 0.55,
+  o: 0.25 + ((k * 13) % 5) * 0.1,
+}));
+
+/**
  * The layered environment behind a hero: sky, rhythm arcs, a world-specific prop layer, curtains, spotlight and a lime-rimmed floor. Static art
  * with one slowly drifting glow (stops under reduced motion). Decorative: hidden from screen readers. Absolutely fills its parent.
  */
@@ -565,6 +678,15 @@ export function SceneBackdrop({
             <Stop offset="0" stopColor={brand.ivory} stopOpacity="0.14" />
             <Stop offset="1" stopColor={brand.ivory} stopOpacity="0" />
           </LinearGradient>
+          <LinearGradient id={`${id}-fog`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={brand.ivory} stopOpacity="0" />
+            <Stop offset="0.55" stopColor={brand.ivory} stopOpacity="0.1" />
+            <Stop offset="1" stopColor={brand.ivory} stopOpacity="0" />
+          </LinearGradient>
+          <RadialGradient id={`${id}-vig`} cx="0.5" cy="0.45" rx="0.75" ry="0.75">
+            <Stop offset="0.6" stopColor="#0F0720" stopOpacity="0" />
+            <Stop offset="1" stopColor="#0F0720" stopOpacity="0.5" />
+          </RadialGradient>
           <RadialGradient id={`${id}-curtain`} cx="0.5" cy="0.5" rx="0.6" ry="0.8">
             <Stop offset="0" stopColor="#4A2B8C" />
             <Stop offset="1" stopColor="#1A0E2E" />
@@ -599,6 +721,8 @@ export function SceneBackdrop({
           opacity={0.18}
         />
         <Polygon points="226,0 254,0 330,240 150,240" fill={`url(#${id}-beam)`} />
+        <Horizon world={world} />
+        <Rect x="0" y="214" width="360" height="44" fill={`url(#${id}-fog)`} />
         <Props world={world} chapter={chapter} />
         <Path d="M0 0 H40 C30 70 46 150 26 250 L0 262 Z" fill={`url(#${id}-curtain)`} />
         <Path d="M360 0 H322 C332 66 316 150 338 250 L360 262 Z" fill={`url(#${id}-curtain)`} />
@@ -631,7 +755,34 @@ export function SceneBackdrop({
           opacity={0.18}
         />
         <Ellipse cx="240" cy="262" rx="78" ry="12" fill={brand.violet} opacity={0.26} />
+        <Rect width="360" height="320" fill={`url(#${id}-vig)`} />
       </Svg>
+      {/* sparkles: a far layer that drifts the opposite way to the glow, a quiet parallax (still with Reduce Motion) */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          transform: [
+            { translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [4, -4] }) },
+          ],
+        }}
+      >
+        <Svg width="100%" height="100%" viewBox="0 0 360 320" preserveAspectRatio="xMidYMid slice">
+          {STARS.map((st, k) => (
+            <Circle
+              key={k}
+              cx={st.x + 5}
+              cy={st.y + 6}
+              r={st.r}
+              fill={k % 4 === 0 ? brand.lime : brand.ivory}
+              opacity={st.o}
+            />
+          ))}
+        </Svg>
+      </Animated.View>
       <Animated.View
         style={{
           position: 'absolute',

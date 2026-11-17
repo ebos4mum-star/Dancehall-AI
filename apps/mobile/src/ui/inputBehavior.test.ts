@@ -160,3 +160,10 @@ describe('household fields submit their own action', () => {
     expect(src).toMatch(/onSubmitEditing=\{\(\) => void run\(\(\) => store\.createHousehold/);
   });
 });
+
+describe('Coach thinking pose respects the celebration setting', () => {
+  it('thinks only while busy and never when Pulse celebrations are Off', () => {
+    const src = read('app/(tabs)/coach.tsx');
+    expect(src).toMatch(/busy && celebrations !== 'off' \? 'thinking' : 'thoughtEnded'/);
+  });
+});

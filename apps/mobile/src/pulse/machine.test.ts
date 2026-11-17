@@ -11,8 +11,15 @@ import {
 const run = (events: PulseEvent[], from: PulseState = 'idle') => events.reduce(pulseReduce, from);
 
 describe('Pulse state machine', () => {
-  it('has the five approved states, each with a text description', () => {
-    expect([...PULSE_STATES]).toEqual(['idle', 'welcome', 'dance', 'celebrate', 'encourage']);
+  it('has the approved states (five, plus the Coach thinking pose), each with a text description', () => {
+    expect([...PULSE_STATES]).toEqual([
+      'idle',
+      'welcome',
+      'dance',
+      'celebrate',
+      'encourage',
+      'think',
+    ]);
     for (const s of PULSE_STATES) expect(PULSE_DESCRIPTION[s]).toMatch(/Pulse/);
   });
   it('one-shots return to idle on settled; dance and idle do not', () => {
@@ -60,5 +67,22 @@ describe('Pulse tap and rest-day reactions', () => {
     expect(tapAllowed([0], 1300)).toBe(true);
     expect(tapAllowed([0, 2000, 4000, 6000], 8000)).toBe(false);
     expect(tapAllowed([0, 2000, 4000, 6000], 21_000)).toBe(true);
+  });
+});
+
+describe('Pulse thinking pose (AI Coach)', () => {
+  it('thinks until the reply is done, then rests', () => {
+    expect(run(['thinking'])).toBe('think');
+    expect(run(['thinking', 'settled'])).toBe('think');
+    expect(run(['thinking', 'thoughtEnded'])).toBe('idle');
+  });
+  it('never hides a celebration or a welcome, and thoughtEnded does not cancel other states', () => {
+    expect(pulseReduce('celebrate', 'thinking')).toBe('celebrate');
+    expect(pulseReduce('encourage', 'thinking')).toBe('encourage');
+    expect(pulseReduce('dance', 'thoughtEnded')).toBe('dance');
+    expect(run(['thinking', 'milestone'])).toBe('celebrate');
+  });
+  it('a tap does not interrupt thinking', () => {
+    expect(run(['thinking', 'tapped'])).toBe('think');
   });
 });

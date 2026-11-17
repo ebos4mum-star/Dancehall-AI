@@ -182,3 +182,43 @@ Browser results: Enter on the onboarding name field moved focus to "Date of birt
 3. Whether to store XP events (capped) on the device to enable an XP progression chart.
 4. Whether to add dated badges to enable a milestone timeline.
 5. A distinct Pulse "thinking/listening" pose for the Coach (needs a new state; the five approved states are unchanged).
+
+---
+
+# Round 3: approved polish (after 34c9c7c)
+
+Evidence (real running app, web export, mock mode): `docs/review-shots/story-friends.png`, `story-community.png`, `story-coach-think-normal.png`, `story-coach-think-reduced.png`, `story-coach-chat.png`, onboarding and Progress captures; `results-think.json`; scripts `e2e/storybook.cjs`, `e2e/pulse-think.cjs`. Baselines untouched.
+
+## What was improved
+
+1. **Taller Friends and Community banners (approved decision 1).** `Banner` gained a `height` option (default 148). Friends and Community use 200 with a slightly larger Pulse. The campfire, lanterns, village houses, notice board and bunting are now inside the visible area. Banner text keeps its scrim and still wraps cleanly.
+2. **Scene art quality (decision 2).** Every world now has depth layers: two atmospheric ridges, a world-specific horizon (village rooftops with lit windows, pine trees for friends, speaker stacks for dance, a skyline for today), a low fog band, a vignette and a far sparkle layer that drifts opposite to the glow (a quiet parallax; native-driver transform; still with Reduce Motion). Friends and Community props were brightened. Text legibility is unchanged because scrims were kept.
+3. **Pulse thinking pose (decision 3).** New state `think` for the AI Coach: one hand raised beside the head, one lifted brow, eyes glancing up and aside, three thought dots that appear one after another. Motion is a slow small sway. **Reduce Motion:** a still pose with all three dots visible (verified: the transform does not change over time). **Celebrations Off:** Pulse stays at rest (the Coach only sends `thinking` when the setting is not Off; covered by a source test). Priority: never hides a welcome, encouragement or celebration; a tap does not interrupt it. Pulse's silhouette, colours, ribbon and cosmetics are unchanged. The Coach header strip was enlarged (116 px) so the pose is readable.
+   - My first version put the hand across the face and read as a "nose"; it was redrawn after looking at the screenshot.
+4. **XP history architecture proposal (decision 4):** `docs/PROPOSAL_XP_HISTORY.md`. Documentation only: derive on device from records now (no persistence), a read-only capped server function later, never a separate cache. No persistence or database change was made.
+5. **Badge timestamp and milestone timeline proposal (decision 5):** `docs/PROPOSAL_BADGE_TIMELINE.md`. Documentation only: dates are shown only when provable (qualified/recorded), back-filled items are explicitly undated, nothing fabricated. No change made.
+
+## Verification this round
+
+- Typecheck, lint, format, all unit suites (mobile 729 passed, shared 984, ai 116, admin 27), edge/secrets/script checks: pass.
+- Browser: route sweep, a11y sweep (no findings), reduced-motion, 36/36 regression, walkthrough, gamification upgrade, charts, storybook captures: pass. iOS bundle export: pass.
+- Pulse think: label announced as "thinking it over"; moves in normal mode, still with Reduce Motion.
+- Social integration 17/17, community integration 26/26, db tests pass (local Postgres 16 started for the run), none skipped.
+- No change to `packages/shared`, `supabase/`, gamification, privacy or health code: XP rules, caps and privacy safeguards are untouched.
+- Tooling note: `dist-review/` (a design-review build used only to hold the thinking pose still for a screenshot) was added to the lint and format ignore lists.
+
+## What remains incomplete
+
+- The art is still original **vector** work. Depth, layering and subtle motion are much improved, but it is not hand-illustrated production art; that remains a commissioning decision.
+- Characters: Pulse is the only character. Expressions are authored per state; no new characters were added.
+- Only Home, Coach, Friends, Community, Onboarding and Progress heroes were visually reviewed in the browser this round; the dance, food and me worlds got the shared depth layers but were not re-photographed.
+- The thinking pose could not be triggered by a real Coach reply in the browser (the mock replies instantly); it is verified through the review build, the state-machine tests and the source test. Real timing needs the live Coach on a device.
+- XP history and badge timeline: proposals only, awaiting your decisions (listed in each proposal).
+
+## Native-only checks still required
+
+Everything in the earlier checklist (keyboard matrix on a real iPhone, haptics, chart drag versus scroll, VoiceOver, Dynamic Type, HealthKit) plus:
+
+- [ ] Parallax sparkle layer, ridges and fog: frame rate on an older iPhone, and that nothing flickers at the scene edges.
+- [ ] The thinking pose in the Coach header on a device at the largest Dynamic Type, with Reduce Motion on, and with celebrations Off.
+- [ ] Friends and Community 200 px banners: text legibility and Pulse overlap on the smallest supported iPhone.

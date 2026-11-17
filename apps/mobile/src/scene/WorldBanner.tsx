@@ -14,12 +14,15 @@ export interface Banner {
   /** One supportive line. */
   line?: string;
   pulse?: PulseState;
+  /** Taller banners show more of the scene (Friends and Community use 200). Default 148. */
+  height?: number;
 }
 
 /** The compact version of a tab's world, shown at the top of its child screens. Same scene, same Pulse, lower height. */
-export function WorldBanner({ world, title, line, pulse = 'idle' }: Banner) {
+export function WorldBanner({ world, title, line, pulse = 'idle', height = 148 }: Banner) {
+  const tall = height > 170;
   return (
-    <HeroScene world={world} height={148}>
+    <HeroScene world={world} height={height}>
       {/* A soft plum scrim keeps the words legible over the scene's props. */}
       <LinearGradient
         pointerEvents="none"
@@ -28,7 +31,9 @@ export function WorldBanner({ world, title, line, pulse = 'idle' }: Banner) {
         end={{ x: 1, y: 0 }}
         style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '78%' }}
       />
-      <View style={{ position: 'absolute', top: spacing.md, left: spacing.lg, right: 118 }}>
+      <View
+        style={{ position: 'absolute', top: spacing.md, left: spacing.lg, right: tall ? 138 : 118 }}
+      >
         <AppText variant="heading" accessibilityRole="header" style={{ color: brand.ivory }}>
           {title}
         </AppText>
@@ -39,7 +44,7 @@ export function WorldBanner({ world, title, line, pulse = 'idle' }: Banner) {
         ) : null}
       </View>
       <View style={{ position: 'absolute', right: -2, bottom: 14 }}>
-        <PulseStage state={pulse} size={112} />
+        <PulseStage state={pulse} size={tall ? 132 : 112} />
       </View>
     </HeroScene>
   );
