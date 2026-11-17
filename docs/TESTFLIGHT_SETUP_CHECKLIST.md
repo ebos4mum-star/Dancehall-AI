@@ -22,17 +22,29 @@ Check for what already exists first (step 0) and reuse it when it is valid. Crea
 
 Apple Developer Program account enrolled as an **organization** and in good standing; you are Account Holder or Admin. Membership details show the **Team ID** (10 letters and digits). You will store it as a GitHub variable (not a secret).
 
-## 2. Apple Distribution certificate (reuse if 0a/0b found one you can export)
+## 2. Apple Distribution certificate (reuse if 0a/0b found one you can export; otherwise use the scripts)
 
-Reuse path (the private key is in your Mac's login keychain):
+Run these **on your Mac**, in Terminal, from a clone of this repository (the scripts never touch the repository; the private key lives in `~/.dancehall-signing/`, mode 600, outside Git). They print no key and no password.
 
-1. Keychain Access, category **My Certificates**, find `Apple Distribution: ...`; expand it (the private key must appear beneath it).
-2. Right-click the certificate, **Export**, format **Personal Information Exchange (.p12)**, save as `distribution.p12`, set a strong password (keep it in your password manager).
+```bash
+# 1. Look for a reusable identity (read only: changes, revokes and exports nothing)
+bash scripts/release/signing-prep/make-csr.sh check
 
-New certificate path:
+# 2. Only if nothing reusable exists: create a private key and the CSR
+bash scripts/release/signing-prep/make-csr.sh create
+#    -> upload ~/Downloads/DanceHallFitAI_Distribution.csr on Apple's page (Certificates, +, Apple Distribution, Continue, Choose File)
+#    -> download the issued .cer
 
-1. Keychain Access, menu Certificate Assistant, **Request a Certificate From a Certificate Authority**: your email, a name, **Saved to disk**. This creates the private key in your keychain.
-2. developer.apple.com, Certificates, **+**, **Apple Distribution**, upload the request, download the `.cer`, double-click it to install it, then export the `.p12` as above.
+# 3. After downloading the .cer: check it (right type, your team, not expired, matches the key) and create the password-protected .p12
+bash scripts/release/signing-prep/make-p12.sh ~/Downloads/<the downloaded file>.cer
+#    -> ~/.dancehall-signing/distribution.p12 (mode 600); you type the password twice, hidden
+```
+
+The `.p12` is built with the older encryption algorithms that macOS `security import` (used by the build workflow) accepts; the default of newer OpenSSL versions is refused by it. The scripts refuse to overwrite an existing key, CSR or `.p12`. Keep `distribution.key`, `distribution.p12` and its password in your password manager or an encrypted backup. The certificate is team-wide, so it can also sign your other apps; this flow does not touch their signing.
+
+Reuse path instead (an identity with its private key is already in your Mac's login keychain): Keychain Access, category **My Certificates**, find `Apple Distribution: FlexApp software Inc. (9RA6G4GC6Q)`; expand it (the private key must appear beneath it); right-click the certificate, **Export**, format **Personal Information Exchange (.p12)**, set a strong password.
+
+Optional: importing the issued `.cer` into Keychain Access is **not** needed for this pipeline (the `.p12` carries both parts). If you want it in your keychain too, double-click the `.cer` only if you also keep the key in the keychain.
 
 ## 3. App ID with HealthKit
 
